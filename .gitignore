@@ -12,3 +12,6 @@ tools/asset-source/
 # conservan localmente como referencia, no hace falta versionarlas
 # (el propio historial de git ya cumple ese papel a partir de ahora).
 backups/
+
+.vercel
+.env*
