@@ -18,7 +18,7 @@ function bucle(ts) {
           netEnviarInputCliente();
           try {
             if (G && G.players) {
-              interpolarPosicionesRed();
+              interpolarPosicionesRed(dt);
               render();
             }
             else {

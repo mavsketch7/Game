@@ -1,5 +1,5 @@
 // Auto-generated during the modularization refactor (2026-07-23).
-import { H } from "../core/canvas.js";
+import { H, W } from "../core/canvas.js";
 import { META } from "../core/save.js";
 import { G, setG } from "../core/state.js";
 import { render } from "../render/world.js";
@@ -581,7 +581,25 @@ function lerpAngulo(a, b, t) {
 // jugador entre el snapshot anterior y el último recibido; si aún no ha
 // llegado uno nuevo, extrapola un poco más allá del último (hasta 1.6x el
 // intervalo) en la misma dirección en la que ya venía moviéndose.
-export function interpolarPosicionesRed() {
+//
+// Para el propio jugador del invitado esto no basta: aunque esté suave, su
+// posición sigue "yendo con retraso" porque depende de ida y vuelta al
+// anfitrión. Para ese jugador en concreto (NET.miIdx) además se avanza la
+// posición YA en el cliente usando su propio input local (misma idea que la
+// "predicción" de netcode, pero solo visual, sin tocar colisiones ni daño),
+// y se corrige poco a poco hacia la posición real del host para que no
+// haya desincronización permanente si la predicción se desvía un poco.
+function inputLocalMxMy() {
+        const mx =
+          (keys["d"] || keys["arrowright"] ? 1 : 0) -
+          (keys["a"] || keys["arrowleft"] ? 1 : 0);
+        const my =
+          (keys["s"] || keys["arrowdown"] ? 1 : 0) -
+          (keys["w"] || keys["arrowup"] ? 1 : 0);
+        return { mx, my };
+      }
+
+export function interpolarPosicionesRed(dt) {
         if (NET.modo !== "cliente" || !G || !G.players) return;
         const { interpPrev: prev, interpCurr: curr } = NET;
         if (!curr) return;
@@ -592,10 +610,39 @@ export function interpolarPosicionesRed() {
           const a = base.players.find((p) => p.idx === gp.idx);
           const b = curr.players.find((p) => p.idx === gp.idx);
           if (!a || !b) continue;
-          gp.x = a.x + (b.x - a.x) * t;
-          gp.y = a.y + (b.y - a.y) * t;
-          if (typeof a.aim === "number" && typeof b.aim === "number") {
-            gp.aim = lerpAngulo(a.aim, b.aim, t);
+          const authX = a.x + (b.x - a.x) * t;
+          const authY = a.y + (b.y - a.y) * t;
+          const authAim =
+            typeof a.aim === "number" && typeof b.aim === "number"
+              ? lerpAngulo(a.aim, b.aim, t)
+              : gp.aim;
+
+          if (gp.idx === NET.miIdx && !gp.ko && typeof dt === "number") {
+            if (!NET.predPos) NET.predPos = { x: authX, y: authY };
+            const { mx, my } = inputLocalMxMy();
+            const n = Math.hypot(mx, my);
+            const vel = (gp._netStats && gp._netStats.vel) || 150;
+            if (n > 0) {
+              NET.predPos.x += (mx / n) * vel * Math.min(1, n) * dt;
+              NET.predPos.y += (my / n) * vel * Math.min(1, n) * dt;
+            }
+            // corrección suave: tira de la predicción hacia la posición real
+            // del host un 15% de la distancia cada frame, para que un pase
+            // perdido o una pequeña desviación no se acumule para siempre.
+            NET.predPos.x += (authX - NET.predPos.x) * 0.15;
+            NET.predPos.y += (authY - NET.predPos.y) * 0.15;
+            NET.predPos.x = clamp(NET.predPos.x, 28, W - 28);
+            NET.predPos.y = clamp(NET.predPos.y, 28, H - 28);
+            gp.x = NET.predPos.x;
+            gp.y = NET.predPos.y;
+            // la puntería del propio jugador se calcula al instante contra
+            // el ratón local — se siente igual de reactiva que en solitario.
+            gp.aim = Math.atan2(mouse.y - gp.y, mouse.x - gp.x);
+          } else {
+            if (gp.idx === NET.miIdx) NET.predPos = null; // ko: reset al revivir
+            gp.x = authX;
+            gp.y = authY;
+            gp.aim = authAim;
           }
         }
       }
