@@ -7,6 +7,7 @@ import { NET, interpolarPosicionesRed, netEnviarEventosFx, netEnviarInputCliente
 import { render } from "./render/world.js";
 import { pollPads } from "./systems/input.js";
 import { construirMenu } from "./ui/menu.js";
+import "./ui/intro.js";
 
 let ultimo = 0;
 

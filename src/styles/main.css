@@ -10,6 +10,104 @@
         --alba: #7fd4c1;
         --esc-texto: 1;
       }
+
+      /* ===== Pantalla de inicio ===== */
+      #pantalla-inicio {
+        position: fixed;
+        inset: 0;
+        z-index: 1000;
+        background: #08060f;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: flex-end;
+        overflow: hidden;
+        cursor: pointer;
+      }
+      #pantalla-inicio.oculto {
+        display: none;
+      }
+      .inicio-fondo {
+        position: absolute;
+        inset: 0;
+        background-size: cover;
+        background-position: center 32%;
+        animation: inicio-zoom 20s ease-in-out infinite alternate;
+      }
+      .inicio-vineta {
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(
+          180deg,
+          rgba(8, 6, 15, 0.1) 0%,
+          rgba(8, 6, 15, 0.22) 45%,
+          rgba(8, 6, 15, 0.97) 100%
+        );
+      }
+      .inicio-logo {
+        position: relative;
+        z-index: 2;
+        width: min(680px, 82vw);
+        margin-top: min(8vh, 90px);
+        filter: drop-shadow(0 8px 26px rgba(0, 0, 0, 0.65));
+        animation: inicio-aparece 1.6s ease-out;
+      }
+      .inicio-start {
+        position: relative;
+        z-index: 2;
+        margin-bottom: min(9vh, 84px);
+        font-family: "Cinzel", serif;
+        font-weight: 800;
+        font-size: clamp(1.05rem, 2.4vw, 1.5rem);
+        letter-spacing: 0.22em;
+        text-transform: uppercase;
+        background: linear-gradient(
+          180deg,
+          #fbe7ad 0%,
+          var(--vespero) 55%,
+          #a9701f 100%
+        );
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+        text-shadow: 0 2px 20px rgba(233, 180, 92, 0.35);
+        animation: inicio-parpadeo 1.8s ease-in-out infinite;
+      }
+      @keyframes inicio-zoom {
+        from {
+          transform: scale(1);
+        }
+        to {
+          transform: scale(1.06);
+        }
+      }
+      @keyframes inicio-parpadeo {
+        0%,
+        100% {
+          opacity: 1;
+        }
+        50% {
+          opacity: 0.32;
+        }
+      }
+      @keyframes inicio-aparece {
+        from {
+          opacity: 0;
+          transform: translateY(-16px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .inicio-fondo,
+        .inicio-start,
+        .inicio-logo {
+          animation: none !important;
+        }
+      }
+
       .overlay-inner {
         font-size: calc(1rem * var(--esc-texto));
       }
