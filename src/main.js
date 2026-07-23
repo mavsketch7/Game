@@ -3,7 +3,7 @@ import { H, W, ajustarLienzo, cx } from "./core/canvas.js";
 import { update } from "./core/loop.js";
 import { aplicarTexto } from "./core/settings.js";
 import { G } from "./core/state.js";
-import { NET, interpolarPosicionesRed, netEnviarInputCliente, netEnviarSnapshot } from "./net/peer.js";
+import { NET, interpolarPosicionesRed, netEnviarEventosFx, netEnviarInputCliente, netEnviarSnapshot } from "./net/peer.js";
 import { render } from "./render/world.js";
 import { pollPads } from "./systems/input.js";
 import { construirMenu } from "./ui/menu.js";
@@ -38,7 +38,10 @@ function bucle(ts) {
         pollPads();
         if (G && G.activo && !G.pausa) update(dt);
         render();
-        if (NET.modo === "host") netEnviarSnapshot();
+        if (NET.modo === "host") {
+          netEnviarEventosFx();
+          netEnviarSnapshot();
+        }
         requestAnimationFrame(bucle);
       }
 

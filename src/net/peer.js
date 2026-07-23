@@ -47,6 +47,9 @@ export const NET = {
         predPos: null,
         predCd: { atk: 0, dash: 0, parry: 0 },
         predPrev: { dash: false, parry: false, ulti: false },
+        // host: mayor id de fx ya retransmitido por el canal rápido (ver
+        // netEnviarEventosFx), para no reenviar los mismos cada frame.
+        lastFxIdSent: -1,
       };
 
 function cargarPeerJS(cb) {
@@ -263,6 +266,12 @@ function onDataCliente(d) {
           ocultar("menu");
         } else if (d.t === "fin") {
           /* el host controla el fin */
+        } else if (d.t === "fx") {
+          if (G && G.fx) {
+            for (const item of d.items) {
+              if (!G.fx.some((f) => f.id === item.id)) G.fx.push({ ...item });
+            }
+          }
         }
       }
 
@@ -454,10 +463,29 @@ function serializarEstado() {
 export function netEnviarSnapshot() {
         if (NET.modo !== "host" || !G) return;
         const ahora = performance.now();
-        if (ahora - NET.lastSend < 50) return; // ~20 Hz
+        if (ahora - NET.lastSend < 40) return; // ~25 Hz
         NET.lastSend = ahora;
         NET.seq++;
         netBroadcast({ t: "estado", s: serializarEstado(), seq: NET.seq });
+      }
+
+// El daño/las chispas/el número que sale al golpear (G.fx) solo llegaban al
+// invitado dentro del siguiente snapshot completo, cada ~40ms — el golpe en
+// sí (con el ataque optimista) se veía al instante, pero la confirmación de
+// que había impactado tardaba lo mismo que antes. En vez de intentar
+// adivinar el impacto en el cliente (duplicar la geometría de golpeArco y
+// los proyectiles ahí, con riesgo de que un día se desincronice del balance
+// real), el host manda los fx nuevos por su cuenta, sin esperar al siguiente
+// snapshot: siguen siendo 100% reales, solo que llegan con un solo salto de
+// red en vez de ida y vuelta + espera del siguiente tick. Se llama cada
+// frame del host (no está limitado como netEnviarSnapshot) porque solo
+// manda algo cuando de verdad hay fx nuevos que enviar.
+export function netEnviarEventosFx() {
+        if (NET.modo !== "host" || !G || !G.fx) return;
+        const nuevos = G.fx.filter((f) => f.id > NET.lastFxIdSent);
+        if (nuevos.length === 0) return;
+        NET.lastFxIdSent = nuevos.reduce((m, f) => Math.max(m, f.id), NET.lastFxIdSent);
+        netBroadcast({ t: "fx", items: nuevos });
       }
 
 function recibirSnapshot(s) {
@@ -628,6 +656,34 @@ function inputLocalMxMy() {
 // (swingT/dashT/parryT) se sobrescriben con el valor real del host, así
 // que como mucho se nota una animación que dura un pelín distinto un
 // instante, nunca una desincronización de verdad.
+// Mismos números que systems/abilities.js:atacar() (cooldown/duración de
+// swing por clase y, en el druida, por forma) para que la animación
+// optimista dure lo mismo que la real y no se note un "salto" cuando el
+// snapshot autoritativo la reemplaza a mitad de swing. Se ignoran matices
+// menores (bonus de haste, combo colosal del guerrero...) — como mucho
+// desajustan la duración un poco un instante, nunca la posición ni el daño.
+function timingAtaque(gp) {
+        switch (gp.rol) {
+          case "guerrero":
+            return { cd: 0.38, swing: 0.18, sfx: "golpe" };
+          case "arquero":
+            return { cd: 0.3, swing: 0.3, sfx: "flecha" };
+          case "picaro":
+            return { cd: 0.2, swing: 0.1, sfx: "golpe" };
+          case "mago":
+            return { cd: 0.45, swing: 0, sfx: "magia", costeRes: 8 };
+          case "clerigo":
+            return { cd: 0.45, swing: 0, sfx: "magia" };
+          case "druida":
+            if (gp.forma === "aguila") return { cd: 0.25, swing: 0.1, sfx: "golpe" };
+            if (gp.forma === "lobo") return { cd: 0.34, swing: 0.14, sfx: "golpe" };
+            if (gp.forma === "oso") return { cd: 0.6, swing: 0.22, sfx: "golpe" };
+            return { cd: 0.4, swing: 0, sfx: "magia" }; // humano: rama a distancia
+          default:
+            return { cd: 0.35, swing: 0.15, sfx: "golpe" };
+        }
+      }
+
 function predecirAccionLocal(gp, dt) {
         NET.predCd.atk = Math.max(0, NET.predCd.atk - dt);
         NET.predCd.dash = Math.max(0, NET.predCd.dash - dt);
@@ -637,10 +693,17 @@ function predecirAccionLocal(gp, dt) {
         if (gp.parryT > 0) gp.parryT -= dt;
         if (gp.atrapado) return;
 
-        if (mouse.izq && NET.predCd.atk <= 0) {
-          gp.swingT = 0.18;
-          NET.predCd.atk = 0.32;
-          sfx("golpe");
+        // el mago-arcano no "ataca" con clics sueltos: carga manteniendo el
+        // botón (ver update()) y suelta al soltar — fingir un swing por
+        // clic no encaja con ese gesto, así que se deja sin predicción.
+        const esArcano = gp.rol === "mago" && gp.elemento === "arcano";
+        if (mouse.izq && NET.predCd.atk <= 0 && !esArcano) {
+          const tim = timingAtaque(gp);
+          if (!tim.costeRes || gp.res >= tim.costeRes) {
+            if (tim.swing > 0) gp.swingT = tim.swing;
+            NET.predCd.atk = tim.cd;
+            sfx(tim.sfx);
+          }
         }
 
         const dashAhora = !!keys[" "];
@@ -655,7 +718,7 @@ function predecirAccionLocal(gp, dt) {
           const n = Math.hypot(dx, dy) || 1;
           gp.dashX = dx / n;
           gp.dashY = dy / n;
-          gp.dashT = 0.2;
+          gp.dashT = gp.rol === "picaro" ? 0.26 : 0.2;
           NET.predCd.dash = 0.7;
         }
         NET.predPrev.dash = dashAhora;
@@ -677,6 +740,18 @@ function predecirAccionLocal(gp, dt) {
 
 export function interpolarPosicionesRed(dt) {
         if (NET.modo !== "cliente" || !G || !G.players) return;
+        // el cliente nunca corre update(), así que sin esto los fx (chispas,
+        // números de daño...) se quedaban "congelados" con el t que traía
+        // el último snapshot en vez de apagarse suavemente — se nota sobre
+        // todo en los que llegan por el canal rápido (netEnviarEventosFx),
+        // que si no se van desvaneciendo hasta que el siguiente snapshot
+        // completo los reemplaza. Mismo recorte que hace core/loop.js.
+        if (G.fx && typeof dt === "number") {
+          for (let i = G.fx.length - 1; i >= 0; i--) {
+            G.fx[i].t -= dt;
+            if (G.fx[i].t <= 0) G.fx.splice(i, 1);
+          }
+        }
         const { interpPrev: prev, interpCurr: curr } = NET;
         if (!curr) return;
         const base = prev || curr;
