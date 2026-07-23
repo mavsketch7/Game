@@ -4,6 +4,7 @@ import { RAREZAS } from "../core/constants.js";
 import { META, SKINS } from "../core/save.js";
 import { G } from "../core/state.js";
 import { M, keys } from "../systems/input.js";
+import { construirMenu } from "../ui/menu.js";
 
 // Real PNG files (extracted from the original inline base64 blobs) live in
 // public/assets/sprites/. BASE_URL respects vite.config.js's `base: "./"`,
@@ -683,7 +684,16 @@ for (const kIcon in KENNEY_ICON_SRC) {
         const imIcon = new Image();
         imIcon.onload = (() => {
           const kk = kIcon;
-          return () => { SPR[kk] = upscaleNN(imIcon, KENNEY_ICON_SCALE[kk] || 3); };
+          return () => {
+            SPR[kk] = upscaleNN(imIcon, KENNEY_ICON_SCALE[kk] || 3);
+            // el menú de selección de personaje dibuja SPR[rol] en un
+            // <canvas> una sola vez al construirse; como este icono carga
+            // async, la primera vez casi siempre se adelanta y se queda
+            // enseñando el sprite procedural de relleno. Si el que acaba
+            // de cargar es una de las 6 clases, se reconstruye el menú
+            // para que recoja ya el icono definitivo.
+            if (kk in PALS) construirMenu();
+          };
         })();
         imIcon.src = KENNEY_ICON_SRC[kIcon];
       }

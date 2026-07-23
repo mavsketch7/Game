@@ -22,7 +22,6 @@
         align-items: center;
         justify-content: flex-end;
         overflow: hidden;
-        cursor: pointer;
       }
       #pantalla-inicio.oculto {
         display: none;
@@ -61,17 +60,25 @@
         font-size: clamp(1.05rem, 2.4vw, 1.5rem);
         letter-spacing: 0.22em;
         text-transform: uppercase;
-        background: linear-gradient(
-          180deg,
-          #fbe7ad 0%,
-          var(--vespero) 55%,
-          #a9701f 100%
-        );
+        background-image: linear-gradient(
+            110deg,
+            transparent 40%,
+            rgba(255, 250, 235, 0.95) 50%,
+            transparent 60%
+          ),
+          linear-gradient(180deg, #fbe7ad 0%, var(--vespero) 55%, #a9701f 100%);
+        background-size:
+          200% 100%,
+          100% 100%;
+        background-repeat: no-repeat;
         -webkit-background-clip: text;
         background-clip: text;
         color: transparent;
-        text-shadow: 0 2px 20px rgba(233, 180, 92, 0.35);
-        animation: inicio-parpadeo 1.8s ease-in-out infinite;
+        opacity: 0;
+        animation:
+          inicio-aparece-texto 1s ease-out 0.5s forwards,
+          inicio-brillo 2.8s linear 1.5s infinite,
+          inicio-respira 2s ease-in-out 1.5s infinite;
       }
       @keyframes inicio-zoom {
         from {
@@ -81,13 +88,25 @@
           transform: scale(1.06);
         }
       }
-      @keyframes inicio-parpadeo {
+      @keyframes inicio-brillo {
+        0% {
+          background-position:
+            -120% 0,
+            0 0;
+        }
+        100% {
+          background-position:
+            220% 0,
+            0 0;
+        }
+      }
+      @keyframes inicio-respira {
         0%,
         100% {
-          opacity: 1;
+          text-shadow: 0 2px 20px rgba(233, 180, 92, 0.35);
         }
         50% {
-          opacity: 0.32;
+          text-shadow: 0 2px 32px rgba(233, 180, 92, 0.7);
         }
       }
       @keyframes inicio-aparece {
@@ -100,12 +119,52 @@
           transform: translateY(0);
         }
       }
+      @keyframes inicio-aparece-texto {
+        from {
+          opacity: 0;
+          transform: translateY(8px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
       @media (prefers-reduced-motion: reduce) {
         .inicio-fondo,
         .inicio-start,
         .inicio-logo {
           animation: none !important;
         }
+        .inicio-start {
+          opacity: 1;
+        }
+      }
+
+      /* ===== Cursor personalizado (guantelete) ===== */
+      #cursor-wrap {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 0;
+        height: 0;
+        z-index: 2000;
+        pointer-events: none;
+      }
+      #cursor-wrap.oculto {
+        display: none;
+      }
+      #cursor-img {
+        position: absolute;
+        left: -10px;
+        top: -8px;
+        width: 42px;
+        height: auto;
+        filter: drop-shadow(0 3px 7px rgba(0, 0, 0, 0.55));
+        transform-origin: 20% 15%;
+        transition: transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1);
+      }
+      #cursor-wrap.pulsando #cursor-img {
+        transform: scale(0.82) rotate(-12deg) translate(2px, 3px);
       }
 
       .overlay-inner {
@@ -1374,4 +1433,16 @@
       .btn-info:hover {
         border-color: var(--vespero);
         color: var(--hueso);
+      }
+
+      /* El guantelete (#cursor-img) sustituye al cursor nativo en toda la
+         interfaz; se pone al final de la hoja para ganarle a cualquier
+         "cursor: pointer/not-allowed" declarado antes. canvas#lienzo ya
+         usaba cursor:none por su cuenta (mira propia del juego), así que
+         no cambia nada ahí. */
+      *,
+      *:hover,
+      *:active,
+      *:disabled {
+        cursor: none !important;
       }
