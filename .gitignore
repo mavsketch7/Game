@@ -1,0 +1,14 @@
+node_modules/
+dist/
+.vite/
+*.log
+.claude/
+
+# Material de desarrollo: se conserva en disco pero no se versiona
+# (capturas de prueba, PNGs de origen, HTML de test, ~13 MB).
+tools/asset-source/
+
+# Copias de seguridad del HTML monolítico previo al refactor: se
+# conservan localmente como referencia, no hace falta versionarlas
+# (el propio historial de git ya cumple ese papel a partir de ahora).
+backups/

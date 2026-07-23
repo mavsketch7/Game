@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>La Torre de Véspero — Cooperativo</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;800&family=Alegreya+Sans:wght@400;500;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/src/styles/main.css" />
+  </head>
+  <body>
+    <div id="marco">
+      <canvas id="lienzo" width="960" height="560"></canvas>
+
+      <div id="menu" class="overlay">
+        <div class="overlay-inner">
+          <div id="hero-titulo" class="marco-px">
+            <span class="lucero">✦</span>
+            <h1>La Torre de Véspero — Cooperativo</h1>
+            <p>
+              Hasta 4 aspirantes. <b>J1</b> juega con teclado y ratón; los
+              mandos se unen pulsando <kbd>A</kbd>. 100 plantas, jefes cada 5.
+              ¿Llegaréis al Eterno?
+            </p>
+          </div>
+          <div class="grupo-sel marco-px">
+            <h2>1 · Aspirantes</h2>
+            <div id="slots"></div>
+          </div>
+          <div class="grupo-sel marco-px">
+            <h2>2 · Lobby del grupo</h2>
+            <div class="grid-cartas" id="cartas-lobby"></div>
+          </div>
+          <div id="fila-nombre">
+            <input
+              id="input-nombre"
+              maxlength="20"
+              placeholder="Nombre de J1 (opcional)"
+              aria-label="Nombre"
+            />
+            <button class="btn dorado" id="btn-empezar" disabled>
+              Entrar en la Torre
+            </button>
+          </div>
+          <label class="check-ff"
+            ><input type="checkbox" id="chk-ff" checked /> 🔥 Fuego amigo
+            (ataques, flechas y áreas dañan a tus compañeros al 50%)</label
+          >
+          <div id="net-panel">
+            <h2 style="margin-top: 14px">
+              🌐 Jugar online
+              <span style="font-size: 0.7rem; color: var(--ceniza)"
+                >(experimental)</span
+              >
+            </h2>
+            <p
+              style="
+                font-size: 0.78rem;
+                color: var(--ceniza);
+                margin: 4px 0 8px;
+              "
+            >
+              Crea una sala y comparte el enlace. Tus amigos lo abren y se unen
+              a tu partida por internet. Tú (el anfitrión) debes permanecer
+              conectado. Requiere conexión a internet.
+            </p>
+            <div style="display: flex; gap: 8px; flex-wrap: wrap">
+              <button class="btn" id="btn-crear-sala">
+                Crear sala y obtener enlace
+              </button>
+              <span
+                id="net-estado"
+                style="
+                  align-self: center;
+                  font-size: 0.8rem;
+                  color: var(--alba);
+                "
+              ></span>
+            </div>
+            <div id="net-enlace" style="display: none; margin-top: 8px">
+              <div style="display: flex; gap: 6px">
+                <input readonly style="flex: 1; min-width: 180px" value="" />
+                <button class="btn dorado" id="btn-copiar-enlace">
+                  Copiar
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="inv" class="overlay oculto">
+        <div class="overlay-inner" id="inv-inner"></div>
+      </div>
+      <div id="fin" class="overlay oculto">
+        <div class="overlay-inner" id="fin-inner"></div>
+      </div>
+      <div id="cartas-overlay" class="overlay oculto">
+        <div class="overlay-inner" id="cartas-inner"></div>
+      </div>
+      <div id="tienda" class="overlay oculto">
+        <div class="overlay-inner" id="tienda-inner"></div>
+      </div>
+      <div id="skins" class="overlay oculto">
+        <div class="overlay-inner" id="skins-inner"></div>
+      </div>
+      <div id="arena-pvp" class="overlay oculto">
+        <div class="overlay-inner" id="arena-pvp-inner"></div>
+      </div>
+      <div id="info-overlay" class="overlay oculto" style="z-index: 20">
+        <div class="overlay-inner" id="info-inner"></div>
+      </div>
+      <div id="ajustes" class="overlay oculto" style="z-index: 25">
+        <div class="overlay-inner" id="ajustes-inner"></div>
+      </div>
+      <button id="btn-ajustes" title="Ajustes" aria-label="Ajustes">⚙</button>
+    </div>
+
+    <div id="hint">
+      <span
+        ><b>Teclado</b>: <kbd>WASD</kbd> mover · <kbd>clic izq</kbd> atacar ·
+        <kbd>clic der</kbd> parry · <kbd>Espacio</kbd> esquivar ·
+        <kbd>E</kbd> ulti · <kbd>1·2·3</kbd> elementos/soportes/formas ·
+        <kbd>Tab</kbd> ficha</span
+      >
+      <span
+        ><b>Mando</b>: sticks mover/apuntar · <kbd>RT</kbd> atacar ·
+        <kbd>LT</kbd> parry · <kbd>A</kbd> esquivar · <kbd>Y</kbd> ulti ·
+        <kbd>X·B·RB</kbd> elementos/soportes/formas · <kbd>Start</kbd> ficha ·
+        <kbd>Select</kbd> ajustes</span
+      >
+      <span
+        ><b>Ajustes</b>: <kbd>⚙</kbd> o <kbd>G</kbd> abre ajustes ·
+        <kbd>F</kbd> pantalla completa · <kbd>M</kbd> silenciar</span
+      >
+    </div>
+
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
