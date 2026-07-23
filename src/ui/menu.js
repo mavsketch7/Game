@@ -7,6 +7,20 @@ import { SPR } from "../render/sprites.js";
 import { M } from "../systems/input.js";
 import { abrirInfo } from "./info.js";
 
+// Fondo inmersivo del menú (misma ilustración que la pantalla de inicio),
+// fijado una sola vez desde JS en vez de en el CSS: así respeta el `base`
+// relativo de vite.config.js igual que assetUrl() en render/sprites.js.
+(() => {
+  const menuEl = document.getElementById("menu");
+  if (!menuEl) return;
+  const url = `${import.meta.env.BASE_URL}assets/ui/portada.webp`;
+  menuEl.style.backgroundImage =
+    `linear-gradient(180deg, rgba(8,6,15,.5) 0%, rgba(8,6,15,.74) 45%, rgba(8,6,15,.96) 100%), url("${url}")`;
+  menuEl.style.backgroundSize = "cover, cover";
+  menuEl.style.backgroundPosition = "center, center 30%";
+  menuEl.style.backgroundRepeat = "no-repeat, no-repeat";
+})();
+
 export function construirMenu() {
         if (window._esInvitado) return;
         const cont = document.getElementById("slots");
