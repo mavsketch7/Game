@@ -6,6 +6,7 @@ import { render } from "../render/world.js";
 import { activarParry, castSup, esquivar, habilidad, transformar } from "../systems/abilities.js";
 import { statsTot } from "../systems/combat.js";
 import { M, keys, mouse } from "../systems/input.js";
+import { aplicarMusica, initAudio, reanudarAudio, sfx } from "../systems/audio.js";
 import { invSel } from "../ui/inventory.js";
 import { construirMenu } from "../ui/menu.js";
 import { banner, toast } from "../ui/notifications.js";
@@ -37,6 +38,15 @@ export const NET = {
         // de que la posición salte a trompicones cada vez que llega una.
         interpPrev: null,
         interpCurr: null,
+        // cliente: para inicializar el audio una sola vez al recibir el
+        // primer estado real de partida.
+        audioListo: false,
+        // cliente: posición predicha localmente para su propio jugador, y
+        // cooldowns/flancos locales para sus acciones optimistas (ver
+        // interpolarPosicionesRed).
+        predPos: null,
+        predCd: { atk: 0, dash: 0, parry: 0 },
+        predPrev: { dash: false, parry: false, ulti: false },
       };
 
 function cargarPeerJS(cb) {
@@ -451,6 +461,16 @@ export function netEnviarSnapshot() {
       }
 
 function recibirSnapshot(s) {
+        // el cliente nunca llama a nuevaPartida() (eso solo lo hace el
+        // host), así que sin esto no se inicializaba nunca su AudioContext:
+        // el invitado jugaba la partida entera en silencio total, sin
+        // música ni sonido de sus propias acciones.
+        if (!NET.audioListo) {
+          NET.audioListo = true;
+          initAudio();
+          reanudarAudio();
+          aplicarMusica();
+        }
         // guarda las posiciones de este snapshot para interpolarlas frame a
         // frame en interpolarPosicionesRed() en vez de que salten a
         // trompicones cada ~50ms (ver esa función más abajo).
@@ -599,6 +619,62 @@ function inputLocalMxMy() {
         return { mx, my };
       }
 
+// Dispara localmente la animación/sonido de atacar, esquivar y parry en
+// cuanto se pulsa el botón, sin esperar a que el host confirme nada por
+// snapshot. Es "de mentira": no calcula impactos ni gasta recursos reales
+// (eso lo sigue decidiendo el host en exclusiva, con su propia copia de
+// atkCd/dashCd/parryCd) — solo hace que la pantalla del invitado responda
+// al instante. Cuando llegue el siguiente snapshot, estos mismos campos
+// (swingT/dashT/parryT) se sobrescriben con el valor real del host, así
+// que como mucho se nota una animación que dura un pelín distinto un
+// instante, nunca una desincronización de verdad.
+function predecirAccionLocal(gp, dt) {
+        NET.predCd.atk = Math.max(0, NET.predCd.atk - dt);
+        NET.predCd.dash = Math.max(0, NET.predCd.dash - dt);
+        NET.predCd.parry = Math.max(0, NET.predCd.parry - dt);
+        if (gp.swingT > 0) gp.swingT -= dt;
+        if (gp.dashT > 0) gp.dashT -= dt;
+        if (gp.parryT > 0) gp.parryT -= dt;
+        if (gp.atrapado) return;
+
+        if (mouse.izq && NET.predCd.atk <= 0) {
+          gp.swingT = 0.18;
+          NET.predCd.atk = 0.32;
+          sfx("golpe");
+        }
+
+        const dashAhora = !!keys[" "];
+        if (dashAhora && !NET.predPrev.dash && NET.predCd.dash <= 0) {
+          const { mx, my } = inputLocalMxMy();
+          let dx = mx,
+            dy = my;
+          if (dx === 0 && dy === 0) {
+            dx = Math.cos(gp.aim);
+            dy = Math.sin(gp.aim);
+          }
+          const n = Math.hypot(dx, dy) || 1;
+          gp.dashX = dx / n;
+          gp.dashY = dy / n;
+          gp.dashT = 0.2;
+          NET.predCd.dash = 0.7;
+        }
+        NET.predPrev.dash = dashAhora;
+
+        const parryAhora = !!mouse.der;
+        if (parryAhora && !NET.predPrev.parry && NET.predCd.parry <= 0) {
+          gp.parryT = 0.18;
+          NET.predCd.parry = 0.9;
+          sfx("parry");
+        }
+        NET.predPrev.parry = parryAhora;
+
+        // ulti: el efecto real varía demasiado por clase para fingirlo sin
+        // arriesgar una animación inconsistente — solo confirmación sonora.
+        const ultiAhora = !!keys["e"];
+        if (ultiAhora && !NET.predPrev.ulti) sfx("ulti");
+        NET.predPrev.ulti = ultiAhora;
+      }
+
 export function interpolarPosicionesRed(dt) {
         if (NET.modo !== "cliente" || !G || !G.players) return;
         const { interpPrev: prev, interpCurr: curr } = NET;
@@ -619,12 +695,28 @@ export function interpolarPosicionesRed(dt) {
 
           if (gp.idx === NET.miIdx && !gp.ko && typeof dt === "number") {
             if (!NET.predPos) NET.predPos = { x: authX, y: authY };
-            const { mx, my } = inputLocalMxMy();
-            const n = Math.hypot(mx, my);
-            const vel = (gp._netStats && gp._netStats.vel) || 150;
-            if (n > 0) {
-              NET.predPos.x += (mx / n) * vel * Math.min(1, n) * dt;
-              NET.predPos.y += (my / n) * vel * Math.min(1, n) * dt;
+            predecirAccionLocal(gp, dt);
+            // dashX/dashY no viaja en el snapshot (el host nunca lo manda):
+            // solo existen aquí cuando la propia predicción local los ha
+            // fijado. Si un dashT autoritativo llega sin que la predicción
+            // lo haya disparado (paquete perdido, etc.), se ignora el salto
+            // y se sigue moviendo con el input normal en vez de arriesgar
+            // NaN.
+            if (
+              gp.dashT > 0 &&
+              typeof gp.dashX === "number" &&
+              typeof gp.dashY === "number"
+            ) {
+              NET.predPos.x += gp.dashX * 560 * dt;
+              NET.predPos.y += gp.dashY * 560 * dt;
+            } else {
+              const { mx, my } = inputLocalMxMy();
+              const n = Math.hypot(mx, my);
+              const vel = (gp._netStats && gp._netStats.vel) || 150;
+              if (n > 0) {
+                NET.predPos.x += (mx / n) * vel * Math.min(1, n) * dt;
+                NET.predPos.y += (my / n) * vel * Math.min(1, n) * dt;
+              }
             }
             // corrección suave: tira de la predicción hacia la posición real
             // del host un 15% de la distancia cada frame, para que un pase
