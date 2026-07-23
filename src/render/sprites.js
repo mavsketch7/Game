@@ -83,9 +83,59 @@ const ARMOR_ROWS = [
         "................",
         "................",
         "................",
-        ".....AA..AA.....",
+        ".....AA..AA.....", // hombreras
+        "....AAAAAAAA....", // pechera alta
+        "....A......A....", // deja ver el emblema del centro
+        "....AAAAAAAA....", // pechera baja
         "................",
-        "....AAAAAAAA....",
+        "....AAAAAAAA....", // cinturon
+        "................",
+        "................",
+        "................",
+        "................",
+        "................",
+        "................",
+        "................",
+      ];
+
+// Arma equipada dibujada al bies sobre la espalda/torso (como una espada
+// enfundada) en vez de "en la mano" — así cabe siempre dentro de la misma
+// rejilla de 16x20 sin necesitar espacio extra a los lados del cuerpo.
+const WEAPON_ROWS = [
+        "................",
+        "................",
+        "................",
+        "................",
+        "................",
+        "................",
+        "................",
+        "...W............", // pomo, hombro izq.
+        "...WW...........",
+        "..WWWW..........", // guarda cruzada
+        "....WW..........",
+        ".....WW.........",
+        "......WW........",
+        ".......WW.......", // punta hacia la cadera dcha.
+        "................",
+        "................",
+        "................",
+        "................",
+        "................",
+        "................",
+      ];
+
+// Accesorio equipado: un pequeño dije/gema brillando en el cuello.
+const ACCESSORY_ROWS = [
+        "................",
+        "................",
+        "................",
+        "................",
+        "................",
+        "................",
+        "......NN........",
+        "................",
+        "................",
+        "................",
         "................",
         "................",
         "................",
@@ -791,8 +841,10 @@ const compCache = {};
 
 export function spriteJugador(p) {
         const armR = p.equipo.armadura ? p.equipo.armadura.rareza : -1;
+        const armaR = p.equipo.arma ? p.equipo.arma.rareza : -1;
+        const accR = p.equipo.accesorio ? p.equipo.accesorio.rareza : -1;
         const skinId = META.skins.equipada[p.rol] || "";
-        const key = p.rol + "#" + armR + "#" + skinId;
+        const key = p.rol + "#" + armR + "#" + armaR + "#" + accR + "#" + skinId;
         if (compCache[key]) return compCache[key];
         let base = SPR[p.rol];
         if (skinId) {
@@ -813,6 +865,18 @@ export function spriteJugador(p) {
         if (armR >= 0)
           g.drawImage(
             buildSprite(ARMOR_ROWS, { A: RAREZAS[armR].col }, ESC_HEROE),
+            0,
+            0,
+          );
+        if (armaR >= 0)
+          g.drawImage(
+            buildSprite(WEAPON_ROWS, { W: RAREZAS[armaR].col }, ESC_HEROE),
+            0,
+            0,
+          );
+        if (accR >= 0)
+          g.drawImage(
+            buildSprite(ACCESSORY_ROWS, { N: RAREZAS[accR].col }, ESC_HEROE),
             0,
             0,
           );
