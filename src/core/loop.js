@@ -75,7 +75,11 @@ export function update(dt) {
             b.res,
           );
           p.anim += dt;
-          p.aim = p.inp.aimA;
+          // netAplicarInputs() ya puso el p.aim correcto para los jugadores
+          // 'net' (viene del cliente remoto); p.inp.aimA no existe para
+          // ellos, así que pisarlo aquí lo dejaba en NaN cada frame —
+          // rompía su dirección de ataque y el flip/rotación del sprite.
+          if (p.ctrl.tipo !== "net") p.aim = p.inp.aimA;
 
           let vx = 0,
             vy = 0;

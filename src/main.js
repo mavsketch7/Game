@@ -3,7 +3,7 @@ import { H, W, ajustarLienzo, cx } from "./core/canvas.js";
 import { update } from "./core/loop.js";
 import { aplicarTexto } from "./core/settings.js";
 import { G } from "./core/state.js";
-import { NET, netEnviarInputCliente, netEnviarSnapshot } from "./net/peer.js";
+import { NET, interpolarPosicionesRed, netEnviarInputCliente, netEnviarSnapshot } from "./net/peer.js";
 import { render } from "./render/world.js";
 import { pollPads } from "./systems/input.js";
 import { construirMenu } from "./ui/menu.js";
@@ -17,7 +17,10 @@ function bucle(ts) {
           // el cliente no simula: envía su input y dibuja el estado recibido
           netEnviarInputCliente();
           try {
-            if (G && G.players) render();
+            if (G && G.players) {
+              interpolarPosicionesRed();
+              render();
+            }
             else {
               cx.fillStyle = "#12101c";
               cx.fillRect(0, 0, W, H);

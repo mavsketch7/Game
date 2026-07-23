@@ -10,6 +10,7 @@ import { invSel } from "../ui/inventory.js";
 import { construirMenu } from "../ui/menu.js";
 import { banner, toast } from "../ui/notifications.js";
 import { ocultar } from "../ui/overlays.js";
+import { clamp } from "../utils/helpers.js";
 
 export const NET = {
         activo: false,
@@ -26,6 +27,16 @@ export const NET = {
         lastSend: 0,
         estado: "idle",
         rolElegido: 0,
+        // host: número de secuencia del último snapshot enviado.
+        seq: 0,
+        // cliente: último seq aceptado, para descartar snapshots viejos o
+        // desordenados que puedan llegar por el canal no fiable ("reliable: false").
+        lastSeq: -1,
+        // cliente: dos últimas posiciones de jugadores recibidas, para
+        // interpolar el movimiento entre snapshots (llegan a ~20 Hz) en vez
+        // de que la posición salte a trompicones cada vez que llega una.
+        interpPrev: null,
+        interpCurr: null,
       };
 
 function cargarPeerJS(cb) {
@@ -230,6 +241,13 @@ function onDataCliente(d) {
         if (d.t === "welcome") {
           NET.miIdx = d.idx;
         } else if (d.t === "estado") {
+          // el canal va sin fiabilidad/orden garantizados: si llega un
+          // snapshot más viejo que el último aplicado (adelantado por otro
+          // más reciente), se descarta para no "retroceder" el estado.
+          if (typeof d.seq === "number") {
+            if (d.seq <= NET.lastSeq) return;
+            NET.lastSeq = d.seq;
+          }
           recibirSnapshot(d.s);
         } else if (d.t === "inicio") {
           ocultar("menu");
@@ -426,12 +444,21 @@ function serializarEstado() {
 export function netEnviarSnapshot() {
         if (NET.modo !== "host" || !G) return;
         const ahora = performance.now();
-        if (ahora - NET.lastSend < 66) return; // ~15 Hz
+        if (ahora - NET.lastSend < 50) return; // ~20 Hz
         NET.lastSend = ahora;
-        netBroadcast({ t: "estado", s: serializarEstado() });
+        NET.seq++;
+        netBroadcast({ t: "estado", s: serializarEstado(), seq: NET.seq });
       }
 
 function recibirSnapshot(s) {
+        // guarda las posiciones de este snapshot para interpolarlas frame a
+        // frame en interpolarPosicionesRed() en vez de que salten a
+        // trompicones cada ~50ms (ver esa función más abajo).
+        NET.interpPrev = NET.interpCurr;
+        NET.interpCurr = {
+          t: performance.now(),
+          players: s.P.map((sp) => ({ idx: sp.idx, x: sp.x, y: sp.y, aim: sp.aim })),
+        };
         // players con defaults para que render() no falle
         const players = s.P.map((sp) => ({
           ...sp,
@@ -538,4 +565,37 @@ export function netEnviarInputCliente() {
           k2: !!keys["2"],
           k3: !!keys["3"],
         });
+      }
+
+function lerpAngulo(a, b, t) {
+        let diff = b - a;
+        while (diff > Math.PI) diff -= Math.PI * 2;
+        while (diff < -Math.PI) diff += Math.PI * 2;
+        return a + diff * t;
+      }
+
+// El host solo manda un snapshot completo ~20 veces por segundo; sin esto,
+// el cliente ve la posición de cada jugador saltar de una foto a la
+// siguiente (a trompicones) en vez de moverse fluido a los 60fps a los que
+// se renderiza. Se llama cada frame (ver main.js) y desliza x/y/aim de cada
+// jugador entre el snapshot anterior y el último recibido; si aún no ha
+// llegado uno nuevo, extrapola un poco más allá del último (hasta 1.6x el
+// intervalo) en la misma dirección en la que ya venía moviéndose.
+export function interpolarPosicionesRed() {
+        if (NET.modo !== "cliente" || !G || !G.players) return;
+        const { interpPrev: prev, interpCurr: curr } = NET;
+        if (!curr) return;
+        const base = prev || curr;
+        const span = curr.t - base.t;
+        const t = span > 0 ? clamp((performance.now() - base.t) / span, 0, 1.6) : 1;
+        for (const gp of G.players) {
+          const a = base.players.find((p) => p.idx === gp.idx);
+          const b = curr.players.find((p) => p.idx === gp.idx);
+          if (!a || !b) continue;
+          gp.x = a.x + (b.x - a.x) * t;
+          gp.y = a.y + (b.y - a.y) * t;
+          if (typeof a.aim === "number" && typeof b.aim === "number") {
+            gp.aim = lerpAngulo(a.aim, b.aim, t);
+          }
+        }
       }
