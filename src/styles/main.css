@@ -1106,6 +1106,24 @@ body.pantalla-completa #hint {
   color: var(--ceniza);
   padding-left: 8px;
 }
+.rank-header {
+  border-top: none;
+  border-bottom: 1px solid var(--borde);
+  padding-bottom: 6px;
+  margin-bottom: 2px;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  font-size: 0.68rem;
+}
+.rank-header .rank-pos,
+.rank-header .rank-nombre,
+.rank-header .rank-stat {
+  color: var(--ceniza);
+  font-weight: 800;
+}
+.rank-fila.rank-header + .rank-fila {
+  border-top: none;
+}
 .ficha-cab {
   display: flex;
   gap: 14px;

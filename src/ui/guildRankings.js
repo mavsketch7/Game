@@ -20,11 +20,18 @@ export async function abrirRankingGremios() {
     '<button class="btn dorado" onclick="cerrarRankingGremios()">Cerrar</button></div>' +
     '<p style="color:var(--ceniza);font-size:.8rem">Cargando…</p>';
   mostrar("ranking-gremios");
+  const header =
+    '<div class="rank-fila rank-header"><span class="rank-pos">#</span>' +
+    '<span class="rank-nombre">Gremio</span>' +
+    '<span class="rank-stat" title="Daño total">⚔ Daño</span>' +
+    '<span class="rank-stat" title="Enemigos derrotados">☠ Bajas</span>' +
+    '<span class="rank-stat" title="Parries exitosos">🛡‍⚔ Parries</span></div>';
   let filas = "";
   try {
     const top = await rankingGremios(20);
     filas = top.length
-      ? top
+      ? header +
+        top
           .map(
             (g, i) =>
               '<div class="rank-fila"><span class="rank-pos">#' +

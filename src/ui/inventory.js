@@ -49,8 +49,15 @@ function rankingSesion() {
               "</span></div>",
           )
           .join("");
+        const header =
+          '<div class="rank-fila rank-header"><span class="rank-pos">#</span>' +
+          '<span class="rank-nombre">Jugador</span>' +
+          '<span class="rank-stat" title="Daño total">⚔ Daño</span>' +
+          '<span class="rank-stat" title="Enemigos derrotados">☠ Bajas</span>' +
+          '<span class="rank-stat" title="Parries exitosos">🛡‍⚔ Parries</span></div>';
         return (
           '<div class="ranking-sesion"><h3 style="margin-top:0;font-size:.85rem;color:var(--vespero)">🏆 Ranking de la sesión</h3>' +
+          header +
           filas +
           "</div>"
         );
