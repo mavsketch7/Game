@@ -50,6 +50,11 @@
               Entrar en la Torre
             </button>
           </div>
+          <div style="text-align: center; margin-top: 6px">
+            <button class="btn" onclick="abrirRankingGremios()">
+              🏆 Rankings de gremios
+            </button>
+          </div>
           <label class="check-ff"
             ><input type="checkbox" id="chk-ff" checked /> 🔥 Fuego amigo
             (ataques, flechas y áreas dañan a tus compañeros al 50%)</label
@@ -117,6 +122,9 @@
       </div>
       <div id="info-overlay" class="overlay oculto" style="z-index: 20">
         <div class="overlay-inner" id="info-inner"></div>
+      </div>
+      <div id="ranking-gremios" class="overlay oculto" style="z-index: 20">
+        <div class="overlay-inner" id="ranking-gremios-inner"></div>
       </div>
       <div id="ajustes" class="overlay oculto" style="z-index: 25">
         <div class="overlay-inner" id="ajustes-inner"></div>

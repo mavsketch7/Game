@@ -25,6 +25,7 @@ export function nuevaPartida() {
             color: COLORES_J[i],
             nombre: (s.nombre && s.nombre.trim().slice(0, 14)) || "J" + (i + 1),
             gremio: s.gremio ? s.gremio.name : null,
+            gremioId: s.gremio ? s.gremio.id : null,
             ctrl: s.ctrl,
             rol,
             x: 0,

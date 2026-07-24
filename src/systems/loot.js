@@ -3,6 +3,7 @@ import { H, W } from "../core/canvas.js";
 import { MAX_PLANTA, NOMBRES_ARMA_CLASE, NOMBRES_ITEM, ORDEN_ROLES, PRECIO_VENTA, RAREZAS, ROLES, SLOTS, SUFIJOS } from "../core/constants.js";
 import { META } from "../core/save.js";
 import { G, setG } from "../core/state.js";
+import { enviarStatsGremio } from "./guilds.js";
 import { M } from "./input.js";
 import { construirMenu } from "../ui/menu.js";
 import { banner, toast } from "../ui/notifications.js";
@@ -94,6 +95,18 @@ export function plantaDespejada() {
 
 export function finPartida(victoria) {
         G.activo = false;
+        // sumar al ranking global del gremio (si el jugador pertenece a uno);
+        // no bloquea el fin de partida ni se muestra error si falla la red
+        for (const p of G.players) {
+          if (p.gremioId) {
+            enviarStatsGremio(
+              p.gremioId,
+              p.statDano,
+              p.statDerrotados,
+              p.statParries,
+            ).catch(() => {});
+          }
+        }
         const st = G.stats,
           min = Math.floor(st.tiempo / 60),
           seg = Math.floor(st.tiempo % 60);
