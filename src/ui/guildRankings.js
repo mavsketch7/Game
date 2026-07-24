@@ -22,7 +22,7 @@ export async function abrirRankingGremios() {
   mostrar("ranking-gremios");
   const header =
     '<div class="rank-fila rank-header"><span class="rank-pos">#</span>' +
-    '<span class="rank-nombre">Gremio</span>' +
+    '<span class="rank-jugador">Gremio</span>' +
     '<span class="rank-stat" title="Daño total">⚔ Daño</span>' +
     '<span class="rank-stat" title="Enemigos derrotados">☠ Bajas</span>' +
     '<span class="rank-stat" title="Parries exitosos">🛡‍⚔ Parries</span></div>';
@@ -36,9 +36,9 @@ export async function abrirRankingGremios() {
             (g, i) =>
               '<div class="rank-fila"><span class="rank-pos">#' +
               (i + 1) +
-              "</span><span class=\"rank-nombre\">" +
+              '</span><span class="rank-jugador"><span class="rank-nombre">' +
               escHtml(g.name) +
-              "</span>" +
+              "</span></span>" +
               '<span class="rank-stat" title="Daño total">⚔ ' +
               g.total_dano +
               '</span><span class="rank-stat" title="Enemigos derrotados">☠ ' +

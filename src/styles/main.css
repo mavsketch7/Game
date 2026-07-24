@@ -1078,10 +1078,10 @@ body.pantalla-completa #hint {
   margin-top: 10px;
 }
 .rank-fila {
-  display: flex;
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr) 64px 64px 72px;
   align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
+  column-gap: 8px;
   padding: 4px 0;
   font-size: 0.78rem;
   border-top: 1px solid var(--borde);
@@ -1092,19 +1092,29 @@ body.pantalla-completa #hint {
 .rank-pos {
   color: var(--ceniza);
   font-weight: 800;
-  min-width: 22px;
+}
+.rank-jugador {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
 }
 .rank-nombre {
   font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .rank-gremio {
   color: var(--alba);
-  font-size: 0.72rem;
+  font-size: 0.7rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .rank-stat {
-  margin-left: auto;
   color: var(--ceniza);
-  padding-left: 8px;
+  text-align: right;
+  white-space: nowrap;
 }
 .rank-header {
   border-top: none;
@@ -1116,7 +1126,7 @@ body.pantalla-completa #hint {
   font-size: 0.68rem;
 }
 .rank-header .rank-pos,
-.rank-header .rank-nombre,
+.rank-header .rank-jugador,
 .rank-header .rank-stat {
   color: var(--ceniza);
   font-weight: 800;

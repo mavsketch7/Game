@@ -32,7 +32,7 @@ function rankingSesion() {
             (q, i) =>
               '<div class="rank-fila"><span class="rank-pos">#' +
               (i + 1) +
-              '</span><span class="rank-nombre" style="color:' +
+              '</span><span class="rank-jugador"><span class="rank-nombre" style="color:' +
               q.color +
               '">' +
               escHtml(q.nombre) +
@@ -40,6 +40,7 @@ function rankingSesion() {
               (q.gremio
                 ? '<span class="rank-gremio">🛡 ' + escHtml(q.gremio) + "</span>"
                 : "") +
+              "</span>" +
               '<span class="rank-stat" title="Daño total">⚔ ' +
               Math.round(q.statDano || 0) +
               '</span><span class="rank-stat" title="Enemigos derrotados">☠ ' +
@@ -51,7 +52,7 @@ function rankingSesion() {
           .join("");
         const header =
           '<div class="rank-fila rank-header"><span class="rank-pos">#</span>' +
-          '<span class="rank-nombre">Jugador</span>' +
+          '<span class="rank-jugador">Jugador</span>' +
           '<span class="rank-stat" title="Daño total">⚔ Daño</span>' +
           '<span class="rank-stat" title="Enemigos derrotados">☠ Bajas</span>' +
           '<span class="rank-stat" title="Parries exitosos">🛡‍⚔ Parries</span></div>';
