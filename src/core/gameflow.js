@@ -15,9 +15,6 @@ export function nuevaPartida() {
         initAudio();
         reanudarAudio();
         aplicarMusica();
-        const nombre1 = (document.getElementById("input-nombre").value || "J1")
-          .trim()
-          .slice(0, 14);
         const players = [];
         M.slots.forEach((s, i) => {
           if (!s.activo) return;
@@ -26,7 +23,7 @@ export function nuevaPartida() {
           players.push({
             idx: players.length,
             color: COLORES_J[i],
-            nombre: i === 0 ? nombre1 : "J" + (i + 1),
+            nombre: (s.nombre && s.nombre.trim().slice(0, 14)) || "J" + (i + 1),
             ctrl: s.ctrl,
             rol,
             x: 0,

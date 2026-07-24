@@ -488,23 +488,30 @@ body.pantalla-completa #hint {
 
 #fila-nombre {
   display: flex;
+  justify-content: center;
   gap: 8px;
   margin-top: 10px;
   flex-wrap: wrap;
 }
-#fila-nombre input {
-  flex: 1;
-  min-width: 170px;
+/* nombre por jugador: un input pequeño dentro de cada tarjeta de
+   aspirante (ver ui/menu.js), no uno solo compartido para J1. */
+.input-nombre-slot {
+  width: 100%;
+  margin-top: 2px;
   background: #0d0b15;
   border: 1px solid var(--borde);
-  border-radius: 8px;
-  padding: 9px 12px;
+  border-radius: 6px;
+  padding: 4px 7px;
   color: var(--hueso);
   font-family: inherit;
-  font-size: 0.92rem;
+  font-size: 0.78rem;
 }
-#fila-nombre input:focus-visible {
+.input-nombre-slot:focus-visible {
   outline: 2px solid var(--vespero);
+}
+.input-nombre-slot:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 .btn {
   background: var(--piedra2);

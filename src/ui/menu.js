@@ -47,6 +47,23 @@ export function construirMenu() {
         const cont = document.getElementById("slots");
         if (!cont) return;
         const soyAnfitrion = esAnfitrionDelLobby();
+
+        // cont.innerHTML="" reconstruye todas las tarjetas desde cero, así
+        // que sin esto, escribir el propio nombre perdía el foco y el
+        // cursor en cuanto llegaba CUALQUIER otro cambio de red mientras
+        // tecleabas (incluida tu propia actualización, que vuelve como
+        // snapshot del anfitrión). Se guarda y se restaura alrededor del
+        // repintado.
+        const focoPrevio = document.activeElement;
+        let focoIdx = -1,
+          focoSel = null,
+          focoVal = null;
+        if (focoPrevio && focoPrevio.classList?.contains("input-nombre-slot")) {
+          focoIdx = Number(focoPrevio.dataset.idx);
+          focoSel = [focoPrevio.selectionStart, focoPrevio.selectionEnd];
+          focoVal = focoPrevio.value;
+        }
+
         cont.innerHTML = "";
         M.slots.forEach((s, i) => {
           const div = document.createElement("div");
@@ -95,13 +112,35 @@ export function construirMenu() {
           mini.style.width = "44px";
           mini.style.imageRendering = "pixelated";
           div.appendChild(mini);
+          const nombreInput = document.createElement("input");
+          nombreInput.className = "input-nombre-slot";
+          nombreInput.maxLength = 20;
+          nombreInput.placeholder = "Nombre (opcional)";
+          nombreInput.setAttribute("aria-label", "Nombre de J" + (i + 1));
+          nombreInput.dataset.idx = String(i);
+          nombreInput.value = s.nombre || "";
+          nombreInput.disabled = !editable;
+          let nombreDebounce = null;
+          nombreInput.oninput = () => {
+            s.nombre = nombreInput.value;
+            if (NET.modo === "cliente") {
+              clearTimeout(nombreDebounce);
+              nombreDebounce = setTimeout(
+                () => enviarRolPropio(s.rolIdx, s.listo, s.nombre),
+                400,
+              );
+            } else {
+              netEnviarLobby();
+            }
+          };
+          div.appendChild(nombreInput);
           const bl = document.createElement("button");
           bl.className = "btn-listo";
           bl.textContent = s.listo ? "✔ Listo" : "Marcar listo";
           bl.disabled = !editable;
           bl.onclick = () => {
             s.listo = !s.listo;
-            if (NET.modo === "cliente") enviarRolPropio(s.rolIdx, s.listo);
+            if (NET.modo === "cliente") enviarRolPropio(s.rolIdx, s.listo, s.nombre);
             construirMenu();
           };
           div.appendChild(bl);
@@ -127,7 +166,7 @@ export function construirMenu() {
                   s.rolIdx =
                     (s.rolIdx + ORDEN_ROLES.length + +b.dataset.d) %
                     ORDEN_ROLES.length;
-                  if (NET.modo === "cliente") enviarRolPropio(s.rolIdx, s.listo);
+                  if (NET.modo === "cliente") enviarRolPropio(s.rolIdx, s.listo, s.nombre);
                   construirMenu();
                 }
               };
@@ -135,6 +174,16 @@ export function construirMenu() {
           }
           cont.appendChild(div);
         });
+        if (focoIdx >= 0) {
+          const focoNuevo = cont.querySelector(
+            '.input-nombre-slot[data-idx="' + focoIdx + '"]',
+          );
+          if (focoNuevo && !focoNuevo.disabled) {
+            focoNuevo.value = focoVal;
+            focoNuevo.focus();
+            focoNuevo.setSelectionRange(focoSel[0], focoSel[1]);
+          }
+        }
         const cl = document.getElementById("cartas-lobby");
         cl.innerHTML = Object.entries(LOBBIES)
           .map(
