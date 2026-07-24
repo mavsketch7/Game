@@ -1,7 +1,7 @@
 // Auto-generated during the modularization refactor (2026-07-23).
 import { H, W } from "../core/canvas.js";
 import { MAX_PLANTA, NOMBRES_ARMA_CLASE, NOMBRES_ITEM, ORDEN_ROLES, PRECIO_VENTA, RAREZAS, ROLES, SLOTS, SUFIJOS } from "../core/constants.js";
-import { META } from "../core/save.js";
+import { META, guardarMeta } from "../core/save.js";
 import { G, setG } from "../core/state.js";
 import { enviarStatsGremio } from "./guilds.js";
 import { M } from "./input.js";
@@ -130,6 +130,7 @@ export function finPartida(victoria) {
         const ventaAdj = Math.round(venta * fortunaM);
         const total = G.oroRun + ventaAdj;
         META.oro += total;
+        guardarMeta();
         document.getElementById("fin-inner").innerHTML =
           '<div class="pantalla-fin ' +
           (victoria ? "victoria" : "derrota") +

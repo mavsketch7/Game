@@ -1,5 +1,5 @@
 // Auto-generated during the modularization refactor (2026-07-23).
-import { META, SKINS } from "../core/save.js";
+import { META, SKINS, guardarMeta } from "../core/save.js";
 import { G } from "../core/state.js";
 import { HERO_ROWS, PALS, ROWS_CLASE, buildSprite } from "../render/sprites.js";
 import { toast } from "./notifications.js";
@@ -112,6 +112,7 @@ function comprarSkin(id) {
         if (META.skins.comprados.includes(id) || META.oro < sk.precio) return;
         META.oro -= sk.precio;
         META.skins.comprados.push(id);
+        guardarMeta();
         toast("🧵 Skin desbloqueada: " + sk.nombre, sk.pal.G);
         abrirSkins();
       }
@@ -123,11 +124,13 @@ function equiparSkin(id, pi) {
         if (META.skins.equipada[p.rol] === id)
           delete META.skins.equipada[p.rol];
         else META.skins.equipada[p.rol] = id;
+        guardarMeta();
         abrirSkins();
       }
 
 function quitarSkins() {
         META.skins.equipada = {};
+        guardarMeta();
         abrirSkins();
       }
 

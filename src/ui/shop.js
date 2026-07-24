@@ -1,5 +1,5 @@
 // Auto-generated during the modularization refactor (2026-07-23).
-import { MEJORAS_TIENDA, META, costeMejora } from "../core/save.js";
+import { MEJORAS_TIENDA, META, costeMejora, guardarMeta } from "../core/save.js";
 import { G } from "../core/state.js";
 import { statsTot } from "../systems/combat.js";
 import { M } from "../systems/input.js";
@@ -71,6 +71,7 @@ function comprarMejora(id) {
         if (META.oro < coste) return;
         META.oro -= coste;
         META.mejoras[id]++;
+        guardarMeta();
         toast(
           "Mejora comprada: " + m.nombre + " Nv." + META.mejoras[id],
           "#ffd27f",

@@ -7,6 +7,36 @@ export const META = {
         mejoras: { hp: 0, atk: 0, armor: 0, vel: 0, fortuna: 0 },
       };
 
+const CLAVE_META = "vespero_meta_v1";
+
+// Progreso entre partidas (oro, mejoras, skins) persistido en el propio
+// navegador -- antes vivía solo en memoria y se perdía al recargar.
+export function guardarMeta() {
+        try {
+          localStorage.setItem(CLAVE_META, JSON.stringify(META));
+        } catch (e) {
+          /* localStorage lleno/deshabilitado: seguir sin persistir */
+        }
+      }
+
+function cargarMeta() {
+        let datos;
+        try {
+          const bruto = localStorage.getItem(CLAVE_META);
+          if (!bruto) return;
+          datos = JSON.parse(bruto);
+        } catch (e) {
+          return;
+        }
+        if (typeof datos.oro === "number") META.oro = datos.oro;
+        if (datos.mejoras) Object.assign(META.mejoras, datos.mejoras);
+        if (datos.skins) {
+          if (Array.isArray(datos.skins.comprados))
+            META.skins.comprados = datos.skins.comprados;
+          if (datos.skins.equipada) META.skins.equipada = datos.skins.equipada;
+        }
+      }
+
 export const MEJORAS_TIENDA = [
         {
           id: "hp",
@@ -94,3 +124,5 @@ export const SKINS = [
           pal: { H: "#e9b45c", B: "#c99035", G: "#fff0c8", L: "#8a6b23" },
         },
       ];
+
+cargarMeta();
