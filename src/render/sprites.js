@@ -646,8 +646,6 @@ const KENNEY_ICON_SRC = {
         slime: assetUrl("slime"),
         mercader: assetUrl("mercader"),
         sastre: assetUrl("sastre"),
-        cofre: assetUrl("cofre"),
-        cofreAb: assetUrl("cofreAb"),
         barril: assetUrl("barril"),
         guerrero: assetUrl("guerrero"),
         arquero: assetUrl("arquero"),
@@ -669,8 +667,6 @@ const KENNEY_ICON_SCALE = {
         slime: 3.5,
         mercader: 3,
         sastre: 3,
-        cofre: 3,
-        cofreAb: 3,
         barril: 3,
         guerrero: 3,
         arquero: 3,
@@ -697,6 +693,24 @@ for (const kIcon in KENNEY_ICON_SRC) {
         })();
         imIcon.src = KENNEY_ICON_SRC[kIcon];
       }
+
+// Animación de apertura del cofre (3 fotogramas reales: cerrado, entreabierto,
+// abierto con oro -- ver docs de la sesión). SPR.cofre/SPR.cofreAb siguen
+// existiendo por compatibilidad (primer y último fotograma) para cualquier
+// código que aún los lea directamente; SPR.cofreFrames es el array completo
+// que usa render/world.js para la animación al abrir.
+export const SPR_COFRE_FRAMES = [];
+const COFRE_FRAME_SRC = ["cofre_f0", "cofre_f1", "cofre_f2"];
+COFRE_FRAME_SRC.forEach((name, i) => {
+  const im = new Image();
+  im.onload = () => {
+    SPR_COFRE_FRAMES[i] = upscaleNN(im, 3);
+    if (SPR_COFRE_FRAMES[0]) SPR.cofre = SPR_COFRE_FRAMES[0];
+    if (SPR_COFRE_FRAMES[COFRE_FRAME_SRC.length - 1])
+      SPR.cofreAb = SPR_COFRE_FRAMES[COFRE_FRAME_SRC.length - 1];
+  };
+  im.src = assetUrl(name);
+});
 
 const KENNEY_TILE_SRC = {
         floorA: assetUrl("floorA"),

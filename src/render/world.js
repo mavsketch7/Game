@@ -4,7 +4,7 @@ import { ELEMENTOS, MAX_PLANTA, RAREZAS, SUPS } from "../core/constants.js";
 import { G } from "../core/state.js";
 import { fxParticulas } from "./effects.js";
 import { barra, renderHUD } from "./hud.js";
-import { ATTACK_DUR, ESC_FORMA, KENNEY_TILE, NO_SCHEMATIC_WEAPON, REAL_ATTACK, REAL_RUN, REAL_SPRITE_SCALE, SHEETS, SPR, SPR_FORMAS, assetOK, spriteJugador, wallPatron } from "./sprites.js";
+import { ATTACK_DUR, ESC_FORMA, KENNEY_TILE, NO_SCHEMATIC_WEAPON, REAL_ATTACK, REAL_RUN, REAL_SPRITE_SCALE, SHEETS, SPR, SPR_COFRE_FRAMES, SPR_FORMAS, assetOK, spriteJugador, wallPatron } from "./sprites.js";
 import { groundTarget } from "../systems/abilities.js";
 import { masCercano } from "../systems/combat.js";
 import { mouse } from "../systems/input.js";
@@ -20,13 +20,10 @@ export let sueloPat = null,
 const TEMA_SUELO_FORMA = {
         sala: "floorA",
         cruz: "floorB",
-        circulo: "floorA",
         partida: "floorB",
         foso: "floorA",
-        rombo: "floorB",
         columnas: "floorA",
         pasilloL: "floorB",
-        anillo: "floorA",
       };
 
 function patronSuelo(f, forma, tipo) {
@@ -101,6 +98,29 @@ function patronSuelo(f, forma, tipo) {
         return cx.createPattern(c, "repeat");
       }
 
+// Aviso de "pulsa esta tecla" sobre un objeto interactivo (ver cofre): un
+// cuadrado imitando un keycap de teclado, con un pequeño rebote para que
+// llame la atención -- mismo estilo visual que los <kbd> del HUD (main.css).
+function dibujarAvisoTecla(x, y, letra) {
+        const bob = Math.sin(animGlobal * 4) * 2;
+        const s = 20;
+        cx.save();
+        cx.translate(x, y + bob);
+        cx.fillStyle = "#0d0b15";
+        cx.strokeStyle = "#3a3453";
+        cx.lineWidth = 2;
+        cx.beginPath();
+        cx.roundRect(-s / 2, -s / 2, s, s, 4);
+        cx.fill();
+        cx.stroke();
+        cx.fillStyle = "#e9e3d5";
+        cx.font = "700 12px Alegreya Sans";
+        cx.textAlign = "center";
+        cx.textBaseline = "middle";
+        cx.fillText(letra, 0, 1);
+        cx.restore();
+      }
+
 function drawSprite(img, x, y, flip, esc) {
         esc = esc || 1;
         cx.save();
@@ -153,41 +173,6 @@ export function render() {
           return;
         }
 
-        // forma de la sala: vacío exterior y muros
-        if (G.forma === "circulo" || G.forma === "rombo" || G.forma === "anillo") {
-          cx.fillStyle = "#0a0812";
-          cx.beginPath();
-          cx.rect(0, 0, W, H);
-          if (G.forma === "circulo" || G.forma === "anillo")
-            cx.ellipse(W / 2, H / 2, W / 2 - 24, H / 2 - 24, 0, 0, TAU);
-          else {
-            cx.moveTo(W / 2, 20);
-            cx.lineTo(W - 20, H / 2);
-            cx.lineTo(W / 2, H - 20);
-            cx.lineTo(20, H / 2);
-            cx.closePath();
-          }
-          if (G.forma === "anillo") cx.ellipse(W / 2, H / 2, 90, 70, 0, 0, TAU);
-          cx.fill("evenodd");
-          cx.strokeStyle = "#3a3453";
-          cx.lineWidth = 6;
-          cx.beginPath();
-          if (G.forma === "circulo" || G.forma === "anillo")
-            cx.ellipse(W / 2, H / 2, W / 2 - 24, H / 2 - 24, 0, 0, TAU);
-          else {
-            cx.moveTo(W / 2, 20);
-            cx.lineTo(W - 20, H / 2);
-            cx.lineTo(W / 2, H - 20);
-            cx.lineTo(20, H / 2);
-            cx.closePath();
-          }
-          cx.stroke();
-          if (G.forma === "anillo") {
-            cx.beginPath();
-            cx.ellipse(W / 2, H / 2, 90, 70, 0, 0, TAU);
-            cx.stroke();
-          }
-        }
         const wallPat = wallPatron();
         for (const m of G.muros) {
           if (wallPat) {
@@ -608,7 +593,17 @@ export function render() {
             cx.beginPath();
             cx.ellipse(o.x, o.y + 10, 14, 5, 0, 0, TAU);
             cx.fill();
-            drawSprite(o.abierto ? SPR.cofreAb : SPR.cofre, o.x, o.y);
+            // al abrirse (interactuar() en abilities.js) reproduce brevemente
+            // los 3 fotogramas reales de la animación antes de quedarse en
+            // el último (abierto); si aún no cargaron del todo, cae al
+            // procedural/estático de siempre sin romper nada.
+            let imgCofre = o.abierto ? SPR.cofreAb : SPR.cofre;
+            if (o.abriendoT > 0 && SPR_COFRE_FRAMES.length > 1) {
+              const prog = clamp(1 - o.abriendoT / 0.4, 0, 0.999);
+              const fr = SPR_COFRE_FRAMES[Math.floor(prog * SPR_COFRE_FRAMES.length)];
+              if (fr) imgCofre = fr;
+            }
+            drawSprite(imgCofre, o.x, o.y);
             if (!o.abierto) {
               cx.globalAlpha = 0.3 + Math.sin(animGlobal * 3) * 0.15;
               cx.fillStyle = "#e9b45c";
@@ -616,6 +611,16 @@ export function render() {
               cx.arc(o.x, o.y, 18, 0, TAU);
               cx.fill();
               cx.globalAlpha = 1;
+              // distancia directa (no depende de p.cofreObj, que es estado
+              // solo del host -- así el aviso se ve igual en el invitado,
+              // que solo recibe la posición de los jugadores y los objetos)
+              if (
+                G.players.some(
+                  (p) => !p.ko && Math.hypot(p.x - o.x, p.y - o.y) < 46,
+                )
+              ) {
+                dibujarAvisoTecla(o.x, o.y - 26, "E");
+              }
             }
           } else if (o.tipo === "cristal") {
             const bob = Math.sin(animGlobal * 3 + o.x) * 3;

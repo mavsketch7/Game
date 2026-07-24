@@ -20,29 +20,24 @@ function climaAleatorio() {
                 : "ceniza";
       }
 
+// Solo formas cuadradas/rectangulares -- nada de círculos, rombos ni anillos.
 const FORMAS_MAPA = [
         "sala",
         "sala",
         "cruz",
-        "circulo",
         "partida",
         "foso",
-        "rombo",
         "columnas",
         "pasilloL",
-        "anillo",
       ];
 
 const NOMBRE_FORMA = {
         sala: "",
         cruz: "Sala en cruz",
-        circulo: "Rotonda",
         partida: "Sala partida",
         foso: "Anillo del foso",
-        rombo: "Cámara romboidal",
         columnas: "Sala de columnas",
         pasilloL: "Pasillo en L",
-        anillo: "Anillo hueco",
       };
 
 export function generarMapa(forma) {
@@ -97,37 +92,10 @@ export function generarMapa(forma) {
             { x: W * 0.11, y: H * 0.56, w: W * 0.34, h: H * 0.3 },
           );
         }
-        // "anillo": el hueco central se resuelve como zona inválida en
-        // dentroForma()/aplicarLimites(), no como muro rectangular -- no
-        // añade nada a G.muros.
       }
 
 export function dentroForma(x, y, margen) {
         const m = margen || 0;
-        if (G.forma === "circulo") {
-          const rx = W / 2 - 30 - m,
-            ry = H / 2 - 30 - m;
-          const dx = (x - W / 2) / rx,
-            dy = (y - H / 2) / ry;
-          return dx * dx + dy * dy <= 1;
-        }
-        if (G.forma === "rombo") {
-          const rx = W / 2 - 26 - m,
-            ry = H / 2 - 26 - m;
-          return Math.abs(x - W / 2) / rx + Math.abs(y - H / 2) / ry <= 1;
-        }
-        if (G.forma === "anillo") {
-          const rx = W / 2 - 30 - m,
-            ry = H / 2 - 30 - m;
-          const dx = (x - W / 2) / rx,
-            dy = (y - H / 2) / ry;
-          if (dx * dx + dy * dy > 1) return false;
-          const irx = 90 + m,
-            iry = 70 + m;
-          const idx = (x - W / 2) / irx,
-            idy = (y - H / 2) / iry;
-          return idx * idx + idy * idy > 1;
-        }
         return x > 28 + m * 0 && x < W - 28 && y > 28 && y < H - 28;
       }
 
@@ -174,38 +142,6 @@ export function aplicarLimites(ent) {
             if (Math.min(dx1, dx2) < Math.min(dy1, dy2))
               ent.x += dx1 < dx2 ? dx1 : -dx2;
             else ent.y += dy1 < dy2 ? dy1 : -dy2;
-          }
-        }
-        if (G.forma === "circulo" || G.forma === "anillo") {
-          const rx = W / 2 - 30,
-            ry = H / 2 - 30;
-          const dx = (ent.x - W / 2) / rx,
-            dy = (ent.y - H / 2) / ry;
-          const d2 = dx * dx + dy * dy;
-          if (d2 > 1) {
-            const d = Math.sqrt(d2);
-            ent.x = W / 2 + (dx / d) * rx;
-            ent.y = H / 2 + (dy / d) * ry;
-          }
-          if (G.forma === "anillo") {
-            const irx = 90,
-              iry = 70;
-            const idx = (ent.x - W / 2) / irx,
-              idy = (ent.y - H / 2) / iry;
-            const id2 = idx * idx + idy * idy;
-            if (id2 < 1 && id2 > 0) {
-              const id = Math.sqrt(id2);
-              ent.x = W / 2 + (idx / id) * irx;
-              ent.y = H / 2 + (idy / id) * iry;
-            }
-          }
-        } else if (G.forma === "rombo") {
-          const rx = W / 2 - 26,
-            ry = H / 2 - 26;
-          const s = Math.abs(ent.x - W / 2) / rx + Math.abs(ent.y - H / 2) / ry;
-          if (s > 1) {
-            ent.x = W / 2 + (ent.x - W / 2) / s;
-            ent.y = H / 2 + (ent.y - H / 2) / s;
           }
         }
       }
@@ -303,7 +239,8 @@ function ponHazardsYObjetos(f) {
 // cámara ni scroll. La cuadrícula GRIDxGRID solo decide qué salas son
 // vecinas y en qué dirección cardinal cae la puerta entre ellas; las 4
 // posiciones de puerta (centro de cada borde) son fijas y ya se verificó
-// que caen dentro de dentroForma() para las 9 formas de sala existentes.
+// que caen dentro de dentroForma() para las 6 formas de sala existentes
+// (todas rectangulares -- ver FORMAS_MAPA).
 const GRID = 3;
 const DIR_VEC = { N: [0, -1], S: [0, 1], O: [-1, 0], E: [1, 0] };
 const DIR_OPUESTA = { N: "S", S: "N", E: "O", O: "E" };
@@ -549,8 +486,6 @@ export function iniciarPlanta() {
             p.safeY = p.y;
             p.atrapado = null;
             p.rootT = 0;
-            if (G.forma === "circulo" || G.forma === "rombo" || G.forma === "anillo")
-              p.y = H - 88;
             if (p.ko) {
               p.ko = false;
               p.hp = Math.round(statsTot(p).hpMax * 0.3);
@@ -574,7 +509,7 @@ export function iniciarPlanta() {
           G.objetos = [];
           G.decals = [];
           G.hazards = [];
-          generarMapa(az(["sala", "circulo", "rombo"]));
+          generarMapa(az(["sala", "sala", "cruz"]));
           reposicionarJugadores();
           G.pilares = [];
           ponPilares(f, ri(1, 2));

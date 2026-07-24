@@ -271,53 +271,17 @@ export function golpeObjeto(o, dmg) {
         }
       }
 
-// Ventana de acierto del QTE de interacción con cofres (mismo patrón que el
-// QTE de escape de las arenas movedizas en core/loop.js: un temporizador que
-// oscila 0→1 y hay que pulsar "interactuar" cuando cae en esta franja).
-const COFRE_QTE_VENTANA = [0.6, 0.85];
-const COFRE_QTE_GOLPES = 3;
-
-// Botón de acción (E en teclado, ver systems/input.js): abre un cofre cercano
-// sin abrir mediante un mini-QTE, en vez de golpearlo como a un barril. El
-// temporizador del QTE (p.cofreQteT) se actualiza cada frame en core/loop.js
-// mientras el jugador siga cerca del mismo cofre.
+// Botón de acción (E en teclado, click del stick izq. en mando -- ver
+// systems/input.js): abre al instante un cofre cercano sin abrir. La
+// detección de "hay un cofre cerca" corre cada frame en core/loop.js
+// (p.cofreObj), que también es lo que usa render/world.js para dibujar el
+// aviso de tecla sobre el cofre antes de pulsar nada.
 export function interactuar(p) {
         if (p.atrapado || p.ko) return;
-        let cofre = p.cofreObj;
-        if (!cofre || cofre.abierto) {
-          cofre = G.objetos.find(
-            (o) =>
-              o.tipo === "cofre" &&
-              !o.abierto &&
-              Math.hypot(o.x - p.x, o.y - p.y) < 46,
-          );
-          if (!cofre) return;
-          p.cofreObj = cofre;
-          p.cofreQteT = 0;
-          p.cofreHits = 0;
-          fxTexto(p.x, p.y - 30, "Abriendo…", "#e9b45c");
-          return;
-        }
-        const enVentana =
-          p.cofreQteT >= COFRE_QTE_VENTANA[0] &&
-          p.cofreQteT <= COFRE_QTE_VENTANA[1];
-        if (!enVentana) {
-          fxTexto(p.x, p.y - 30, "fallo…", "#9a93ab");
-          return;
-        }
-        p.cofreHits++;
-        fxOnda(p.x, p.y, 20 + p.cofreHits * 8, "#e9b45c");
-        if (p.cofreHits < COFRE_QTE_GOLPES) {
-          fxTexto(
-            p.x,
-            p.y - 30,
-            "¡" + p.cofreHits + "/" + COFRE_QTE_GOLPES + "!",
-            "#e9b45c",
-            true,
-          );
-          return;
-        }
+        const cofre = p.cofreObj;
+        if (!cofre || cofre.abierto) return;
         cofre.abierto = true;
+        cofre.abriendoT = 0.4; // reproduce la animación de apertura (ver world.js)
         p.cofreObj = null;
         fxOnda(cofre.x, cofre.y, 30, "#e9b45c");
         const pv1 = posDropValida(cofre.x, cofre.y - 14);

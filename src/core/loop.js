@@ -222,19 +222,17 @@ export function update(dt) {
             }
           }
 
-          // ---- QTE de apertura de cofre (botón de interacción, ver
-          // abilities.js: interactuar) -- se cancela si el jugador se aleja
-          // o si el cofre ya lo abrió otro compañero ----
-          if (p.cofreObj) {
-            if (
-              p.cofreObj.abierto ||
-              Math.hypot(p.cofreObj.x - p.x, p.cofreObj.y - p.y) > 46
-            ) {
-              p.cofreObj = null;
-            } else {
-              p.cofreQteT = (p.cofreQteT + dt * 1.1) % 1;
-            }
-          }
+          // cofre cercano sin abrir (botón de interacción, ver
+          // abilities.js: interactuar) -- se recalcula cada frame, tanto
+          // para saber si E hace algo como para que render/world.js dibuje
+          // el aviso de tecla sobre el cofre
+          p.cofreObj =
+            G.objetos.find(
+              (o) =>
+                o.tipo === "cofre" &&
+                !o.abierto &&
+                Math.hypot(o.x - p.x, o.y - p.y) < 46,
+            ) || null;
           for (let i = p.trail.length - 1; i >= 0; i--) {
             p.trail[i].t -= dt;
             if (p.trail[i].t <= 0) p.trail.splice(i, 1);
@@ -1152,6 +1150,7 @@ export function update(dt) {
         // objetos interactivos por proximidad (cristal de maná)
         for (let i = G.objetos.length - 1; i >= 0; i--) {
           const o = G.objetos[i];
+          if (o.tipo === "cofre" && o.abriendoT > 0) o.abriendoT -= dt;
           if (o.tipo === "cristal") {
             const p = vivos().find(
               (q) => Math.hypot(o.x - q.x, o.y - q.y) < 24,

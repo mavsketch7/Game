@@ -79,7 +79,7 @@ function iniciarPvP() {
         G.puertas = [];
         G.salaTipo = "normal";
         G.salaEsFinal = false;
-        generarMapa(az(["sala", "circulo", "rombo"]));
+        generarMapa(az(["sala", "sala", "cruz"]));
         G.pilares = [];
         const nPil = ri(2, 3);
         for (let i = 0; i < nPil; i++) {
