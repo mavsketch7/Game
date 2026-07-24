@@ -2,7 +2,7 @@
 import { COLORES_J, LOBBIES, ORDEN_ROLES, ROLES } from "../core/constants.js";
 import { nuevaPartida } from "../core/gameflow.js";
 import { MEJORAS_TIENDA, META } from "../core/save.js";
-import { NET, crearSalaOnline, unirseSalaOnline } from "../net/peer.js";
+import { NET, crearSalaOnline, netEnviarLobby, unirseSalaOnline } from "../net/peer.js";
 import { SPR } from "../render/sprites.js";
 import { M } from "../systems/input.js";
 import { abrirInfo } from "./info.js";
@@ -21,10 +21,22 @@ import { abrirInfo } from "./info.js";
   menuEl.style.backgroundRepeat = "no-repeat, no-repeat";
 })();
 
+// Estructura original del menú, guardada en comprobarEnlace() antes de que
+// la sustituya por el panel "elige tu clase y conéctate" — se restaura en
+// mostrarLobbySincronizado() en cuanto el invitado empieza a recibir el
+// estado real del lobby del anfitrión.
+let overlayInnerOriginal = null;
+
+// true si este peer manda sobre el lobby (anfitrión o partida local sin
+// red todavía); false si es un invitado viendo el estado del anfitrión.
+function esAnfitrionDelLobby() {
+        return NET.modo !== "cliente";
+      }
+
 export function construirMenu() {
-        if (window._esInvitado) return;
         const cont = document.getElementById("slots");
         if (!cont) return;
+        const soyAnfitrion = esAnfitrionDelLobby();
         cont.innerHTML = "";
         M.slots.forEach((s, i) => {
           const div = document.createElement("div");
@@ -45,14 +57,20 @@ export function construirMenu() {
             " · " +
             (s.ctrl.tipo === "kbm"
               ? "Teclado + Ratón"
-              : "Mando " + (s.ctrl.idx + 1)) +
+              : s.ctrl.tipo === "net"
+                ? "Online"
+                : "Mando " + (s.ctrl.idx + 1)) +
             "</span>" +
             '<span class="pcolor" style="background:' +
             COLORES_J[i] +
             '"></span></div>' +
-            '<div class="fila-clase"><button class="btn-mini" data-d="-1">◀</button><h3>' +
+            '<div class="fila-clase"><button class="btn-mini"' +
+            (soyAnfitrion ? "" : " disabled") +
+            ' data-d="-1">◀</button><h3>' +
             r.nombre +
-            '</h3><button class="btn-mini" data-d="1">▶</button></div>' +
+            '</h3><button class="btn-mini"' +
+            (soyAnfitrion ? "" : " disabled") +
+            ' data-d="1">▶</button></div>' +
             '<div class="desc">' +
             r.desc +
             '<br><b style="color:var(--vespero)">Ulti:</b> ' +
@@ -69,6 +87,7 @@ export function construirMenu() {
           const bl = document.createElement("button");
           bl.className = "btn-listo";
           bl.textContent = s.listo ? "✔ Listo" : "Marcar listo";
+          bl.disabled = !soyAnfitrion;
           bl.onclick = () => {
             s.listo = !s.listo;
             construirMenu();
@@ -89,16 +108,18 @@ export function construirMenu() {
               "<kbd>◀▶</kbd> clase · <kbd>A</kbd> listo · <kbd>B</kbd> salir · <kbd>X</kbd> info · <kbd>▲▼</kbd> lobby · <kbd>Start</kbd> empezar";
             div.appendChild(ay);
           }
-          div.querySelectorAll(".btn-mini").forEach((b) => {
-            b.onclick = () => {
-              if (!s.listo) {
-                s.rolIdx =
-                  (s.rolIdx + ORDEN_ROLES.length + +b.dataset.d) %
-                  ORDEN_ROLES.length;
-                construirMenu();
-              }
-            };
-          });
+          if (soyAnfitrion) {
+            div.querySelectorAll(".btn-mini").forEach((b) => {
+              b.onclick = () => {
+                if (!s.listo) {
+                  s.rolIdx =
+                    (s.rolIdx + ORDEN_ROLES.length + +b.dataset.d) %
+                    ORDEN_ROLES.length;
+                  construirMenu();
+                }
+              };
+            });
+          }
           cont.appendChild(div);
         });
         const cl = document.getElementById("cartas-lobby");
@@ -107,7 +128,9 @@ export function construirMenu() {
             ([id, l]) =>
               '<button class="card-sel' +
               (M.lobby === id ? " activa" : "") +
-              '" data-lobby="' +
+              '"' +
+              (soyAnfitrion ? "" : " disabled") +
+              ' data-lobby="' +
               id +
               '">' +
               "<h3>" +
@@ -119,36 +142,83 @@ export function construirMenu() {
               "</div></button>",
           )
           .join("");
-        cl.querySelectorAll("button").forEach((b) => {
-          b.onclick = () => {
-            M.lobby = b.dataset.lobby;
-            construirMenu();
-          };
-        });
-        const activos = M.slots.filter((s) => s.activo);
-        document.getElementById("btn-empezar").disabled = !(
-          M.lobby &&
-          activos.length > 0 &&
-          activos.every((s) => s.listo)
-        );
-        // oro del gremio
-        let oroEl = document.getElementById("menu-oro");
-        if (!oroEl) {
-          oroEl = document.createElement("p");
-          oroEl.id = "menu-oro";
-          oroEl.style.cssText =
-            "text-align:center;color:#ffd27f;font-weight:800;font-size:.88rem;margin-top:10px";
-          document.getElementById("fila-nombre").after(oroEl);
+        if (soyAnfitrion) {
+          cl.querySelectorAll("button").forEach((b) => {
+            b.onclick = () => {
+              M.lobby = b.dataset.lobby;
+              construirMenu();
+            };
+          });
         }
-        oroEl.innerHTML =
-          "🪙 Oro del gremio: " +
-          META.oro +
-          (Object.values(META.mejoras).some((v) => v > 0)
-            ? " · Mejoras activas: " +
-              MEJORAS_TIENDA.filter((m) => META.mejoras[m.id] > 0)
-                .map((m) => m.ico + " Nv." + META.mejoras[m.id])
-                .join(" ")
-            : "");
+
+        // Controles exclusivos del anfitrión (nombre/empezar, fuego amigo,
+        // crear sala): ocultos para el invitado, que en su lugar ve un
+        // aviso de que está conectado y esperando.
+        const filaNombre = document.getElementById("fila-nombre");
+        const netPanel = document.getElementById("net-panel");
+        const ffLabel = document.querySelector(".check-ff");
+        if (filaNombre) filaNombre.style.display = soyAnfitrion ? "" : "none";
+        if (netPanel) netPanel.style.display = soyAnfitrion ? "" : "none";
+        if (ffLabel) ffLabel.style.display = soyAnfitrion ? "" : "none";
+        let estadoInvitado = document.getElementById("estado-invitado");
+        if (!soyAnfitrion) {
+          if (!estadoInvitado) {
+            estadoInvitado = document.createElement("p");
+            estadoInvitado.id = "estado-invitado";
+            estadoInvitado.style.cssText =
+              "text-align:center;color:var(--alba);margin-top:14px;font-size:.88rem";
+            document.getElementById("cartas-lobby").after(estadoInvitado);
+          }
+          estadoInvitado.textContent =
+            "Conectado. Viendo la sala del anfitrión en directo — esperando a que marque a todos listos y empiece la partida…";
+        } else if (estadoInvitado) {
+          estadoInvitado.remove();
+        }
+
+        if (soyAnfitrion) {
+          const activos = M.slots.filter((s) => s.activo);
+          document.getElementById("btn-empezar").disabled = !(
+            M.lobby &&
+            activos.length > 0 &&
+            activos.every((s) => s.listo)
+          );
+          // oro del gremio
+          let oroEl = document.getElementById("menu-oro");
+          if (!oroEl) {
+            oroEl = document.createElement("p");
+            oroEl.id = "menu-oro";
+            oroEl.style.cssText =
+              "text-align:center;color:#ffd27f;font-weight:800;font-size:.88rem;margin-top:10px";
+            document.getElementById("fila-nombre").after(oroEl);
+          }
+          oroEl.innerHTML =
+            "🪙 Oro del gremio: " +
+            META.oro +
+            (Object.values(META.mejoras).some((v) => v > 0)
+              ? " · Mejoras activas: " +
+                MEJORAS_TIENDA.filter((m) => META.mejoras[m.id] > 0)
+                  .map((m) => m.ico + " Nv." + META.mejoras[m.id])
+                  .join(" ")
+              : "");
+          // el invitado necesita ver esto mismo en tiempo real (ver
+          // net/peer.js:netEnviarLobby y mostrarLobbySincronizado más abajo)
+          netEnviarLobby();
+        }
+      }
+
+// Llamado desde net/peer.js cuando llega un snapshot del lobby del
+// anfitrión (mensaje "lobby"). Restaura la estructura real del menú (la
+// primera vez, si comprobarEnlace() la había sustituido por el panel de
+// "elige tu clase y conéctate") y renderiza el mismo construirMenu() que ve
+// el anfitrión, en modo solo-lectura.
+export function mostrarLobbySincronizado(slots, lobby) {
+        const menu = document.getElementById("menu")?.querySelector(".overlay-inner");
+        if (menu && overlayInnerOriginal !== null && !document.getElementById("slots")) {
+          menu.innerHTML = overlayInnerOriginal;
+        }
+        M.slots = slots;
+        M.lobby = lobby;
+        construirMenu();
       }
 
 document.getElementById("btn-empezar").onclick = nuevaPartida;
@@ -176,11 +246,11 @@ document.getElementById("btn-copiar-enlace").onclick = () => {
         const m = (location.hash || "").match(/sala=([\w-]+)/);
         if (!m) return;
         const sala = m[1];
-        window._esInvitado = true;
         // panel de invitado: elegir clase y conectar
         const menu = document
           .getElementById("menu")
           .querySelector(".overlay-inner");
+        overlayInnerOriginal = menu.innerHTML;
         menu.innerHTML =
           '<div id="hero-titulo" class="marco-px"><span class="lucero">✦</span><h1>La Torre de Véspero — Online</h1>' +
           "<p>Te han invitado a una sala. Elige tu clase y conéctate.</p></div>" +

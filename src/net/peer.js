@@ -8,7 +8,7 @@ import { statsTot } from "../systems/combat.js";
 import { M, keys, mouse } from "../systems/input.js";
 import { aplicarMusica, initAudio, reanudarAudio, sfx } from "../systems/audio.js";
 import { invSel } from "../ui/inventory.js";
-import { construirMenu } from "../ui/menu.js";
+import { construirMenu, mostrarLobbySincronizado } from "../ui/menu.js";
 import { banner, toast } from "../ui/notifications.js";
 import { ocultar } from "../ui/overlays.js";
 import { clamp } from "../utils/helpers.js";
@@ -180,6 +180,15 @@ export function netBroadcast(obj) {
         }
       }
 
+// El anfitrión manda el estado del lobby (M.slots/M.lobby) cada vez que su
+// propio construirMenu() se repinta — al unirse alguien, al cambiar de
+// clase o de tipo de grupo, al marcar listo... así el invitado ve siempre
+// la misma pantalla, no solo una foto del momento de conectar.
+export function netEnviarLobby() {
+        if (NET.modo !== "host") return;
+        netBroadcast({ t: "lobby", slots: M.slots, lobby: M.lobby });
+      }
+
 export function netAplicarInputs() {
         if (NET.modo !== "host") return;
         for (const p of G.players) {
@@ -253,6 +262,8 @@ export function unirseSalaOnline(id) {
 function onDataCliente(d) {
         if (d.t === "welcome") {
           NET.miIdx = d.idx;
+        } else if (d.t === "lobby") {
+          mostrarLobbySincronizado(d.slots, d.lobby);
         } else if (d.t === "estado") {
           // el canal va sin fiabilidad/orden garantizados: si llega un
           // snapshot más viejo que el último aplicado (adelantado por otro
