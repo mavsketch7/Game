@@ -700,7 +700,7 @@ for (const kIcon in KENNEY_ICON_SRC) {
 // código que aún los lea directamente; SPR.cofreFrames es el array completo
 // que usa render/world.js para la animación al abrir.
 export const SPR_COFRE_FRAMES = [];
-const COFRE_FRAME_SRC = ["cofre_f0", "cofre_f1", "cofre_f2"];
+const COFRE_FRAME_SRC = ["cofre_f0", "cofre_f1", "cofre_f2", "cofre_f3", "cofre_f4"];
 COFRE_FRAME_SRC.forEach((name, i) => {
   const im = new Image();
   im.onload = () => {
