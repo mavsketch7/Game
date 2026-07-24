@@ -513,6 +513,42 @@ body.pantalla-completa #hint {
   opacity: 0.5;
   cursor: not-allowed;
 }
+/* gremio por jugador: mismo patrón que el nombre, ver ui/menu.js */
+.gremio-slot {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 4px;
+}
+.gremio-tag {
+  font-size: 0.76rem;
+  color: var(--alba);
+  background: #0d0b15;
+  border: 1px solid var(--borde);
+  border-radius: 6px;
+  padding: 3px 7px;
+}
+.gremio-tag.gremio-vacio {
+  color: var(--ceniza);
+  font-style: italic;
+}
+.input-gremio-slot {
+  flex: 1;
+  min-width: 90px;
+  background: #0d0b15;
+  border: 1px solid var(--borde);
+  border-radius: 6px;
+  padding: 4px 7px;
+  color: var(--hueso);
+  font-family: inherit;
+  font-size: 0.76rem;
+}
+.gremio-msg {
+  width: 100%;
+  font-size: 0.7rem;
+  color: var(--ceniza);
+}
 .btn {
   background: var(--piedra2);
   color: var(--hueso);

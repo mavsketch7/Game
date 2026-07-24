@@ -4,6 +4,8 @@ import { nuevaPartida } from "../core/gameflow.js";
 import { MEJORAS_TIENDA, META } from "../core/save.js";
 import { NET, crearSalaOnline, enviarRolPropio, netEnviarLobby, unirseSalaOnline } from "../net/peer.js";
 import { SPR } from "../render/sprites.js";
+import { crearGremio, miGremio, salirGremio, unirseGremio } from "../systems/guilds.js";
+import { idJugador } from "../systems/identity.js";
 import { M } from "../systems/input.js";
 import { abrirInfo } from "./info.js";
 
@@ -26,6 +28,16 @@ import { abrirInfo } from "./info.js";
 // mostrarLobbySincronizado() en cuanto el invitado empieza a recibir el
 // estado real del lobby del anfitrión.
 let overlayInnerOriginal = null;
+
+// Ids de jugador (ver systems/identity.js) para los que ya se consultó su
+// gremio a Supabase en esta carga de página — evita repetir la consulta en
+// cada repintado de construirMenu(), que ocurre varias veces por segundo.
+const gremioFetchHecho = new Set();
+
+function sincronizarGremio(s) {
+  if (NET.modo === "cliente") enviarRolPropio(s.rolIdx, s.listo, s.nombre, s.gremio);
+  else netEnviarLobby();
+}
 
 // true si este peer manda sobre el lobby (anfitrión o partida local sin
 // red todavía); false si es un invitado viendo el estado del anfitrión.
@@ -56,9 +68,15 @@ export function construirMenu() {
         // repintado.
         const focoPrevio = document.activeElement;
         let focoIdx = -1,
+          focoClase = null,
           focoSel = null,
           focoVal = null;
-        if (focoPrevio && focoPrevio.classList?.contains("input-nombre-slot")) {
+        if (focoPrevio?.classList?.contains("input-nombre-slot")) {
+          focoClase = "input-nombre-slot";
+        } else if (focoPrevio?.classList?.contains("input-gremio-slot")) {
+          focoClase = "input-gremio-slot";
+        }
+        if (focoClase) {
           focoIdx = Number(focoPrevio.dataset.idx);
           focoSel = [focoPrevio.selectionStart, focoPrevio.selectionEnd];
           focoVal = focoPrevio.value;
@@ -126,7 +144,7 @@ export function construirMenu() {
             if (NET.modo === "cliente") {
               clearTimeout(nombreDebounce);
               nombreDebounce = setTimeout(
-                () => enviarRolPropio(s.rolIdx, s.listo, s.nombre),
+                () => enviarRolPropio(s.rolIdx, s.listo, s.nombre, s.gremio),
                 400,
               );
             } else {
@@ -134,13 +152,95 @@ export function construirMenu() {
             }
           };
           div.appendChild(nombreInput);
+
+          if (editable && !gremioFetchHecho.has(idJugador(s.ctrl))) {
+            const pid = idJugador(s.ctrl);
+            gremioFetchHecho.add(pid);
+            miGremio(pid)
+              .then((g) => {
+                s.gremio = g;
+                sincronizarGremio(s);
+                construirMenu();
+              })
+              .catch(() => {});
+          }
+          const gremioDiv = document.createElement("div");
+          gremioDiv.className = "gremio-slot";
+          if (s.gremio) {
+            const tag = document.createElement("span");
+            tag.className = "gremio-tag";
+            tag.textContent = "🛡 " + s.gremio.name;
+            gremioDiv.appendChild(tag);
+            if (editable) {
+              const salirBtn = document.createElement("button");
+              salirBtn.className = "btn-mini";
+              salirBtn.textContent = "Salir";
+              salirBtn.onclick = () => {
+                salirBtn.disabled = true;
+                salirGremio(idJugador(s.ctrl))
+                  .then(() => {
+                    s.gremio = null;
+                    sincronizarGremio(s);
+                    construirMenu();
+                  })
+                  .catch((e) => {
+                    salirBtn.disabled = false;
+                    const msg = gremioDiv.querySelector(".gremio-msg");
+                    if (msg) msg.textContent = e.message || "Error al salir del gremio";
+                  });
+              };
+              gremioDiv.appendChild(salirBtn);
+            }
+          } else if (editable) {
+            const gInput = document.createElement("input");
+            gInput.className = "input-gremio-slot";
+            gInput.maxLength = 24;
+            gInput.placeholder = "Nombre de gremio";
+            gInput.dataset.idx = String(i);
+            const crearBtn = document.createElement("button");
+            crearBtn.className = "btn-mini";
+            crearBtn.textContent = "Crear";
+            const unirseBtn = document.createElement("button");
+            unirseBtn.className = "btn-mini";
+            unirseBtn.textContent = "Unirse";
+            const msg = document.createElement("span");
+            msg.className = "gremio-msg";
+            const conAccion = (fn) => () => {
+              const nombreG = gInput.value;
+              if (!nombreG || !nombreG.trim()) return;
+              crearBtn.disabled = true;
+              unirseBtn.disabled = true;
+              msg.textContent = "Un momento…";
+              fn(nombreG, idJugador(s.ctrl), s.nombre)
+                .then((g) => {
+                  s.gremio = { id: g.id, name: g.name, tag: g.tag };
+                  sincronizarGremio(s);
+                  construirMenu();
+                })
+                .catch((e) => {
+                  crearBtn.disabled = false;
+                  unirseBtn.disabled = false;
+                  msg.textContent = e.message || "Error";
+                });
+            };
+            crearBtn.onclick = conAccion(crearGremio);
+            unirseBtn.onclick = conAccion(unirseGremio);
+            gremioDiv.append(gInput, crearBtn, unirseBtn, msg);
+          } else {
+            const tag = document.createElement("span");
+            tag.className = "gremio-tag gremio-vacio";
+            tag.textContent = "Sin gremio";
+            gremioDiv.appendChild(tag);
+          }
+          div.appendChild(gremioDiv);
+
           const bl = document.createElement("button");
           bl.className = "btn-listo";
           bl.textContent = s.listo ? "✔ Listo" : "Marcar listo";
           bl.disabled = !editable;
           bl.onclick = () => {
             s.listo = !s.listo;
-            if (NET.modo === "cliente") enviarRolPropio(s.rolIdx, s.listo, s.nombre);
+            if (NET.modo === "cliente") enviarRolPropio(s.rolIdx, s.listo, s.nombre, s.gremio);
             construirMenu();
           };
           div.appendChild(bl);
@@ -160,13 +260,13 @@ export function construirMenu() {
             div.appendChild(ay);
           }
           if (editable) {
-            div.querySelectorAll(".btn-mini").forEach((b) => {
+            div.querySelector(".fila-clase").querySelectorAll(".btn-mini").forEach((b) => {
               b.onclick = () => {
                 if (!s.listo) {
                   s.rolIdx =
                     (s.rolIdx + ORDEN_ROLES.length + +b.dataset.d) %
                     ORDEN_ROLES.length;
-                  if (NET.modo === "cliente") enviarRolPropio(s.rolIdx, s.listo, s.nombre);
+                  if (NET.modo === "cliente") enviarRolPropio(s.rolIdx, s.listo, s.nombre, s.gremio);
                   construirMenu();
                 }
               };
@@ -176,7 +276,7 @@ export function construirMenu() {
         });
         if (focoIdx >= 0) {
           const focoNuevo = cont.querySelector(
-            '.input-nombre-slot[data-idx="' + focoIdx + '"]',
+            "." + focoClase + '[data-idx="' + focoIdx + '"]',
           );
           if (focoNuevo && !focoNuevo.disabled) {
             focoNuevo.value = focoVal;

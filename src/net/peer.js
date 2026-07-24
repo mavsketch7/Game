@@ -168,6 +168,7 @@ function onDataHost(conn, d) {
             s.rolIdx = d.rol;
             s.listo = d.listo;
             if (typeof d.nombre === "string") s.nombre = d.nombre.slice(0, 20);
+            if (d.gremio !== undefined) s.gremio = d.gremio;
             construirMenu();
           }
         } else if (d.t === "input") {
@@ -194,9 +195,9 @@ export function netEnviarLobby() {
 // sabe aplicarlo — ver el "rol" en onDataHost — y reemite "lobby" tras
 // aplicarlo). Cada invitado solo puede tocar su propio slot: ver
 // puedeEditarSlot() en ui/menu.js.
-export function enviarRolPropio(rol, listo, nombre) {
+export function enviarRolPropio(rol, listo, nombre, gremio) {
         if (NET.modo !== "cliente" || !NET.conn || !NET.conn.open) return;
-        NET.conn.send({ t: "rol", rol, listo, nombre });
+        NET.conn.send({ t: "rol", rol, listo, nombre, gremio });
       }
 
 export function netAplicarInputs() {

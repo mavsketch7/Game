@@ -141,10 +141,10 @@ export function pollPads() {
 
 export const M = {
         slots: [
-          { activo: true, ctrl: { tipo: "kbm" }, rolIdx: 0, listo: false, nombre: "" },
-          { activo: false, ctrl: null, rolIdx: 1, listo: false, nombre: "" },
-          { activo: false, ctrl: null, rolIdx: 2, listo: false, nombre: "" },
-          { activo: false, ctrl: null, rolIdx: 3, listo: false, nombre: "" },
+          { activo: true, ctrl: { tipo: "kbm" }, rolIdx: 0, listo: false, nombre: "", gremio: null },
+          { activo: false, ctrl: null, rolIdx: 1, listo: false, nombre: "", gremio: null },
+          { activo: false, ctrl: null, rolIdx: 2, listo: false, nombre: "", gremio: null },
+          { activo: false, ctrl: null, rolIdx: 3, listo: false, nombre: "", gremio: null },
         ],
         lobby: null,
       };
