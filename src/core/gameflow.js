@@ -105,6 +105,10 @@ export function nuevaPartida() {
             cartasElegidas: [],
             bolsa: [],
             equipo: { arma: null, armadura: null, accesorio: null },
+            // estadísticas de la sesión actual, para el ranking en vivo (Tab)
+            statDano: 0,
+            statDerrotados: 0,
+            statParries: 0,
           });
         });
         setG({

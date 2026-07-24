@@ -1070,6 +1070,42 @@ body.pantalla-completa #hint {
 }
 
 /* ===== Ficha de personaje ===== */
+.ranking-sesion {
+  background: var(--piedra);
+  border: 1px solid var(--borde);
+  border-radius: 12px;
+  padding: 10px 12px;
+  margin-top: 10px;
+}
+.rank-fila {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 4px 0;
+  font-size: 0.78rem;
+  border-top: 1px solid var(--borde);
+}
+.rank-fila:first-of-type {
+  border-top: none;
+}
+.rank-pos {
+  color: var(--ceniza);
+  font-weight: 800;
+  min-width: 22px;
+}
+.rank-nombre {
+  font-weight: 700;
+}
+.rank-gremio {
+  color: var(--alba);
+  font-size: 0.72rem;
+}
+.rank-stat {
+  margin-left: auto;
+  color: var(--ceniza);
+  padding-left: 8px;
+}
 .ficha-cab {
   display: flex;
   gap: 14px;

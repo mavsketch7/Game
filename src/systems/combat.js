@@ -292,16 +292,18 @@ export function danoAEnemigo(e, raw, duenio, puedeCrit, kbx, kby) {
         e.kx += (kbx || 0) * kr;
         e.ky += (kby || 0) * kr;
         G.stats.dano += dmg;
+        duenio.statDano = (duenio.statDano || 0) + dmg;
         fxTexto(e.x, e.y - e.r - 6, dmg, crit ? "#e9b45c" : "#e9e3d5", crit);
         if (G.lobby === "malos") {
           const robo = Math.round(dmg * 0.12);
           if (robo > 0) curarP(duenio, robo, true);
         }
-        if (e.hp <= 0) matarEnemigo(e);
+        if (e.hp <= 0) matarEnemigo(e, duenio);
       }
 
-export function matarEnemigo(e) {
+export function matarEnemigo(e, duenio) {
         G.stats.derrotados++;
+        if (duenio) duenio.statDerrotados = (duenio.statDerrotados || 0) + 1;
         sfx(e.jefe ? "jefe" : "muerte");
         fxParticulas(e.x, e.y, e.jefe ? 26 : 10, "#6a5a94");
         if (e.jefe) G.shake = Math.max(G.shake, 8);
@@ -467,6 +469,7 @@ function parryExitoso(p, fuente) {
         p.parryCd = 0.45;
         sfx("parry");
         G.stats.parries++;
+        p.statParries = (p.statParries || 0) + 1;
         // cadena de parries: cada parry consecutivo (sin dejar pasar más de
         // ~2.6s entre uno y otro) escala el contraataque; al 4º eslabón se
         // desata una onda de choque que aturde y golpea a todo enemigo cerca.

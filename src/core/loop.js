@@ -514,10 +514,13 @@ export function update(dt) {
               e.poisonTick = 0.5;
               const pd = Math.max(1, Math.round(e.poisonDps * 0.5));
               e.hp -= pd;
-              if (e.poisonOwner) G.stats.dano += pd;
+              if (e.poisonOwner) {
+                G.stats.dano += pd;
+                e.poisonOwner.statDano = (e.poisonOwner.statDano || 0) + pd;
+              }
               fxTexto(e.x, e.y - e.r - 4, pd, "#6ac04a");
               if (e.hp <= 0) {
-                matarEnemigo(e);
+                matarEnemigo(e, e.poisonOwner);
                 continue;
               }
             }
@@ -530,11 +533,14 @@ export function update(dt) {
               e.burnTick = 0.5;
               const bd = Math.max(1, Math.round((e.burnDps || 0) * 0.5));
               e.hp -= bd;
-              if (e.burnOwner) G.stats.dano += bd;
+              if (e.burnOwner) {
+                G.stats.dano += bd;
+                e.burnOwner.statDano = (e.burnOwner.statDano || 0) + bd;
+              }
               fxTexto(e.x, e.y - e.r - 4, bd, "#ff7d4d");
               fxParticulas(e.x, e.y, 2, "#ff7d4d");
               if (e.hp <= 0) {
-                matarEnemigo(e);
+                matarEnemigo(e, e.burnOwner);
                 continue;
               }
             }

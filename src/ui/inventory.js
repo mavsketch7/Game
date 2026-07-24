@@ -12,6 +12,50 @@ import { banner, toast } from "./notifications.js";
 import { mostrar, ocultar } from "./overlays.js";
 import { clamp } from "../utils/helpers.js";
 
+function escHtml(s) {
+        return String(s ?? "").replace(
+          /[&<>"']/g,
+          (c) =>
+            ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c],
+        );
+      }
+
+// Ranking en vivo de la sesión actual (punto 5 de la mejora de UX
+// multijugador): quién más daño/bajas/parries lleva, con su nombre y
+// gremio elegidos. No depende de red: cada jugador (local u online) ya
+// trae su propio nombre/gremio resuelto en G.players desde el lobby.
+function rankingSesion() {
+        const filas = G.players
+          .slice()
+          .sort((a, b) => (b.statDano || 0) - (a.statDano || 0))
+          .map(
+            (q, i) =>
+              '<div class="rank-fila"><span class="rank-pos">#' +
+              (i + 1) +
+              '</span><span class="rank-nombre" style="color:' +
+              q.color +
+              '">' +
+              escHtml(q.nombre) +
+              "</span>" +
+              (q.gremio
+                ? '<span class="rank-gremio">🛡 ' + escHtml(q.gremio) + "</span>"
+                : "") +
+              '<span class="rank-stat" title="Daño total">⚔ ' +
+              Math.round(q.statDano || 0) +
+              '</span><span class="rank-stat" title="Enemigos derrotados">☠ ' +
+              (q.statDerrotados || 0) +
+              '</span><span class="rank-stat" title="Parries exitosos">🛡‍⚔ ' +
+              (q.statParries || 0) +
+              "</span></div>",
+          )
+          .join("");
+        return (
+          '<div class="ranking-sesion"><h3 style="margin-top:0;font-size:.85rem;color:var(--vespero)">🏆 Ranking de la sesión</h3>' +
+          filas +
+          "</div>"
+        );
+      }
+
 function fmtStats(st) {
         return Object.entries(st)
           .map(([k, v]) => "+" + v + " " + ETQ[k])
@@ -409,6 +453,7 @@ export function abrirInv() {
           '<div class="tabs-jug">' +
           tabs +
           "</div>" +
+          rankingSesion() +
           '<div class="ficha-cab">' +
           '<canvas id="ficha-retrato" width="72" height="84"></canvas>' +
           '<div class="ficha-datos">' +
