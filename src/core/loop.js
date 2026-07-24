@@ -10,7 +10,7 @@ import { aplicarImbuido, atacar, danoPilar, dispararArcano, golpeObjeto } from "
 import { sfx } from "../systems/audio.js";
 import { esJefe, escalaEnemigo } from "../systems/bosses.js";
 import { curarP, danoAEnemigo, danoAlJugador, explotarBomber, ganarXP, masCercano, matarEnemigo, spawnClon, spawnEnemigo, statsTot, tipoAleatorio, vivos } from "../systems/combat.js";
-import { aplicarLimites, colisionaMuro, dentroForma, iniciarPlanta } from "../systems/floorgen.js";
+import { aplicarLimites, colisionaMuro, cruzarPuerta, dentroForma, iniciarPlanta, salaActual } from "../systems/floorgen.js";
 import { leerInput } from "../systems/input.js";
 import { finPartida, plantaDespejada } from "../systems/loot.js";
 import { abrirCartasParaJugador } from "../ui/cardsOverlay.js";
@@ -257,6 +257,7 @@ export function update(dt) {
             }
           }
           if (p.lvlT > 0) p.lvlT -= dt;
+          if (p._retoAvisoT > 0) p._retoAvisoT -= dt;
           // combo del guerrero: se desvanece sin golpear
           if (p.comboT > 0) {
             p.comboT -= dt;
@@ -289,7 +290,14 @@ export function update(dt) {
             if (mejor) p.imbuido = mejor.elem;
           }
           if (p.rol === "mago" && p.elemento === "arcano" && !p.atrapado) {
-            if (p.inp.atkHeld && p.castCd <= 0 && p.res >= 12) {
+            // en la sala de reto "solo parry" el arcano no puede cargar más
+            // (si no, esquivaría el guard de atacar() en abilities.js, que
+            // es el único sitio pensado para bloquear el daño normal)
+            if (G.salaTipo === "reto_parry") {
+              if (p.cargaT > 0) dispararArcano(p);
+              p.cargaT = 0;
+              if (p.inp.atkHeld) atacar(p);
+            } else if (p.inp.atkHeld && p.castCd <= 0 && p.res >= 12) {
               p.cargaT = Math.min(p.cargaT + dt, 1.1);
             } else if (!p.inp.atkHeld && p.cargaT > 0) {
               dispararArcano(p);
@@ -1071,12 +1079,21 @@ export function update(dt) {
           }
         }
 
+        // en una mazmorra multi-sala, limpiar una sala normal NO debe
+        // adelantar la planta -- solo cuenta la sala marcada "esFinal"
+        // (las plantas de jefe no tienen mazmorra -- G.mazmorra===null --
+        // y se comportan exactamente igual que antes)
+        const sfActual = G.mazmorra ? salaActual() : null;
+        const finalPendiente =
+          !G.mazmorra || (sfActual && sfActual.esFinal && !sfActual.despejada);
         if (
           G.escena === "torre" &&
           G.enemigos.length === 0 &&
           !G.portal &&
-          G.activo
+          G.activo &&
+          finalPendiente
         ) {
+          if (sfActual) sfActual.despejada = true;
           if (G.planta === MAX_PLANTA) {
             finPartida(true);
             return;
@@ -1208,6 +1225,20 @@ export function update(dt) {
             G.descansoT = Math.max(0, G.descansoT - dt * 2);
         }
 
+        // puertas de la mazmorra: en cuanto un jugador vivo toca una, todo
+        // el grupo salta junto a la sala conectada (ver cruzarPuerta) --
+        // no hace falta que todos estén juntos, a diferencia del portal
+        if (G.escena === "torre" && G.puertas && G.puertas.length) {
+          for (const pu of G.puertas) {
+            if (
+              vivos().some((q) => Math.hypot(q.x - pu.x, q.y - pu.y) < pu.r)
+            ) {
+              cruzarPuerta(pu);
+              break;
+            }
+          }
+        }
+
         // portal: todos los vivos dentro
         if (G.portal) {
           G.portal.t += dt;
@@ -1315,6 +1346,7 @@ export function update(dt) {
         }
         // impactos telegrafiados: rayos de tormenta y meteoros de jefe
         if (G.flashT > 0) G.flashT -= dt;
+        if (G.fadeT > 0) G.fadeT -= dt;
         for (let i = G.rayos.length - 1; i >= 0; i--) {
           const ry = G.rayos[i];
           ry.t -= dt;

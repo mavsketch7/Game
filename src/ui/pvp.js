@@ -75,6 +75,10 @@ function iniciarPvP() {
         G.skinNpc = null;
         G.arenaNpc = null;
         G.clima = "despejado";
+        G.mazmorra = null;
+        G.puertas = [];
+        G.salaTipo = "normal";
+        G.salaEsFinal = false;
         generarMapa(az(["sala", "circulo", "rombo"]));
         G.pilares = [];
         const nPil = ri(2, 3);

@@ -484,6 +484,10 @@ function serializarEstado() {
           AN: G.arenaNpc,
           FG: G.fogata,
           FX: (G.fx || []).slice(-30),
+          pu: G.puertas || [],
+          st: G.salaTipo || "normal",
+          sf: !!G.salaEsFinal,
+          fd: G.fadeT || 0,
         };
       }
 
@@ -591,6 +595,10 @@ function recibirSnapshot(s) {
           arenaNpc: s.AN,
           fogata: s.FG,
           fx: s.FX,
+          puertas: s.pu || [],
+          salaTipo: s.st || "normal",
+          salaEsFinal: !!s.sf,
+          fadeT: s.fd || 0,
           decals: [],
           lobby: "buenos",
           invSel: 0,

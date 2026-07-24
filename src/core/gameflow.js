@@ -99,6 +99,7 @@ export function nuevaPartida() {
             cofreObj: null,
             cofreQteT: 0,
             cofreHits: 0,
+            _retoAvisoT: 0,
             rootT: 0,
             hazTick: 0,
             enOrtiga: false,
@@ -137,8 +138,13 @@ export function nuevaPartida() {
           rayos: [],
           rayoCd: 0,
           flashT: 0,
+          fadeT: 0,
           forma: "sala",
           muros: [],
+          mazmorra: null,
+          puertas: [],
+          salaTipo: "normal",
+          salaEsFinal: false,
           portal: null,
           fogata: null,
           fogataUsada: false,
@@ -178,6 +184,10 @@ export function iniciarLobby() {
         G.rayos = [];
         G.forma = "sala";
         G.muros = [];
+        G.mazmorra = null;
+        G.puertas = [];
+        G.salaTipo = "normal";
+        G.salaEsFinal = false;
         G.portal = { x: W / 2, y: 64, r: 24, t: 0 };
         G.fogata = null;
         G.fogataUsada = true;

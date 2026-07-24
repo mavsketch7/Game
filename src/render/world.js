@@ -11,17 +11,35 @@ import { mouse } from "../systems/input.js";
 import { clamp, ri, rnd } from "../utils/helpers.js";
 
 export let sueloPat = null,
-        sueloPlanta = -1,
+        sueloClave = "",
         animGlobal = 0;
 
-function patronSuelo(f) {
+// tema de suelo preferido por forma de sala -- así al cruzar una puerta
+// entre dos salas de formas distintas la textura cambia con ellas, en vez
+// de depender solo del número de planta (ver claveSuelo en render())
+const TEMA_SUELO_FORMA = {
+        sala: "floorA",
+        cruz: "floorB",
+        circulo: "floorA",
+        partida: "floorB",
+        foso: "floorA",
+        rombo: "floorB",
+        columnas: "floorA",
+        pasilloL: "floorB",
+        anillo: "floorA",
+      };
+
+function patronSuelo(f, forma, tipo) {
         // prueba: tile real de Kenney Tiny Dungeon (misma familia visual que
         // enemigos/PNJs/props ya sustituidos), con prioridad sobre la textura
         // suelo1/suelo2 anterior para lograr coherencia visual.
-        const kenneyKey = f % 10 < 5 ? "floorA" : "floorB";
+        const kenneyKey =
+          tipo === "reto_parry"
+            ? "floorB"
+            : TEMA_SUELO_FORMA[forma] || (f % 10 < 5 ? "floorA" : "floorB");
         if (KENNEY_TILE[kenneyKey]) return cx.createPattern(KENNEY_TILE[kenneyKey], "repeat");
         // usar baldosa de mazmorra tileable (espejada, sin costuras)
-        const tileKey = f % 10 < 5 ? "suelo1" : "suelo2";
+        const tileKey = kenneyKey === "floorA" ? "suelo1" : "suelo2";
         if (assetOK(tileKey)) {
           const src = SHEETS[tileKey];
           // dibujar la baldosa a un tamaño múltiplo entero para que encaje limpia
@@ -112,12 +130,15 @@ function dibujarHeroe(p, x, y, mov) {
 export function render() {
         animGlobal += 0.016;
         if (window._sueloDirty) {
-          sueloPlanta = -2;
+          sueloClave = "";
           window._sueloDirty = false;
         }
-        if (sueloPlanta !== (G ? G.planta : -2)) {
-          sueloPat = patronSuelo(G ? G.planta : 1);
-          sueloPlanta = G ? G.planta : -2;
+        const claveSuelo = G
+          ? G.planta + "|" + G.forma + "|" + (G.salaTipo || "normal")
+          : "sinG";
+        if (sueloClave !== claveSuelo) {
+          sueloPat = patronSuelo(G ? G.planta : 1, G ? G.forma : "sala", G ? G.salaTipo : "normal");
+          sueloClave = claveSuelo;
         }
         cx.save();
         if (G && G.shake > 0)
@@ -133,11 +154,11 @@ export function render() {
         }
 
         // forma de la sala: vacío exterior y muros
-        if (G.forma === "circulo" || G.forma === "rombo") {
+        if (G.forma === "circulo" || G.forma === "rombo" || G.forma === "anillo") {
           cx.fillStyle = "#0a0812";
           cx.beginPath();
           cx.rect(0, 0, W, H);
-          if (G.forma === "circulo")
+          if (G.forma === "circulo" || G.forma === "anillo")
             cx.ellipse(W / 2, H / 2, W / 2 - 24, H / 2 - 24, 0, 0, TAU);
           else {
             cx.moveTo(W / 2, 20);
@@ -146,11 +167,12 @@ export function render() {
             cx.lineTo(20, H / 2);
             cx.closePath();
           }
+          if (G.forma === "anillo") cx.ellipse(W / 2, H / 2, 90, 70, 0, 0, TAU);
           cx.fill("evenodd");
           cx.strokeStyle = "#3a3453";
           cx.lineWidth = 6;
           cx.beginPath();
-          if (G.forma === "circulo")
+          if (G.forma === "circulo" || G.forma === "anillo")
             cx.ellipse(W / 2, H / 2, W / 2 - 24, H / 2 - 24, 0, 0, TAU);
           else {
             cx.moveTo(W / 2, 20);
@@ -160,6 +182,11 @@ export function render() {
             cx.closePath();
           }
           cx.stroke();
+          if (G.forma === "anillo") {
+            cx.beginPath();
+            cx.ellipse(W / 2, H / 2, 90, 70, 0, 0, TAU);
+            cx.stroke();
+          }
         }
         const wallPat = wallPatron();
         for (const m of G.muros) {
@@ -186,6 +213,39 @@ export function render() {
             cx.lineTo(m.x + m.w - 2, yy);
             cx.stroke();
           }
+        }
+
+        // puertas de la mazmorra (ver systems/floorgen.js: cargarSala/cruzarPuerta)
+        const ANG_PUERTA = { N: -Math.PI / 2, S: Math.PI / 2, E: 0, O: Math.PI };
+        for (const pu of G.puertas || []) {
+          const ang = ANG_PUERTA[pu.dir];
+          for (let k = 0; k < 3; k++) {
+            cx.strokeStyle = "rgba(143,211,255," + (0.85 - k * 0.25) + ")";
+            cx.lineWidth = 3;
+            cx.beginPath();
+            cx.arc(
+              pu.x,
+              pu.y,
+              pu.r - 6 - k * 5 + Math.sin(animGlobal * 3 + k) * 2,
+              ang - 0.9,
+              ang + 0.9,
+            );
+            cx.stroke();
+          }
+          cx.save();
+          cx.translate(
+            pu.x + Math.cos(ang) * (pu.r + 10),
+            pu.y + Math.sin(ang) * (pu.r + 10),
+          );
+          cx.rotate(ang);
+          cx.fillStyle = "#8fd3ff";
+          cx.beginPath();
+          cx.moveTo(-6, -8);
+          cx.lineTo(8, 0);
+          cx.lineTo(-6, 8);
+          cx.closePath();
+          cx.fill();
+          cx.restore();
         }
 
         // fogata
@@ -933,6 +993,10 @@ export function render() {
           }
           if (G.flashT > 0) {
             cx.fillStyle = "rgba(230,240,255," + (G.flashT / 0.14) * 0.5 + ")";
+            cx.fillRect(0, 0, W, H);
+          }
+          if (G.fadeT > 0) {
+            cx.fillStyle = "rgba(6,5,10," + clamp(G.fadeT / 0.3, 0, 1) + ")";
             cx.fillRect(0, 0, W, H);
           }
         }

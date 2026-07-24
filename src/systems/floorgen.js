@@ -28,6 +28,9 @@ const FORMAS_MAPA = [
         "partida",
         "foso",
         "rombo",
+        "columnas",
+        "pasilloL",
+        "anillo",
       ];
 
 const NOMBRE_FORMA = {
@@ -37,6 +40,9 @@ const NOMBRE_FORMA = {
         partida: "Sala partida",
         foso: "Anillo del foso",
         rombo: "Cámara romboidal",
+        columnas: "Sala de columnas",
+        pasilloL: "Pasillo en L",
+        anillo: "Anillo hueco",
       };
 
 export function generarMapa(forma) {
@@ -70,7 +76,30 @@ export function generarMapa(forma) {
             w: W * 0.3,
             h: H * 0.28,
           });
+        } else if (forma === "columnas") {
+          const n = ri(4, 6);
+          for (let i = 0; i < n; i++) {
+            let cx2,
+              cy2,
+              it = 0;
+            do {
+              cx2 = rnd(120, W - 120);
+              cy2 = rnd(110, H - 160);
+              it++;
+            } while (!puntoValido(cx2, cy2, 20) && it < 20);
+            if (it < 20) G.muros.push({ x: cx2 - 11, y: cy2 - 11, w: 22, h: 22 });
+          }
+        } else if (forma === "pasilloL") {
+          // dos bloques en cuadrantes opuestos: dejan libres con margen
+          // amplio los 4 puntos cardinales donde van las puertas
+          G.muros.push(
+            { x: W * 0.55, y: H * 0.14, w: W * 0.34, h: H * 0.3 },
+            { x: W * 0.11, y: H * 0.56, w: W * 0.34, h: H * 0.3 },
+          );
         }
+        // "anillo": el hueco central se resuelve como zona inválida en
+        // dentroForma()/aplicarLimites(), no como muro rectangular -- no
+        // añade nada a G.muros.
       }
 
 export function dentroForma(x, y, margen) {
@@ -86,6 +115,18 @@ export function dentroForma(x, y, margen) {
           const rx = W / 2 - 26 - m,
             ry = H / 2 - 26 - m;
           return Math.abs(x - W / 2) / rx + Math.abs(y - H / 2) / ry <= 1;
+        }
+        if (G.forma === "anillo") {
+          const rx = W / 2 - 30 - m,
+            ry = H / 2 - 30 - m;
+          const dx = (x - W / 2) / rx,
+            dy = (y - H / 2) / ry;
+          if (dx * dx + dy * dy > 1) return false;
+          const irx = 90 + m,
+            iry = 70 + m;
+          const idx = (x - W / 2) / irx,
+            idy = (y - H / 2) / iry;
+          return idx * idx + idy * idy > 1;
         }
         return x > 28 + m * 0 && x < W - 28 && y > 28 && y < H - 28;
       }
@@ -135,7 +176,7 @@ export function aplicarLimites(ent) {
             else ent.y += dy1 < dy2 ? dy1 : -dy2;
           }
         }
-        if (G.forma === "circulo") {
+        if (G.forma === "circulo" || G.forma === "anillo") {
           const rx = W / 2 - 30,
             ry = H / 2 - 30;
           const dx = (ent.x - W / 2) / rx,
@@ -145,6 +186,18 @@ export function aplicarLimites(ent) {
             const d = Math.sqrt(d2);
             ent.x = W / 2 + (dx / d) * rx;
             ent.y = H / 2 + (dy / d) * ry;
+          }
+          if (G.forma === "anillo") {
+            const irx = 90,
+              iry = 70;
+            const idx = (ent.x - W / 2) / irx,
+              idy = (ent.y - H / 2) / iry;
+            const id2 = idx * idx + idy * idy;
+            if (id2 < 1 && id2 > 0) {
+              const id = Math.sqrt(id2);
+              ent.x = W / 2 + (idx / id) * irx;
+              ent.y = H / 2 + (idy / id) * iry;
+            }
           }
         } else if (G.forma === "rombo") {
           const rx = W / 2 - 26,
@@ -157,56 +210,54 @@ export function aplicarLimites(ent) {
         }
       }
 
-export function iniciarPlanta() {
-        const f = G.planta,
-          N = G.players.length;
-        G.escena = "torre";
-        G.enemigos = [];
-        G.projs = [];
-        G.areas = [];
-        G.drops = [];
-        G.fx = [];
-        G.objetos = [];
-        G.decals = [];
-        G.hazards = [];
-        G.wx = [];
-        G.rayos = [];
-        G.rayoCd = rnd(3, 6);
-        G.portal = null;
-        G.fogata = null;
-        G.fogataUsada = false;
-        G.descansoT = 0;
-        G.mercader = null;
-        G.skinNpc = null;
-        G.arenaNpc = null;
-        G.clima = climaAleatorio();
-        // forma de la sala: los jefes prefieren espacios abiertos
-        generarMapa(
-          esJefe(f) ? az(["sala", "circulo", "rombo"]) : az(FORMAS_MAPA),
-        );
-        G.players.forEach((p, i) => {
-          p.x = W / 2 + (i - (N - 1) / 2) * 46;
-          p.y = H - 70;
-          p.trail = [];
-          p.safeX = p.x;
-          p.safeY = p.y;
-          p.atrapado = null;
-          p.rootT = 0;
-          if (G.forma === "circulo" || G.forma === "rombo") p.y = H - 88;
-          if (p.ko) {
-            p.ko = false;
-            p.hp = Math.round(statsTot(p).hpMax * 0.3);
-            toast(p.nombre + " se levanta al cruzar el portal", "#7fd4c1");
-          }
-          if (G.lobby === "buenos") {
-            p.escudo = Math.round(statsTot(p).hpMax * 0.12);
-          }
-        });
-        if (G.lobby === "buenos")
-          toast("Pasiva del Alba: escudos renovados", "#7fd4c1");
-        // pilares: ~55% destructibles
-        G.pilares = [];
-        const nPil = esJefe(f) ? ri(1, 2) : ri(2, 4);
+// ---- helpers de poblado, compartidos entre la sala única de una planta de
+// jefe y cada sala de una mazmorra multi-sala normal (ver poblarSala) ----
+
+const zonaLibre = (x, y, r) =>
+        y < H - 140 &&
+        y > 95 &&
+        Math.abs(x - W / 2) + Math.abs(y - 64) > 110 && // lejos del spawn y del portal
+        puntoValido(x, y, r);
+
+function ponHazard(tipo, r2, n2) {
+        for (let i = 0; i < n2; i++) {
+          let hx,
+            hy,
+            it2 = 0;
+          do {
+            hx = rnd(70, W - 70);
+            hy = rnd(100, H - 150);
+            it2++;
+          } while (!zonaLibre(hx, hy, r2) && it2 < 20);
+          G.hazards.push({
+            tipo,
+            x: hx,
+            y: hy,
+            r: r2,
+            estado: 0,
+            t: 0,
+            fase: Math.random() * TAU,
+          });
+        }
+      }
+
+function ponObjeto(o) {
+        let ox,
+          oy,
+          ito = 0;
+        do {
+          ox = rnd(80, W - 80);
+          oy = rnd(100, H - 120);
+          ito++;
+        } while (!puntoValido(ox, oy, 14) && ito < 25);
+        if (ito < 25) {
+          o.x = ox;
+          o.y = oy;
+          G.objetos.push(o);
+        }
+      }
+
+function ponPilares(f, nPil) {
         for (let i = 0; i < nPil; i++) {
           const dest = Math.random() < 0.55;
           let px2,
@@ -228,54 +279,14 @@ export function iniciarPlanta() {
             hurtT: 0,
           });
         }
-        // ---- zonas peligrosas del suelo ----
-        const zonaLibre = (x, y, r) =>
-          y < H - 140 &&
-          y > 95 &&
-          Math.abs(x - W / 2) + Math.abs(y - 64) > 110 &&
-          puntoValido(x, y, r); // lejos del spawn y del portal
-        function ponHazard(tipo, r2, n2) {
-          for (let i = 0; i < n2; i++) {
-            let hx,
-              hy,
-              it2 = 0;
-            do {
-              hx = rnd(70, W - 70);
-              hy = rnd(100, H - 150);
-              it2++;
-            } while (!zonaLibre(hx, hy, r2) && it2 < 20);
-            G.hazards.push({
-              tipo,
-              x: hx,
-              y: hy,
-              r: r2,
-              estado: 0,
-              t: 0,
-              fase: Math.random() * TAU,
-            });
-          }
-        }
+      }
+
+function ponHazardsYObjetos(f) {
         if (f >= 10 && Math.random() < 0.7) ponHazard("grieta", 20, ri(1, 3));
         if (f >= 8 && Math.random() < 0.35) ponHazard("arena", 34, 1);
         if (f >= 6 && Math.random() < 0.5) ponHazard("ortiga", 28, ri(1, 2));
         if (f >= 14 && Math.random() < 0.45)
           ponHazard("fuegoZona", 26, ri(1, 2));
-        // objetos del nivel (respetando la forma de la sala)
-        function ponObjeto(o) {
-          let ox,
-            oy,
-            ito = 0;
-          do {
-            ox = rnd(80, W - 80);
-            oy = rnd(100, H - 120);
-            ito++;
-          } while (!puntoValido(ox, oy, 14) && ito < 25);
-          if (ito < 25) {
-            o.x = ox;
-            o.y = oy;
-            G.objetos.push(o);
-          }
-        }
         const nBar = ri(1, 3);
         for (let i = 0; i < nBar; i++)
           ponObjeto({ tipo: "barril", x: 0, y: 0, hp: 10 });
@@ -283,7 +294,291 @@ export function iniciarPlanta() {
           ponObjeto({ tipo: "cofre", x: 0, y: 0, hp: 1, abierto: false });
         if (Math.random() < 0.5) ponObjeto({ tipo: "cristal", x: 0, y: 0 });
         if (Math.random() < 0.6) ponObjeto({ tipo: "brasero", x: 0, y: 0 });
+      }
+
+// ---- mazmorra multi-sala (plantas normales; las de jefe siguen siendo una
+// única sala, ver iniciarPlanta) ----
+//
+// Cada sala sigue siendo una pantalla fija de 960x560 como hoy -- no hay
+// cámara ni scroll. La cuadrícula GRIDxGRID solo decide qué salas son
+// vecinas y en qué dirección cardinal cae la puerta entre ellas; las 4
+// posiciones de puerta (centro de cada borde) son fijas y ya se verificó
+// que caen dentro de dentroForma() para las 9 formas de sala existentes.
+const GRID = 3;
+const DIR_VEC = { N: [0, -1], S: [0, 1], O: [-1, 0], E: [1, 0] };
+const DIR_OPUESTA = { N: "S", S: "N", E: "O", O: "E" };
+
+function posPuerta(dir) {
+        return dir === "N"
+          ? { x: W / 2, y: 46 }
+          : dir === "S"
+            ? { x: W / 2, y: H - 46 }
+            : dir === "O"
+              ? { x: 46, y: H / 2 }
+              : { x: W - 46, y: H / 2 };
+      }
+
+function nuevaSala(id, gx, gy, esInicial) {
+        return {
+          id,
+          gx,
+          gy,
+          forma: az(FORMAS_MAPA),
+          tipo: "normal", // "normal" | "reto_parry"
+          visitada: false,
+          poblada: false,
+          despejada: false, // solo relevante si esFinal
+          esInicial: !!esInicial,
+          esFinal: false,
+          muros: [],
+          pilares: [],
+          objetos: [],
+          hazards: [],
+          enemigos: [],
+          decals: [],
+          puertas: [],
+        };
+      }
+
+function conectar(a, b, dirDesdeA) {
+        const dirDesdeB = DIR_OPUESTA[dirDesdeA];
+        const pa = posPuerta(dirDesdeA),
+          pb = posPuerta(dirDesdeB);
+        a.puertas.push({ x: pa.x, y: pa.y, r: 30, dir: dirDesdeA, destino: b.id });
+        b.puertas.push({ x: pb.x, y: pb.y, r: 30, dir: dirDesdeB, destino: a.id });
+      }
+
+// Paseo aleatorio simple sobre una cuadrícula 3x3: basta para 3-5 salas,
+// no hace falta nada más sofisticado (BSP, etc.) para el alcance actual.
+export function generarGrafoPlanta() {
+        const nSalas = ri(3, 5);
+        const ocupadas = new Map();
+        const gxInicial = ri(0, GRID - 1),
+          gyInicial = GRID - 1; // entrada en la fila inferior
+        const salas = [];
+        const crear = (x, y, ini) => {
+          const s = nuevaSala(salas.length, x, y, ini);
+          salas.push(s);
+          ocupadas.set(x + "," + y, s);
+          return s;
+        };
+        let actual = crear(gxInicial, gyInicial, true);
+        let intentos = 0;
+        while (salas.length < nSalas && intentos++ < 60) {
+          const libres = Object.entries(DIR_VEC)
+            .map(([d, [dx, dy]]) => ({
+              d,
+              gx: actual.gx + dx,
+              gy: actual.gy + dy,
+            }))
+            .filter(
+              (o) =>
+                o.gx >= 0 &&
+                o.gx < GRID &&
+                o.gy >= 0 &&
+                o.gy < GRID &&
+                !ocupadas.has(o.gx + "," + o.gy),
+            );
+          if (!libres.length) {
+            actual = az(salas); // atasco: retrocede a una sala ya creada y sigue el paseo
+            continue;
+          }
+          const o = az(libres);
+          const nva = crear(o.gx, o.gy, false);
+          conectar(actual, nva, o.d);
+          actual = nva;
+        }
+        const inicial = salas[0];
+        const final = salas.reduce(
+          (a, b) =>
+            Math.abs(b.gx - inicial.gx) + Math.abs(b.gy - inicial.gy) >
+            Math.abs(a.gx - inicial.gx) + Math.abs(a.gy - inicial.gy)
+              ? b
+              : a,
+          salas[0],
+        );
+        final.esFinal = true;
+        // sala de reto "solo parry": aparece a veces como una sala intermedia
+        // más (nunca la de inicio ni la final), a partir de cierta planta
+        if (G.planta >= 5 && salas.length > 2 && Math.random() < 0.09) {
+          const candidatas = salas.filter((s) => !s.esInicial && !s.esFinal);
+          if (candidatas.length) az(candidatas).tipo = "reto_parry";
+        }
+        return { salas, salaActualId: inicial.id };
+      }
+
+export function salaPorId(id) {
+        return G.mazmorra && G.mazmorra.salas.find((s) => s.id === id);
+      }
+
+export function salaActual() {
+        return G.mazmorra ? salaPorId(G.mazmorra.salaActualId) : null;
+      }
+
+// Puebla pilares/hazards/objetos/enemigos de una sala normal la PRIMERA vez
+// que se visita (ver cargarSala) -- no se regenera si se vuelve a entrar.
+function poblarSala(sala, f) {
+        const N = G.players.length;
+        ponPilares(f, ri(2, 4));
+        if (sala.tipo === "reto_parry") {
+          // sala de reto: sin hazards/objetos que distraigan, solo enemigos
+          const nEn = ri(2, 3) + Math.floor((N - 1) / 2);
+          for (let i = 0; i < nEn; i++) spawnEnemigo(f, "melee");
+          toast(
+            "Sala de reto: aquí solo el contraataque de parry hace daño",
+            "#c084f0",
+          );
+          return;
+        }
+        ponHazardsYObjetos(f);
+        const base =
+          f <= 5
+            ? ri(2, 3)
+            : f <= 20
+              ? ri(3, 4)
+              : f <= 50
+                ? ri(4, 5)
+                : f <= 80
+                  ? ri(5, 6)
+                  : ri(6, 8);
+        const n = base + (N - 1);
+        for (let i = 0; i < n; i++) {
+          const esElite = Math.random() < clamp(f * 0.005, 0, 0.35);
+          spawnEnemigo(f, tipoAleatorio(f), esElite);
+        }
+        if (f >= 7 && Math.random() < 0.16) {
+          spawnEnemigo(f, "mini");
+          toast("⚠ Un minijefe merodea esta planta…", "#c07be0");
+        }
+      }
+
+// Carga una sala en G (reasigna las referencias que ya usa todo el motor:
+// render(), masCercano(), puntoValido(), aplicarLimites(), spawnEnemigo()...
+// siguen funcionando sin ningún cambio porque siempre operan sobre "lo que
+// hoy está en G"). La forma/muros se generan la primera vez que se visita
+// y se reutilizan después; los enemigos/pilares/objetos supervivientes de
+// una sala ya visitada NO se regeneran al volver a entrar.
+export function cargarSala(sala) {
+        G.mazmorra.salaActualId = sala.id;
+        if (!sala.visitada) {
+          generarMapa(sala.forma); // deja el resultado en G.forma/G.muros
+          sala.muros = G.muros;
+        } else {
+          G.forma = sala.forma;
+          G.muros = sala.muros;
+        }
+        G.pilares = sala.pilares;
+        G.objetos = sala.objetos;
+        G.hazards = sala.hazards;
+        G.enemigos = sala.enemigos;
+        G.decals = sala.decals;
+        G.puertas = sala.puertas;
+        // espejos de solo-lectura para render()/red (el invitado no tiene
+        // G.mazmorra): son valores primitivos, no referencias -- cualquier
+        // mutación persistente (ej. "despejada") debe ir contra el objeto
+        // `sala` real vía salaActual(), nunca contra estos espejos.
+        G.salaTipo = sala.tipo;
+        G.salaEsFinal = sala.esFinal;
+        G.projs = [];
+        G.areas = [];
+        G.drops = []; // transitorios: no persisten al cruzar una puerta
+        G.portal =
+          sala.esFinal && sala.despejada
+            ? { x: W / 2, y: 64, r: 24, t: 0 }
+            : null;
+        if (!sala.poblada) {
+          poblarSala(sala, G.planta);
+          sala.poblada = true;
+        }
+        sala.visitada = true;
+      }
+
+// Traslada a TODO el grupo a la sala conectada en cuanto un jugador vivo
+// toca una puerta (ver core/loop.js) -- no hace falta que todos estén
+// juntos, a diferencia del portal de fin de planta.
+export function cruzarPuerta(pu) {
+        const origenId = G.mazmorra.salaActualId;
+        const destino = salaPorId(pu.destino);
+        if (!destino) return;
+        cargarSala(destino);
+        const entrada =
+          destino.puertas.find((d) => d.destino === origenId) ||
+          destino.puertas[0];
+        const [dx, dy] = DIR_VEC[entrada.dir];
+        const bx = entrada.x - dx * 70,
+          by = entrada.y - dy * 70; // un paso hacia dentro, opuesto a la puerta
+        const perp = [-dy, dx];
+        const N = G.players.length;
+        G.players.forEach((p, i) => {
+          const off = (i - (N - 1) / 2) * 34;
+          p.x = clamp(bx + perp[0] * off, 40, W - 40);
+          p.y = clamp(by + perp[1] * off, 40, H - 40);
+          p.atrapado = null;
+          p.rootT = 0;
+          aplicarLimites(p);
+        });
+        G.fadeT = 0.3;
+      }
+
+export function iniciarPlanta() {
+        const f = G.planta,
+          N = G.players.length;
+        G.escena = "torre";
+        G.projs = [];
+        G.areas = [];
+        G.drops = [];
+        G.fx = [];
+        G.wx = [];
+        G.rayos = [];
+        G.rayoCd = rnd(3, 6);
+        G.portal = null;
+        G.fogata = null;
+        G.fogataUsada = false;
+        G.descansoT = 0;
+        G.mercader = null;
+        G.skinNpc = null;
+        G.arenaNpc = null;
+        G.clima = climaAleatorio();
+
+        function reposicionarJugadores() {
+          G.players.forEach((p, i) => {
+            p.x = W / 2 + (i - (N - 1) / 2) * 46;
+            p.y = H - 70;
+            p.trail = [];
+            p.safeX = p.x;
+            p.safeY = p.y;
+            p.atrapado = null;
+            p.rootT = 0;
+            if (G.forma === "circulo" || G.forma === "rombo" || G.forma === "anillo")
+              p.y = H - 88;
+            if (p.ko) {
+              p.ko = false;
+              p.hp = Math.round(statsTot(p).hpMax * 0.3);
+              toast(p.nombre + " se levanta al cruzar el portal", "#7fd4c1");
+            }
+            if (G.lobby === "buenos") {
+              p.escudo = Math.round(statsTot(p).hpMax * 0.12);
+            }
+          });
+          if (G.lobby === "buenos")
+            toast("Pasiva del Alba: escudos renovados", "#7fd4c1");
+        }
+
         if (esJefe(f)) {
+          // plantas de jefe: SIEMPRE una única sala, sin mazmorra multi-sala
+          G.mazmorra = null;
+          G.puertas = [];
+          G.salaTipo = "normal";
+          G.salaEsFinal = false;
+          G.enemigos = [];
+          G.objetos = [];
+          G.decals = [];
+          G.hazards = [];
+          generarMapa(az(["sala", "circulo", "rombo"]));
+          reposicionarJugadores();
+          G.pilares = [];
+          ponPilares(f, ri(1, 2));
+          ponHazardsYObjetos(f);
           const arq = arquetipoJefe(f);
           if (f === 5) {
             // JEFE SECRETO: El Magnate (cerdo presidencial) — solo para test en planta 5
@@ -321,27 +616,11 @@ export function iniciarPlanta() {
             for (const p of G.players) spawnClon(f, p.rol);
           }
         } else {
-          const base =
-            f <= 5
-              ? ri(2, 3)
-              : f <= 20
-                ? ri(3, 4)
-                : f <= 50
-                  ? ri(4, 5)
-                  : f <= 80
-                    ? ri(5, 6)
-                    : ri(6, 8);
-          const n = base + (N - 1);
-          for (let i = 0; i < n; i++) {
-            const esElite = Math.random() < clamp(f * 0.005, 0, 0.35);
-            spawnEnemigo(f, tipoAleatorio(f), esElite);
-          }
-          // minijefe aleatorio
-          if (f >= 7 && Math.random() < 0.16) {
-            spawnEnemigo(f, "mini");
-            toast("⚠ Un minijefe merodea esta planta…", "#c07be0");
-          }
+          G.mazmorra = generarGrafoPlanta();
+          cargarSala(salaPorId(G.mazmorra.salaActualId));
+          reposicionarJugadores();
         }
+
         const climaTxt = NOMBRE_CLIMA[G.clima]
           ? " · " + NOMBRE_CLIMA[G.clima]
           : "";

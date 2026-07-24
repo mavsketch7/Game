@@ -26,6 +26,13 @@ const cdHaste = (p) => (p.hasteT > 0 ? 0.55 : 1);
 
 export function atacar(p) {
         if (p.atrapado) return;
+        if (G.salaTipo === "reto_parry") {
+          if (!(p._retoAvisoT > 0)) {
+            fxTexto(p.x, p.y - 28, "¡Solo puedes parryar aquí!", "#c084f0");
+            p._retoAvisoT = 0.9;
+          }
+          return;
+        }
         const t = statsTot(p);
         if (p.rol === "guerrero") {
           if (p.atkCd > 0) return;
