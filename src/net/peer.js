@@ -189,6 +189,15 @@ export function netEnviarLobby() {
         netBroadcast({ t: "lobby", slots: M.slots, lobby: M.lobby });
       }
 
+// El invitado manda su propio cambio de clase/listo al anfitrión (que ya
+// sabe aplicarlo — ver el "rol" en onDataHost — y reemite "lobby" tras
+// aplicarlo). Cada invitado solo puede tocar su propio slot: ver
+// puedeEditarSlot() en ui/menu.js.
+export function enviarRolPropio(rol, listo) {
+        if (NET.modo !== "cliente" || !NET.conn || !NET.conn.open) return;
+        NET.conn.send({ t: "rol", rol, listo });
+      }
+
 export function netAplicarInputs() {
         if (NET.modo !== "host") return;
         for (const p of G.players) {
@@ -262,6 +271,11 @@ export function unirseSalaOnline(id) {
 function onDataCliente(d) {
         if (d.t === "welcome") {
           NET.miIdx = d.idx;
+          // el canal no garantiza orden: si el primer "lobby" llegó antes
+          // que este "welcome", ese primer render se hizo con el índice
+          // por defecto (0) y dejaba el propio slot marcado como ajeno
+          // (deshabilitado). Repintar ahora con el NET.miIdx ya correcto.
+          construirMenu();
         } else if (d.t === "lobby") {
           mostrarLobbySincronizado(d.slots, d.lobby);
         } else if (d.t === "estado") {

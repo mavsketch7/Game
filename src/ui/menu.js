@@ -2,7 +2,7 @@
 import { COLORES_J, LOBBIES, ORDEN_ROLES, ROLES } from "../core/constants.js";
 import { nuevaPartida } from "../core/gameflow.js";
 import { MEJORAS_TIENDA, META } from "../core/save.js";
-import { NET, crearSalaOnline, netEnviarLobby, unirseSalaOnline } from "../net/peer.js";
+import { NET, crearSalaOnline, enviarRolPropio, netEnviarLobby, unirseSalaOnline } from "../net/peer.js";
 import { SPR } from "../render/sprites.js";
 import { M } from "../systems/input.js";
 import { abrirInfo } from "./info.js";
@@ -33,6 +33,16 @@ function esAnfitrionDelLobby() {
         return NET.modo !== "cliente";
       }
 
+// Cada jugador confirma su propia clase/listo de forma independiente: el
+// invitado solo puede tocar el slot que le asignó el anfitrión (NET.miIdx);
+// el anfitrión sigue controlando sus propios dispositivos locales
+// (teclado + mandos), pero ya no los slots "net" de los invitados — esos
+// se controlan solos desde su propia pantalla.
+function puedeEditarSlot(s, i) {
+        if (NET.modo === "cliente") return i === NET.miIdx;
+        return s.ctrl.tipo !== "net";
+      }
+
 export function construirMenu() {
         const cont = document.getElementById("slots");
         if (!cont) return;
@@ -49,6 +59,7 @@ export function construirMenu() {
           }
           const rol = ORDEN_ROLES[s.rolIdx],
             r = ROLES[rol];
+          const editable = puedeEditarSlot(s, i);
           div.className = "slot marco-px" + (s.listo ? " listo" : "");
           div.style.setProperty("--gema", COLORES_J[i]);
           div.innerHTML =
@@ -65,11 +76,11 @@ export function construirMenu() {
             COLORES_J[i] +
             '"></span></div>' +
             '<div class="fila-clase"><button class="btn-mini"' +
-            (soyAnfitrion ? "" : " disabled") +
+            (editable ? "" : " disabled") +
             ' data-d="-1">◀</button><h3>' +
             r.nombre +
             '</h3><button class="btn-mini"' +
-            (soyAnfitrion ? "" : " disabled") +
+            (editable ? "" : " disabled") +
             ' data-d="1">▶</button></div>' +
             '<div class="desc">' +
             r.desc +
@@ -87,9 +98,10 @@ export function construirMenu() {
           const bl = document.createElement("button");
           bl.className = "btn-listo";
           bl.textContent = s.listo ? "✔ Listo" : "Marcar listo";
-          bl.disabled = !soyAnfitrion;
+          bl.disabled = !editable;
           bl.onclick = () => {
             s.listo = !s.listo;
+            if (NET.modo === "cliente") enviarRolPropio(s.rolIdx, s.listo);
             construirMenu();
           };
           div.appendChild(bl);
@@ -108,13 +120,14 @@ export function construirMenu() {
               "<kbd>◀▶</kbd> clase · <kbd>A</kbd> listo · <kbd>B</kbd> salir · <kbd>X</kbd> info · <kbd>▲▼</kbd> lobby · <kbd>Start</kbd> empezar";
             div.appendChild(ay);
           }
-          if (soyAnfitrion) {
+          if (editable) {
             div.querySelectorAll(".btn-mini").forEach((b) => {
               b.onclick = () => {
                 if (!s.listo) {
                   s.rolIdx =
                     (s.rolIdx + ORDEN_ROLES.length + +b.dataset.d) %
                     ORDEN_ROLES.length;
+                  if (NET.modo === "cliente") enviarRolPropio(s.rolIdx, s.listo);
                   construirMenu();
                 }
               };
@@ -170,7 +183,7 @@ export function construirMenu() {
             document.getElementById("cartas-lobby").after(estadoInvitado);
           }
           estadoInvitado.textContent =
-            "Conectado. Viendo la sala del anfitrión en directo — esperando a que marque a todos listos y empiece la partida…";
+            "Conectado. Elige tu clase y marca listo cuando quieras — el anfitrión empezará la partida en cuanto todos lo estéis.";
         } else if (estadoInvitado) {
           estadoInvitado.remove();
         }
