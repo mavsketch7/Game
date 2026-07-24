@@ -21,6 +21,17 @@ export let maximizado = false;
 
 const _marco = document.getElementById("marco");
 
+// Por debajo de 1x (ventana más pequeña que el lienzo nativo) no hay forma
+// de evitar artefactos de escalado. A partir de 1x, redondear siempre hacia
+// abajo al entero exacto es obligatorio: los patrones de suelo/muro
+// (createPattern de un tile pequeño repetido) muestran un moiré muy visible
+// si el navegador los reescala por CSS con un factor no entero -- el
+// lienzo ya usa image-rendering:pixelated, pero eso solo evita el
+// difuminado, no el moiré de un factor fraccionario.
+function escalaSinMoire(limite) {
+        return limite >= 1 ? Math.floor(limite) : limite;
+      }
+
 export function ajustarLienzo() {
         const fs = esPantallaCompleta() || maximizado;
         let maxW, maxH;
@@ -31,9 +42,10 @@ export function ajustarLienzo() {
           maxW = window.innerWidth * 0.97;
           maxH = window.innerHeight * 0.84;
         }
+        const limite = Math.min(maxW / W, maxH / H);
         let esc;
-        if (AJ.escala === "auto") esc = Math.min(maxW / W, maxH / H);
-        else esc = Math.min(parseFloat(AJ.escala), maxW / W, maxH / H);
+        if (AJ.escala === "auto") esc = escalaSinMoire(limite);
+        else esc = escalaSinMoire(Math.min(parseFloat(AJ.escala), limite));
         if (!fs) esc = Math.max(esc, 0.5);
         const cw = Math.round(W * esc),
           ch = Math.round(H * esc);
