@@ -716,6 +716,7 @@ const KENNEY_TILE_SRC = {
         floorA: assetUrl("floorA"),
         floorB: assetUrl("floorB"),
         wall: assetUrl("wall"),
+        wallRemate: assetUrl("wallRemate"),
       };
 
 export const KENNEY_TILE = {};
@@ -739,6 +740,22 @@ export function wallPatron() {
           if (!wallPatternKenney)
             wallPatternKenney = cx.createPattern(KENNEY_TILE.wall, "repeat");
           return wallPatternKenney;
+        }
+        return null;
+      }
+
+// Franja de remate (almenas) para el borde superior de un rectángulo de
+// muro grande -- ver dibujado en render/world.js. El pack de sprites no
+// trae piezas de esquina/borde por bitmask (investigado a fondo), así que
+// en vez de un autotiling de 4/8 vecinos esto da a los muros un acabado
+// "coronado" reutilizando la única tira decorativa reaprovechable del set.
+let remateMuroPatternKenney = null;
+
+export function remateMuroPatron() {
+        if (KENNEY_TILE.wallRemate) {
+          if (!remateMuroPatternKenney)
+            remateMuroPatternKenney = cx.createPattern(KENNEY_TILE.wallRemate, "repeat");
+          return remateMuroPatternKenney;
         }
         return null;
       }

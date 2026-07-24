@@ -4,7 +4,7 @@ import { ELEMENTOS, MAX_PLANTA, RAREZAS, SUPS } from "../core/constants.js";
 import { G } from "../core/state.js";
 import { fxParticulas } from "./effects.js";
 import { barra, renderHUD } from "./hud.js";
-import { ATTACK_DUR, ESC_FORMA, KENNEY_TILE, NO_SCHEMATIC_WEAPON, REAL_ATTACK, REAL_RUN, REAL_SPRITE_SCALE, SHEETS, SPR, SPR_COFRE_FRAMES, SPR_FORMAS, assetOK, spriteJugador, wallPatron } from "./sprites.js";
+import { ATTACK_DUR, ESC_FORMA, KENNEY_TILE, NO_SCHEMATIC_WEAPON, REAL_ATTACK, REAL_RUN, REAL_SPRITE_SCALE, SHEETS, SPR, SPR_COFRE_FRAMES, SPR_FORMAS, assetOK, remateMuroPatron, spriteJugador, wallPatron } from "./sprites.js";
 import { groundTarget } from "../systems/abilities.js";
 import { masCercano } from "../systems/combat.js";
 import { mouse } from "../systems/input.js";
@@ -24,6 +24,12 @@ const TEMA_SUELO_FORMA = {
         foso: "floorA",
         columnas: "floorA",
         pasilloL: "floorB",
+        nicho: "floorA",
+        u: "floorB",
+        pasilloDoble: "floorA",
+        antesala: "floorB",
+        herradura: "floorA",
+        escalonada: "floorB",
       };
 
 function patronSuelo(f, forma, tipo) {
@@ -174,10 +180,22 @@ export function render() {
         }
 
         const wallPat = wallPatron();
+        const rematePat = remateMuroPatron();
         for (const m of G.muros) {
           if (wallPat) {
             cx.fillStyle = wallPat;
             cx.fillRect(m.x, m.y, m.w, m.h);
+            // remate (almenas) en el borde superior de los muros grandes:
+            // el pack de sprites no trae piezas de esquina/borde por
+            // bitmask (ver systems/floorgen.js), así que en vez de un
+            // autotiling de 4/8 vecinos esto le da a cada rectángulo un
+            // acabado "coronado" en vez de un corte plano. Se omite en
+            // obstáculos pequeños (ej. los bloques de "columnas", 22px)
+            // porque saturaría visualmente una pieza tan chica.
+            if (rematePat && m.h >= 26) {
+              cx.fillStyle = rematePat;
+              cx.fillRect(m.x, m.y, m.w, 16);
+            }
             cx.strokeStyle = "rgba(10,8,17,.6)";
             cx.lineWidth = 2;
             cx.strokeRect(m.x + 1, m.y + 1, m.w - 2, m.h - 2);

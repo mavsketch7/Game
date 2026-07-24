@@ -21,6 +21,10 @@ function climaAleatorio() {
       }
 
 // Solo formas cuadradas/rectangulares -- nada de círculos, rombos ni anillos.
+// Cada una es una composición de rectángulos hecha a mano (no aleatoria en
+// su disposición base, como mucho con algún parámetro puntual tipo el `gy`
+// de "partida"), verificada para dejar siempre libres con margen los 4
+// puntos cardinales donde caen las puertas de la mazmorra multi-sala.
 const FORMAS_MAPA = [
         "sala",
         "sala",
@@ -29,6 +33,12 @@ const FORMAS_MAPA = [
         "foso",
         "columnas",
         "pasilloL",
+        "nicho",
+        "u",
+        "pasilloDoble",
+        "antesala",
+        "herradura",
+        "escalonada",
       ];
 
 const NOMBRE_FORMA = {
@@ -38,6 +48,12 @@ const NOMBRE_FORMA = {
         foso: "Anillo del foso",
         columnas: "Sala de columnas",
         pasilloL: "Pasillo en L",
+        nicho: "Sala con nicho",
+        u: "Sala en U",
+        pasilloDoble: "Pasillo doble",
+        antesala: "Antesala angosta",
+        herradura: "Herradura",
+        escalonada: "Sala escalonada",
       };
 
 export function generarMapa(forma) {
@@ -90,6 +106,54 @@ export function generarMapa(forma) {
           G.muros.push(
             { x: W * 0.55, y: H * 0.14, w: W * 0.34, h: H * 0.3 },
             { x: W * 0.11, y: H * 0.56, w: W * 0.34, h: H * 0.3 },
+          );
+        } else if (forma === "nicho") {
+          // alcoba lateral: un bloque asimétrico a un lado de la sala
+          G.muros.push({ x: 110, y: 190, w: 110, h: 180 });
+        } else if (forma === "u") {
+          // bloque macizo arriba con hueco por debajo: obliga a rodearlo
+          G.muros.push({ x: W / 2 - 160, y: 90, w: 320, h: 130 });
+        } else if (forma === "pasilloDoble") {
+          // dos corredores paralelos simétricos con un hueco central
+          const gy2 = H * 0.5,
+            gap2 = 60;
+          G.muros.push(
+            { x: W * 0.3, y: 92, w: 26, h: Math.max(30, gy2 - gap2 - 92) },
+            {
+              x: W * 0.3,
+              y: gy2 + gap2,
+              w: 26,
+              h: Math.max(30, H - 92 - (gy2 + gap2)),
+            },
+            { x: W * 0.66, y: 92, w: 26, h: Math.max(30, gy2 - gap2 - 92) },
+            {
+              x: W * 0.66,
+              y: gy2 + gap2,
+              w: 26,
+              h: Math.max(30, H - 92 - (gy2 + gap2)),
+            },
+          );
+        } else if (forma === "antesala") {
+          // cuello de botella cerca de la entrada inferior: dos bloques con
+          // un hueco central estrecho por el que hay que pasar
+          G.muros.push(
+            { x: 0, y: H - 170, w: W * 0.38, h: 30 },
+            { x: W * 0.62, y: H - 170, w: W * 0.38, h: 30 },
+          );
+        } else if (forma === "herradura") {
+          // marco hueco en forma de herradura, abierto por abajo -- se
+          // puede entrar y caminar dentro, no es un bloque macizo
+          G.muros.push(
+            { x: 330, y: 170, w: 300, h: 26 },
+            { x: 330, y: 170, w: 26, h: 200 },
+            { x: 604, y: 170, w: 26, h: 200 },
+          );
+        } else if (forma === "escalonada") {
+          // tres bloques pequeños en zigzag diagonal
+          G.muros.push(
+            { x: 200, y: 150, w: 70, h: 70 },
+            { x: 445, y: 250, w: 70, h: 70 },
+            { x: 690, y: 350, w: 70, h: 70 },
           );
         }
       }
@@ -217,19 +281,26 @@ function ponPilares(f, nPil) {
         }
       }
 
-function ponHazardsYObjetos(f) {
-        if (f >= 10 && Math.random() < 0.7) ponHazard("grieta", 20, ri(1, 3));
-        if (f >= 8 && Math.random() < 0.35) ponHazard("arena", 34, 1);
-        if (f >= 6 && Math.random() < 0.5) ponHazard("ortiga", 28, ri(1, 2));
-        if (f >= 14 && Math.random() < 0.45)
+// hazardMult/objMult (por defecto 1) escalan las probabilidades según el
+// "perfil" sorteado para la sala en poblarSala() -- las plantas de jefe
+// llaman a esta función sin argumentos extra y no se ven afectadas.
+function ponHazardsYObjetos(f, hazardMult, objMult) {
+        hazardMult = hazardMult ?? 1;
+        objMult = objMult ?? 1;
+        const p = (base) => clamp(base * hazardMult, 0, 0.95);
+        const po = (base) => clamp(base * objMult, 0, 0.95);
+        if (f >= 10 && Math.random() < p(0.7)) ponHazard("grieta", 20, ri(1, 3));
+        if (f >= 8 && Math.random() < p(0.35)) ponHazard("arena", 34, 1);
+        if (f >= 6 && Math.random() < p(0.5)) ponHazard("ortiga", 28, ri(1, 2));
+        if (f >= 14 && Math.random() < p(0.45))
           ponHazard("fuegoZona", 26, ri(1, 2));
-        const nBar = ri(1, 3);
+        const nBar = Math.round(ri(1, 3) * objMult);
         for (let i = 0; i < nBar; i++)
           ponObjeto({ tipo: "barril", x: 0, y: 0, hp: 10 });
-        if (Math.random() < 0.45)
+        if (Math.random() < po(0.45))
           ponObjeto({ tipo: "cofre", x: 0, y: 0, hp: 1, abierto: false });
-        if (Math.random() < 0.5) ponObjeto({ tipo: "cristal", x: 0, y: 0 });
-        if (Math.random() < 0.6) ponObjeto({ tipo: "brasero", x: 0, y: 0 });
+        if (Math.random() < po(0.5)) ponObjeto({ tipo: "cristal", x: 0, y: 0 });
+        if (Math.random() < po(0.6)) ponObjeto({ tipo: "brasero", x: 0, y: 0 });
       }
 
 // ---- mazmorra multi-sala (plantas normales; las de jefe siguen siendo una
@@ -352,11 +423,25 @@ export function salaActual() {
         return G.mazmorra ? salaPorId(G.mazmorra.salaActualId) : null;
       }
 
+// Perfiles de contenido para que dos salas con la misma forma no se
+// sientan iguales: cada uno pesa distinto el número de pilares y las
+// probabilidades de hazards/objetos (ver ponHazardsYObjetos). Sorteado por
+// sala, no ligado a la forma -- así la variedad no depende solo de la
+// geometría de FORMAS_MAPA.
+const PERFILES_SALA = [
+        { nombre: "estandar", pilares: [2, 4], hazardMult: 1, objMult: 1 },
+        { nombre: "pilares", pilares: [4, 6], hazardMult: 0.3, objMult: 1 },
+        { nombre: "hazards", pilares: [0, 1], hazardMult: 1.8, objMult: 0.6 },
+        { nombre: "tesoro", pilares: [1, 3], hazardMult: 0.4, objMult: 1.6 },
+        { nombre: "arena", pilares: [0, 1], hazardMult: 0.2, objMult: 0.3 },
+      ];
+
 // Puebla pilares/hazards/objetos/enemigos de una sala normal la PRIMERA vez
 // que se visita (ver cargarSala) -- no se regenera si se vuelve a entrar.
 function poblarSala(sala, f) {
         const N = G.players.length;
-        ponPilares(f, ri(2, 4));
+        const perfil = az(PERFILES_SALA);
+        ponPilares(f, ri(perfil.pilares[0], perfil.pilares[1]));
         if (sala.tipo === "reto_parry") {
           // sala de reto: sin hazards/objetos que distraigan, solo enemigos
           const nEn = ri(2, 3) + Math.floor((N - 1) / 2);
@@ -367,7 +452,7 @@ function poblarSala(sala, f) {
           );
           return;
         }
-        ponHazardsYObjetos(f);
+        ponHazardsYObjetos(f, perfil.hazardMult, perfil.objMult);
         const base =
           f <= 5
             ? ri(2, 3)
@@ -582,3 +667,4 @@ export function iniciarPlanta() {
             f === 5 ? "#e9b45c" : "#c07be0",
           );
       }
+
