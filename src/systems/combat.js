@@ -7,7 +7,7 @@ import { fxOnda, fxParticulas, fxTexto } from "../render/effects.js";
 import { NIVEL_ULTI, danoPilar, golpeObjeto } from "./abilities.js";
 import { sfx } from "./audio.js";
 import { NOMBRES_MINI, arquetipoJefe, escalaEnemigo, nombreJefe } from "./bosses.js";
-import { puntoValido } from "./floorgen.js";
+import { posDropValida, puntoValido } from "./floorgen.js";
 import { finPartida, genItem } from "./loot.js";
 import { banner, toast } from "../ui/notifications.js";
 import { az, clamp, ri, rnd } from "../utils/helpers.js";
@@ -318,8 +318,10 @@ export function matarEnemigo(e, duenio) {
             banner("¡El Coloso superviviente enfurece!");
           }
         }
-        if (Math.random() < 0.12)
-          G.drops.push({ tipo: "vial", x: e.x, y: e.y });
+        if (Math.random() < 0.12) {
+          const pv = posDropValida(e.x, e.y);
+          G.drops.push({ tipo: "vial", x: pv.x, y: pv.y });
+        }
         // monedas
         if (e.jefe || e.mini || Math.random() < 0.6) {
           const val = Math.max(
@@ -329,10 +331,11 @@ export function matarEnemigo(e, duenio) {
                 (e.jefe ? 15 : e.mini ? 6 : e.elite ? 3 : 1),
             ),
           );
+          const pv = posDropValida(e.x + rnd(-10, 10), e.y + rnd(-10, 10));
           G.drops.push({
             tipo: "moneda",
-            x: e.x + rnd(-10, 10),
-            y: e.y + rnd(-10, 10),
+            x: pv.x,
+            y: pv.y,
             val,
           });
         }
@@ -344,10 +347,11 @@ export function matarEnemigo(e, duenio) {
               G.planta >= 90 ? 3 : G.planta >= 50 ? 2 : 1,
             );
           if (e.mini) it2.rareza = Math.max(it2.rareza, 1);
+          const pv = posDropValida(e.x + rnd(-8, 8), e.y + rnd(-8, 8));
           G.drops.push({
             tipo: "item",
-            x: e.x + rnd(-8, 8),
-            y: e.y + rnd(-8, 8),
+            x: pv.x,
+            y: pv.y,
             item: it2,
           });
         }

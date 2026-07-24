@@ -3,6 +3,7 @@ import { H, W } from "../core/canvas.js";
 import { MAX_PLANTA, NOMBRES_ARMA_CLASE, NOMBRES_ITEM, ORDEN_ROLES, PRECIO_VENTA, RAREZAS, ROLES, SLOTS, SUFIJOS } from "../core/constants.js";
 import { META, guardarMeta } from "../core/save.js";
 import { G, setG } from "../core/state.js";
+import { posDropValida } from "./floorgen.js";
 import { enviarStatsGremio } from "./guilds.js";
 import { M } from "./input.js";
 import { construirMenu } from "../ui/menu.js";
@@ -80,13 +81,10 @@ export function genItem(f, forceRar, forceSlot) {
 export function plantaDespejada() {
         const f = G.planta;
         G.drops.push({ tipo: "item", x: W / 2, y: H / 2, item: genItem(f) });
-        if (G.players.length >= 3)
-          G.drops.push({
-            tipo: "item",
-            x: W / 2 + 30,
-            y: H / 2 + 14,
-            item: genItem(f),
-          });
+        if (G.players.length >= 3) {
+          const pv = posDropValida(W / 2 + 30, H / 2 + 14);
+          G.drops.push({ tipo: "item", x: pv.x, y: pv.y, item: genItem(f) });
+        }
         G.portal = { x: W / 2, y: 64, r: 24, t: 0 };
         G.fogata = { x: W / 2 + 150, y: H / 2 + 40 };
         banner("Planta " + f + " despejada — todos al portal");

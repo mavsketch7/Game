@@ -106,6 +106,18 @@ export function puntoValido(x, y, r) {
         return dentroForma(x, y, r) && !colisionaMuro(x, y, r || 10);
       }
 
+// Corrige una posición propuesta para un drop (botín, moneda...) que podría
+// caer dentro de un muro o fuera de la forma de la sala -- por ejemplo el
+// knockback de un enemigo justo antes de morir, o el jitter aleatorio que se
+// suma a su posición de muerte. Sin esto el drop podía quedar en un punto
+// inalcanzable para siempre (ver matarEnemigo/golpeObjeto/danoPilar).
+export function posDropValida(x, y, r) {
+        const ent = { x, y, r: r || 8 };
+        aplicarLimites(ent);
+        aplicarLimites(ent); // segundo pase: por si el primero lo dejó tocando otro muro
+        return { x: ent.x, y: ent.y };
+      }
+
 export function aplicarLimites(ent) {
         for (const m of G.muros) {
           if (

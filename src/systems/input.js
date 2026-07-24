@@ -3,7 +3,7 @@ import { H, W, cv, toggleFullscreen } from "../core/canvas.js";
 import { LOBBIES, ORDEN_ROLES } from "../core/constants.js";
 import { G } from "../core/state.js";
 import { NET } from "../net/peer.js";
-import { activarParry, atacar, castSup, cicloElem, esquivar, habilidad, transformar } from "./abilities.js";
+import { activarParry, atacar, castSup, cicloElem, esquivar, habilidad, interactuar, transformar } from "./abilities.js";
 import { aplicarMusica, initAudio, reanudarAudio } from "./audio.js";
 import { abrirInfo, cerrarInfo } from "../ui/info.js";
 import { cerrarInv, toggleInv } from "../ui/inventory.js";
@@ -118,6 +118,7 @@ export function pollPads() {
                 if (edge(6) || edge(4)) activarParry(p);
                 if (edge(0)) esquivar(p);
                 if (edge(3)) habilidad(p);
+                if (edge(10)) interactuar(p);
                 if (p.rol === "mago") {
                   if (edge(2) || edge(15)) cicloElem(p, 1);
                   if (edge(14)) cicloElem(p, -1);
@@ -355,7 +356,8 @@ window.addEventListener("keydown", (e) => {
           e.preventDefault();
           esquivar(p);
         }
-        if (k === "e") habilidad(p);
+        if (k === "q") habilidad(p);
+        if (k === "e") interactuar(p);
         if (p.rol === "mago") {
           if (k === "1") p.elemento = "fuego";
           if (k === "2") p.elemento = "hielo";

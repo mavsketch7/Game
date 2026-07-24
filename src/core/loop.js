@@ -221,6 +221,20 @@ export function update(dt) {
               toast(p.nombre + " escapa de las arenas", "#7fd4c1");
             }
           }
+
+          // ---- QTE de apertura de cofre (botón de interacción, ver
+          // abilities.js: interactuar) -- se cancela si el jugador se aleja
+          // o si el cofre ya lo abrió otro compañero ----
+          if (p.cofreObj) {
+            if (
+              p.cofreObj.abierto ||
+              Math.hypot(p.cofreObj.x - p.x, p.cofreObj.y - p.y) > 46
+            ) {
+              p.cofreObj = null;
+            } else {
+              p.cofreQteT = (p.cofreQteT + dt * 1.1) % 1;
+            }
+          }
           for (let i = p.trail.length - 1; i >= 0; i--) {
             p.trail[i].t -= dt;
             if (p.trail[i].t <= 0) p.trail.splice(i, 1);
@@ -313,7 +327,7 @@ export function update(dt) {
             }
           if (pr.owner === "p")
             for (const o of G.objetos) {
-              if (o.tipo === "barril" || (o.tipo === "cofre" && !o.abierto)) {
+              if (o.tipo === "barril") {
                 if (Math.hypot(pr.x - o.x, pr.y - o.y) < 14) {
                   golpeObjeto(o, pr.dmg);
                   fuera = true;

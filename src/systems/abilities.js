@@ -6,6 +6,7 @@ import { G } from "../core/state.js";
 import { fxOnda, fxParticulas, fxTajo, fxTexto } from "../render/effects.js";
 import { sfx } from "./audio.js";
 import { curarP, danoAEnemigo, danoAlJugador, masCercano, statsTot, vivos } from "./combat.js";
+import { posDropValida } from "./floorgen.js";
 import { genItem } from "./loot.js";
 import { toast } from "../ui/notifications.js";
 import { clamp } from "../utils/helpers.js";
@@ -190,8 +191,7 @@ function golpeArco(p, dir, rango, arco, dmgBase, esPicaro) {
           }
         }
         for (const o of G.objetos) {
-          if (o.tipo !== "barril" && !(o.tipo === "cofre" && !o.abierto))
-            continue;
+          if (o.tipo !== "barril") continue;
           if (Math.hypot(o.x - p.x, o.y - p.y) < rango + 12) {
             let da = Math.atan2(o.y - p.y, o.x - p.x) - dir;
             while (da > Math.PI) da -= TAU;
@@ -261,22 +261,73 @@ export function golpeObjeto(o, dmg) {
               G.drops.push({ tipo: "vial", x: o.x, y: o.y });
             G.objetos.splice(G.objetos.indexOf(o), 1);
           }
-        } else if (o.tipo === "cofre" && !o.abierto) {
-          o.abierto = true;
-          fxOnda(o.x, o.y, 26, "#e9b45c");
-          G.drops.push({
-            tipo: "item",
-            x: o.x,
-            y: o.y - 14,
-            item: genItem(G.planta || 1),
-          });
-          G.drops.push({
-            tipo: "moneda",
-            x: o.x + 14,
-            y: o.y,
-            val: Math.max(2, Math.round(3 + G.planta * 0.25)),
-          });
         }
+      }
+
+// Ventana de acierto del QTE de interacción con cofres (mismo patrón que el
+// QTE de escape de las arenas movedizas en core/loop.js: un temporizador que
+// oscila 0→1 y hay que pulsar "interactuar" cuando cae en esta franja).
+const COFRE_QTE_VENTANA = [0.6, 0.85];
+const COFRE_QTE_GOLPES = 3;
+
+// Botón de acción (E en teclado, ver systems/input.js): abre un cofre cercano
+// sin abrir mediante un mini-QTE, en vez de golpearlo como a un barril. El
+// temporizador del QTE (p.cofreQteT) se actualiza cada frame en core/loop.js
+// mientras el jugador siga cerca del mismo cofre.
+export function interactuar(p) {
+        if (p.atrapado || p.ko) return;
+        let cofre = p.cofreObj;
+        if (!cofre || cofre.abierto) {
+          cofre = G.objetos.find(
+            (o) =>
+              o.tipo === "cofre" &&
+              !o.abierto &&
+              Math.hypot(o.x - p.x, o.y - p.y) < 46,
+          );
+          if (!cofre) return;
+          p.cofreObj = cofre;
+          p.cofreQteT = 0;
+          p.cofreHits = 0;
+          fxTexto(p.x, p.y - 30, "Abriendo…", "#e9b45c");
+          return;
+        }
+        const enVentana =
+          p.cofreQteT >= COFRE_QTE_VENTANA[0] &&
+          p.cofreQteT <= COFRE_QTE_VENTANA[1];
+        if (!enVentana) {
+          fxTexto(p.x, p.y - 30, "fallo…", "#9a93ab");
+          return;
+        }
+        p.cofreHits++;
+        fxOnda(p.x, p.y, 20 + p.cofreHits * 8, "#e9b45c");
+        if (p.cofreHits < COFRE_QTE_GOLPES) {
+          fxTexto(
+            p.x,
+            p.y - 30,
+            "¡" + p.cofreHits + "/" + COFRE_QTE_GOLPES + "!",
+            "#e9b45c",
+            true,
+          );
+          return;
+        }
+        cofre.abierto = true;
+        p.cofreObj = null;
+        fxOnda(cofre.x, cofre.y, 30, "#e9b45c");
+        const pv1 = posDropValida(cofre.x, cofre.y - 14);
+        G.drops.push({
+          tipo: "item",
+          x: pv1.x,
+          y: pv1.y,
+          item: genItem(G.planta || 1),
+        });
+        const pv2 = posDropValida(cofre.x + 14, cofre.y);
+        G.drops.push({
+          tipo: "moneda",
+          x: pv2.x,
+          y: pv2.y,
+          val: Math.max(2, Math.round(3 + G.planta * 0.25)),
+        });
+        toast("🪙 ¡Cofre abierto!", "#e9b45c");
       }
 
 function dispararProy(p, dir, dmg, tipo, color, v) {
