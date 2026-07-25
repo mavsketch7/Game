@@ -1,6 +1,7 @@
 // Auto-generated during the modularization refactor (2026-07-23).
-import { ETQ, FORMAS_INFO, MAX_NIV_PJ, RAREZAS, ROLES, SLOTS } from "../core/constants.js";
+import { ETQ, FORMAS_INFO, MAX_NIV_PJ, PRECIO_VENTA, RAREZAS, ROLES, SLOTS } from "../core/constants.js";
 import { abandonarPartida } from "../core/gameflow.js";
+import { META } from "../core/save.js";
 import { G } from "../core/state.js";
 import { fxOnda, fxParticulas } from "../render/effects.js";
 import { spriteJugador } from "../render/sprites.js";
@@ -24,6 +25,50 @@ function escHtml(s) {
 // multijugador): quién más daño/bajas/parries lleva, con su nombre y
 // gremio elegidos. No depende de red: cada jugador (local u online) ya
 // trae su propio nombre/gremio resuelto en G.players desde el lobby.
+// Mapa de la planta actual (solo plantas normales -- las de jefe son una
+// única sala y no tienen G.mazmorra, ver iniciarPlanta en floorgen.js).
+// Una sala se considera "conocida" si ya se visitó o si es vecina directa
+// de una visitada (sus puertas ya se ven en pantalla al estar dentro) --
+// no se revela la mazmorra entera de golpe, solo lo que el grupo ya pudo
+// ver por sí mismo.
+function minimapaPlanta() {
+        if (!G.mazmorra) return "";
+        const salas = G.mazmorra.salas;
+        const conocidas = new Set();
+        for (const s of salas)
+          if (s.visitada) {
+            conocidas.add(s.id);
+            for (const pu of s.puertas) conocidas.add(pu.destino);
+          }
+        const celdas = [];
+        for (let gy = 0; gy < 3; gy++)
+          for (let gx = 0; gx < 3; gx++) {
+            const s = salas.find((x) => x.gx === gx && x.gy === gy);
+            if (!s || !conocidas.has(s.id)) {
+              celdas.push('<div class="mini-celda vacia"></div>');
+              continue;
+            }
+            const actual = s.id === G.mazmorra.salaActualId;
+            const ico = s.esFinal ? "★" : s.esInicial ? "▲" : "";
+            celdas.push(
+              '<div class="mini-celda' +
+                (actual ? " actual" : s.visitada ? " visitada" : " conocida") +
+                '" title="' +
+                (s.esFinal ? "Sala final" : "Sala " + (s.id + 1)) +
+                '">' +
+                ico +
+                "</div>",
+            );
+          }
+        return (
+          '<h3 style="margin-top:14px;font-size:.85rem;color:var(--vespero)">🗺 Mapa de la planta</h3>' +
+          '<div class="minimapa">' +
+          celdas.join("") +
+          "</div>" +
+          '<div style="font-size:.68rem;color:var(--ceniza);margin-top:4px">▲ entrada · ★ sala final · solo se ve lo que ya habéis explorado</div>'
+        );
+      }
+
 function rankingSesion() {
         const filas = G.players
           .slice()
@@ -126,6 +171,10 @@ function totalPoder(st) {
         return Object.values(st || {}).reduce((a, b) => a + b, 0);
       }
 
+function precioVenta(it) {
+        return Math.round(PRECIO_VENTA[it.rareza] * (1 + 0.1 * META.mejoras.fortuna));
+      }
+
 function lineaItem(it, idx, equipada, p) {
         const rar = RAREZAS[it.rareza];
         const actual = p.equipo[it.slot];
@@ -213,6 +262,11 @@ function lineaItem(it, idx, equipada, p) {
                   "</button>") +
               fusBtnItem(it, idx, p) +
               transf +
+              '<button class="btn" onclick="venderItem(' +
+              idx +
+              ')" title="Se suma al oro de la partida (se banca al terminar, como las monedas)">Vender ' +
+              precioVenta(it) +
+              " 🪙</button>" +
               '<button class="btn peligro" onclick="tirarItem(' +
               idx +
               ')">Tirar</button></div>') +
@@ -556,6 +610,7 @@ export function abrirInv() {
           tabs +
           "</div>" +
           rankingSesion() +
+          minimapaPlanta() +
           '<div class="ficha-cab">' +
           '<canvas id="ficha-retrato" width="72" height="84"></canvas>' +
           '<div class="ficha-datos">' +
@@ -705,6 +760,21 @@ function tirarItem(idx) {
         }
       }
 
+// Vende un objeto de la bolsa por oro AHORA en vez de esperar a la venta
+// automática de fin de partida -- el oro va a G.oroRun (igual que las
+// monedas recogidas), no directo a META.oro: sigue bancándose (y sujeto al
+// peaje de abandonar) al terminar la partida, no salta esa mecánica.
+function venderItem(idx) {
+        const p = G.players[G.invSel] || G.players[0];
+        const it = p.bolsa[idx];
+        if (!it) return;
+        const oro = precioVenta(it);
+        p.bolsa.splice(idx, 1);
+        G.oroRun += oro;
+        toast("Vendido " + it.nombre + " por " + oro + " 🪙", "#ffd27f");
+        abrirInv();
+      }
+
 function darItem(idx, targetIdx) {
         const p = G.players[G.invSel] || G.players[0];
         const q = G.players[targetIdx];
@@ -730,3 +800,4 @@ window.invSel = invSel;
 window.ordenarBolsa = ordenarBolsa;
 window.tirarItem = tirarItem;
 window.togFusion = togFusion;
+window.venderItem = venderItem;

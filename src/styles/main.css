@@ -1134,6 +1134,39 @@ body.pantalla-completa #hint {
 .rank-fila.rank-header + .rank-fila {
   border-top: none;
 }
+.minimapa {
+  display: grid;
+  grid-template-columns: repeat(3, 34px);
+  grid-template-rows: repeat(3, 34px);
+  gap: 4px;
+  margin-top: 6px;
+}
+.mini-celda {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 5px;
+  font-size: 0.9rem;
+}
+.mini-celda.vacia {
+  background: transparent;
+}
+.mini-celda.conocida {
+  background: var(--piedra2);
+  border: 1px dashed var(--borde);
+  color: var(--ceniza);
+}
+.mini-celda.visitada {
+  background: var(--piedra2);
+  border: 1px solid var(--borde);
+  color: var(--hueso);
+}
+.mini-celda.actual {
+  background: var(--vespero);
+  border: 1px solid var(--vespero);
+  color: #1a1206;
+  font-weight: 800;
+}
 .ficha-cab {
   display: flex;
   gap: 14px;
