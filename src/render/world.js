@@ -4,7 +4,7 @@ import { ELEMENTOS, MAX_PLANTA, RAREZAS, SUPS } from "../core/constants.js";
 import { G } from "../core/state.js";
 import { fxParticulas } from "./effects.js";
 import { barra, renderHUD } from "./hud.js";
-import { ATTACK_DUR, ESC_FORMA, KENNEY_TILE, NO_SCHEMATIC_WEAPON, REAL_ATTACK, REAL_RUN, REAL_SPRITE_SCALE, SHEETS, SPR, SPR_COFRE_FRAMES, SPR_FORMAS, assetOK, remateMuroPatron, spriteJugador, wallPatron } from "./sprites.js";
+import { ATTACK_DUR, ESC_FORMA, KENNEY_TILE, NO_SCHEMATIC_WEAPON, REAL_ATTACK, REAL_RUN, REAL_SPRITE_SCALE, SHEETS, SPR, SPR_FORMAS, assetOK, remateMuroPatron, spriteJugador, wallPatron } from "./sprites.js";
 import { groundTarget } from "../systems/abilities.js";
 import { masCercano } from "../systems/combat.js";
 import { mouse } from "../systems/input.js";
@@ -611,17 +611,20 @@ export function render() {
             cx.beginPath();
             cx.ellipse(o.x, o.y + 10, 14, 5, 0, 0, TAU);
             cx.fill();
-            // al abrirse (interactuar() en abilities.js) reproduce brevemente
-            // los 3 fotogramas reales de la animación antes de quedarse en
-            // el último (abierto); si aún no cargaron del todo, cae al
-            // procedural/estático de siempre sin romper nada.
-            let imgCofre = o.abierto ? SPR.cofreAb : SPR.cofre;
-            if (o.abriendoT > 0 && SPR_COFRE_FRAMES.length > 1) {
-              const prog = clamp(1 - o.abriendoT / 0.4, 0, 0.999);
-              const fr = SPR_COFRE_FRAMES[Math.floor(prog * SPR_COFRE_FRAMES.length)];
-              if (fr) imgCofre = fr;
+            // Solo hay sprite de cerrado y de abierto (ver sprites.js): la
+            // hoja de origen no trae fotogramas intermedios utilizables. El
+            // "chispazo" de abrirse es puramente de código -- un pop de
+            // escala con rebote (ease-out-back) sobre el sprite abierto,
+            // en vez de animar entre imágenes.
+            const imgCofre = o.abierto ? SPR.cofreAb : SPR.cofre;
+            let escCofre = 1;
+            if (o.abierto && o.abriendoT > 0) {
+              const k = clamp(1 - o.abriendoT / 0.4, 0, 1);
+              const c1 = 1.70158, c3 = c1 + 1;
+              const backOut = 1 + c3 * Math.pow(k - 1, 3) + c1 * Math.pow(k - 1, 2);
+              escCofre = 0.3 + 0.7 * backOut;
             }
-            drawSprite(imgCofre, o.x, o.y);
+            drawSprite(imgCofre, o.x, o.y, false, escCofre);
             if (!o.abierto) {
               cx.globalAlpha = 0.3 + Math.sin(animGlobal * 3) * 0.15;
               cx.fillStyle = "#e9b45c";

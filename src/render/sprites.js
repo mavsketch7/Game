@@ -694,28 +694,22 @@ for (const kIcon in KENNEY_ICON_SRC) {
         imIcon.src = KENNEY_ICON_SRC[kIcon];
       }
 
-// Animación de apertura del cofre (cerrado, entreabierto, abierto con oro).
-// La hoja de origen trae 5 fotogramas, pero el 2º y 3er están recortados/
-// desplazados más estrechos que el resto dentro de su celda -- usarlos en
-// la animación hacía que el cofre pareciera "ensancharse" de golpe al
-// pasar al siguiente fotograma. Se usan solo los que comparten el mismo
-// ancho visual (cerrado, entreabierto con oro, abierto del todo).
-// SPR.cofre/SPR.cofreAb siguen existiendo por compatibilidad (primer y
-// último fotograma) para cualquier código que aún los lea directamente;
-// SPR.cofreFrames es el array completo que usa render/world.js para la
-// animación al abrir.
-export const SPR_COFRE_FRAMES = [];
-const COFRE_FRAME_SRC = ["cofre_f0", "cofre_f3", "cofre_f4"];
-COFRE_FRAME_SRC.forEach((name, i) => {
+// Sprites del cofre: solo cerrado y abierto. La hoja de origen trae 5
+// fotogramas "intermedios" pero ninguno sirve para animar entre ellos --
+// el 2º/3er son más estrechos que el resto dentro de su celda y el 4º
+// (cofre_f3) en realidad contiene DOS medias-ilustraciones del cofre una a
+// cada lado de la celda (visible como el cofre "partiéndose en dos" al
+// pasar por ese fotograma). En vez de perseguir más recortes de esa hoja,
+// la transición de cerrado→abierto se resuelve en render/world.js con un
+// efecto de "pop" (escala) puramente de código, sin fotogramas intermedios.
+const COFRE_FRAME_SRC = { cofre: "cofre_f0", cofreAb: "cofre_f4" };
+for (const key in COFRE_FRAME_SRC) {
   const im = new Image();
   im.onload = () => {
-    SPR_COFRE_FRAMES[i] = upscaleNN(im, 3);
-    if (SPR_COFRE_FRAMES[0]) SPR.cofre = SPR_COFRE_FRAMES[0];
-    if (SPR_COFRE_FRAMES[COFRE_FRAME_SRC.length - 1])
-      SPR.cofreAb = SPR_COFRE_FRAMES[COFRE_FRAME_SRC.length - 1];
+    SPR[key] = upscaleNN(im, 3);
   };
-  im.src = assetUrl(name);
-});
+  im.src = assetUrl(COFRE_FRAME_SRC[key]);
+}
 
 const KENNEY_TILE_SRC = {
         wall: assetUrl("wall"),

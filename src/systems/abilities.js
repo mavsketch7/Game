@@ -281,9 +281,10 @@ export function interactuar(p) {
         const cofre = p.cofreObj;
         if (!cofre || cofre.abierto) return;
         cofre.abierto = true;
-        cofre.abriendoT = 0.4; // reproduce la animación de apertura (ver world.js)
+        cofre.abriendoT = 0.4; // duración del pop de apertura (ver world.js)
         p.cofreObj = null;
         fxOnda(cofre.x, cofre.y, 30, "#e9b45c");
+        fxParticulas(cofre.x, cofre.y - 6, 12, "#e9b45c");
         const pv1 = posDropValida(cofre.x, cofre.y - 14);
         G.drops.push({
           tipo: "item",
