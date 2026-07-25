@@ -694,13 +694,18 @@ for (const kIcon in KENNEY_ICON_SRC) {
         imIcon.src = KENNEY_ICON_SRC[kIcon];
       }
 
-// Animación de apertura del cofre (3 fotogramas reales: cerrado, entreabierto,
-// abierto con oro -- ver docs de la sesión). SPR.cofre/SPR.cofreAb siguen
-// existiendo por compatibilidad (primer y último fotograma) para cualquier
-// código que aún los lea directamente; SPR.cofreFrames es el array completo
-// que usa render/world.js para la animación al abrir.
+// Animación de apertura del cofre (cerrado, entreabierto, abierto con oro).
+// La hoja de origen trae 5 fotogramas, pero el 2º y 3er están recortados/
+// desplazados más estrechos que el resto dentro de su celda -- usarlos en
+// la animación hacía que el cofre pareciera "ensancharse" de golpe al
+// pasar al siguiente fotograma. Se usan solo los que comparten el mismo
+// ancho visual (cerrado, entreabierto con oro, abierto del todo).
+// SPR.cofre/SPR.cofreAb siguen existiendo por compatibilidad (primer y
+// último fotograma) para cualquier código que aún los lea directamente;
+// SPR.cofreFrames es el array completo que usa render/world.js para la
+// animación al abrir.
 export const SPR_COFRE_FRAMES = [];
-const COFRE_FRAME_SRC = ["cofre_f0", "cofre_f1", "cofre_f2", "cofre_f3", "cofre_f4"];
+const COFRE_FRAME_SRC = ["cofre_f0", "cofre_f3", "cofre_f4"];
 COFRE_FRAME_SRC.forEach((name, i) => {
   const im = new Image();
   im.onload = () => {
