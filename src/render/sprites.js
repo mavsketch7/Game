@@ -713,8 +713,6 @@ COFRE_FRAME_SRC.forEach((name, i) => {
 });
 
 const KENNEY_TILE_SRC = {
-        floorA: assetUrl("floorA"),
-        floorB: assetUrl("floorB"),
         wall: assetUrl("wall"),
         wallRemate: assetUrl("wallRemate"),
       };
