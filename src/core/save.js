@@ -4,7 +4,7 @@ import { G } from "./state.js";
 
 export const META = {
         oro: 0,
-        mejoras: { hp: 0, atk: 0, armor: 0, vel: 0, fortuna: 0 },
+        mejoras: { hp: 0, atk: 0, armor: 0, vel: 0, fortuna: 0, crit: 0, cdr: 0 },
       };
 
 const CLAVE_META = "vespero_meta_v1";
@@ -77,6 +77,22 @@ export const MEJORAS_TIENDA = [
           desc: "+10% de oro obtenido por nivel.",
           max: 5,
           porNivel: "+10% oro",
+        },
+        {
+          id: "crit",
+          ico: "🎯",
+          nombre: "Ojo Certero",
+          desc: "+2% de probabilidad de crítico para todo el grupo por nivel.",
+          max: 8,
+          porNivel: "+2% crít.",
+        },
+        {
+          id: "cdr",
+          ico: "⏱️",
+          nombre: "Reflejos del Gremio",
+          desc: "+3% de reducción de cooldown de habilidades por nivel.",
+          max: 8,
+          porNivel: "+3% CDR",
         },
       ];
 

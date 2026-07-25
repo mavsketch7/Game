@@ -64,24 +64,88 @@ function rankingSesion() {
         );
       }
 
+// Estadística de la ficha de personaje con icono y, cuando el stat tiene un
+// techo natural (vida actual/máxima, % de crítico, % de CDR), una barrita
+// de progreso -- daño/armadura/velocidad no tienen techo fijo (crecen sin
+// límite con equipo) así que se quedan solo en número para no dar una
+// lectura visual engañosa.
+function fichaStat(ico, etq, valor, pct) {
+        const barra =
+          pct == null
+            ? ""
+            : '<div class="ficha-stat-bar"><div style="width:' +
+              clamp(pct, 0, 100) +
+              '%"></div></div>';
+        return (
+          '<div class="ficha-stat">' +
+          ico +
+          " " +
+          etq +
+          "<b>" +
+          valor +
+          "</b>" +
+          barra +
+          "</div>"
+        );
+      }
+
 function fmtStats(st) {
         return Object.entries(st)
           .map(([k, v]) => "+" + v + " " + ETQ[k])
           .join(" · ");
       }
 
+// Compara los stats de un objeto de la bolsa contra el equipado en su mismo
+// slot: cada línea lleva el valor absoluto y, si hay algo equipado con lo
+// que comparar, un delta en verde/rojo -- así se ve de un vistazo si es una
+// mejora sin tener que hacer la resta a mano.
+function fmtStatsComparativo(it, actual) {
+        const claves = new Set(Object.keys(it.stats));
+        if (actual) for (const k in actual.stats) claves.add(k);
+        return [...claves]
+          .map((k) => {
+            const v = it.stats[k] || 0;
+            let delta = "";
+            if (actual) {
+              const d = v - (actual.stats[k] || 0);
+              if (d !== 0)
+                delta =
+                  ' <span style="color:' +
+                  (d > 0 ? "#5fcf8f" : "#e0707a") +
+                  '">(' +
+                  (d > 0 ? "+" : "") +
+                  d +
+                  ")</span>";
+            }
+            return "+" + v + " " + ETQ[k] + delta;
+          })
+          .join(" · ");
+      }
+
+function totalPoder(st) {
+        return Object.values(st || {}).reduce((a, b) => a + b, 0);
+      }
+
 function lineaItem(it, idx, equipada, p) {
         const rar = RAREZAS[it.rareza];
         const actual = p.equipo[it.slot];
+        let mejorTag = "";
+        if (!equipada && actual) {
+          const d = totalPoder(it.stats) - totalPoder(actual.stats);
+          mejorTag =
+            d > 0
+              ? ' <span style="color:#5fcf8f;font-size:.72rem">▲ mejora</span>'
+              : d < 0
+                ? ' <span style="color:#e0707a;font-size:.72rem">▼ peor</span>'
+                : ' <span style="color:var(--ceniza);font-size:.72rem">= igual</span>';
+        }
         const comp =
           !equipada && actual
-            ? '<div class="item-stats">Equipado: <span class="' +
+            ? '<div class="item-stats">vs. equipado <span class="' +
               RAREZAS[actual.rareza].cls +
               '">' +
               actual.nombre +
-              "</span> (" +
-              fmtStats(actual.stats) +
-              ")</div>"
+              "</span></div>"
             : "";
         // tag de clase para armas
         let tagClase = "";
@@ -130,9 +194,10 @@ function lineaItem(it, idx, equipada, p) {
           rar.cls +
           '">' +
           it.nombre +
+          mejorTag +
           "</div>" +
           '<div class="item-stats">' +
-          fmtStats(it.stats) +
+          (equipada ? fmtStats(it.stats) : fmtStatsComparativo(it, actual)) +
           "</div>" +
           comp +
           "</div>" +
@@ -184,6 +249,12 @@ function togFusion(idx) {
           (p.fusionSel.length === 0 || p.fusionSel[0].rareza === it.rareza)
         )
           p.fusionSel.push(it);
+        abrirInv();
+      }
+
+function filtrarBolsa(slot) {
+        const p = G.players[G.invSel] || G.players[0];
+        p.filtroBolsa = slot;
         abrirInv();
       }
 
@@ -368,9 +439,15 @@ export function abrirInv() {
                 s +
                 '</div><div class="item-stats">Vacío</div></div></div>';
         }).join("");
-        const bolsa = p.bolsa.length
-          ? p.bolsa.map((it, i) => lineaItem(it, i, false, p)).join("")
-          : '<p style="color:var(--ceniza);margin-top:8px">Tu bolsa está vacía. Recoge botín de enemigos, cofres y barriles.</p>';
+        const filtro = p.filtroBolsa || "todos";
+        const bolsaFiltrada = p.bolsa
+          .map((it, i) => ({ it, i }))
+          .filter(({ it }) => filtro === "todos" || it.slot === filtro);
+        const bolsa = !p.bolsa.length
+          ? '<p style="color:var(--ceniza);margin-top:8px">Tu bolsa está vacía. Recoge botín de enemigos, cofres y barriles.</p>'
+          : bolsaFiltrada.length
+            ? bolsaFiltrada.map(({ it, i }) => lineaItem(it, i, false, p)).join("")
+            : '<p style="color:var(--ceniza);margin-top:8px">Nada de ese tipo en la bolsa.</p>';
         // ---- panel de fusión ----
         p.fusionSel = p.fusionSel.filter((it) => p.bolsa.includes(it));
         const slotsF = [0, 1, 2]
@@ -445,6 +522,23 @@ export function abrirInv() {
             )
             .join("") +
           "</div></div>";
+        const filtroCtrl =
+          '<div style="display:flex;gap:6px;align-items:center;margin:2px 0 8px;flex-wrap:wrap">' +
+          '<span style="font-size:.75rem;color:var(--ceniza)">Filtrar:</span>' +
+          '<div class="seg">' +
+          [["Todo", "todos"], ...SLOTS.map((s) => [s, s])]
+            .map(
+              ([lab, v]) =>
+                '<button class="' +
+                (filtro === v ? "on" : "") +
+                '" onclick="filtrarBolsa(\'' +
+                v +
+                "')\">" +
+                lab +
+                "</button>",
+            )
+            .join("") +
+          "</div></div>";
         const xpPct =
           p.nivel >= MAX_NIV_PJ ? 100 : Math.round((p.xp / p.xpSig) * 100);
         document.getElementById("inv-inner").innerHTML =
@@ -500,26 +594,17 @@ export function abrirInv() {
             : p.xp + " / " + p.xpSig + " XP") +
           "</div>" +
           '<div class="ficha-stats">' +
-          '<div class="ficha-stat">Daño<b>' +
-          t.atk +
-          "</b></div>" +
-          '<div class="ficha-stat">Vida<b>' +
-          Math.ceil(p.hp) +
-          " / " +
-          t.hpMax +
-          "</b></div>" +
-          '<div class="ficha-stat">Armadura<b>' +
-          t.armor +
-          "</b></div>" +
-          '<div class="ficha-stat">Crítico<b>' +
-          t.crit +
-          "%</b></div>" +
-          '<div class="ficha-stat">Velocidad<b>' +
-          t.vel +
-          "</b></div>" +
-          '<div class="ficha-stat">Red. CD<b>' +
-          t.cdr +
-          "%</b></div>" +
+          fichaStat("⚔", "Daño", t.atk, null) +
+          fichaStat(
+            "❤",
+            "Vida",
+            Math.ceil(p.hp) + " / " + t.hpMax,
+            (p.hp / t.hpMax) * 100,
+          ) +
+          fichaStat("🛡", "Armadura", t.armor, null) +
+          fichaStat("🎯", "Crítico", t.crit + "%", (t.crit / 85) * 100) +
+          fichaStat("💨", "Velocidad", t.vel, null) +
+          fichaStat("⏱", "Red. CD", t.cdr + "%", (t.cdr / 55) * 100) +
           "</div>" +
           "</div>" +
           "</div>" +
@@ -537,6 +622,7 @@ export function abrirInv() {
           " (" +
           p.bolsa.length +
           ")</h3>" +
+          filtroCtrl +
           ordCtrl +
           bolsa;
         mostrar("inv");
@@ -637,6 +723,7 @@ function darItem(idx, targetIdx) {
 window.cerrarInv = cerrarInv;
 window.darItem = darItem;
 window.equipar = equipar;
+window.filtrarBolsa = filtrarBolsa;
 window.fusionRapida = fusionRapida;
 window.fusionar = fusionar;
 window.invSel = invSel;

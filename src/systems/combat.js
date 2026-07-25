@@ -43,6 +43,8 @@ export function statsTot(p) {
         t.atk += META.mejoras.atk * 2;
         t.armor += META.mejoras.armor;
         t.vel += META.mejoras.vel * 4;
+        t.crit += META.mejoras.crit * 2;
+        t.cdr += META.mejoras.cdr * 3;
         // formas del druida
         if (p.rol === "druida" && p.forma && p.forma !== "humano") {
           if (p.forma === "aguila") {
