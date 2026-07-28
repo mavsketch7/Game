@@ -3,7 +3,7 @@ import { H, W } from "../core/canvas.js";
 import { META } from "../core/save.js";
 import { G, setG } from "../core/state.js";
 import { render } from "../render/world.js";
-import { activarParry, castSup, esquivar, habilidad, transformar } from "../systems/abilities.js";
+import { activarParry, castSup, esquivar, habilidad, interactuar, transformar } from "../systems/abilities.js";
 import { statsTot } from "../systems/combat.js";
 import { M, keys, mouse } from "../systems/input.js";
 import { aplicarMusica, initAudio, reanudarAudio, sfx } from "../systems/audio.js";
@@ -210,11 +210,14 @@ export function netAplicarInputs() {
           p.inp.mx = d.mx || 0;
           p.inp.my = d.my || 0;
           p.inp.atkHeld = !!d.atk;
+          p.inp.gtX = typeof d.gtX === "number" ? d.gtX : p.x;
+          p.inp.gtY = typeof d.gtY === "number" ? d.gtY : p.y;
           if (typeof d.aim === "number") p.aim = d.aim;
           if (!p.ko && !G.pausa) {
             if (d.parry && !pv.parry) activarParry(p);
             if (d.dash && !pv.dash) esquivar(p);
             if (d.ulti && !pv.ulti) habilidad(p);
+            if (d.interact && !pv.interact) interactuar(p);
             const eKey = (n) => d["k" + n] && !pv["k" + n];
             if (p.rol === "mago") {
               if (eKey(1)) p.elemento = "fuego";
@@ -640,10 +643,13 @@ export function netEnviarInputCliente() {
           mx,
           my,
           aim,
+          gtX: mouse.x,
+          gtY: mouse.y,
           atk: !!mouse.izq,
           parry: !!mouse.der,
           dash: !!keys[" "],
-          ulti: !!keys["e"],
+          ulti: !!keys["q"],
+          interact: !!keys["e"],
           k1: !!keys["1"],
           k2: !!keys["2"],
           k3: !!keys["3"],

@@ -292,6 +292,13 @@ function jugadorKbm() {
       }
 
 window.addEventListener("keydown", (e) => {
+        // con el foco en un campo de texto (nombre de personaje/gremio, etc.)
+        // ninguna tecla debe actuar como atajo del juego -- si no, escribir
+        // "f", "g" o "m" alternaba pantalla completa/ajustes/silencio en
+        // vez de escribirse en el campo.
+        const foco = document.activeElement;
+        if (foco && (foco.tagName === "INPUT" || foco.tagName === "TEXTAREA"))
+          return;
         const k = e.key.toLowerCase();
         keys[k] = true;
         // atajos globales (funcionan siempre)
