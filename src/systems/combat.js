@@ -8,7 +8,7 @@ import { NIVEL_ULTI, danoPilar, golpeObjeto } from "./abilities.js";
 import { sfx } from "./audio.js";
 import { NOMBRES_MINI, arquetipoJefe, escalaEnemigo, nombreJefe } from "./bosses.js";
 import { posDropValida, puntoValido } from "./floorgen.js";
-import { finPartida, genItem } from "./loot.js";
+import { dropItem, finPartida, genItem } from "./loot.js";
 import { banner, toast } from "../ui/notifications.js";
 import { az, clamp, ri, rnd } from "../utils/helpers.js";
 
@@ -350,12 +350,7 @@ export function matarEnemigo(e, duenio) {
             );
           if (e.mini) it2.rareza = Math.max(it2.rareza, 1);
           const pv = posDropValida(e.x + rnd(-8, 8), e.y + rnd(-8, 8));
-          G.drops.push({
-            tipo: "item",
-            x: pv.x,
-            y: pv.y,
-            item: it2,
-          });
+          dropItem(pv.x, pv.y, it2);
         }
         // XP por matar
         const xpGanado = Math.round(

@@ -10,6 +10,7 @@ import { construirMenu } from "../ui/menu.js";
 import { banner, toast } from "../ui/notifications.js";
 import { mostrar, ocultar } from "../ui/overlays.js";
 import { az, clamp, ri } from "../utils/helpers.js";
+import { sfx } from "./audio.js";
 
 export function genItem(f, forceRar, forceSlot) {
         // mayor probabilidad de rarezas altas en plantas avanzadas
@@ -78,12 +79,22 @@ export function genItem(f, forceRar, forceSlot) {
         };
       }
 
+// Único punto de entrada para soltar una pieza de equipo al suelo (cofres,
+// muertes de enemigo, recompensa de planta despejada...) -- centraliza el
+// contador de tiempo que usa el rayo de luz al caer (ver render/world.js) y
+// el sonido especial de legendario+ para que no haya que repetirlo en cada
+// sitio que llama a G.drops.push().
+export function dropItem(x, y, item) {
+        G.drops.push({ tipo: "item", x, y, item, t: 0 });
+        if (item.rareza >= 3) sfx("legendario");
+      }
+
 export function plantaDespejada() {
         const f = G.planta;
-        G.drops.push({ tipo: "item", x: W / 2, y: H / 2, item: genItem(f) });
+        dropItem(W / 2, H / 2, genItem(f));
         if (G.players.length >= 3) {
           const pv = posDropValida(W / 2 + 30, H / 2 + 14);
-          G.drops.push({ tipo: "item", x: pv.x, y: pv.y, item: genItem(f) });
+          dropItem(pv.x, pv.y, genItem(f));
         }
         G.portal = { x: W / 2, y: 64, r: 24, t: 0 };
         G.fogata = { x: W / 2 + 150, y: H / 2 + 40 };

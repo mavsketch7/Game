@@ -7,7 +7,7 @@ import { fxOnda, fxParticulas, fxTajo, fxTexto } from "../render/effects.js";
 import { sfx } from "./audio.js";
 import { curarP, danoAEnemigo, danoAlJugador, masCercano, statsTot, vivos } from "./combat.js";
 import { posDropValida } from "./floorgen.js";
-import { genItem } from "./loot.js";
+import { dropItem, genItem } from "./loot.js";
 import { toast } from "../ui/notifications.js";
 import { clamp } from "../utils/helpers.js";
 
@@ -286,12 +286,7 @@ export function interactuar(p) {
         fxOnda(cofre.x, cofre.y, 30, "#e9b45c");
         fxParticulas(cofre.x, cofre.y - 6, 12, "#e9b45c");
         const pv1 = posDropValida(cofre.x, cofre.y - 14);
-        G.drops.push({
-          tipo: "item",
-          x: pv1.x,
-          y: pv1.y,
-          item: genItem(G.planta || 1),
-        });
+        dropItem(pv1.x, pv1.y, genItem(G.planta || 1));
         const pv2 = posDropValida(cofre.x + 14, cofre.y);
         G.drops.push({
           tipo: "moneda",

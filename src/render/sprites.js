@@ -153,6 +153,45 @@ const VIAL_ROWS = [
 
 const GEMA_ROWS = ["..KK..", ".KXXK.", "KXXXXK", ".KXXK.", "..KK.."];
 
+// Iconos de drop por slot (arma/armadura/accesorio), teñidos por rareza --
+// para que se vea de un vistazo QUÉ ha caído, no solo su rareza (antes
+// todos los objetos caían con el mismo icono de gema, ver iconoDrop()).
+const ESPADA_ROWS = [
+        "..K..",
+        ".KXK.",
+        ".KXK.",
+        ".KXK.",
+        "KKXKK",
+        "..K..",
+        "..K..",
+      ];
+const ESCUDO_ROWS = [
+        ".KKKK.",
+        "KXXXXK",
+        "KXXXXK",
+        "KXXXXK",
+        ".KXXK.",
+        "..KK..",
+      ];
+const ANILLO_ROWS = ["..KK..", ".K..K.", "K.XX.K", ".K..K.", "..KK.."];
+
+const ICONO_DROP_ROWS = { arma: ESPADA_ROWS, armadura: ESCUDO_ROWS, accesorio: ANILLO_ROWS };
+const iconoDropCache = {};
+
+// Perezoso y cacheado por slot+rareza: así una futura rareza por encima de
+// legendario (índice 4+) funciona sola, sin tocar este código ni añadir
+// más variantes a mano -- el color sale siempre de RAREZAS[rareza].col.
+export function iconoDrop(item) {
+        const rows = ICONO_DROP_ROWS[item.slot];
+        if (!rows) return SPR.gema[Math.min(item.rareza, SPR.gema.length - 1)];
+        const clave = item.slot + "|" + item.rareza;
+        if (!iconoDropCache[clave]) {
+          const col = RAREZAS[item.rareza] ? RAREZAS[item.rareza].col : "#e9b45c";
+          iconoDropCache[clave] = buildSprite(rows, { K, X: col }, 3);
+        }
+        return iconoDropCache[clave];
+      }
+
 const GOLEM_ROWS = [
         "..KKKKKKKK..",
         ".KMMMMMMMMK.",

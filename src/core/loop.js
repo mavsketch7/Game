@@ -1115,6 +1115,7 @@ export function update(dt) {
         // drops (cada jugador tiene su propia bolsa)
         for (let i = G.drops.length - 1; i >= 0; i--) {
           const dr = G.drops[i];
+          dr.t = (dr.t || 0) + dt; // edad del drop, ver el rayo de luz en render/world.js
           const p = vivos().find(
             (q) => Math.hypot(dr.x - q.x, dr.y - q.y) < 26,
           );

@@ -39,6 +39,7 @@ export function sfx(tipo) {
           muerte: { f: 300, f2: 40, tipo: "sawtooth", dur: 0.35, v: 0.4 },
           nivel: { f: 520, f2: 1040, tipo: "triangle", dur: 0.5, v: 0.4 },
           moneda: { f: 1200, f2: 1800, tipo: "triangle", dur: 0.1, v: 0.3 },
+          legendario: { f: 300, f2: 1500, tipo: "sine", dur: 0.6, v: 0.4 },
           carta: { f: 660, f2: 990, tipo: "sine", dur: 0.22, v: 0.34 },
           portal: { f: 300, f2: 900, tipo: "sine", dur: 0.5, v: 0.36 },
           parry: { f: 1400, f2: 700, tipo: "square", dur: 0.12, v: 0.4 },
