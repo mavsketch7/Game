@@ -17,7 +17,13 @@ const ASSET_SRC = {
         jefe_cerdo: assetUrl("jefe_cerdo"),
         suelo1: assetUrl("suelo1"),
         suelo2: assetUrl("suelo2"),
-        pilar: assetUrl("pilar"),
+        // "pilar" quitado: el archivo que usaba (pilar.png) resultó ser en
+        // realidad un fragmento de pared, no una columna independiente --
+        // ver conversación. assetOK("pilar") en world.js sigue devolviendo
+        // false con seguridad (sin este archivo no hay nada que cargar),
+        // así que los pilares caen de vuelta al procedural de siempre sin
+        // romper nada; en cuanto haya un sprite de columna real se puede
+        // volver a añadir aquí.
       };
 
 export const SHEETS = {};
