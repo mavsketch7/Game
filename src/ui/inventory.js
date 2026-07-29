@@ -274,6 +274,15 @@ function lineaItem(it, idx, equipada, p) {
         );
       }
 
+// Misma rareza Y mismo slot (y misma clase si es arma) -- ver
+// gruposFusionables() para el porqué: armadura y accesorio no son
+// intercambiables aunque compartan rareza.
+function mismoGrupoFusion(a, b) {
+        if (a.rareza !== b.rareza || a.slot !== b.slot) return false;
+        if (a.slot === "arma" && a.clase !== b.clase) return false;
+        return true;
+      }
+
 function fusBtnItem(it, idx, p) {
         const dentro = p.fusionSel.includes(it);
         if (dentro)
@@ -283,7 +292,7 @@ function fusBtnItem(it, idx, p) {
             ')">⚗ quitar</button>'
           );
         if (p.fusionSel.length >= 3) return "";
-        if (p.fusionSel.length > 0 && p.fusionSel[0].rareza !== it.rareza)
+        if (p.fusionSel.length > 0 && !mismoGrupoFusion(p.fusionSel[0], it))
           return "";
         return (
           '<button class="btn-fus" onclick="togFusion(' +
@@ -300,7 +309,7 @@ function togFusion(idx) {
         if (pos >= 0) p.fusionSel.splice(pos, 1);
         else if (
           p.fusionSel.length < 3 &&
-          (p.fusionSel.length === 0 || p.fusionSel[0].rareza === it.rareza)
+          (p.fusionSel.length === 0 || mismoGrupoFusion(p.fusionSel[0], it))
         )
           p.fusionSel.push(it);
         abrirInv();
@@ -335,11 +344,16 @@ function ordenarBolsa(crit) {
 function gruposFusionables(p) {
         const grupos = {};
         for (const it of p.bolsa) {
-          // agrupar por rareza; las armas además por clase para no mezclar clases al evolucionar
+          // agrupar por rareza y por slot -- las armas además por clase para
+          // no mezclar clases al evolucionar. Antes armadura y accesorio caían
+          // en la misma clave ("x"), así que la fusión rápida podía juntar
+          // p.ej. 2 armaduras + 1 accesorio de la misma rareza como si fueran
+          // "3 del mismo tipo" y fusionarlos igualmente, perdiendo el
+          // accesorio como relleno sin avisar.
           const clave =
             it.rareza +
             "|" +
-            (it.slot === "arma" ? "arma:" + (it.clase || "") : "x");
+            (it.slot === "arma" ? "arma:" + (it.clase || "") : it.slot);
           (grupos[clave] = grupos[clave] || []).push(it);
         }
         return grupos;
