@@ -214,9 +214,10 @@ export const RAREZAS = [
         { n: "Raro", cls: "r1", col: "#6fb3e8", m: 1.5 },
         { n: "Épico", cls: "r2", col: "#c084f0", m: 2.2 },
         { n: "Legendario", cls: "r3", col: "#e9b45c", m: 3.2 },
+        { n: "Mítico", cls: "r4", col: "#ff5a36", m: 4.5 },
       ];
 
-export const PRECIO_VENTA = [8, 20, 50, 120];
+export const PRECIO_VENTA = [8, 20, 50, 120, 320];
 
 export const NOMBRES_ARMA_CLASE = {
         guerrero: ["Espada", "Filo", "Hacha", "Mandoble"],

@@ -9,6 +9,7 @@ import { sfx } from "./audio.js";
 import { NOMBRES_MINI, arquetipoJefe, escalaEnemigo, nombreJefe } from "./bosses.js";
 import { posDropValida, puntoValido } from "./floorgen.js";
 import { dropItem, finPartida, genItem } from "./loot.js";
+import { tieneEfecto } from "./objetosMiticos.js";
 import { banner, toast } from "../ui/notifications.js";
 import { az, clamp, ri, rnd } from "../utils/helpers.js";
 
@@ -281,6 +282,8 @@ export function danoAEnemigo(e, raw, duenio, puedeCrit, kbx, kby) {
         let dmg = raw * (0.9 + Math.random() * 0.2);
         const crit = puedeCrit && Math.random() * 100 < t.crit;
         if (crit) dmg *= 1.7;
+        if (e.hpMax && e.hp / e.hpMax < 0.25 && tieneEfecto(duenio, "ejecutor"))
+          dmg *= 1.5;
         dmg = Math.max(1, Math.round(dmg));
         e.hurtT = 0.12;
         if (e.dummy) {
@@ -300,12 +303,18 @@ export function danoAEnemigo(e, raw, duenio, puedeCrit, kbx, kby) {
           const robo = Math.round(dmg * 0.12);
           if (robo > 0) curarP(duenio, robo, true);
         }
+        if (tieneEfecto(duenio, "vampirismo")) {
+          const robo = Math.round(dmg * 0.08);
+          if (robo > 0) curarP(duenio, robo, true);
+        }
         if (e.hp <= 0) matarEnemigo(e, duenio);
       }
 
 export function matarEnemigo(e, duenio) {
         G.stats.derrotados++;
         if (duenio) duenio.statDerrotados = (duenio.statDerrotados || 0) + 1;
+        if (duenio && tieneEfecto(duenio, "robatiempo"))
+          duenio.castCd = Math.max(0, duenio.castCd - 1);
         sfx(e.jefe ? "jefe" : "muerte");
         fxParticulas(e.x, e.y, e.jefe ? 26 : 10, "#6a5a94");
         if (e.jefe) G.shake = Math.max(G.shake, 8);
@@ -450,6 +459,15 @@ export function danoAlJugador(p, raw, fuente) {
           p.golpeT = 0.25;
           G.shake = Math.max(G.shake, 4);
           fxTexto(p.x, p.y - 24, "-" + dmg, "#d1545c");
+        }
+        if (p.hp <= 0 && !p._fenixUsado && tieneEfecto(p, "fenix")) {
+          p._fenixUsado = true;
+          p.hp = Math.round(t.hpMax * 0.3);
+          p.invulT = Math.max(p.invulT, 1.2);
+          fxOnda(p.x, p.y, 60, "#ff5a36");
+          fxParticulas(p.x, p.y, 20, "#ff5a36");
+          toast(p.nombre + " renace de sus cenizas 🔥", "#ff5a36");
+          return;
         }
         if (p.hp <= 0) {
           p.hp = 0;

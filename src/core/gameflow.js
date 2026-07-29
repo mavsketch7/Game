@@ -44,6 +44,7 @@ export function nuevaPartida() {
             dashCd: 0,
             dashX: 0,
             dashY: 1,
+            disparoCd: 0,
             invulT: 0,
             parryT: 0,
             parryCd: 0,
@@ -193,6 +194,21 @@ export function iniciarLobby() {
         G.mercader = { x: W - 130, y: H / 2 - 40 };
         G.skinNpc = { x: 110, y: H / 2 - 40 };
         G.arenaNpc = { x: W / 2, y: H - 130 };
+        // Cofre de pruebas (QA): solo aparece con ?qa=1 en la URL -- a
+        // propósito NO depende de import.meta.env.DEV para que se pueda
+        // activar también en el build de producción sin tener que montar
+        // un entorno de desarrollo aparte. Suelta el set completo de
+        // objetos Míticos al abrirse (ver interactuar() en abilities.js).
+        if (new URLSearchParams(location.search).get("qa") === "1") {
+          G.objetos.push({
+            tipo: "cofre",
+            x: W / 2,
+            y: H - 220,
+            abierto: false,
+            abriendoT: 0,
+            qa: true,
+          });
+        }
         G.tiendaLock = false;
         G.skinLock = false;
         G.arenaLock = false;

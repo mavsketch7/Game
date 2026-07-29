@@ -3,7 +3,7 @@ import { H, W, cv, toggleFullscreen } from "../core/canvas.js";
 import { LOBBIES, ORDEN_ROLES } from "../core/constants.js";
 import { G } from "../core/state.js";
 import { NET } from "../net/peer.js";
-import { activarParry, atacar, castSup, cicloElem, esquivar, habilidad, interactuar, transformar } from "./abilities.js";
+import { activarParry, atacar, castSup, cicloElem, disparoSecundario, esquivar, habilidad, interactuar, transformar } from "./abilities.js";
 import { aplicarMusica, initAudio, reanudarAudio } from "./audio.js";
 import { abrirInfo, cerrarInfo } from "../ui/info.js";
 import { cerrarInv, toggleInv } from "../ui/inventory.js";
@@ -365,6 +365,7 @@ window.addEventListener("keydown", (e) => {
         }
         if (k === "q") habilidad(p);
         if (k === "e") interactuar(p);
+        if (k === "r") disparoSecundario(p);
         if (p.rol === "mago") {
           if (k === "1") p.elemento = "fuego";
           if (k === "2") p.elemento = "hielo";

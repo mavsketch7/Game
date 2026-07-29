@@ -3,7 +3,7 @@ import { H, W } from "../core/canvas.js";
 import { META } from "../core/save.js";
 import { G, setG } from "../core/state.js";
 import { render } from "../render/world.js";
-import { activarParry, castSup, esquivar, habilidad, interactuar, transformar } from "../systems/abilities.js";
+import { activarParry, castSup, disparoSecundario, esquivar, habilidad, interactuar, transformar } from "../systems/abilities.js";
 import { statsTot } from "../systems/combat.js";
 import { M, keys, mouse } from "../systems/input.js";
 import { aplicarMusica, initAudio, reanudarAudio, sfx } from "../systems/audio.js";
@@ -218,6 +218,7 @@ export function netAplicarInputs() {
             if (d.dash && !pv.dash) esquivar(p);
             if (d.ulti && !pv.ulti) habilidad(p);
             if (d.interact && !pv.interact) interactuar(p);
+            if (d.disparo && !pv.disparo) disparoSecundario(p);
             const eKey = (n) => d["k" + n] && !pv["k" + n];
             if (p.rol === "mago") {
               if (eKey(1)) p.elemento = "fuego";
@@ -650,6 +651,7 @@ export function netEnviarInputCliente() {
           dash: !!keys[" "],
           ulti: !!keys["q"],
           interact: !!keys["e"],
+          disparo: !!keys["r"],
           k1: !!keys["1"],
           k2: !!keys["2"],
           k3: !!keys["3"],

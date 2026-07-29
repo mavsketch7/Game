@@ -8,6 +8,7 @@ import { sfx } from "./audio.js";
 import { curarP, danoAEnemigo, danoAlJugador, masCercano, statsTot, vivos } from "./combat.js";
 import { posDropValida } from "./floorgen.js";
 import { dropItem, genItem } from "./loot.js";
+import { OBJETOS_MITICOS, genObjetoMitico, tieneEfecto } from "./objetosMiticos.js";
 import { toast } from "../ui/notifications.js";
 import { clamp } from "../utils/helpers.js";
 
@@ -231,6 +232,13 @@ export function aplicarImbuido(p, e) {
         // 'arcano' se aplica como multiplicador de daño en el propio golpe
       }
 
+// Probabilidad de que un pilar/barril roto suelte un objeto Mítico -- una
+// vía alternativa a la fusión legendaria, pensada para ser rarísima (el
+// jugador rompe decenas de estos por partida, así que incluso un 1.5% se
+// nota bastante a lo largo de 100 plantas sin sentirse garantizado en
+// ninguna sesión corta). Valor a revisar en balanceo si hace falta.
+const PROB_DROP_MITICO_ROTO = 0.015;
+
 export function danoPilar(pl, dmg) {
         if (!pl.destructible || pl.hp <= 0) return;
         pl.hp -= Math.round(dmg);
@@ -239,7 +247,9 @@ export function danoPilar(pl, dmg) {
           fxParticulas(pl.x, pl.y - 10, 16, "#57496f");
           G.shake = Math.max(G.shake, 3);
           G.decals.push({ x: pl.x, y: pl.y });
-          if (Math.random() < 0.35)
+          if (Math.random() < PROB_DROP_MITICO_ROTO)
+            dropItem(pl.x, pl.y, genObjetoMitico(G.planta || 1));
+          else if (Math.random() < 0.35)
             G.drops.push({
               tipo: "moneda",
               x: pl.x,
@@ -257,7 +267,9 @@ export function golpeObjeto(o, dmg) {
           o.hp -= dmg;
           if (o.hp <= 0) {
             fxParticulas(o.x, o.y, 10, "#6b4a2c");
-            if (Math.random() < 0.55)
+            if (Math.random() < PROB_DROP_MITICO_ROTO)
+              dropItem(o.x, o.y, genObjetoMitico(G.planta || 1));
+            else if (Math.random() < 0.55)
               G.drops.push({
                 tipo: "moneda",
                 x: o.x,
@@ -285,6 +297,25 @@ export function interactuar(p) {
         p.cofreObj = null;
         fxOnda(cofre.x, cofre.y, 30, "#e9b45c");
         fxParticulas(cofre.x, cofre.y - 6, 12, "#e9b45c");
+        if (cofre.qa) {
+          // cofre de pruebas (?qa=1): suelta el set COMPLETO de Míticos de
+          // golpe para poder probar los 6 efectos sin depender del RNG de
+          // fusión -- ver systems/objetosMiticos.js
+          OBJETOS_MITICOS.forEach((tpl, i) => {
+            const ang = (i / OBJETOS_MITICOS.length) * TAU;
+            const pv = posDropValida(
+              cofre.x + Math.cos(ang) * 40,
+              cofre.y + Math.sin(ang) * 40,
+            );
+            const item = genObjetoMitico(G.planta || 1, tpl.slot);
+            item.nombre = tpl.nombre; // set completo, no uno al azar por slot
+            item.efecto = tpl.efecto;
+            item.efectoDesc = tpl.efectoDesc;
+            dropItem(pv.x, pv.y, item);
+          });
+          toast("🧪 Cofre de pruebas: set Mítico completo", "#ff5a36");
+          return;
+        }
         const pv1 = posDropValida(cofre.x, cofre.y - 14);
         dropItem(pv1.x, pv1.y, genItem(G.planta || 1));
         const pv2 = posDropValida(cofre.x + 14, cofre.y);
@@ -295,6 +326,31 @@ export function interactuar(p) {
           val: Math.max(2, Math.round(3 + G.planta * 0.25)),
         });
         toast("🪙 ¡Cofre abierto!", "#e9b45c");
+      }
+
+// Efecto único de la Espada-Pistola (ver systems/objetosMiticos.js): un
+// ataque a distancia que no reemplaza ni interrumpe el combo melé normal --
+// tecla propia (R), cooldown aparte del resto de habilidades.
+export function disparoSecundario(p) {
+        if (p.ko || p.atrapado || !tieneEfecto(p, "disparo_secundario")) return;
+        if (p.disparoCd > 0) return;
+        p.disparoCd = 3;
+        const t = statsTot(p);
+        sfx("flecha");
+        G.projs.push({
+          owner: "p",
+          duenio: p,
+          x: p.x + Math.cos(p.aim) * 16,
+          y: p.y + Math.sin(p.aim) * 16,
+          vx: Math.cos(p.aim) * 620,
+          vy: Math.sin(p.aim) * 620,
+          r: 4,
+          dmg: Math.round(t.atk * 0.8),
+          tipo: "flecha",
+          color: "#ff5a36",
+          ttl: 1.2,
+          pierce: 2,
+        });
       }
 
 function dispararProy(p, dir, dmg, tipo, color, v) {
@@ -608,7 +664,7 @@ export function esquivar(p) {
         const durDash = p.rol === "picaro" ? 0.26 : 0.2;
         p.dashT = durDash;
         p.dashCd = 0.7;
-        p.invulT = durDash + 0.04;
+        p.invulT = durDash + 0.04 + (tieneEfecto(p, "sombras") ? 0.5 : 0);
         p._dashVictims = p._dashDmg ? new Set() : null;
       }
 

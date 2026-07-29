@@ -625,6 +625,12 @@ export function render() {
               escCofre = 0.3 + 0.7 * backOut;
             }
             drawSprite(imgCofre, o.x, o.y, false, escCofre);
+            if (o.qa) {
+              cx.fillStyle = "#ff5a36";
+              cx.font = "800 11px Alegreya Sans";
+              cx.textAlign = "center";
+              cx.fillText("⚠ COFRE DE PRUEBAS (QA) ⚠", o.x, o.y - 34);
+            }
             if (!o.abierto) {
               cx.globalAlpha = 0.3 + Math.sin(animGlobal * 3) * 0.15;
               cx.fillStyle = "#e9b45c";

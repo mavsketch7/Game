@@ -9,6 +9,7 @@ import { CARD_RAREZAS } from "../systems/cards.js";
 import { statsTot } from "../systems/combat.js";
 import { M } from "../systems/input.js";
 import { genItem } from "../systems/loot.js";
+import { genObjetoMitico } from "../systems/objetosMiticos.js";
 import { banner, toast } from "./notifications.js";
 import { mostrar, ocultar } from "./overlays.js";
 import { clamp } from "../utils/helpers.js";
@@ -248,6 +249,9 @@ function lineaItem(it, idx, equipada, p) {
           '<div class="item-stats">' +
           (equipada ? fmtStats(it.stats) : fmtStatsComparativo(it, actual)) +
           "</div>" +
+          (it.efectoDesc
+            ? '<div class="item-efecto">✦ ' + it.efectoDesc + "</div>"
+            : "") +
           comp +
           "</div>" +
           (equipada
@@ -284,6 +288,7 @@ function mismoGrupoFusion(a, b) {
       }
 
 function fusBtnItem(it, idx, p) {
+        if (it.rareza >= 4) return ""; // Mítico es el techo, no se fusiona más
         const dentro = p.fusionSel.includes(it);
         if (dentro)
           return (
@@ -344,6 +349,7 @@ function ordenarBolsa(crit) {
 function gruposFusionables(p) {
         const grupos = {};
         for (const it of p.bolsa) {
+          if (it.rareza >= 4) continue; // Mítico es el techo, no se fusiona más
           // agrupar por rareza y por slot -- las armas además por clase para
           // no mezclar clases al evolucionar. Antes armadura y accesorio caían
           // en la misma clave ("x"), así que la fusión rápida podía juntar
@@ -414,30 +420,23 @@ function fusionar() {
               "]",
             RAREZAS[rarF + 1].col,
           );
-        } else {
-          // fusión legendaria: 30% éxito → suma de TODOS los stats; 70% → destrucción total
-          if (Math.random() < 0.3) {
-            const stats = {};
-            for (const it of p.fusionSel)
-              for (const k in it.stats)
-                stats[k] = (stats[k] || 0) + it.stats[k];
-            const nuevo = {
-              slot: base.slot,
-              clase: base.slot === "arma" ? base.clase : null,
-              rareza: 3,
-              nombre: "✦ Reliquia Fusionada de Véspero",
-              stats,
-            };
+        } else if (rarF === 3) {
+          // fusión legendaria: única vía (junto al drop rarísimo al romper
+          // pilares/barriles, ver systems/combat.js) para conseguir un
+          // objeto Mítico. Antes esto daba un 30% de una "reliquia" con
+          // todos los stats sumados; ahora ese 30% baja a ~13% (sigue
+          // siendo un objeto curado de systems/objetosMiticos.js, no un
+          // simple sumatorio) para que el techo de la progresión siga
+          // sintiéndose especial sin ser inalcanzable.
+          if (Math.random() < 0.13) {
+            const nuevo = genObjetoMitico(Math.max(1, G.planta), base.slot);
             p.bolsa.push(nuevo);
             G.shake = Math.max(G.shake, 8);
-            fxOnda(p.x, p.y, 80, "#e9b45c");
+            fxOnda(p.x, p.y, 80, "#ff5a36");
             fxOnda(p.x, p.y, 50, "#fff0c8");
-            fxParticulas(p.x, p.y, 30, "#e9b45c");
+            fxParticulas(p.x, p.y, 30, "#ff5a36");
             banner("✦ ¡LA FUSIÓN LEGENDARIA SOBREVIVE! ✦");
-            toast(
-              "Nace la Reliquia Fusionada — todos los stats sumados",
-              "#e9b45c",
-            );
+            toast("Nace " + nuevo.nombre + " [Mítico]", "#ff5a36");
           } else {
             G.shake = Math.max(G.shake, 6);
             fxParticulas(p.x, p.y, 24, "#57496f");

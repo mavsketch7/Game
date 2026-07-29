@@ -56,6 +56,7 @@ export function update(dt) {
             "castCd",
             "skillCd",
             "dashCd",
+            "disparoCd",
             "invulT",
             "parryT",
             "parryCd",

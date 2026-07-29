@@ -724,6 +724,12 @@ body.pantalla-completa #hint {
   color: var(--ceniza);
   margin-top: 2px;
 }
+.item-efecto {
+  font-size: 0.74rem;
+  color: #ff5a36;
+  margin-top: 3px;
+  font-weight: 600;
+}
 .item-acciones {
   display: flex;
   gap: 6px;
@@ -739,6 +745,10 @@ body.pantalla-completa #hint {
 }
 .r3 {
   color: var(--vespero);
+}
+.r4 {
+  color: #ff5a36;
+  text-shadow: 0 0 6px rgba(255, 90, 54, 0.5);
 }
 .fila-cerrar {
   display: flex;
