@@ -442,7 +442,11 @@ function serializarEstado() {
             y: dr.y,
             tipo: dr.tipo,
             val: dr.val,
-            rar: dr.item ? dr.item.rareza : -1,
+            t: dr.t,
+            // el invitado necesita el objeto completo (no solo la rareza)
+            // para dibujar el icono correcto (iconoDrop() usa item.slot) y
+            // el rayo/aviso de tecla que ahora se quedan hasta que se recoge
+            item: dr.item,
           })),
           H: G.hazards.map((h) => ({
             tipo: h.tipo,

@@ -763,19 +763,20 @@ export function render() {
             drawSprite(SPR.moneda, dr.x, dr.y + bob);
           } else {
             const col = RAREZAS[dr.item.rareza].col;
-            // rayo de luz vertical al caer (estilo Diablo): se apaga solo en
-            // ~0.9s, no es un efecto permanente sobre el objeto en el suelo
-            const beamK = clamp(1 - (dr.t || 0) / 0.9, 0, 1);
-            if (beamK > 0) {
-              const beamH = 74;
-              const grad = cx.createLinearGradient(dr.x, dr.y - beamH, dr.x, dr.y);
-              grad.addColorStop(0, "rgba(0,0,0,0)");
-              grad.addColorStop(1, col);
-              cx.globalAlpha = beamK * 0.6;
-              cx.fillStyle = grad;
-              cx.fillRect(dr.x - 3, dr.y - beamH, 6, beamH);
-              cx.globalAlpha = 1;
-            }
+            // rayo de luz vertical (estilo Diablo): a diferencia del oro/vial,
+            // este objeto no se recoge solo al pisarlo (hay que pulsar
+            // E/botón, ver interactuar() en abilities.js), así que el rayo se
+            // mantiene mientras siga en el suelo -- solo un breve fade-in al
+            // caer, sin fade-out por tiempo.
+            const beamK = clamp((dr.t || 0) / 0.2, 0, 1);
+            const beamH = 74;
+            const grad = cx.createLinearGradient(dr.x, dr.y - beamH, dr.x, dr.y);
+            grad.addColorStop(0, "rgba(0,0,0,0)");
+            grad.addColorStop(1, col);
+            cx.globalAlpha = beamK * 0.6;
+            cx.fillStyle = grad;
+            cx.fillRect(dr.x - 3, dr.y - beamH, 6, beamH);
+            cx.globalAlpha = 1;
             cx.globalAlpha = 0.35;
             cx.fillStyle = col;
             cx.beginPath();
@@ -783,6 +784,15 @@ export function render() {
             cx.fill();
             cx.globalAlpha = 1;
             drawSprite(iconoDrop(dr.item), dr.x, dr.y + bob);
+            // aviso de tecla por distancia directa (no depende de p.dropObj,
+            // que es estado solo del host) -- mismo patrón que el cofre.
+            if (
+              G.players.some(
+                (p) => !p.ko && Math.hypot(p.x - dr.x, p.y - dr.y) < 40,
+              )
+            ) {
+              dibujarAvisoTecla(dr.x, dr.y - 26, "E");
+            }
           }
         }
 

@@ -234,6 +234,16 @@ export function update(dt) {
                 !o.abierto &&
                 Math.hypot(o.x - p.x, o.y - p.y) < 46,
             ) || null;
+          // objeto (arma/armadura/accesorio) cercano sin recoger -- a
+          // diferencia del oro/vial, no se recoge solo por pisarlo: hay que
+          // pulsar E/botón (ver abilities.js: interactuar), igual que el
+          // cofre
+          p.dropObj =
+            G.drops.find(
+              (dr) =>
+                dr.tipo === "item" &&
+                Math.hypot(dr.x - p.x, dr.y - p.y) < 40,
+            ) || null;
           for (let i = p.trail.length - 1; i >= 0; i--) {
             p.trail[i].t -= dt;
             if (p.trail[i].t <= 0) p.trail.splice(i, 1);
@@ -1113,10 +1123,14 @@ export function update(dt) {
           }
         }
 
-        // drops (cada jugador tiene su propia bolsa)
+        // drops (cada jugador tiene su propia bolsa). El oro y los viales se
+        // recogen solos al pisarlos; los objetos (arma/armadura/accesorio)
+        // NO -- esos exigen pulsar E/botón, ver p.dropObj más arriba y
+        // interactuar() en abilities.js.
         for (let i = G.drops.length - 1; i >= 0; i--) {
           const dr = G.drops[i];
           dr.t = (dr.t || 0) + dt; // edad del drop, ver el rayo de luz en render/world.js
+          if (dr.tipo === "item") continue;
           const p = vivos().find(
             (q) => Math.hypot(dr.x - q.x, dr.y - q.y) < 26,
           );
@@ -1132,18 +1146,6 @@ export function update(dt) {
               G.oroRun += gan;
               sfx("moneda");
               fxTexto(p.x, p.y - 30, "+" + gan + " 🪙", "#ffd27f");
-            } else {
-              p.bolsa.push(dr.item);
-              sfx("moneda");
-              toast(
-                p.nombre +
-                  " recoge " +
-                  dr.item.nombre +
-                  " [" +
-                  RAREZAS[dr.item.rareza].n +
-                  "] — Tab/Start",
-                RAREZAS[dr.item.rareza].col,
-              );
             }
             G.drops.splice(i, 1);
           }

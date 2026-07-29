@@ -1,6 +1,6 @@
 // Auto-generated during the modularization refactor (2026-07-23).
 import { H, TAU, W } from "../core/canvas.js";
-import { ELEMENTOS, ELEM_MAGO, FORMAS_DRUIDA, FORMAS_INFO, ROLES, SUPS } from "../core/constants.js";
+import { ELEMENTOS, ELEM_MAGO, FORMAS_DRUIDA, FORMAS_INFO, RAREZAS, ROLES, SUPS } from "../core/constants.js";
 import { update } from "../core/loop.js";
 import { G } from "../core/state.js";
 import { fxOnda, fxParticulas, fxTajo, fxTexto } from "../render/effects.js";
@@ -291,7 +291,30 @@ export function golpeObjeto(o, dmg) {
 export function interactuar(p) {
         if (p.atrapado || p.ko) return;
         const cofre = p.cofreObj;
-        if (!cofre || cofre.abierto) return;
+        if (!cofre || cofre.abierto) {
+          // sin cofre cerca: ¿hay un objeto (arma/armadura/accesorio) en el
+          // suelo esperando a que lo recojan? A diferencia del oro/vial, que
+          // se cogen solos al pisarlos, estos exigen este mismo botón (ver
+          // p.dropObj en core/loop.js).
+          const dr = p.dropObj;
+          if (!dr) return;
+          const idx = G.drops.indexOf(dr);
+          if (idx < 0) return;
+          G.drops.splice(idx, 1);
+          p.dropObj = null;
+          p.bolsa.push(dr.item);
+          sfx("moneda");
+          toast(
+            p.nombre +
+              " recoge " +
+              dr.item.nombre +
+              " [" +
+              RAREZAS[dr.item.rareza].n +
+              "] — Tab/Start",
+            RAREZAS[dr.item.rareza].col,
+          );
+          return;
+        }
         cofre.abierto = true;
         cofre.abriendoT = 0.4; // duración del pop de apertura (ver world.js)
         p.cofreObj = null;

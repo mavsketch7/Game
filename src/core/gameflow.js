@@ -98,6 +98,7 @@ export function nuevaPartida() {
             qteHits: 0,
             rescT: 0,
             cofreObj: null,
+            dropObj: null,
             _retoAvisoT: 0,
             rootT: 0,
             hazTick: 0,
