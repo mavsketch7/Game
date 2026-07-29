@@ -6,7 +6,7 @@ import { NET } from "../net/peer.js";
 import { activarParry, atacar, castSup, cicloElem, disparoSecundario, esquivar, habilidad, interactuar, transformar } from "./abilities.js";
 import { aplicarMusica, initAudio, reanudarAudio } from "./audio.js";
 import { abrirInfo, cerrarInfo } from "../ui/info.js";
-import { cerrarInv, toggleInv } from "../ui/inventory.js";
+import { cambiarPestanaInv, cerrarInv, toggleInv } from "../ui/inventory.js";
 import { construirMenu } from "../ui/menu.js";
 import { cerrarArenaPvp } from "../ui/pvp.js";
 import { abrirAjustes, cerrarAjustes, toggleSilencioRapido } from "../ui/settingsOverlay.js";
@@ -100,6 +100,14 @@ export function pollPads() {
               if (edge(0)) padActiva();
               if (edge(1)) padCierra();
               if (edge(9)) toggleInv();
+              // LB/RB cambian de pestaña en la ficha de personaje (Personaje/
+              // Equipamiento/Estadísticas/Mapa) -- libres aquí porque durante
+              // el juego LB (4) se usa para parry y solo en la rama de abajo
+              // (ovAb ya ha hecho "continue" antes de llegar a esa rama).
+              if (ovAb === "inv") {
+                if (edge(4)) cambiarPestanaInv(-1);
+                if (edge(5)) cambiarPestanaInv(1);
+              }
               prevBtns[i] = cur;
               continue;
             }

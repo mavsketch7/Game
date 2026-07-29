@@ -4,7 +4,7 @@ import { abandonarPartida } from "../core/gameflow.js";
 import { META } from "../core/save.js";
 import { G } from "../core/state.js";
 import { fxOnda, fxParticulas } from "../render/effects.js";
-import { spriteJugador } from "../render/sprites.js";
+import { iconoDrop, spriteJugador } from "../render/sprites.js";
 import { CARD_RAREZAS } from "../systems/cards.js";
 import { statsTot } from "../systems/combat.js";
 import { M } from "../systems/input.js";
@@ -20,6 +20,39 @@ function escHtml(s) {
           (c) =>
             ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c],
         );
+      }
+
+// ---- Pestañas del panel de ficha (Personaje/Equipamiento/Estadísticas/
+// Mapa) -- estado puramente de interfaz, no de partida: vive aquí como
+// variable de módulo (igual que padFoco en systems/input.js) en vez de en
+// G, porque no hace falta sincronizarla por red ni guardarla.
+const PESTANAS_INV = [
+        { id: "personaje", ico: "🧑", nombre: "Personaje" },
+        { id: "equipo", ico: "🎒", nombre: "Equipamiento" },
+        { id: "stats", ico: "📊", nombre: "Estadísticas" },
+        { id: "mapa", ico: "🗺", nombre: "Mapa" },
+      ];
+let invTab = "personaje";
+// objeto de la bolsa seleccionado en la pestaña Equipamiento (-1 = ninguno)
+let idxSel = -1;
+
+export function cambiarPestanaInv(dir) {
+        const i = PESTANAS_INV.findIndex((t) => t.id === invTab);
+        const n = PESTANAS_INV.length;
+        invTab = PESTANAS_INV[(((i + dir) % n) + n) % n].id;
+        idxSel = -1;
+        abrirInv();
+      }
+
+function irPestanaInv(id) {
+        invTab = id;
+        idxSel = -1;
+        abrirInv();
+      }
+
+function selItemInv(idx) {
+        idxSel = idxSel === idx ? -1 : idx;
+        abrirInv();
       }
 
 // Ranking en vivo de la sesión actual (punto 5 de la mejora de UX
@@ -62,7 +95,7 @@ function minimapaPlanta() {
             );
           }
         return (
-          '<h3 style="margin-top:14px;font-size:.85rem;color:var(--vespero)">🗺 Mapa de la planta</h3>' +
+          '<h3 style="margin-top:0;font-size:.85rem;color:var(--vespero)">🗺 Mapa de la planta</h3>' +
           '<div class="minimapa">' +
           celdas.join("") +
           "</div>" +
@@ -103,7 +136,7 @@ function rankingSesion() {
           '<span class="rank-stat" title="Enemigos derrotados">☠ Bajas</span>' +
           '<span class="rank-stat" title="Parries exitosos">🛡‍⚔ Parries</span></div>';
         return (
-          '<div class="ranking-sesion"><h3 style="margin-top:0;font-size:.85rem;color:var(--vespero)">🏆 Ranking de la sesión</h3>' +
+          '<div class="ranking-sesion"><h3 style="margin-top:14px;font-size:.85rem;color:var(--vespero)">🏆 Ranking de la sesión</h3>' +
           header +
           filas +
           "</div>"
@@ -176,104 +209,119 @@ function precioVenta(it) {
         return Math.round(PRECIO_VENTA[it.rareza] * (1 + 0.1 * META.mejoras.fortuna));
       }
 
-function lineaItem(it, idx, equipada, p) {
-        const rar = RAREZAS[it.rareza];
-        const actual = p.equipo[it.slot];
-        let mejorTag = "";
-        if (!equipada && actual) {
-          const d = totalPoder(it.stats) - totalPoder(actual.stats);
-          mejorTag =
-            d > 0
-              ? ' <span style="color:#5fcf8f;font-size:.72rem">▲ mejora</span>'
-              : d < 0
-                ? ' <span style="color:#e0707a;font-size:.72rem">▼ peor</span>'
-                : ' <span style="color:var(--ceniza);font-size:.72rem">= igual</span>';
+// ---- Resumen de impacto en estadísticas (▲/▼ por stat) para la celda de
+// la cuadrícula y el tooltip -- comparado contra lo que ya lleva puesto el
+// personaje en ese mismo slot (null si el slot está vacío, en cuyo caso
+// todo cuenta como ganancia).
+const ETQ_CORTA = { atk: "ATK", hp: "HP", armor: "DEF", crit: "CRIT", vel: "VEL", cdr: "CDR" };
+
+function impactoStats(it, actual) {
+        const claves = new Set(Object.keys(it.stats));
+        if (actual) for (const k in actual.stats) claves.add(k);
+        const partes = [];
+        for (const k of claves) {
+          const v = it.stats[k] || 0;
+          const base = actual ? actual.stats[k] || 0 : 0;
+          const d = v - base;
+          if (d !== 0) partes.push({ k, d });
         }
-        const comp =
-          !equipada && actual
-            ? '<div class="item-stats">vs. equipado <span class="' +
-              RAREZAS[actual.rareza].cls +
+        partes.sort((a, b) => b.d - a.d);
+        return partes;
+      }
+
+function impactoResumenHtml(partes) {
+        if (!partes.length) return '<span class="impacto-igual">= igual</span>';
+        return partes
+          .map(
+            ({ k, d }) =>
+              '<span class="impacto-' +
+              (d > 0 ? "up" : "down") +
               '">' +
-              actual.nombre +
-              "</span></div>"
-            : "";
-        // tag de clase para armas
+              (d > 0 ? "▲" : "▼") +
+              (ETQ_CORTA[k] || k) +
+              "</span>",
+          )
+          .join(" ");
+      }
+
+function impactoDetalleHtml(partes) {
+        if (!partes.length)
+          return '<div class="tt-stat-linea igual">Sin cambio de estadísticas</div>';
+        return partes
+          .map(
+            ({ k, d }) =>
+              '<div class="tt-stat-linea ' +
+              (d > 0 ? "up" : "down") +
+              '">' +
+              (d > 0 ? "▲ +" + d : "▼ " + d) +
+              " " +
+              ETQ[k] +
+              "</div>",
+          )
+          .join("");
+      }
+
+function iconoUrl(it) {
+        return iconoDrop(it).toDataURL();
+      }
+
+// Celda de la cuadrícula de inventario: icono por tipo de objeto (ver
+// iconoDrop en render/sprites.js), color de borde por rareza, resumen
+// corto de impacto en stats y, al pasar el cursor, un tooltip con la
+// descripción completa (efecto especial + todas las estadísticas con
+// indicador de mejora/empeoramiento vs. lo ya equipado).
+function celdaItem(it, idx, p, equipada) {
+        const rar = RAREZAS[it.rareza];
+        const actual = equipada ? null : p.equipo[it.slot];
+        const partes = impactoStats(it, actual);
         let tagClase = "";
         if (it.slot === "arma" && it.clase) {
-          const bien = it.clase === p.rol;
-          tagClase =
-            ' <span class="tag-clase ' +
-            (bien ? "bien" : "mal") +
-            '">' +
-            ROLES[it.clase].nombre.split(" ")[0] +
-            "</span>";
+          tagClase = ROLES[it.clase].nombre.split(" ")[0];
         }
-        const puedeEquipar = !(
-          it.slot === "arma" &&
-          it.clase &&
-          it.clase !== p.rol
-        );
-        // botones de transferencia a otros jugadores
-        let transf = "";
-        if (!equipada && G.players.length > 1) {
-          transf = G.players
-            .map((q, qi) =>
-              qi === G.invSel
-                ? ""
-                : '<button class="btn" style="padding:5px 8px;font-size:.72rem" onclick="darItem(' +
-                  idx +
-                  "," +
-                  qi +
-                  ')">→ ' +
-                  q.nombre +
-                  "</button>",
-            )
-            .join("");
-        }
+        const seleccionada = !equipada && idx === idxSel;
         return (
-          '<div class="item-linea"><div class="item-info">' +
-          '<div class="item-slot">' +
+          '<div class="item-cell ' +
+          rar.cls +
+          (seleccionada ? " seleccionada" : "") +
+          '" style="border-color:' +
+          rar.col +
+          '"' +
+          (equipada ? "" : ' onclick="selItemInv(' + idx + ')"') +
+          ">" +
+          '<img class="item-cell-ico" src="' +
+          iconoUrl(it) +
+          '" alt="" />' +
+          '<div class="item-cell-nombre ' +
+          rar.cls +
+          '">' +
+          escHtml(it.nombre) +
+          "</div>" +
+          '<div class="item-cell-tipo">' +
           it.slot +
-          tagClase +
+          (tagClase ? " · " + tagClase : "") +
+          "</div>" +
+          '<div class="item-cell-impacto">' +
+          impactoResumenHtml(partes) +
+          "</div>" +
+          '<div class="item-tooltip">' +
+          '<div class="tt-nombre ' +
+          rar.cls +
+          '">' +
+          escHtml(it.nombre) +
+          "</div>" +
+          '<div class="tt-slot">' +
+          it.slot +
+          (tagClase ? " · " + tagClase : "") +
           ' · <span class="' +
           rar.cls +
           '">' +
           rar.n +
           "</span></div>" +
-          '<div class="item-nombre ' +
-          rar.cls +
-          '">' +
-          it.nombre +
-          mejorTag +
-          "</div>" +
-          '<div class="item-stats">' +
-          (equipada ? fmtStats(it.stats) : fmtStatsComparativo(it, actual)) +
-          "</div>" +
           (it.efectoDesc
-            ? '<div class="item-efecto">✦ ' + it.efectoDesc + "</div>"
+            ? '<div class="tt-efecto">✦ ' + escHtml(it.efectoDesc) + "</div>"
             : "") +
-          comp +
+          impactoDetalleHtml(partes) +
           "</div>" +
-          (equipada
-            ? ""
-            : '<div class="item-acciones">' +
-              (puedeEquipar
-                ? '<button class="btn" onclick="equipar(' +
-                  idx +
-                  ')">Equipar</button>'
-                : '<button class="btn" disabled title="Arma de otra clase">Solo ' +
-                  ROLES[it.clase].nombre.split(" ")[0] +
-                  "</button>") +
-              fusBtnItem(it, idx, p) +
-              transf +
-              '<button class="btn" onclick="venderItem(' +
-              idx +
-              ')" title="Se suma al oro de la partida (se banca al terminar, como las monedas)">Vender ' +
-              precioVenta(it) +
-              " 🪙</button>" +
-              '<button class="btn peligro" onclick="tirarItem(' +
-              idx +
-              ')">Tirar</button></div>') +
           "</div>"
         );
       }
@@ -323,6 +371,7 @@ function togFusion(idx) {
 function filtrarBolsa(slot) {
         const p = G.players[G.invSel] || G.players[0];
         p.filtroBolsa = slot;
+        idxSel = -1;
         abrirInv();
       }
 
@@ -343,6 +392,7 @@ function ordenarBolsa(crit) {
             (a, b) => slotIdx(a.slot) - slotIdx(b.slot) || b.rareza - a.rareza,
           );
         else p.bolsa.sort((a, b) => suma(b) - suma(a));
+        idxSel = -1;
         abrirInv();
       }
 
@@ -405,6 +455,7 @@ function fusionar() {
           const i = p.bolsa.indexOf(it);
           if (i >= 0) p.bolsa.splice(i, 1);
         }
+        idxSel = -1;
         if (rarF < 3) {
           // evolución garantizada a la rareza superior, conservando el slot del primero
           const nuevo = genItem(Math.max(1, G.planta), rarF + 1, base.slot);
@@ -451,29 +502,11 @@ function fusionar() {
         abrirInv();
       }
 
-export function abrirInv() {
-        if (!G || !G.activo) return;
-        G.pausa = true;
-        const p = G.players[G.invSel] || G.players[0];
-        const t = statsTot(p),
-          b = ROLES[p.rol];
-        const tabs = G.players
-          .map(
-            (q, i) =>
-              '<button class="tab-jug' +
-              (i === G.invSel ? " activa" : "") +
-              '" onclick="invSel(' +
-              i +
-              ')" style="border-left:3px solid ' +
-              q.color +
-              '">' +
-              q.nombre +
-              " · " +
-              ROLES[q.rol].nombre.split(" ")[0] +
-              "</button>",
-          )
-          .join("");
-        // chips de mejoras elegidas
+// ---- Contenido de cada pestaña ----
+
+function tabPersonaje(p, t, b) {
+        const xpPct =
+          p.nivel >= MAX_NIV_PJ ? 100 : Math.round((p.xp / p.xpSig) * 100);
         const chips = p.cartasElegidas.length
           ? p.cartasElegidas
               .map((c) => {
@@ -498,132 +531,7 @@ export function abrirInv() {
               })
               .join("")
           : '<span style="color:var(--ceniza);font-size:.72rem">Ninguna todavía — sube de nivel</span>';
-        const eq = SLOTS.map((s) => {
-          const it = p.equipo[s];
-          return it
-            ? lineaItem(it, -1, true, p)
-            : '<div class="item-linea"><div class="item-info"><div class="item-slot">' +
-                s +
-                '</div><div class="item-stats">Vacío</div></div></div>';
-        }).join("");
-        const filtro = p.filtroBolsa || "todos";
-        const bolsaFiltrada = p.bolsa
-          .map((it, i) => ({ it, i }))
-          .filter(({ it }) => filtro === "todos" || it.slot === filtro);
-        const bolsa = !p.bolsa.length
-          ? '<p style="color:var(--ceniza);margin-top:8px">Tu bolsa está vacía. Recoge botín de enemigos, cofres y barriles.</p>'
-          : bolsaFiltrada.length
-            ? bolsaFiltrada.map(({ it, i }) => lineaItem(it, i, false, p)).join("")
-            : '<p style="color:var(--ceniza);margin-top:8px">Nada de ese tipo en la bolsa.</p>';
-        // ---- panel de fusión ----
-        p.fusionSel = p.fusionSel.filter((it) => p.bolsa.includes(it));
-        const slotsF = [0, 1, 2]
-          .map((k) => {
-            const it = p.fusionSel[k];
-            return it
-              ? '<div class="fusion-slot lleno" style="border-color:' +
-                  RAREZAS[it.rareza].col +
-                  ";color:" +
-                  RAREZAS[it.rareza].col +
-                  '">' +
-                  it.nombre +
-                  "</div>"
-              : '<div class="fusion-slot">vacío</div>';
-          })
-          .join("");
-        const rarF = p.fusionSel.length ? p.fusionSel[0].rareza : -1;
-        const esLeg = rarF === 3;
-        let fusBtn = "";
-        if (p.fusionSel.length === 3) {
-          fusBtn =
-            '<button class="btn dorado" onclick="fusionar()">⚗️ FUSIONAR' +
-            (esLeg ? " (30% de éxito)" : " → " + RAREZAS[rarF + 1].n) +
-            "</button>";
-        }
-        const avisoF =
-          esLeg && p.fusionSel.length === 3
-            ? '<div class="fusion-aviso">⚠ Fusión legendaria: si tiene éxito, el resultado SUMA todas las estadísticas de los 3 objetos. Si falla (70%), LOS TRES SE DESTRUYEN.</div>'
-            : "";
-        const nRapidas = contarFusionesRapidas(p);
-        const btnRapida =
-          nRapidas > 0
-            ? '<button class="btn dorado" onclick="fusionRapida()">⚡ Fusión rápida (' +
-              nRapidas +
-              " disponible" +
-              (nRapidas > 1 ? "s" : "") +
-              ")</button>"
-            : '<button class="btn" disabled title="Necesitas 3 objetos de la misma rareza">⚡ Fusión rápida (0)</button>';
-        const fusion =
-          '<div class="fusion-panel">' +
-          '<b style="font-size:.85rem;color:var(--vespero)">⚗️ Mesa de fusión</b>' +
-          '<div style="font-size:.72rem;color:var(--ceniza);margin-top:2px">Combina 3 objetos de la MISMA rareza → evolucionan a la superior. Con legendarios, el resultado suma todos los stats… si sobrevive.</div>' +
-          '<div class="fusion-slots">' +
-          slotsF +
-          fusBtn +
-          "</div>" +
-          '<div style="margin-top:8px">' +
-          btnRapida +
-          ' <span style="font-size:.7rem;color:var(--ceniza)">coge 3 iguales automáticamente (prioriza la rareza más alta)</span></div>' +
-          avisoF +
-          "</div>";
-        // controles de orden de la bolsa
-        const ord = p.ordenBolsa || "rareza";
-        const ordCtrl =
-          '<div style="display:flex;gap:6px;align-items:center;margin:10px 0 2px;flex-wrap:wrap">' +
-          '<span style="font-size:.75rem;color:var(--ceniza)">Ordenar:</span>' +
-          '<div class="seg">' +
-          [
-            ["Rareza", "rareza"],
-            ["Tipo", "slot"],
-            ["Poder", "valor"],
-          ]
-            .map(
-              ([lab, v]) =>
-                '<button class="' +
-                (ord === v ? "on" : "") +
-                '" onclick="ordenarBolsa(\'' +
-                v +
-                "')\">" +
-                lab +
-                "</button>",
-            )
-            .join("") +
-          "</div></div>";
-        const filtroCtrl =
-          '<div style="display:flex;gap:6px;align-items:center;margin:2px 0 8px;flex-wrap:wrap">' +
-          '<span style="font-size:.75rem;color:var(--ceniza)">Filtrar:</span>' +
-          '<div class="seg">' +
-          [["Todo", "todos"], ...SLOTS.map((s) => [s, s])]
-            .map(
-              ([lab, v]) =>
-                '<button class="' +
-                (filtro === v ? "on" : "") +
-                '" onclick="filtrarBolsa(\'' +
-                v +
-                "')\">" +
-                lab +
-                "</button>",
-            )
-            .join("") +
-          "</div></div>";
-        const xpPct =
-          p.nivel >= MAX_NIV_PJ ? 100 : Math.round((p.xp / p.xpSig) * 100);
-        document.getElementById("inv-inner").innerHTML =
-          '<div class="fila-cerrar"><h2 class="display">Ficha de personaje — pausa</h2>' +
-          '<div style="display:flex;gap:8px">' +
-          (G.escena === "torre"
-            ? '<button class="btn peligro" onclick="abandonarPartida()">' +
-              (G.confirmAband
-                ? "⚠ ¿SEGURO? −" + Math.ceil(G.oroRun * 0.5) + " 🪙"
-                : "🏳 Al lobby (−50% oro)") +
-              "</button>"
-            : "") +
-          '<button class="btn dorado" onclick="cerrarInv()">Volver (Tab / Start)</button></div></div>' +
-          '<div class="tabs-jug">' +
-          tabs +
-          "</div>" +
-          rankingSesion() +
-          minimapaPlanta() +
+        return (
           '<div class="ficha-cab">' +
           '<canvas id="ficha-retrato" width="72" height="84"></canvas>' +
           '<div class="ficha-datos">' +
@@ -661,6 +569,19 @@ export function abrirInv() {
             ? "NIVEL MÁXIMO"
             : p.xp + " / " + p.xpSig + " XP") +
           "</div>" +
+          "</div>" +
+          "</div>" +
+          '<h3 style="margin-top:14px;font-size:.85rem;color:var(--vespero)">Mejoras de nivel (' +
+          p.cartasElegidas.length +
+          ")</h3>" +
+          '<div class="chips-mejoras">' +
+          chips +
+          "</div>"
+        );
+      }
+
+function tabStats(p, t) {
+        return (
           '<div class="ficha-stats">' +
           fichaStat("⚔", "Daño", t.atk, null) +
           fichaStat(
@@ -674,16 +595,215 @@ export function abrirInv() {
           fichaStat("💨", "Velocidad", t.vel, null) +
           fichaStat("⏱", "Red. CD", t.cdr + "%", (t.cdr / 55) * 100) +
           "</div>" +
+          rankingSesion()
+        );
+      }
+
+function tabMapa() {
+        const mm = minimapaPlanta();
+        return (
+          mm ||
+          '<p style="color:var(--ceniza)">Sin mapa en esta sala (las plantas de jefe son una única sala).</p>'
+        );
+      }
+
+// Panel con la descripción/acciones del objeto de la bolsa seleccionado en
+// la cuadrícula (equipar, fusión, vender, tirar, dar a otro jugador) --
+// separado de la celda para que la cuadrícula se mantenga compacta.
+function panelAccionItem(p) {
+        const it = p.bolsa[idxSel];
+        if (!it) return "";
+        const rar = RAREZAS[it.rareza];
+        const actual = p.equipo[it.slot];
+        const puedeEquipar = !(
+          it.slot === "arma" &&
+          it.clase &&
+          it.clase !== p.rol
+        );
+        let transf = "";
+        if (G.players.length > 1) {
+          transf = G.players
+            .map((q, qi) =>
+              qi === G.invSel
+                ? ""
+                : '<button class="btn" onclick="darItem(' +
+                  idxSel +
+                  "," +
+                  qi +
+                  ')">→ ' +
+                  escHtml(q.nombre) +
+                  "</button>",
+            )
+            .join("");
+        }
+        return (
+          '<div class="panel-item-sel" style="border-color:' +
+          rar.col +
+          '">' +
+          '<div class="panel-item-cab">' +
+          '<div class="panel-item-nombre ' +
+          rar.cls +
+          '">' +
+          escHtml(it.nombre) +
           "</div>" +
+          '<div class="panel-item-slot">' +
+          it.slot +
+          ' · <span class="' +
+          rar.cls +
+          '">' +
+          rar.n +
+          "</span></div>" +
           "</div>" +
-          '<h3 style="margin-top:12px;font-size:.85rem;color:var(--vespero)">Mejoras de nivel (' +
-          p.cartasElegidas.length +
-          ")</h3>" +
-          '<div class="chips-mejoras">' +
-          chips +
+          (it.efectoDesc
+            ? '<div class="item-efecto">✦ ' + escHtml(it.efectoDesc) + "</div>"
+            : "") +
+          '<div class="panel-item-stats">' +
+          fmtStatsComparativo(it, actual) +
           "</div>" +
-          '<h3 style="margin-top:14px;font-size:.85rem;color:var(--vespero)">Equipado</h3>' +
-          eq +
+          '<div class="item-acciones">' +
+          (puedeEquipar
+            ? '<button class="btn" onclick="equipar(' +
+              idxSel +
+              ')">Equipar</button>'
+            : '<button class="btn" disabled title="Arma de otra clase">Solo ' +
+              ROLES[it.clase].nombre.split(" ")[0] +
+              "</button>") +
+          fusBtnItem(it, idxSel, p) +
+          transf +
+          '<button class="btn" onclick="venderItem(' +
+          idxSel +
+          ')" title="Se suma al oro de la partida (se banca al terminar, como las monedas)">Vender ' +
+          precioVenta(it) +
+          " 🪙</button>" +
+          '<button class="btn peligro" onclick="tirarItem(' +
+          idxSel +
+          ')">Tirar</button>' +
+          "</div>" +
+          "</div>"
+        );
+      }
+
+function gridBolsa(p) {
+        const filtro = p.filtroBolsa || "todos";
+        const bolsaFiltrada = p.bolsa
+          .map((it, i) => ({ it, i }))
+          .filter(({ it }) => filtro === "todos" || it.slot === filtro);
+        if (!p.bolsa.length)
+          return '<p style="color:var(--ceniza);margin-top:8px">Tu bolsa está vacía. Recoge botín de enemigos, cofres y barriles.</p>';
+        if (!bolsaFiltrada.length)
+          return '<p style="color:var(--ceniza);margin-top:8px">Nada de ese tipo en la bolsa.</p>';
+        return (
+          '<div class="grid-inv">' +
+          bolsaFiltrada.map(({ it, i }) => celdaItem(it, i, p, false)).join("") +
+          "</div>"
+        );
+      }
+
+function tabEquipo(p) {
+        const eqCells = SLOTS.map((s) => {
+          const it = p.equipo[s];
+          return it
+            ? celdaItem(it, -1, p, true)
+            : '<div class="item-cell vacio"><div class="item-cell-tipo">' +
+                s +
+                '</div><div class="item-cell-nombre" style="color:var(--ceniza)">Vacío</div></div>';
+        }).join("");
+        // ---- panel de fusión ----
+        p.fusionSel = p.fusionSel.filter((it) => p.bolsa.includes(it));
+        const slotsF = [0, 1, 2]
+          .map((k) => {
+            const it = p.fusionSel[k];
+            return it
+              ? '<div class="fusion-slot lleno" style="border-color:' +
+                  RAREZAS[it.rareza].col +
+                  ";color:" +
+                  RAREZAS[it.rareza].col +
+                  '">' +
+                  it.nombre +
+                  "</div>"
+              : '<div class="fusion-slot">vacío</div>';
+          })
+          .join("");
+        const rarF = p.fusionSel.length ? p.fusionSel[0].rareza : -1;
+        const esLeg = rarF === 3;
+        let fusBtn = "";
+        if (p.fusionSel.length === 3) {
+          fusBtn =
+            '<button class="btn dorado" onclick="fusionar()">⚗️ FUSIONAR' +
+            (esLeg ? " (13% de éxito)" : " → " + RAREZAS[rarF + 1].n) +
+            "</button>";
+        }
+        const avisoF =
+          esLeg && p.fusionSel.length === 3
+            ? '<div class="fusion-aviso">⚠ Fusión legendaria: si tiene éxito, nace un objeto Mítico único. Si falla (87%), LOS TRES SE DESTRUYEN.</div>'
+            : "";
+        const nRapidas = contarFusionesRapidas(p);
+        const btnRapida =
+          nRapidas > 0
+            ? '<button class="btn dorado" onclick="fusionRapida()">⚡ Fusión rápida (' +
+              nRapidas +
+              " disponible" +
+              (nRapidas > 1 ? "s" : "") +
+              ")</button>"
+            : '<button class="btn" disabled title="Necesitas 3 objetos de la misma rareza">⚡ Fusión rápida (0)</button>';
+        const fusion =
+          '<div class="fusion-panel">' +
+          '<b style="font-size:.85rem;color:var(--vespero)">⚗️ Mesa de fusión</b>' +
+          '<div style="font-size:.72rem;color:var(--ceniza);margin-top:2px">Combina 3 objetos de la MISMA rareza (mismo slot, y misma clase si son armas) → evolucionan a la superior.</div>' +
+          '<div class="fusion-slots">' +
+          slotsF +
+          fusBtn +
+          "</div>" +
+          '<div style="margin-top:8px">' +
+          btnRapida +
+          ' <span style="font-size:.7rem;color:var(--ceniza)">coge 3 iguales automáticamente (prioriza la rareza más alta)</span></div>' +
+          avisoF +
+          "</div>";
+        const ord = p.ordenBolsa || "rareza";
+        const ordCtrl =
+          '<div style="display:flex;gap:6px;align-items:center;margin:10px 0 2px;flex-wrap:wrap">' +
+          '<span style="font-size:.75rem;color:var(--ceniza)">Ordenar:</span>' +
+          '<div class="seg">' +
+          [
+            ["Rareza", "rareza"],
+            ["Tipo", "slot"],
+            ["Poder", "valor"],
+          ]
+            .map(
+              ([lab, v]) =>
+                '<button class="' +
+                (ord === v ? "on" : "") +
+                '" onclick="ordenarBolsa(\'' +
+                v +
+                "')\">" +
+                lab +
+                "</button>",
+            )
+            .join("") +
+          "</div></div>";
+        const filtro = p.filtroBolsa || "todos";
+        const filtroCtrl =
+          '<div style="display:flex;gap:6px;align-items:center;margin:2px 0 8px;flex-wrap:wrap">' +
+          '<span style="font-size:.75rem;color:var(--ceniza)">Filtrar:</span>' +
+          '<div class="seg">' +
+          [["Todo", "todos"], ...SLOTS.map((s) => [s, s])]
+            .map(
+              ([lab, v]) =>
+                '<button class="' +
+                (filtro === v ? "on" : "") +
+                '" onclick="filtrarBolsa(\'' +
+                v +
+                "')\">" +
+                lab +
+                "</button>",
+            )
+            .join("") +
+          "</div></div>";
+        return (
+          '<h3 style="margin-top:0;font-size:.85rem;color:var(--vespero)">Equipado</h3>' +
+          '<div class="grid-inv grid-equipado">' +
+          eqCells +
+          "</div>" +
           fusion +
           '<h3 style="margin-top:14px;font-size:.85rem;color:var(--vespero)">Bolsa de ' +
           p.nombre +
@@ -692,9 +812,74 @@ export function abrirInv() {
           ")</h3>" +
           filtroCtrl +
           ordCtrl +
-          bolsa;
+          gridBolsa(p) +
+          panelAccionItem(p)
+        );
+      }
+
+export function abrirInv() {
+        if (!G || !G.activo) return;
+        G.pausa = true;
+        const p = G.players[G.invSel] || G.players[0];
+        const t = statsTot(p),
+          b = ROLES[p.rol];
+        const tabsJug = G.players
+          .map(
+            (q, i) =>
+              '<button class="tab-jug' +
+              (i === G.invSel ? " activa" : "") +
+              '" onclick="invSel(' +
+              i +
+              ')" style="border-left:3px solid ' +
+              q.color +
+              '">' +
+              q.nombre +
+              " · " +
+              ROLES[q.rol].nombre.split(" ")[0] +
+              "</button>",
+          )
+          .join("");
+        const pestanas = PESTANAS_INV.map(
+          (tb) =>
+            '<button class="tab-inv' +
+            (invTab === tb.id ? " activa" : "") +
+            '" onclick="irPestanaInv(\'' +
+            tb.id +
+            "')\"><span class=\"tab-inv-ico\">" +
+            tb.ico +
+            '</span><span class="tab-inv-nombre">' +
+            tb.nombre +
+            "</span></button>",
+        ).join("");
+        let contenido;
+        if (invTab === "equipo") contenido = tabEquipo(p);
+        else if (invTab === "stats") contenido = tabStats(p, t);
+        else if (invTab === "mapa") contenido = tabMapa();
+        else contenido = tabPersonaje(p, t, b);
+        document.getElementById("inv-inner").innerHTML =
+          '<div class="fila-cerrar"><h2 class="display">Ficha de personaje — pausa</h2>' +
+          '<div style="display:flex;gap:8px">' +
+          (G.escena === "torre"
+            ? '<button class="btn peligro" onclick="abandonarPartida()">' +
+              (G.confirmAband
+                ? "⚠ ¿SEGURO? −" + Math.ceil(G.oroRun * 0.5) + " 🪙"
+                : "🏳 Al lobby (−50% oro)") +
+              "</button>"
+            : "") +
+          '<button class="btn dorado" onclick="cerrarInv()">Volver (Tab / Start)</button></div></div>' +
+          '<div class="tabs-jug">' +
+          tabsJug +
+          "</div>" +
+          '<div class="tabs-inv">' +
+          pestanas +
+          ' <span class="tabs-inv-hint">LB/RB para cambiar</span>' +
+          "</div>" +
+          '<div class="inv-contenido">' +
+          contenido +
+          "</div>";
         mostrar("inv");
-        // retrato grande
+        // retrato grande (solo existe en el DOM cuando la pestaña Personaje
+        // está activa, ver tabPersonaje())
         const rc = document.getElementById("ficha-retrato");
         if (rc) {
           const g = rc.getContext("2d");
@@ -715,6 +900,7 @@ export function abrirInv() {
 
 export function invSel(i) {
         G.invSel = i;
+        idxSel = -1;
         abrirInv();
       }
 
@@ -761,6 +947,7 @@ function equipar(idx) {
         p.bolsa.splice(idx, 1);
         if (ant) p.bolsa.push(ant);
         p.hp = clamp(p.hp, 1, statsTot(p).hpMax);
+        idxSel = -1;
         toast(p.nombre + " equipa " + it.nombre, RAREZAS[it.rareza].col);
         abrirInv();
       }
@@ -769,6 +956,7 @@ function tirarItem(idx) {
         const p = G.players[G.invSel] || G.players[0];
         if (p.bolsa[idx]) {
           p.bolsa.splice(idx, 1);
+          idxSel = -1;
           abrirInv();
         }
       }
@@ -784,6 +972,7 @@ function venderItem(idx) {
         const oro = precioVenta(it);
         p.bolsa.splice(idx, 1);
         G.oroRun += oro;
+        idxSel = -1;
         toast("Vendido " + it.nombre + " por " + oro + " 🪙", "#ffd27f");
         abrirInv();
       }
@@ -795,6 +984,7 @@ function darItem(idx, targetIdx) {
         if (!it || !q || q === p) return;
         p.bolsa.splice(idx, 1);
         q.bolsa.push(it);
+        idxSel = -1;
         toast(
           p.nombre + " da " + it.nombre + " a " + q.nombre,
           RAREZAS[it.rareza].col,
@@ -810,7 +1000,9 @@ window.filtrarBolsa = filtrarBolsa;
 window.fusionRapida = fusionRapida;
 window.fusionar = fusionar;
 window.invSel = invSel;
+window.irPestanaInv = irPestanaInv;
 window.ordenarBolsa = ordenarBolsa;
+window.selItemInv = selItemInv;
 window.tirarItem = tirarItem;
 window.togFusion = togFusion;
 window.venderItem = venderItem;

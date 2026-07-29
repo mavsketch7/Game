@@ -60,6 +60,32 @@ export function esPantallaCompleta() {
         );
       }
 
+// Pantalla completa "por defecto": los navegadores bloquean
+// requestFullscreen() sin un gesto real del usuario, así que no se puede
+// forzar al cargar la página. En su lugar, ui/intro.js llama a esto en el
+// primer gesto real (tecla/clic/botón de mando en la pantalla "Pulsa
+// Start"), el mismo punto donde ya se desbloquea el audio -- efecto
+// práctico idéntico a "empieza en pantalla completa" sin violar la
+// política del navegador.
+export function pedirPantallaCompleta() {
+        if (esPantallaCompleta() || maximizado) return;
+        const el = document.documentElement;
+        const req = el.requestFullscreen || el.webkitRequestFullscreen;
+        if (req) {
+          const pr = req.call(el);
+          if (pr && pr.catch)
+            pr.catch(() => {
+              maximizado = true;
+              document.body.classList.add("pantalla-completa");
+              ajustarLienzo();
+            });
+        } else {
+          maximizado = true;
+          document.body.classList.add("pantalla-completa");
+        }
+        setTimeout(ajustarLienzo, 200);
+      }
+
 export function toggleFullscreen() {
         const el = document.documentElement;
         const yaFS = esPantallaCompleta();

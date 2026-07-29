@@ -1592,6 +1592,221 @@ body.pantalla-completa #hint {
   color: var(--hueso);
 }
 
+/* ===== Ficha de personaje: pestañas (Personaje/Equipamiento/Estadísticas/
+   Mapa). El objetivo es que la cabecera (título, pestaña de jugador,
+   pestañas de sección) se quede siempre visible y solo el CONTENIDO de la
+   pestaña activa haga scroll si no cabe -- así se evita el scroll largo de
+   antes, donde había que bajar por toda la ficha para llegar a la bolsa. */
+#inv.overlay {
+  align-items: stretch;
+}
+#inv .overlay-inner {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+.tabs-inv {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 10px;
+  border-bottom: 1px solid var(--borde);
+  padding-bottom: 8px;
+  flex-shrink: 0;
+}
+.tab-inv {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid var(--borde);
+  background: var(--piedra2);
+  color: var(--ceniza);
+  border-radius: 8px 8px 0 0;
+  padding: 7px 14px;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+.tab-inv-ico {
+  font-size: 1.05rem;
+}
+.tab-inv.activa {
+  color: var(--hueso);
+  border-color: var(--vespero);
+  background: #2a2340;
+  box-shadow: 0 -2px 0 var(--vespero) inset;
+}
+.tabs-inv-hint {
+  margin-left: auto;
+  font-size: 0.68rem;
+  color: var(--ceniza);
+}
+.inv-contenido {
+  width: 100%;
+  margin-top: 6px;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+/* ===== Cuadrícula de inventario ===== */
+.grid-inv {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(108px, 1fr));
+  gap: 8px;
+  margin-top: 8px;
+}
+.grid-equipado {
+  grid-template-columns: repeat(3, minmax(108px, 1fr));
+  max-width: 420px;
+}
+.item-cell {
+  position: relative;
+  background: var(--piedra2);
+  border: 1px solid var(--borde);
+  border-radius: 8px;
+  padding: 8px;
+  cursor: pointer;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+.item-cell.vacio {
+  cursor: default;
+  opacity: 0.55;
+  border-style: dashed;
+  min-height: 76px;
+  justify-content: center;
+}
+.item-cell.seleccionada {
+  outline: 2px solid var(--vespero);
+  background: #2a2340;
+}
+.item-cell-ico {
+  width: 40px;
+  height: 40px;
+  image-rendering: pixelated;
+  margin-bottom: 2px;
+}
+.item-cell-nombre {
+  font-size: 0.72rem;
+  font-weight: 800;
+  line-height: 1.15;
+}
+.item-cell-tipo {
+  font-size: 0.6rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--ceniza);
+}
+.item-cell-impacto {
+  font-size: 0.62rem;
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  justify-content: center;
+  margin-top: 2px;
+}
+.impacto-up {
+  color: #5fcf8f;
+}
+.impacto-down {
+  color: #e0707a;
+}
+.impacto-igual {
+  color: var(--ceniza);
+}
+
+/* Tooltip al pasar el cursor sobre una celda: descripción completa,
+   efecto especial (si tiene) y todas las estadísticas con su indicador de
+   mejora/empeoramiento frente a lo ya equipado en ese slot. */
+.item-tooltip {
+  display: none;
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 8px);
+  transform: translateX(-50%);
+  width: 190px;
+  background: #0d0b15;
+  border: 1px solid var(--vespero);
+  border-radius: 8px;
+  padding: 8px 10px;
+  text-align: left;
+  z-index: 40;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.55);
+  pointer-events: none;
+}
+.item-cell:hover .item-tooltip {
+  display: block;
+}
+.tt-nombre {
+  font-weight: 800;
+  font-size: 0.82rem;
+}
+.tt-slot {
+  font-size: 0.66rem;
+  color: var(--ceniza);
+  margin-top: 2px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.tt-efecto {
+  font-size: 0.7rem;
+  color: #ff5a36;
+  margin-top: 4px;
+  font-weight: 600;
+}
+.tt-stat-linea {
+  font-size: 0.72rem;
+  margin-top: 2px;
+}
+.tt-stat-linea.up {
+  color: #5fcf8f;
+}
+.tt-stat-linea.down {
+  color: #e0707a;
+}
+.tt-stat-linea.igual {
+  color: var(--ceniza);
+}
+
+/* Panel de acciones del objeto de la bolsa seleccionado (equipar, fusión,
+   vender, tirar, dar a otro jugador) */
+.panel-item-sel {
+  margin-top: 10px;
+  background: var(--piedra);
+  border: 1px solid var(--borde);
+  border-left-width: 3px;
+  border-radius: 10px;
+  padding: 10px 13px;
+}
+.panel-item-cab {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.panel-item-nombre {
+  font-weight: 800;
+  font-size: 0.92rem;
+}
+.panel-item-slot {
+  font-size: 0.68rem;
+  color: var(--ceniza);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.panel-item-stats {
+  font-size: 0.78rem;
+  color: var(--ceniza);
+  margin-top: 5px;
+}
+
 /* El guantelete (#cursor-img) sustituye al cursor nativo en toda la
          interfaz; se pone al final de la hoja para ganarle a cualquier
          "cursor: pointer/not-allowed" declarado antes. canvas#lienzo ya
