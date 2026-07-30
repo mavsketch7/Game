@@ -504,9 +504,20 @@ export function cargarSala(sala) {
         G.projs = [];
         G.areas = [];
         G.drops = []; // transitorios: no persisten al cruzar una puerta
+        // El portal de fin de planta se colocaba en (W/2, 64), casi encima
+        // de la puerta "N" (W/2, 46, radio 30 -- ver posPuerta()): con el
+        // radio de captura del portal (r+12=36) las dos zonas se solapaban
+        // por completo. Cuando la sala final tenía su puerta de vuelta
+        // justo en el lado norte (según por dónde se llegó a ella en el
+        // paseo aleatorio del grafo), intentar cruzar esa puerta para
+        // volver también contaba como "estar dentro del portal", así que
+        // en vez de cruzar hacia la sala anterior el juego devolvía al
+        // jugador siempre al mismo sitio. Se separa en X (bien lejos de
+        // las 4 posiciones de puerta) manteniendo la Y original, que ya
+        // está verificada libre de muros en las 6 formas de sala.
         G.portal =
           sala.esFinal && sala.despejada
-            ? { x: W / 2, y: 64, r: 24, t: 0 }
+            ? { x: W / 2 + 160, y: 64, r: 24, t: 0 }
             : null;
         if (!sala.poblada) {
           poblarSala(sala, G.planta);
