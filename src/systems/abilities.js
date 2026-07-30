@@ -1,6 +1,8 @@
 // Auto-generated during the modularization refactor (2026-07-23).
-import { H, TAU, W } from "../core/canvas.js";
-import { ELEMENTOS, ELEM_MAGO, FORMAS_DRUIDA, FORMAS_INFO, RAREZAS, ROLES, SUPS } from "../core/constants.js";
+import { TAU } from "../core/canvas.js";
+// Alias: el único uso de W/H de este archivo es un clamp de objetivo
+// DENTRO de la sala (mundo) -- ver el mismo truco en systems/floorgen.js.
+import { ELEMENTOS, ELEM_MAGO, FORMAS_DRUIDA, FORMAS_INFO, RAREZAS, ROLES, SALA_H as H, SALA_W as W, SUPS } from "../core/constants.js";
 import { update } from "../core/loop.js";
 import { G } from "../core/state.js";
 import { fxOnda, fxParticulas, fxTajo, fxTexto } from "../render/effects.js";

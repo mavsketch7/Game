@@ -1,6 +1,9 @@
 // Auto-generated during the modularization refactor (2026-07-23).
-import { H, TAU, W } from "../core/canvas.js";
-import { MAX_NIV_PJ, ROLES, SLOTS, XP_POR_PLANTA, XP_TABLA } from "../core/constants.js";
+import { TAU } from "../core/canvas.js";
+// Alias: todos los usos de W/H en este archivo son posiciones de aparición
+// de enemigos DENTRO de la sala (mundo), no del viewport -- ver el mismo
+// truco en systems/floorgen.js.
+import { MAX_NIV_PJ, ROLES, SALA_H as H, SALA_W as W, SLOTS, XP_POR_PLANTA, XP_TABLA } from "../core/constants.js";
 import { META } from "../core/save.js";
 import { G } from "../core/state.js";
 import { fxOnda, fxParticulas, fxTexto } from "../render/effects.js";

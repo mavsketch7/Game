@@ -1,6 +1,6 @@
 // Auto-generated during the modularization refactor (2026-07-23).
 import { H, TAU, W } from "./canvas.js";
-import { ELEMENTOS, MAX_PLANTA, RAREZAS, ROLES, XP_POR_PLANTA } from "./constants.js";
+import { ELEMENTOS, MAX_PLANTA, RAREZAS, ROLES, SALA_H, SALA_W, XP_POR_PLANTA } from "./constants.js";
 import { iniciarLobby } from "./gameflow.js";
 import { META } from "./save.js";
 import { G } from "./state.js";
@@ -101,8 +101,8 @@ export function update(dt) {
               vy = (p.inp.my / n) * velEf * Math.min(1, n);
             }
           }
-          p.x = clamp(p.x + vx * dt, 28, W - 28);
-          p.y = clamp(p.y + vy * dt, 28, H - 28);
+          p.x = clamp(p.x + vx * dt, 28, SALA_W - 28);
+          p.y = clamp(p.y + vy * dt, 28, SALA_H - 28);
           for (const pl of G.pilares) {
             const d = Math.hypot(p.x - pl.x, p.y - pl.y);
             if (d < pl.r + p.r) {
@@ -215,8 +215,8 @@ export function update(dt) {
               p.invulT = 0.5;
               // salto hacia fuera
               const a = Math.atan2(p.y - hz.y, p.x - hz.x) || rnd(0, TAU);
-              p.x = clamp(hz.x + Math.cos(a) * (hz.r + 16), 28, W - 28);
-              p.y = clamp(hz.y + Math.sin(a) * (hz.r + 16), 28, H - 28);
+              p.x = clamp(hz.x + Math.cos(a) * (hz.r + 16), 28, SALA_W - 28);
+              p.y = clamp(hz.y + Math.sin(a) * (hz.r + 16), 28, SALA_H - 28);
               fxOnda(p.x, p.y, 30, "#c9a35a");
               fxParticulas(p.x, p.y, 10, "#c9a35a");
               toast(p.nombre + " escapa de las arenas", "#7fd4c1");
@@ -328,9 +328,9 @@ export function update(dt) {
           let fuera =
             pr.ttl <= 0 ||
             pr.x < 10 ||
-            pr.x > W - 10 ||
+            pr.x > SALA_W - 10 ||
             pr.y < 10 ||
-            pr.y > H - 10;
+            pr.y > SALA_H - 10;
           if (colisionaMuro(pr.x, pr.y, pr.r)) {
             fuera = true;
             fxParticulas(pr.x, pr.y, 3, "#6a5a94");
@@ -580,7 +580,7 @@ export function update(dt) {
           if (e.portalT > 0) {
             e.portalT -= dt;
             if (e.portalT <= 0) {
-              e.x = clamp((e.portalX ?? e.x) + rnd(-24, 24), 40, W - 40);
+              e.x = clamp((e.portalX ?? e.x) + rnd(-24, 24), 40, SALA_W - 40);
               e.y = 42;
               e.stunT = Math.max(e.stunT, 0.55);
               fxParticulas(e.x, e.y, 10, "#c084f0");
@@ -685,8 +685,8 @@ export function update(dt) {
                   spawnEnemigo(G.planta, "melee", false);
                 banner("¡El Magnate reparte cargos!");
               }
-              e.x = clamp(e.x, e.r, W - e.r);
-              e.y = clamp(e.y, e.r, H - e.r);
+              e.x = clamp(e.x, e.r, SALA_W - e.r);
+              e.y = clamp(e.y, e.r, SALA_H - e.r);
               aplicarLimites(e);
               e.hurtT = Math.max(0, e.hurtT - dt);
               if (e.stunT > 0) e.stunT -= dt;
@@ -757,8 +757,8 @@ export function update(dt) {
                 e.patCd = 4;
                 const v2 = az(vivos());
                 if (v2) {
-                  e.segX = clamp(v2.x + rnd(-40, 40), 50, W - 50);
-                  e.segY = clamp(v2.y + rnd(-40, 40), 50, H - 50);
+                  e.segX = clamp(v2.x + rnd(-40, 40), 50, SALA_W - 50);
+                  e.segY = clamp(v2.y + rnd(-40, 40), 50, SALA_H - 50);
                   e.segT = 0.8;
                   fxOnda(e.segX, e.segY, 86, "#57496f");
                   fxTexto(e.segX, e.segY, "⚠", "#c07be0", true);
@@ -822,8 +822,8 @@ export function update(dt) {
                 for (const p of vivos()) {
                   if (Math.random() < 0.8)
                     G.rayos.push({
-                      x: clamp(p.x + rnd(-30, 30), 40, W - 40),
-                      y: clamp(p.y + rnd(-30, 30), 40, H - 40),
+                      x: clamp(p.x + rnd(-30, 30), 40, SALA_W - 40),
+                      y: clamp(p.y + rnd(-30, 30), 40, SALA_H - 40),
                       t: 1.0,
                       meteoro: true,
                       dmg: e.atk * 1.4,
@@ -834,8 +834,8 @@ export function update(dt) {
                 e.patCd = 2.6;
                 if (Math.random() < 0.45) {
                   fxParticulas(e.x, e.y, 10, "#c07be0");
-                  e.x = rnd(70, W - 70);
-                  e.y = rnd(70, H * 0.6);
+                  e.x = rnd(70, SALA_W - 70);
+                  e.y = rnd(70, SALA_H * 0.6);
                   fxParticulas(e.x, e.y, 10, "#c07be0");
                 }
                 const v2 = az(vivos());
@@ -862,8 +862,8 @@ export function update(dt) {
               e.metCd = 4;
               for (const p of vivos())
                 G.rayos.push({
-                  x: clamp(p.x + rnd(-30, 30), 40, W - 40),
-                  y: clamp(p.y + rnd(-30, 30), 40, H - 40),
+                  x: clamp(p.x + rnd(-30, 30), 40, SALA_W - 40),
+                  y: clamp(p.y + rnd(-30, 30), 40, SALA_H - 40),
                   t: 1.0,
                   meteoro: true,
                   dmg: e.atk * 1.3,
@@ -967,8 +967,8 @@ export function update(dt) {
               // teletransporte lejos del jugador
               fxParticulas(e.x, e.y, 8, "#c07be0");
               const a2 = dir + Math.PI + rnd(-0.8, 0.8);
-              e.x = clamp(e.x + Math.cos(a2) * 230, 40, W - 40);
-              e.y = clamp(e.y + Math.sin(a2) * 230, 40, H - 40);
+              e.x = clamp(e.x + Math.cos(a2) * 230, 40, SALA_W - 40);
+              e.y = clamp(e.y + Math.sin(a2) * 230, 40, SALA_H - 40);
               fxParticulas(e.x, e.y, 8, "#c07be0");
               e.blinkCd = 4;
             } else if (d > 320) {
@@ -1044,8 +1044,8 @@ export function update(dt) {
               }
             }
           }
-          e.x = clamp(e.x, 24, W - 24);
-          e.y = clamp(e.y, 24, H - 24);
+          e.x = clamp(e.x, 24, SALA_W - 24);
+          e.y = clamp(e.y, 24, SALA_H - 24);
           aplicarLimites(e);
           e.atkCd -= dt;
           if (e.atkCd <= 0 && e.tipo !== "bomber") {
@@ -1325,11 +1325,11 @@ export function update(dt) {
                   ? az(vivos())
                   : az(G.enemigos.filter((e) => !e.dummy));
               const rx = objetivo
-                ? clamp(objetivo.x + rnd(-50, 50), 40, W - 40)
-                : rnd(60, W - 60);
+                ? clamp(objetivo.x + rnd(-50, 50), 40, SALA_W - 40)
+                : rnd(60, SALA_W - 60);
               const ry = objetivo
-                ? clamp(objetivo.y + rnd(-50, 50), 40, H - 40)
-                : rnd(60, H - 60);
+                ? clamp(objetivo.y + rnd(-50, 50), 40, SALA_H - 40)
+                : rnd(60, SALA_H - 60);
               G.rayos.push({
                 x: rx,
                 y: ry,

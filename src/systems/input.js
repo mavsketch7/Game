@@ -36,13 +36,20 @@ export function leerInput(p) {
         if (p.ctrl.tipo === "kbm") {
           const mx = (keys["d"] ? 1 : 0) - (keys["a"] ? 1 : 0);
           const my = (keys["s"] ? 1 : 0) - (keys["w"] ? 1 : 0);
+          // mouse.x/y son coordenadas de PANTALLA; con cámara de personaje
+          // hay que convertirlas a coordenadas de MUNDO (sumar el
+          // desplazamiento de cámara, ver G.cam en render/world.js) antes
+          // de usarlas para apuntar o como punto de destino en el suelo.
+          const camOf = G && G.cam ? G.cam : { x: 0, y: 0 };
+          const mundoX = mouse.x + camOf.x,
+            mundoY = mouse.y + camOf.y;
           return {
             mx,
             my,
-            aimA: Math.atan2(mouse.y - p.y, mouse.x - p.x),
+            aimA: Math.atan2(mundoY - p.y, mundoX - p.x),
             atkHeld: mouse.izq,
-            gtX: mouse.x,
-            gtY: mouse.y,
+            gtX: mundoX,
+            gtY: mundoY,
           };
         }
         const gps = safeGetGamepads();

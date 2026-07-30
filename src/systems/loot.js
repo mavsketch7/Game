@@ -1,6 +1,7 @@
 // Auto-generated during the modularization refactor (2026-07-23).
-import { H, W } from "../core/canvas.js";
-import { MAX_PLANTA, NOMBRES_ARMA_CLASE, NOMBRES_ITEM, ORDEN_ROLES, PRECIO_VENTA, RAREZAS, ROLES, SLOTS, SUFIJOS } from "../core/constants.js";
+// Alias: los usos de W/H aquí son posiciones DENTRO de la sala (mundo) --
+// ver el mismo truco en systems/floorgen.js.
+import { MAX_PLANTA, NOMBRES_ARMA_CLASE, NOMBRES_ITEM, ORDEN_ROLES, PRECIO_VENTA, RAREZAS, ROLES, SALA_H as H, SALA_W as W, SLOTS, SUFIJOS } from "../core/constants.js";
 import { META, guardarMeta } from "../core/save.js";
 import { G, setG } from "../core/state.js";
 import { posDropValida } from "./floorgen.js";

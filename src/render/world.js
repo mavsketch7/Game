@@ -1,6 +1,6 @@
 // Auto-generated during the modularization refactor (2026-07-23).
 import { H, TAU, W, cx } from "../core/canvas.js";
-import { ELEMENTOS, MAX_PLANTA, RAREZAS, SUPS } from "../core/constants.js";
+import { ELEMENTOS, MAX_PLANTA, RAREZAS, SALA_H, SALA_W, SUPS } from "../core/constants.js";
 import { G } from "../core/state.js";
 import { fxParticulas } from "./effects.js";
 import { barra, renderHUD } from "./hud.js";
@@ -166,18 +166,43 @@ export function render() {
           sueloPat = patronSuelo(G ? G.planta : 1, G ? G.forma : "sala", G ? G.salaTipo : "normal");
           sueloClave = claveSuelo;
         }
+        // Cámara de personaje: sigue el centroide de los jugadores vivos,
+        // recortada para no enseñar fuera de los límites de la sala (que
+        // ahora puede ser más grande que el viewport -- ver SALA_W/SALA_H
+        // en core/constants.js). Se recalcula aquí cada frame en vez de
+        // sincronizarse por red: tanto el host como el invitado la derivan
+        // localmente a partir de G.players (que sí viaja por red), así que
+        // ambos ven prácticamente el mismo encuadre sin mandar nada aparte.
+        let camX = 0,
+          camY = 0;
+        if (G && G.players && G.players.length) {
+          const vivosCam = G.players.filter((p) => !p.ko);
+          const base = vivosCam.length ? vivosCam : G.players;
+          const centroX = base.reduce((s, p) => s + p.x, 0) / base.length;
+          const centroY = base.reduce((s, p) => s + p.y, 0) / base.length;
+          camX = clamp(centroX - W / 2, 0, Math.max(0, SALA_W - W));
+          camY = clamp(centroY - H / 2, 0, Math.max(0, SALA_H - H));
+        }
+        if (G) G.cam = { x: camX, y: camY };
+
         cx.save();
         if (G && G.shake > 0)
           cx.translate(rnd(-G.shake, G.shake), rnd(-G.shake, G.shake));
-        cx.fillStyle = sueloPat;
-        cx.fillRect(0, 0, W, H);
-        cx.strokeStyle = "#3a3453";
-        cx.lineWidth = 8;
-        cx.strokeRect(10, 10, W - 20, H - 20);
         if (!G) {
+          cx.fillStyle = sueloPat;
+          cx.fillRect(0, 0, W, H);
+          cx.strokeStyle = "#3a3453";
+          cx.lineWidth = 8;
+          cx.strokeRect(10, 10, W - 20, H - 20);
           cx.restore();
           return;
         }
+        cx.translate(-camX, -camY);
+        cx.fillStyle = sueloPat;
+        cx.fillRect(0, 0, SALA_W, SALA_H);
+        cx.strokeStyle = "#3a3453";
+        cx.lineWidth = 8;
+        cx.strokeRect(10, 10, SALA_W - 20, SALA_H - 20);
 
         const wallPat = wallPatron();
         const rematePat = remateMuroPatron();
@@ -1068,6 +1093,17 @@ export function render() {
           }
         }
 
+        // La mira/reticle mezcla posiciones de mundo (p.x/p.y) con el
+        // ratón (mouse.x/y, en espacio de pantalla) -- tiene que dibujarse
+        // TODAVÍA dentro de la cámara/temblor para que ambas cuadren.
+        renderMira();
+        // A partir de aquí todo es espacio de pantalla puro: el clima
+        // (lluvia/ceniza/niebla), el flash/fundido y el HUD deben quedarse
+        // fijos en la pantalla en vez de desplazarse con la cámara -- por
+        // eso el clima ya generaba sus partículas en coordenadas de
+        // viewport (rnd(0,W) en core/loop.js), no de mundo.
+        cx.restore();
+
         // ---- capa de clima ----
         if (G.escena === "torre") {
           if (G.clima === "lluvia" || G.clima === "tormenta") {
@@ -1124,9 +1160,7 @@ export function render() {
           }
         }
 
-        renderMira();
         renderHUD();
-        cx.restore();
       }
 
 function renderMira() {
@@ -1134,8 +1168,12 @@ function renderMira() {
         for (const p of G.players) {
           if (p.ko) continue;
           if (p.ctrl.tipo === "kbm") {
-            const mx = mouse.x,
-              my = mouse.y;
+            // mouse.x/y son coordenadas de PANTALLA; aquí se dibuja en
+            // espacio de MUNDO (todavía dentro de la cámara, ver render()),
+            // así que hay que sumar el desplazamiento de cámara primero.
+            const camOf = G.cam || { x: 0, y: 0 };
+            const mx = mouse.x + camOf.x,
+              my = mouse.y + camOf.y;
             cx.strokeStyle = p.color;
             cx.globalAlpha = 0.22;
             cx.lineWidth = 1;

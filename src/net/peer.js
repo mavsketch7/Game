@@ -1,6 +1,7 @@
 // Auto-generated during the modularization refactor (2026-07-23).
 import Peer from "peerjs";
 import { H, W } from "../core/canvas.js";
+import { SALA_H, SALA_W } from "../core/constants.js";
 import { META } from "../core/save.js";
 import { G, setG } from "../core/state.js";
 import { render } from "../render/world.js";
@@ -741,9 +742,17 @@ export function netEnviarInputCliente() {
           NET.snap && NET.snap.P
             ? NET.snap.P.find((p) => p.idx === NET.miIdx)
             : null;
+        // mouse.x/y son coordenadas de PANTALLA de ESTE cliente; hay que
+        // convertirlas a coordenadas de MUNDO (sumar G.cam, ver
+        // render/world.js) antes de mandarlas -- si no, el host (con su
+        // propia cámara) interpretaría mal el punto al que apunta este
+        // invitado.
+        const camOf = G && G.cam ? G.cam : { x: 0, y: 0 };
+        const mundoX = mouse.x + camOf.x,
+          mundoY = mouse.y + camOf.y;
         let aim = 0;
         if (mi) {
-          aim = Math.atan2(mouse.y - mi.y, mouse.x - mi.x);
+          aim = Math.atan2(mundoY - mi.y, mundoX - mi.x);
         }
         const mx =
           (keys["d"] || keys["arrowright"] ? 1 : 0) -
@@ -756,8 +765,8 @@ export function netEnviarInputCliente() {
           mx,
           my,
           aim,
-          gtX: mouse.x,
-          gtY: mouse.y,
+          gtX: mundoX,
+          gtY: mundoY,
           atk: !!mouse.izq,
           parry: !!mouse.der,
           dash: !!keys[" "],
@@ -953,13 +962,21 @@ export function interpolarPosicionesRed(dt) {
             // perdido o una pequeña desviación no se acumule para siempre.
             NET.predPos.x += (authX - NET.predPos.x) * 0.15;
             NET.predPos.y += (authY - NET.predPos.y) * 0.15;
-            NET.predPos.x = clamp(NET.predPos.x, 28, W - 28);
-            NET.predPos.y = clamp(NET.predPos.y, 28, H - 28);
+            NET.predPos.x = clamp(NET.predPos.x, 28, SALA_W - 28);
+            NET.predPos.y = clamp(NET.predPos.y, 28, SALA_H - 28);
             gp.x = NET.predPos.x;
             gp.y = NET.predPos.y;
             // la puntería del propio jugador se calcula al instante contra
             // el ratón local — se siente igual de reactiva que en solitario.
-            gp.aim = Math.atan2(mouse.y - gp.y, mouse.x - gp.x);
+            // mouse.x/y son de pantalla; convertir a mundo con G.cam (ver
+            // render/world.js), igual que en netEnviarInputCliente().
+            {
+              const camOf = G && G.cam ? G.cam : { x: 0, y: 0 };
+              gp.aim = Math.atan2(
+                mouse.y + camOf.y - gp.y,
+                mouse.x + camOf.x - gp.x,
+              );
+            }
           } else {
             if (gp.idx === NET.miIdx) NET.predPos = null; // ko: reset al revivir
             gp.x = authX;

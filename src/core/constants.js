@@ -1,5 +1,17 @@
 // Auto-generated during the modularization refactor (2026-07-23).
 
+// Tamaño de una sala (mundo) -- ya NO es lo mismo que el tamaño del
+// viewport/canvas (960x560, ver core/canvas.js): con la cámara de
+// personaje (ver render/world.js: cálculo de G.cam), una sala puede ser
+// más grande que la pantalla y la cámara recorre ese espacio más amplio.
+// systems/floorgen.js importa estas dos constantes con el ALIAS "W"/"H"
+// (import { SALA_W as W, SALA_H as H } ...) precisamente para que todas
+// las fórmulas de generarMapa()/posPuerta()/etc. -- escritas en su día
+// asumiendo "la sala es la pantalla" -- sigan funcionando igual, solo
+// que ahora a la escala de sala real en vez de a la de viewport.
+export const SALA_W = 1600;
+export const SALA_H = 1000;
+
 export const COLORES_J = ["#e9b45c", "#7fd4c1", "#c084f0", "#e06070"];
 
 export const ROLES = {

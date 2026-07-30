@@ -1,6 +1,12 @@
 // Auto-generated during the modularization refactor (2026-07-23).
-import { H, TAU, W } from "../core/canvas.js";
-import { NOMBRE_CLIMA } from "../core/constants.js";
+import { TAU } from "../core/canvas.js";
+// Alias deliberado: TODO este archivo trata "W"/"H" como el tamaño de la
+// SALA (mundo), no el del viewport -- con la cámara de personaje, ambos
+// dejan de ser lo mismo (ver SALA_W/SALA_H en core/constants.js). Importar
+// con alias evita tener que tocar cada fórmula de generarMapa()/
+// posPuerta()/límites de una por una: siguen escritas igual, ahora a
+// escala de sala real.
+import { NOMBRE_CLIMA, SALA_H as H, SALA_W as W } from "../core/constants.js";
 import { G } from "../core/state.js";
 import { DESC_ARQ, arquetipoJefe, esJefe, nombreJefe } from "./bosses.js";
 import { spawnClon, spawnEnemigo, statsTot, tipoAleatorio } from "./combat.js";
@@ -56,6 +62,15 @@ const NOMBRE_FORMA = {
         escalonada: "Sala escalonada",
       };
 
+// Algunas formas (nicho/u/herradura/escalonada) se diseñaron a mano con
+// coordenadas absolutas en píxeles, pensadas para la sala-pantalla de
+// 960x560 de antes -- a diferencia del resto (cruz/foso/pasilloL/...), que
+// ya usan fracciones de W/H y por tanto escalan solas con el alias de
+// arriba. Estas 4 necesitan un factor de escala explícito para no quedar
+// como detalles diminutos perdidos en una sala ahora mucho más grande.
+const ESC_X = W / 960,
+      ESC_Y = H / 560;
+
 export function generarMapa(forma) {
         G.forma = forma;
         G.muros = [];
@@ -109,10 +124,20 @@ export function generarMapa(forma) {
           );
         } else if (forma === "nicho") {
           // alcoba lateral: un bloque asimétrico a un lado de la sala
-          G.muros.push({ x: 110, y: 190, w: 110, h: 180 });
+          G.muros.push({
+            x: 110 * ESC_X,
+            y: 190 * ESC_Y,
+            w: 110 * ESC_X,
+            h: 180 * ESC_Y,
+          });
         } else if (forma === "u") {
           // bloque macizo arriba con hueco por debajo: obliga a rodearlo
-          G.muros.push({ x: W / 2 - 160, y: 90, w: 320, h: 130 });
+          G.muros.push({
+            x: W / 2 - 160 * ESC_X,
+            y: 90 * ESC_Y,
+            w: 320 * ESC_X,
+            h: 130 * ESC_Y,
+          });
         } else if (forma === "pasilloDoble") {
           // dos corredores paralelos simétricos con un hueco central
           const gy2 = H * 0.5,
@@ -144,16 +169,16 @@ export function generarMapa(forma) {
           // marco hueco en forma de herradura, abierto por abajo -- se
           // puede entrar y caminar dentro, no es un bloque macizo
           G.muros.push(
-            { x: 330, y: 170, w: 300, h: 26 },
-            { x: 330, y: 170, w: 26, h: 200 },
-            { x: 604, y: 170, w: 26, h: 200 },
+            { x: 330 * ESC_X, y: 170 * ESC_Y, w: 300 * ESC_X, h: 26 },
+            { x: 330 * ESC_X, y: 170 * ESC_Y, w: 26, h: 200 * ESC_Y },
+            { x: 604 * ESC_X, y: 170 * ESC_Y, w: 26, h: 200 * ESC_Y },
           );
         } else if (forma === "escalonada") {
           // tres bloques pequeños en zigzag diagonal
           G.muros.push(
-            { x: 200, y: 150, w: 70, h: 70 },
-            { x: 445, y: 250, w: 70, h: 70 },
-            { x: 690, y: 350, w: 70, h: 70 },
+            { x: 200 * ESC_X, y: 150 * ESC_Y, w: 70, h: 70 },
+            { x: 445 * ESC_X, y: 250 * ESC_Y, w: 70, h: 70 },
+            { x: 690 * ESC_X, y: 350 * ESC_Y, w: 70, h: 70 },
           );
         }
       }
