@@ -51,10 +51,32 @@ export const NET = {
         // host: mayor id de fx ya retransmitido por el canal rápido (ver
         // netEnviarEventosFx), para no reenviar los mismos cada frame.
         lastFxIdSent: -1,
+        // cliente: identificador propio estable para todo lo que dure esta
+        // pestaña/sesión (ver tokenPropio()) -- el id de PeerJS cambia en
+        // cada intento de reconexión (unirseSalaOnline crea un Peer nuevo
+        // sin id fijo), así que el host necesita este token para reconocer
+        // "es el mismo jugador reconectando" en vez de crear un hueco nuevo.
+        miToken: null,
+        // cliente: true mientras hay un ciclo de reintentos de reconexión
+        // en marcha (ver manejarDesconexionCliente), para no solapar dos
+        // ciclos si "close"/"error" se disparan más de una vez.
+        reconectando: false,
       };
 
 function idSala() {
         return "vespero-" + Math.random().toString(36).slice(2, 7);
+      }
+
+// Cuánto tiempo (ms) se reserva el hueco de un jugador desconectado a
+// mitad de partida antes de liberarlo de verdad -- ver el "close" del
+// host en crearSalaOnline() y el "join" de onDataHost().
+const GRACIA_RECONEXION_MS = 45000;
+
+function tokenPropio() {
+        if (!NET.miToken)
+          NET.miToken =
+            Math.random().toString(36).slice(2) + Date.now().toString(36);
+        return NET.miToken;
       }
 
 function toastNet(msg, col) {
@@ -93,20 +115,48 @@ export function crearSalaOnline() {
               NET.conns = NET.conns.filter((c) => c !== conn);
               const s = M.slots.find(
                 (s) =>
-                  s.activo &&
                   s.ctrl &&
                   s.ctrl.tipo === "net" &&
                   s.ctrl.connId === conn.peer,
               );
-              if (s) {
+              if (!s) return;
+              // En el lobby no tiene sentido reservar el hueco: el jugador
+              // ni siquiera ha entrado en partida todavía.
+              if (!G || !G.activo) {
                 s.activo = false;
                 s.ctrl = null;
                 construirMenu();
+                toastNet(
+                  "Un jugador se desconectó. Conectados: " + NET.conns.length,
+                  "#c9a35a",
+                );
+                return;
               }
+              // Durante la partida: dar un margen de reconexión (ver
+              // GRACIA_RECONEXION_MS) en vez de liberar el hueco al
+              // instante -- el ctrl.token permite que onDataHost("join")
+              // reconozca al mismo jugador si vuelve con una conexión
+              // nueva. netAplicarInputs() ignora a los marcados
+              // "desconectado" mientras tanto (se quedan quietos, no
+              // reciben input viejo).
+              s.ctrl.desconectado = true;
+              const ctrlDeEsteIntento = s.ctrl;
               toastNet(
-                "Un jugador se desconectó. Conectados: " + NET.conns.length,
+                (s.nombre || "Un jugador") +
+                  " se ha desconectado. Esperando reconexión…",
                 "#c9a35a",
               );
+              setTimeout(() => {
+                if (ctrlDeEsteIntento.desconectado) {
+                  s.activo = false;
+                  s.ctrl = null;
+                  toastNet(
+                    (s.nombre || "Un jugador") +
+                      " no volvió a tiempo — hueco liberado",
+                    "#d1545c",
+                  );
+                }
+              }, GRACIA_RECONEXION_MS);
             });
           });
           NET.peer.on("error", (e) => {
@@ -122,25 +172,47 @@ export function crearSalaOnline() {
 
 function onDataHost(conn, d) {
         if (d.t === "join") {
-          // asignar un slot libre de tipo net
-          let s = M.slots.find(
-            (x) =>
-              x.activo &&
-              x.ctrl &&
-              x.ctrl.tipo === "net" &&
-              x.ctrl.connId === conn.peer,
-          );
-          if (!s) s = M.slots.find((x) => !x.activo);
+          // Primero: ¿es un jugador YA conocido volviendo con una conexión
+          // nueva? (el id de PeerJS cambia en cada intento de reconexión,
+          // ver systems/input.js: intentarConectarCliente -- el token es lo
+          // único estable). Si es así, se reutiliza su mismo hueco/personaje
+          // en vez de tratarlo como alguien nuevo.
+          let s = d.token
+            ? M.slots.find(
+                (x) =>
+                  x.ctrl && x.ctrl.tipo === "net" && x.ctrl.token === d.token,
+              )
+            : null;
+          const esReconexion = !!s;
           if (s) {
+            s.ctrl.connId = conn.peer;
+            s.ctrl.desconectado = false;
             s.activo = true;
-            s.ctrl = { tipo: "net", connId: conn.peer };
-            s.rolIdx = d.rol || 0;
-            s.listo = !!d.listo;
-            construirMenu();
+          } else {
+            // asignar un slot libre de tipo net
+            s = M.slots.find(
+              (x) =>
+                x.activo &&
+                x.ctrl &&
+                x.ctrl.tipo === "net" &&
+                x.ctrl.connId === conn.peer,
+            );
+            if (!s) s = M.slots.find((x) => !x.activo);
+            if (s) {
+              s.activo = true;
+              s.ctrl = { tipo: "net", connId: conn.peer, token: d.token };
+              s.rolIdx = d.rol || 0;
+              s.listo = !!d.listo;
+            }
           }
-          conn.send({ t: "welcome", idx: M.slots.indexOf(s) });
+          if (s) {
+            conn.send({ t: "welcome", idx: M.slots.indexOf(s) });
+            if (!G || !G.activo) construirMenu(); // en partida el menú no está en pantalla
+          }
           toastNet(
-            "🟢 Jugador conectado. Total: " + NET.conns.length,
+            esReconexion
+              ? (s ? s.nombre || "Un jugador" : "Un jugador") + " se ha reconectado"
+              : "🟢 Jugador conectado. Total: " + NET.conns.length,
             "#7fd4c1",
           );
         } else if (d.t === "rol") {
@@ -191,6 +263,9 @@ export function netAplicarInputs() {
         if (NET.modo !== "host") return;
         for (const p of G.players) {
           if (p.ctrl.tipo !== "net") continue;
+          // desconectado a mitad de partida (ver GRACIA_RECONEXION_MS): se
+          // queda quieto en vez de seguir aplicando su último input
+          if (p.ctrl.desconectado) continue;
           const d = NET.inputRemoto[p.ctrl.connId];
           if (!d) continue;
           const pv = NET.prevRemoto[p.ctrl.connId] || {};
@@ -225,38 +300,86 @@ export function netAplicarInputs() {
         }
       }
 
-export function unirseSalaOnline(id) {
+// Reintentos de reconexión si se cae la conexión con el host (ver
+// manejarDesconexionCliente): backoff simple 1s,2s,4s,8s,8s... hasta
+// MAX_REINTENTOS, y solo entonces se rinde con el alert+reload de antes.
+const MAX_REINTENTOS = 5;
+
+function intentarConectarCliente(id, intento) {
         try {
-          NET.peer = new Peer({ debug: 1 });
-          NET.peer.on("open", () => {
-            const conn = NET.peer.connect(id, { reliable: false });
+          const peer = new Peer({ debug: 1 });
+          NET.peer = peer;
+          peer.on("open", () => {
+            const conn = peer.connect(id, { reliable: false });
             NET.conn = conn;
             conn.on("open", () => {
               NET.activo = true;
               NET.modo = "cliente";
               NET.sala = id;
-              conn.send({ t: "join", rol: NET.rolElegido || 0, listo: false });
-              mostrarEsperaCliente();
+              NET.reconectando = false;
+              // el token identifica al MISMO jugador entre intentos aunque
+              // el id de PeerJS cambie cada vez (ver onDataHost: "join")
+              conn.send({
+                t: "join",
+                rol: NET.rolElegido || 0,
+                listo: false,
+                token: tokenPropio(),
+              });
+              if (intento === 0) mostrarEsperaCliente();
+              else toastNet("🟢 Reconectado", "#7fd4c1");
             });
             conn.on("data", (d) => onDataCliente(d));
-            conn.on("close", () => {
-              alert("Desconectado de la sala.");
-              location.hash = "";
-              location.reload();
-            });
+            conn.on("close", () => manejarDesconexionCliente(id));
           });
-          NET.peer.on("error", (e) => {
-            alert(
-              "No se pudo conectar a la sala (" +
-                e.type +
-                "). ¿El host sigue activo?",
-            );
+          peer.on("error", (e) => {
+            if (intento === 0) {
+              alert(
+                "No se pudo conectar a la sala (" +
+                  e.type +
+                  "). ¿El host sigue activo?",
+              );
+            } else {
+              manejarDesconexionCliente(id);
+            }
           });
         } catch (e) {
           alert(
             "No se pudo iniciar el online (¿tu navegador soporta WebRTC?).",
           );
         }
+      }
+
+function manejarDesconexionCliente(id) {
+        if (NET.reconectando) return; // ya hay un ciclo de reintentos en marcha
+        NET.reconectando = true;
+        NET.activo = false;
+        let intento = 0;
+        const reintentar = () => {
+          intento++;
+          if (intento > MAX_REINTENTOS) {
+            alert("Se perdió la conexión con la sala y no se pudo recuperar.");
+            location.hash = "";
+            location.reload();
+            return;
+          }
+          toastNet(
+            "Conexión perdida. Reintentando (" +
+              intento +
+              "/" +
+              MAX_REINTENTOS +
+              ")…",
+            "#c9a35a",
+          );
+          setTimeout(
+            () => intentarConectarCliente(id, intento),
+            Math.min(1000 * 2 ** (intento - 1), 8000),
+          );
+        };
+        reintentar();
+      }
+
+export function unirseSalaOnline(id) {
+        intentarConectarCliente(id, 0);
       }
 
 function onDataCliente(d) {
