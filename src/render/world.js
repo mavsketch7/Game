@@ -8,7 +8,7 @@ import { ATTACK_DUR, ESC_FORMA, KENNEY_TILE, NO_SCHEMATIC_WEAPON, REAL_ATTACK, R
 import { groundTarget } from "../systems/abilities.js";
 import { masCercano } from "../systems/combat.js";
 import { mouse } from "../systems/input.js";
-import { clamp, ri, rnd } from "../utils/helpers.js";
+import { clamp, hexRgba, ri, rnd } from "../utils/helpers.js";
 
 export let sueloPat = null,
         sueloClave = "",
@@ -762,21 +762,88 @@ export function render() {
             cx.globalAlpha = 1;
             drawSprite(SPR.moneda, dr.x, dr.y + bob);
           } else {
-            const col = RAREZAS[dr.item.rareza].col;
-            // rayo de luz vertical (estilo Diablo): a diferencia del oro/vial,
-            // este objeto no se recoge solo al pisarlo (hay que pulsar
-            // E/botón, ver interactuar() en abilities.js), así que el rayo se
-            // mantiene mientras siga en el suelo -- solo un breve fade-in al
-            // caer, sin fade-out por tiempo.
+            const rareza = dr.item.rareza;
+            const col = RAREZAS[rareza].col;
+            // Rayo de botín (estilo Diablo), más vistoso cuanto mayor la
+            // rareza -- ver SPRITES.md para el resto de la jerarquía visual
+            // por rareza. A diferencia del oro/vial, este objeto no se
+            // recoge solo al pisarlo (hay que pulsar E/botón, ver
+            // interactuar() en abilities.js), así que el rayo se mantiene
+            // mientras siga en el suelo -- solo un breve fade-in al caer,
+            // sin fade-out por tiempo.
             const beamK = clamp((dr.t || 0) / 0.2, 0, 1);
-            const beamH = 74;
-            const grad = cx.createLinearGradient(dr.x, dr.y - beamH, dr.x, dr.y);
-            grad.addColorStop(0, "rgba(0,0,0,0)");
-            grad.addColorStop(1, col);
-            cx.globalAlpha = beamK * 0.6;
-            cx.fillStyle = grad;
-            cx.fillRect(dr.x - 3, dr.y - beamH, 6, beamH);
-            cx.globalAlpha = 1;
+            const beamH = 64 + rareza * 14;
+            const anchoGlow = 16 + rareza * 6;
+            const pulso = 0.85 + Math.sin(animGlobal * 5 + dr.x) * 0.15;
+
+            cx.save();
+            cx.globalAlpha = beamK;
+            // resplandor ancho y difuso detrás del núcleo (el shadowBlur del
+            // núcleo ya sangra hacia afuera, esto añade cuerpo a la base)
+            const gGlow = cx.createLinearGradient(dr.x, dr.y - beamH, dr.x, dr.y);
+            gGlow.addColorStop(0, hexRgba(col, 0));
+            gGlow.addColorStop(0.55, hexRgba(col, 0.12 * pulso));
+            gGlow.addColorStop(1, hexRgba(col, 0.5 * pulso));
+            cx.fillStyle = gGlow;
+            cx.fillRect(dr.x - anchoGlow / 2, dr.y - beamH, anchoGlow, beamH);
+            // núcleo brillante con halo real de canvas (shadowBlur) -- más
+            // ancho y luminoso cuanto mayor la rareza
+            cx.shadowColor = col;
+            cx.shadowBlur = (6 + rareza * 5) * pulso;
+            const gCore = cx.createLinearGradient(dr.x, dr.y - beamH, dr.x, dr.y);
+            gCore.addColorStop(0, "rgba(255,255,255,0)");
+            gCore.addColorStop(0.6, hexRgba(col, 0.85));
+            gCore.addColorStop(1, "#fff");
+            cx.fillStyle = gCore;
+            const anchoCore = 3 + rareza * 0.8;
+            cx.fillRect(dr.x - anchoCore / 2, dr.y - beamH, anchoCore, beamH);
+            cx.restore();
+
+            // partículas ambiente ascendiendo por el rayo: densidad y
+            // brillo suben con la rareza ("brillos ludópatas" -- cuanto
+            // mejor el objeto, más refuerzo visual de recompensa). Todo
+            // procedural a partir de animGlobal + dr.x, sin estado propio
+            // por partícula: cada cliente (host/invitado) lo dibuja igual
+            // de bien sin necesitar sincronizarlo por red.
+            const nChispas = 3 + rareza * 4;
+            cx.save();
+            for (let i = 0; i < nChispas; i++) {
+              const fase =
+                (animGlobal * (0.5 + (i % 3) * 0.15) +
+                  i / nChispas +
+                  dr.x * 0.013) %
+                1;
+              const sy = dr.y - fase * beamH;
+              const sx = dr.x + Math.sin(fase * TAU * 2 + i) * (2 + rareza);
+              const salpha = Math.sin(fase * Math.PI);
+              cx.globalAlpha = beamK * salpha;
+              cx.fillStyle = rareza >= 3 ? "#fff" : col;
+              const s = rareza >= 4 ? 2.4 : rareza >= 2 ? 1.8 : 1.3;
+              cx.beginPath();
+              cx.arc(sx, sy, s, 0, TAU);
+              cx.fill();
+            }
+            cx.restore();
+
+            // destello tipo "starburst" para legendario+: un parpadeo breve
+            // de cruz brillante sobre el objeto, sensación de premio gordo
+            if (rareza >= 3) {
+              const flash = Math.max(0, Math.sin(animGlobal * 2.2 + dr.x * 3));
+              if (flash > 0.75) {
+                const fa = (flash - 0.75) / 0.25;
+                cx.save();
+                cx.globalAlpha = beamK * fa * 0.9;
+                cx.fillStyle = "#fff";
+                cx.shadowColor = col;
+                cx.shadowBlur = 14;
+                const fy = dr.y + bob - 10;
+                const largo = 12 + rareza * 2;
+                cx.fillRect(dr.x - largo / 2, fy - 1, largo, 2);
+                cx.fillRect(dr.x - 1, fy - largo / 2, 2, largo);
+                cx.restore();
+              }
+            }
+
             cx.globalAlpha = 0.35;
             cx.fillStyle = col;
             cx.beginPath();

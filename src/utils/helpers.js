@@ -8,6 +8,18 @@ export const az = (a) => a[Math.floor(Math.random() * a.length)];
 
 export const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 
+// "#rrggbb" -> "rgba(r,g,b,a)" -- para degradados/glow donde hace falta
+// variar solo la opacidad de un color de rareza (ver RAREZAS en
+// core/constants.js) sin tocar el resto de la paleta.
+export function hexRgba(hex, a) {
+        const n = parseInt(hex.slice(1), 16);
+        if (isNaN(n)) return hex;
+        const r = (n >> 16) & 0xff,
+          g = (n >> 8) & 0xff,
+          b = n & 0xff;
+        return "rgba(" + r + "," + g + "," + b + "," + a + ")";
+      }
+
 export function lighten(hex, amt) {
         const n = parseInt(hex.slice(1), 16);
         if (isNaN(n)) return hex;
