@@ -538,7 +538,7 @@ function tabPersonaje(p, t, b) {
           '<h3 style="color:' +
           p.color +
           '">' +
-          p.nombre +
+          escHtml(p.nombre) +
           ' <span style="color:var(--ceniza);font-weight:400;font-size:.85rem">' +
           b.nombre +
           "</span></h3>" +
@@ -806,7 +806,7 @@ function tabEquipo(p) {
           "</div>" +
           fusion +
           '<h3 style="margin-top:14px;font-size:.85rem;color:var(--vespero)">Bolsa de ' +
-          p.nombre +
+          escHtml(p.nombre) +
           " (" +
           p.bolsa.length +
           ")</h3>" +
@@ -833,7 +833,7 @@ export function abrirInv() {
               ')" style="border-left:3px solid ' +
               q.color +
               '">' +
-              q.nombre +
+              escHtml(q.nombre) +
               " · " +
               ROLES[q.rol].nombre.split(" ")[0] +
               "</button>",

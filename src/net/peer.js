@@ -1,4 +1,5 @@
 // Auto-generated during the modularization refactor (2026-07-23).
+import Peer from "peerjs";
 import { H, W } from "../core/canvas.js";
 import { META } from "../core/save.js";
 import { G, setG } from "../core/state.js";
@@ -52,18 +53,6 @@ export const NET = {
         lastFxIdSent: -1,
       };
 
-function cargarPeerJS(cb) {
-        if (window.Peer) {
-          cb(true);
-          return;
-        }
-        const s = document.createElement("script");
-        s.src = "https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js";
-        s.onload = () => cb(!!window.Peer);
-        s.onerror = () => cb(false);
-        document.head.appendChild(s);
-      }
-
 function idSala() {
         return "vespero-" + Math.random().toString(36).slice(2, 7);
       }
@@ -78,15 +67,8 @@ function toastNet(msg, col) {
 
 export function crearSalaOnline() {
         const btn = document.getElementById("net-estado");
-        if (btn) btn.textContent = "Cargando módulo online…";
-        cargarPeerJS((ok) => {
-          if (!ok) {
-            toastNet(
-              "⚠ No se pudo cargar el online (¿sin conexión?). El juego local sigue disponible.",
-              "#d1545c",
-            );
-            return;
-          }
+        if (btn) btn.textContent = "Iniciando sala…";
+        try {
           const id = idSala();
           NET.peer = new Peer(id, { debug: 1 });
           NET.peer.on("open", () => {
@@ -130,7 +112,12 @@ export function crearSalaOnline() {
           NET.peer.on("error", (e) => {
             toastNet("Error de red: " + e.type, "#d1545c");
           });
-        });
+        } catch (e) {
+          toastNet(
+            "⚠ No se pudo iniciar el online (¿tu navegador soporta WebRTC?). El juego local sigue disponible.",
+            "#d1545c",
+          );
+        }
       }
 
 function onDataHost(conn, d) {
@@ -239,13 +226,7 @@ export function netAplicarInputs() {
       }
 
 export function unirseSalaOnline(id) {
-        cargarPeerJS((ok) => {
-          if (!ok) {
-            alert(
-              "No se pudo cargar el módulo online. ¿Tienes conexión a internet?",
-            );
-            return;
-          }
+        try {
           NET.peer = new Peer({ debug: 1 });
           NET.peer.on("open", () => {
             const conn = NET.peer.connect(id, { reliable: false });
@@ -271,7 +252,11 @@ export function unirseSalaOnline(id) {
                 "). ¿El host sigue activo?",
             );
           });
-        });
+        } catch (e) {
+          alert(
+            "No se pudo iniciar el online (¿tu navegador soporta WebRTC?).",
+          );
+        }
       }
 
 function onDataCliente(d) {
