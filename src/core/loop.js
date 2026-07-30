@@ -244,6 +244,13 @@ export function update(dt) {
                 dr.tipo === "item" &&
                 Math.hypot(dr.x - p.x, dr.y - p.y) < 40,
             ) || null;
+          // puerta secreta sin revelar cerca -- pulsar E la revela (ver
+          // interactuar() en abilities.js); hasta entonces no se cruza
+          // sola ni se dibuja como puerta normal (ver world.js/loop.js)
+          p.secretoObj =
+            (G.puertas || []).find(
+              (pu) => pu.oculta && Math.hypot(pu.x - p.x, pu.y - p.y) < 46,
+            ) || null;
           for (let i = p.trail.length - 1; i >= 0; i--) {
             p.trail[i].t -= dt;
             if (p.trail[i].t <= 0) p.trail.splice(i, 1);
@@ -1233,6 +1240,7 @@ export function update(dt) {
         // no hace falta que todos estén juntos, a diferencia del portal
         if (G.escena === "torre" && G.puertas && G.puertas.length) {
           for (const pu of G.puertas) {
+            if (pu.oculta) continue; // secreta sin revelar: no se cruza sola
             if (
               vivos().some((q) => Math.hypot(q.x - pu.x, q.y - pu.y) < pu.r)
             ) {

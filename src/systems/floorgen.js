@@ -437,7 +437,31 @@ export function generarGrafoPlanta() {
           const candidatas = salas.filter((s) => !s.esInicial && !s.esFinal);
           if (candidatas.length) az(candidatas).tipo = "reto_parry";
         }
+        // Sala secreta: una sala "hoja" (una sola puerta) que no sea ni la
+        // de inicio ni la final se marca como secreta y su ÚNICA puerta se
+        // oculta (ver p.secretoObj / interactuar() -- hay que encontrarla y
+        // pulsar E para revelarla). Al ser una hoja, nunca está en el
+        // camino obligatorio hacia la sala final -- si nadie la encuentra,
+        // la partida sigue igual de jugable, es solo un extra opcional.
+        if (Math.random() < 0.35) {
+          const hojas = salas.filter(
+            (s) => !s.esInicial && !s.esFinal && s.puertas.length === 1,
+          );
+          if (hojas.length) {
+            const secreta = az(hojas);
+            secreta.secreta = true;
+            const padre = salaPorId2(salas, secreta.puertas[0].destino);
+            const puertaDelPadre = padre?.puertas.find(
+              (pu) => pu.destino === secreta.id,
+            );
+            if (puertaDelPadre) puertaDelPadre.oculta = true;
+          }
+        }
         return { salas, salaActualId: inicial.id };
+      }
+
+function salaPorId2(salas, id) {
+        return salas.find((s) => s.id === id);
       }
 
 export function salaPorId(id) {

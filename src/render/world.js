@@ -247,6 +247,25 @@ export function render() {
         const ANG_PUERTA = { N: -Math.PI / 2, S: Math.PI / 2, E: 0, O: Math.PI };
         for (const pu of G.puertas || []) {
           const ang = ANG_PUERTA[pu.dir];
+          if (pu.oculta) {
+            // secreta sin revelar: se confunde con el muro -- solo un
+            // tinte muy sutil (perceptible si se mira con atención) y el
+            // aviso de tecla al acercarse, igual que un cofre o un drop.
+            cx.globalAlpha = 0.12 + Math.sin(animGlobal * 2) * 0.03;
+            cx.fillStyle = "#c084f0";
+            cx.beginPath();
+            cx.arc(pu.x, pu.y, pu.r - 4, 0, TAU);
+            cx.fill();
+            cx.globalAlpha = 1;
+            if (
+              G.players.some(
+                (p) => !p.ko && Math.hypot(p.x - pu.x, p.y - pu.y) < 46,
+              )
+            ) {
+              dibujarAvisoTecla(pu.x, pu.y - 26, "E");
+            }
+            continue;
+          }
           for (let k = 0; k < 3; k++) {
             cx.strokeStyle = "rgba(143,211,255," + (0.85 - k * 0.25) + ")";
             cx.lineWidth = 3;

@@ -299,7 +299,20 @@ export function interactuar(p) {
           // se cogen solos al pisarlos, estos exigen este mismo botón (ver
           // p.dropObj en core/loop.js).
           const dr = p.dropObj;
-          if (!dr) return;
+          if (!dr) {
+            // tampoco hay objeto que recoger: ¿una puerta secreta cerca sin
+            // revelar? (ver p.secretoObj en core/loop.js). Revelarla no
+            // cruza al momento -- el jugador tiene que volver a acercarse
+            // y entrar, igual que cualquier otra puerta ya visible.
+            const pu = p.secretoObj;
+            if (!pu) return;
+            pu.oculta = false;
+            p.secretoObj = null;
+            fxOnda(pu.x, pu.y, 40, "#c084f0");
+            fxParticulas(pu.x, pu.y, 14, "#c084f0");
+            toast(p.nombre + " descubre una puerta secreta", "#c084f0");
+            return;
+          }
           const idx = G.drops.indexOf(dr);
           if (idx < 0) return;
           G.drops.splice(idx, 1);
