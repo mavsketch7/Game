@@ -61,6 +61,38 @@ export function sfx(tipo) {
         osc.stop(now + pr.dur + 0.02);
       }
 
+// Sonido en capas para la caída de un objeto de rareza alta (Legendario+):
+// varios osciladores combinados (impacto grave + barrido + brillo armónico,
+// y una capa extra solo para Mítico) en vez del único oscilador plano de
+// sfx("legendario") -- una fanfarria en miniatura, más grande cuanto mayor
+// la rareza, sin necesitar ningún archivo de audio.
+export function sfxDropEpico(rareza) {
+        if (AJ.silencio || !audioCtx) return;
+        reanudarAudio();
+        const now = audioCtx.currentTime;
+        const vol = AJ.volMaster * AJ.volSfx;
+        const mitico = rareza >= 4;
+        const capa = (f0, f1, tipo, dur, v, delay) => {
+          const t0 = now + delay;
+          const osc = audioCtx.createOscillator();
+          const g = audioCtx.createGain();
+          osc.type = tipo;
+          osc.frequency.setValueAtTime(f0, t0);
+          osc.frequency.exponentialRampToValueAtTime(Math.max(20, f1), t0 + dur);
+          g.gain.setValueAtTime(0.0001, t0);
+          g.gain.linearRampToValueAtTime(v * vol, t0 + 0.02);
+          g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+          osc.connect(g);
+          g.connect(audioCtx.destination);
+          osc.start(t0);
+          osc.stop(t0 + dur + 0.03);
+        };
+        capa(160, 45, "sawtooth", 0.22, 0.5, 0); // impacto grave: el "peso" del objeto
+        capa(280, 1500, "sine", mitico ? 0.9 : 0.7, 0.4, 0.03); // barrido principal
+        capa(900, 1800, "triangle", mitico ? 0.7 : 0.5, 0.22, 0.12); // brillo armónico ("campana")
+        if (mitico) capa(2000, 3200, "sine", 0.35, 0.18, 0.5); // guinda final solo Mítico
+      }
+
 const MUS_NOTAS = [
         110, 0, 146.83, 0, 130.81, 0, 164.81, 0, 110, 0, 98, 0, 130.81, 0,
         123.47, 0,

@@ -772,8 +772,8 @@ export function render() {
             // mientras siga en el suelo -- solo un breve fade-in al caer,
             // sin fade-out por tiempo.
             const beamK = clamp((dr.t || 0) / 0.2, 0, 1);
-            const beamH = 64 + rareza * 14;
-            const anchoGlow = 16 + rareza * 6;
+            const beamH = 100 + rareza * 24; // más largo que antes (64+14·rar)
+            const anchoGlow = 10 + rareza * 3.5; // más finito que antes (16+6·rar)
             const pulso = 0.85 + Math.sin(animGlobal * 5 + dr.x) * 0.15;
 
             cx.save();
@@ -789,13 +789,13 @@ export function render() {
             // núcleo brillante con halo real de canvas (shadowBlur) -- más
             // ancho y luminoso cuanto mayor la rareza
             cx.shadowColor = col;
-            cx.shadowBlur = (6 + rareza * 5) * pulso;
+            cx.shadowBlur = (5 + rareza * 4) * pulso;
             const gCore = cx.createLinearGradient(dr.x, dr.y - beamH, dr.x, dr.y);
             gCore.addColorStop(0, "rgba(255,255,255,0)");
             gCore.addColorStop(0.6, hexRgba(col, 0.85));
             gCore.addColorStop(1, "#fff");
             cx.fillStyle = gCore;
-            const anchoCore = 3 + rareza * 0.8;
+            const anchoCore = 1.6 + rareza * 0.45; // más finito que antes (3+0.8·rar)
             cx.fillRect(dr.x - anchoCore / 2, dr.y - beamH, anchoCore, beamH);
             cx.restore();
 
@@ -814,7 +814,7 @@ export function render() {
                   dr.x * 0.013) %
                 1;
               const sy = dr.y - fase * beamH;
-              const sx = dr.x + Math.sin(fase * TAU * 2 + i) * (2 + rareza);
+              const sx = dr.x + Math.sin(fase * TAU * 2 + i) * (1.4 + rareza * 0.7);
               const salpha = Math.sin(fase * Math.PI);
               cx.globalAlpha = beamK * salpha;
               cx.fillStyle = rareza >= 3 ? "#fff" : col;

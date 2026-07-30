@@ -10,7 +10,7 @@ import { construirMenu } from "../ui/menu.js";
 import { banner, toast } from "../ui/notifications.js";
 import { mostrar, ocultar } from "../ui/overlays.js";
 import { az, clamp, ri } from "../utils/helpers.js";
-import { sfx } from "./audio.js";
+import { sfxDropEpico } from "./audio.js";
 
 export function genItem(f, forceRar, forceSlot) {
         // mayor probabilidad de rarezas altas en plantas avanzadas
@@ -86,7 +86,7 @@ export function genItem(f, forceRar, forceSlot) {
 // sitio que llama a G.drops.push().
 export function dropItem(x, y, item) {
         G.drops.push({ tipo: "item", x, y, item, t: 0 });
-        if (item.rareza >= 3) sfx("legendario");
+        if (item.rareza >= 3) sfxDropEpico(item.rareza);
       }
 
 export function plantaDespejada() {
