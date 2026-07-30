@@ -280,17 +280,28 @@ export function render() {
             cx.stroke();
           }
           if (KENNEY_TILE.door2) {
-            // door2 (indicación explícita del usuario): imagen única, no un
-            // patrón repetible -- se escala a un ancho fijo manteniendo la
-            // proporción y se rota según el lado de la sala (N/S tal cual,
-            // O/E girada 90° para que la puerta quede "de pie").
-            const anchoDoor = 90,
-              altoDoor = anchoDoor * (KENNEY_TILE.door2.height / KENNEY_TILE.door2.width);
+            // door2 (indicación explícita del usuario) es una hoja de
+            // ANIMACIÓN de 4 fotogramas (verificado recortando/ampliando
+            // la imagen: portón cerrado -> abriéndose -> arco abierto),
+            // no una única puerta -- por eso NO se dibuja la imagen
+            // entera (salía como una fila de 4 puertas aplastadas). Se
+            // recorta solo el último fotograma (arco totalmente abierto,
+            // ya que aquí no hay puertas con estado cerrado/abierto) de
+            // la hoja ya escalada ×3 (KENNEY_TILE, ver sprites.js).
+            const FOTOG_W = 40 * 3,
+              FOTOG_H = 29 * 3,
+              FOTOG_ULTIMO = 3;
+            const anchoDoor = 80,
+              altoDoor = anchoDoor * (FOTOG_H / FOTOG_W);
             cx.save();
             cx.translate(pu.x, pu.y);
             if (pu.dir === "O" || pu.dir === "E") cx.rotate(Math.PI / 2);
             cx.drawImage(
               KENNEY_TILE.door2,
+              FOTOG_ULTIMO * FOTOG_W,
+              0,
+              FOTOG_W,
+              FOTOG_H,
               -anchoDoor / 2,
               -altoDoor / 2,
               anchoDoor,
@@ -371,7 +382,7 @@ export function render() {
             );
             cx.stroke();
           }
-          if (SPR.escaleras) drawSprite(SPR.escaleras, po.x, po.y, false, 1.3);
+          if (SPR.escaleras) drawSprite(SPR.escaleras, po.x, po.y, false, 0.8);
           cx.fillStyle = "#e9b45c";
           cx.font = "700 11px Alegreya Sans";
           cx.textAlign = "center";
@@ -405,7 +416,7 @@ export function render() {
             cx.stroke();
           }
           if (SPR.escalerasAbajo)
-            drawSprite(SPR.escalerasAbajo, ea.x, ea.y, false, 1.3);
+            drawSprite(SPR.escalerasAbajo, ea.x, ea.y, false, 0.8);
           cx.fillStyle = "#8fd3ff";
           cx.font = "700 11px Alegreya Sans";
           cx.textAlign = "center";

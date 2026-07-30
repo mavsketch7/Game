@@ -71,7 +71,55 @@ const NOMBRE_FORMA = {
 const ESC_X = W / 960,
       ESC_Y = H / 560;
 
-export function generarMapa(forma) {
+// Grosor del muro de borde y ancho del hueco que deja libre una puerta --
+// ver agregarMurosPerimetro(). El hueco tiene que ser cómodo de cruzar
+// (más ancho que el sprite de la puerta, ~80px, ver render/world.js) y
+// quedar centrado en la posición fija de cada puerta (posPuerta()).
+const GROSOR_MURO_BORDE = 24;
+const HUECO_PUERTA = 140;
+
+// Por defecto TODO el borde de la sala es muro sólido; el único hueco es
+// el de la(s) puerta(s) reales que tenga esa sala en esa dirección (según
+// el grafo de la mazmorra, no la forma) -- así nunca hay una "salida"
+// donde en realidad no hay camino. Los bloques interiores de cada forma
+// (cruz/foso/etc., más arriba) ya se diseñaron dejando libre el centro de
+// cada borde con margen de sobra, así que este muro adicional no puede
+// chocar con ellos.
+function agregarMurosPerimetro(direcciones) {
+        const t = GROSOR_MURO_BORDE,
+          g = HUECO_PUERTA;
+        const tiene = (d) => direcciones.includes(d);
+        // norte
+        if (tiene("N"))
+          G.muros.push(
+            { x: 0, y: 0, w: W / 2 - g / 2, h: t },
+            { x: W / 2 + g / 2, y: 0, w: W / 2 - g / 2, h: t },
+          );
+        else G.muros.push({ x: 0, y: 0, w: W, h: t });
+        // sur
+        if (tiene("S"))
+          G.muros.push(
+            { x: 0, y: H - t, w: W / 2 - g / 2, h: t },
+            { x: W / 2 + g / 2, y: H - t, w: W / 2 - g / 2, h: t },
+          );
+        else G.muros.push({ x: 0, y: H - t, w: W, h: t });
+        // oeste
+        if (tiene("O"))
+          G.muros.push(
+            { x: 0, y: 0, w: t, h: H / 2 - g / 2 },
+            { x: 0, y: H / 2 + g / 2, w: t, h: H / 2 - g / 2 },
+          );
+        else G.muros.push({ x: 0, y: 0, w: t, h: H });
+        // este
+        if (tiene("E"))
+          G.muros.push(
+            { x: W - t, y: 0, w: t, h: H / 2 - g / 2 },
+            { x: W - t, y: H / 2 + g / 2, w: t, h: H / 2 - g / 2 },
+          );
+        else G.muros.push({ x: W - t, y: 0, w: t, h: H });
+      }
+
+export function generarMapa(forma, direccionesConPuerta) {
         G.forma = forma;
         G.muros = [];
         if (forma === "cruz") {
@@ -181,6 +229,7 @@ export function generarMapa(forma) {
             { x: 690 * ESC_X, y: 350 * ESC_Y, w: 70, h: 70 },
           );
         }
+        agregarMurosPerimetro(direccionesConPuerta || []);
       }
 
 export function dentroForma(x, y, margen) {
@@ -532,7 +581,10 @@ function poblarSala(sala, f) {
 export function cargarSala(sala) {
         G.mazmorra.salaActualId = sala.id;
         if (!sala.visitada) {
-          generarMapa(sala.forma); // deja el resultado en G.forma/G.muros
+          generarMapa(
+            sala.forma,
+            sala.puertas.map((pu) => pu.dir),
+          ); // deja el resultado en G.forma/G.muros
           sala.muros = G.muros;
         } else {
           G.forma = sala.forma;
@@ -663,7 +715,7 @@ export function iniciarPlanta() {
           G.objetos = [];
           G.decals = [];
           G.hazards = [];
-          generarMapa(az(["sala", "sala", "cruz"]));
+          generarMapa(az(["sala", "sala", "cruz"]), []); // sin puertas: sala de jefe sellada
           reposicionarJugadores();
           // vía de retirada, mismo criterio que en cargarSala(): siempre
           // disponible, no hace falta vencer al jefe primero para volver

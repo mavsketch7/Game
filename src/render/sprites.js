@@ -764,7 +764,12 @@ for (const key in COFRE_FRAME_SRC) {
 // hay que sustituir la entrada de abajo).
 const im3 = new Image();
 im3.onload = () => {
-  SPR.escaleras = upscaleNN(im3, 3);
+  // Este sprite ya viene a una resolución "grande" (121x85, no un icono de
+  // 16px) -- a diferencia del resto de KENNEY_TILE/COFRE_FRAME_SRC, aquí
+  // NO hace falta el ×3 habitual (salía gigantesco, casi 1/3 del ancho de
+  // la sala). Factor 1 = tamaño nativo; el ajuste de tamaño en el juego se
+  // hace con el parámetro `esc` de drawSprite() en render/world.js.
+  SPR.escaleras = upscaleNN(im3, 1);
   const c = document.createElement("canvas");
   c.width = SPR.escaleras.width;
   c.height = SPR.escaleras.height;
