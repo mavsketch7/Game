@@ -1273,6 +1273,32 @@ export function update(dt) {
           }
         }
 
+        // escalera abajo: todos los vivos dentro -- retrocede una planta
+        // (o vuelve al lobby si ya estaba en la 1). Regenera la planta
+        // anterior desde cero en vez de recordar el layout exacto que se
+        // dejó atrás: es un "volver" simple, no un mapa de torre completo
+        // con memoria (confirmado con el usuario, ver plan de la torre).
+        if (G.escaleraAbajo) {
+          G.escaleraAbajo.t += dt;
+          const vsAbajo = vivos();
+          const dentroAbajo = vsAbajo.filter(
+            (q) =>
+              Math.hypot(G.escaleraAbajo.x - q.x, G.escaleraAbajo.y - q.y) <
+              G.escaleraAbajo.r + 12,
+          ).length;
+          G.escaleraAbajo.dentro = dentroAbajo;
+          G.escaleraAbajo.total = vsAbajo.length;
+          if (vsAbajo.length > 0 && dentroAbajo === vsAbajo.length) {
+            if (G.planta <= 1) {
+              iniciarLobby();
+            } else {
+              G.planta--;
+              iniciarPlanta();
+            }
+            return;
+          }
+        }
+
         // ---- hazards: progresión de grietas y caducidad de telarañas ----
         for (let i = G.hazards.length - 1; i >= 0; i--) {
           const hz = G.hazards[i];

@@ -544,6 +544,14 @@ export function cargarSala(sala) {
           sala.esFinal && sala.despejada
             ? { x: W / 2 + 160, y: 64, r: 24, t: 0 }
             : null;
+        // Escalera para volver a la planta anterior (o al lobby si esto
+        // era la planta 1): vive en la sala de ENTRADA de la planta, no
+        // hace falta despejarla primero -- es una vía de retirada, no una
+        // recompensa. Espejo del portal de arriba (mismo Y, X al otro
+        // lado del centro) para no solapar con ninguna puerta.
+        G.escaleraAbajo = sala.esInicial
+          ? { x: W / 2 - 160, y: 64, r: 24, t: 0 }
+          : null;
         if (!sala.poblada) {
           poblarSala(sala, G.planta);
           sala.poblada = true;
@@ -590,6 +598,7 @@ export function iniciarPlanta() {
         G.rayos = [];
         G.rayoCd = rnd(3, 6);
         G.portal = null;
+        G.escaleraAbajo = null;
         G.fogata = null;
         G.fogataUsada = false;
         G.descansoT = 0;
@@ -632,6 +641,9 @@ export function iniciarPlanta() {
           G.hazards = [];
           generarMapa(az(["sala", "sala", "cruz"]));
           reposicionarJugadores();
+          // vía de retirada, mismo criterio que en cargarSala(): siempre
+          // disponible, no hace falta vencer al jefe primero para volver
+          G.escaleraAbajo = { x: W / 2 - 160, y: 64, r: 24, t: 0 };
           G.pilares = [];
           ponPilares(f, ri(1, 2));
           ponHazardsYObjetos(f);

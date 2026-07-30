@@ -260,20 +260,40 @@ export function render() {
             );
             cx.stroke();
           }
-          cx.save();
-          cx.translate(
-            pu.x + Math.cos(ang) * (pu.r + 10),
-            pu.y + Math.sin(ang) * (pu.r + 10),
-          );
-          cx.rotate(ang);
-          cx.fillStyle = "#8fd3ff";
-          cx.beginPath();
-          cx.moveTo(-6, -8);
-          cx.lineTo(8, 0);
-          cx.lineTo(-6, 8);
-          cx.closePath();
-          cx.fill();
-          cx.restore();
+          if (KENNEY_TILE.door2) {
+            // door2 (indicación explícita del usuario): imagen única, no un
+            // patrón repetible -- se escala a un ancho fijo manteniendo la
+            // proporción y se rota según el lado de la sala (N/S tal cual,
+            // O/E girada 90° para que la puerta quede "de pie").
+            const anchoDoor = 90,
+              altoDoor = anchoDoor * (KENNEY_TILE.door2.height / KENNEY_TILE.door2.width);
+            cx.save();
+            cx.translate(pu.x, pu.y);
+            if (pu.dir === "O" || pu.dir === "E") cx.rotate(Math.PI / 2);
+            cx.drawImage(
+              KENNEY_TILE.door2,
+              -anchoDoor / 2,
+              -altoDoor / 2,
+              anchoDoor,
+              altoDoor,
+            );
+            cx.restore();
+          } else {
+            cx.save();
+            cx.translate(
+              pu.x + Math.cos(ang) * (pu.r + 10),
+              pu.y + Math.sin(ang) * (pu.r + 10),
+            );
+            cx.rotate(ang);
+            cx.fillStyle = "#8fd3ff";
+            cx.beginPath();
+            cx.moveTo(-6, -8);
+            cx.lineTo(8, 0);
+            cx.lineTo(-6, 8);
+            cx.closePath();
+            cx.fill();
+            cx.restore();
+          }
         }
 
         // fogata
@@ -316,7 +336,7 @@ export function render() {
           }
         }
 
-        // portal
+        // portal / escalera hacia arriba
         if (G.portal) {
           const po = G.portal;
           for (let k = 0; k < 3; k++) {
@@ -332,6 +352,7 @@ export function render() {
             );
             cx.stroke();
           }
+          if (SPR.escaleras) drawSprite(SPR.escaleras, po.x, po.y, false, 1.3);
           cx.fillStyle = "#e9b45c";
           cx.font = "700 11px Alegreya Sans";
           cx.textAlign = "center";
@@ -345,6 +366,39 @@ export function render() {
               ")",
             po.x,
             po.y + po.r + 16,
+          );
+        }
+
+        // escalera hacia abajo (planta anterior, o lobby si esto era la 1)
+        if (G.escaleraAbajo) {
+          const ea = G.escaleraAbajo;
+          for (let k = 0; k < 3; k++) {
+            cx.strokeStyle = "rgba(143,211,255," + (0.9 - k * 0.28) + ")";
+            cx.lineWidth = 3;
+            cx.beginPath();
+            cx.arc(
+              ea.x,
+              ea.y,
+              ea.r - k * 6 + Math.sin(ea.t * 3 + k) * 2,
+              0,
+              TAU,
+            );
+            cx.stroke();
+          }
+          if (SPR.escalerasAbajo)
+            drawSprite(SPR.escalerasAbajo, ea.x, ea.y, false, 1.3);
+          cx.fillStyle = "#8fd3ff";
+          cx.font = "700 11px Alegreya Sans";
+          cx.textAlign = "center";
+          cx.fillText(
+            (G.planta <= 1 ? "VESTÍBULO" : "PLANTA " + (G.planta - 1)) +
+              "  (" +
+              (ea.dentro || 0) +
+              "/" +
+              (ea.total || 1) +
+              ")",
+            ea.x,
+            ea.y + ea.r + 16,
           );
         }
 

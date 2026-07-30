@@ -756,9 +756,32 @@ for (const key in COFRE_FRAME_SRC) {
   im.src = assetUrl(COFRE_FRAME_SRC[key]);
 }
 
+// Escalera (sube/baja de planta, ver systems/floorgen.js): un sprite
+// único, no un patrón repetible -- mismo patrón que COFRE_FRAME_SRC de
+// arriba. Solo hay un sprite "hacia arriba"; el de bajar se genera
+// volteándolo verticalmente en un canvas aparte, sin pedir un archivo
+// nuevo (cambiar por un sprite dedicado más adelante es trivial: solo
+// hay que sustituir la entrada de abajo).
+const im3 = new Image();
+im3.onload = () => {
+  SPR.escaleras = upscaleNN(im3, 3);
+  const c = document.createElement("canvas");
+  c.width = SPR.escaleras.width;
+  c.height = SPR.escaleras.height;
+  const g = c.getContext("2d");
+  g.imageSmoothingEnabled = false;
+  g.translate(0, c.height);
+  g.scale(1, -1);
+  g.drawImage(SPR.escaleras, 0, 0);
+  SPR.escalerasAbajo = c;
+};
+im3.src = assetUrl("escaleras");
+
 const KENNEY_TILE_SRC = {
         wall: assetUrl("wall"),
         wallRemate: assetUrl("wallRemate"),
+        door2: assetUrl("door2"),
+        door1: assetUrl("door1"),
       };
 
 export const KENNEY_TILE = {};
@@ -801,6 +824,11 @@ export function remateMuroPatron() {
         }
         return null;
       }
+
+// Puerta real entre salas (ver render/world.js: dibuja KENNEY_TILE.door2
+// directamente con drawImage, no como patrón repetible -- es una imagen
+// única, no una textura). "door1" se deja cargado en KENNEY_TILE como
+// variante sin usar todavía, por si hace falta más adelante.
 
 for (const r in PALS)
         SPR[r] = buildSprite(

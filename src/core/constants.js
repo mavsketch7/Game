@@ -282,7 +282,11 @@ export const NOMBRE_CLIMA = {
         ceniza: "🌋 Ceniza",
       };
 
-export const MAX_PLANTA = 100;
+// Antes 100 -- las plantas alargaban demasiado la partida (petición del
+// usuario de acortar la torre). Con jefe cada 5 (esJefe() en
+// systems/bosses.js), 20 deja 4 jefes en total. Fácil de reajustar: es la
+// única constante que hay que tocar.
+export const MAX_PLANTA = 20;
 
 export const MAX_NIV_PJ = 50;
 
