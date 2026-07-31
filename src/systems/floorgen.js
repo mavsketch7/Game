@@ -506,6 +506,17 @@ export function generarGrafoPlanta() {
           return s;
         };
         let actual = crear(gxInicial, gyInicial, true);
+        // QA (?qa=1 en la URL, mismo interruptor que el cofre de pruebas en
+        // core/gameflow.js): la sala de entrada de la planta 1 (justo al
+        // subir las escaleras desde el lobby) es siempre "arsenal" -- la
+        // primera sala diseñada a mano con tools/level-editor.html -- para
+        // poder probarla sin esperar a que el sorteo la saque por azar.
+        if (
+          G.planta === 1 &&
+          new URLSearchParams(location.search).get("qa") === "1"
+        ) {
+          actual.forma = "arsenal";
+        }
         let intentos = 0;
         while (salas.length < nSalas && intentos++ < 60) {
           const libres = Object.entries(DIR_VEC)
