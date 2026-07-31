@@ -73,40 +73,35 @@ const NOMBRE_FORMA = {
 // poblarSala()/ponPilares() de forma procedural en cualquier forma, y
 // fijarlos exactamente como los pintó requeriría una plantilla de
 // contenido por forma que todavía no existe (ver conversación).
+// v2 (sustituye al primer boceto): esta vez el usuario alineó sus dos
+// puertas normales EXACTAMENTE con las anclas reales (N en fila0/col20, E
+// en fila12/col39 -- ver ANCLAS_PUERTA en tools/level-editor.html), así
+// que no hace falta ningún hueco especial para ellas: el muro de borde
+// automático (agregarMurosPerimetro) ya abre el hueco justo ahí en
+// cuanto el grafo le asigna una puerta real a esta sala en esa
+// dirección, exactamente igual que en cualquier otra forma.
+// Se omite además una celda de muro suelta de 40x40 en (0,480) que caía
+// justo sobre la ancla de la puerta O -- casi seguro un resto accidental
+// del pintado, y de dejarla habría bloqueado esa puerta si el grafo
+// llegara a asignarle una conexión al oeste.
 const MUROS_ARSENAL = [
-        { x: 40, y: 40, w: 1520, h: 40 },
-        { x: 40, y: 80, w: 40, h: 280 },
-        { x: 40, y: 360, w: 320, h: 40 },
-        { x: 40, y: 400, w: 40, h: 160 },
-        { x: 40, y: 560, w: 440, h: 40 },
-        { x: 40, y: 600, w: 40, h: 320 },
-        { x: 40, y: 920, w: 1520, h: 40 },
-        { x: 400, y: 80, w: 40, h: 320 },
-        { x: 440, y: 600, w: 40, h: 120 },
-        { x: 440, y: 720, w: 80, h: 40 },
-        { x: 480, y: 760, w: 40, h: 120 },
-        { x: 720, y: 720, w: 120, h: 40 },
-        { x: 720, y: 760, w: 40, h: 120 },
-        { x: 760, y: 80, w: 40, h: 200 },
-        // -- hueco de 40x40 en (760,280): la "puerta secreta" interior que
-        // marcó el usuario (fila 7, col 19) -- se rellena aparte, más
-        // abajo, con agregarMuroSecreto() para que sea revelable con E.
-        { x: 760, y: 360, w: 320, h: 40 },
-        { x: 800, y: 560, w: 560, h: 40 },
-        { x: 800, y: 600, w: 40, h: 120 },
-        { x: 1040, y: 320, w: 80, h: 40 },
-        { x: 1080, y: 240, w: 80, h: 40 },
-        { x: 1080, y: 280, w: 40, h: 40 },
-        { x: 1120, y: 80, w: 40, h: 160 },
-        { x: 1280, y: 80, w: 40, h: 320 },
-        { x: 1320, y: 600, w: 40, h: 80 },
-        { x: 1320, y: 680, w: 240, h: 40 },
-        { x: 1440, y: 360, w: 120, h: 40 },
-        { x: 1480, y: 320, w: 80, h: 40 },
-        { x: 1520, y: 80, w: 40, h: 240 },
-        { x: 1520, y: 400, w: 40, h: 160 },
-        { x: 1520, y: 600, w: 40, h: 80 },
-        { x: 1520, y: 720, w: 40, h: 200 },
+        { x: 160, y: 200, w: 360, h: 80 },
+        { x: 160, y: 280, w: 80, h: 400 },
+        { x: 160, y: 680, w: 360, h: 80 },
+        { x: 680, y: 200, w: 80, h: 560 },
+        { x: 920, y: 200, w: 280, h: 80 },
+        // -- hueco de 120x80 en (1200,200): la puerta secreta que marcó el
+        // usuario (filas 5-6, cols 30-32) -- se añade aparte, más abajo,
+        // como muro "secreto" revelable con E.
+        { x: 1320, y: 200, w: 120, h: 80 },
+        { x: 920, y: 280, w: 80, h: 480 },
+        { x: 920, y: 760, w: 200, h: 40 },
+        { x: 920, y: 800, w: 520, h: 40 },
+        { x: 1160, y: 280, w: 40, h: 40 },
+        { x: 1280, y: 760, w: 160, h: 40 },
+        { x: 1360, y: 280, w: 80, h: 360 },
+        { x: 1360, y: 640, w: 120, h: 80 },
+        { x: 1360, y: 720, w: 80, h: 40 },
       ];
 
 // Algunas formas (nicho/u/herradura/escalonada) se diseñaron a mano con
@@ -276,19 +271,20 @@ export function generarMapa(forma, direccionesConPuerta) {
             { x: 690 * ESC_X, y: 350 * ESC_Y, w: 70, h: 70 },
           );
         } else if (forma === "arsenal") {
-          // Sala pintada a mano (ver MUROS_ARSENAL arriba). A diferencia de
-          // las demás, estas coordenadas asumen la sala a 1600x1000 tal
-          // cual (el tamaño del lienzo de tools/level-editor.html) -- si
-          // SALA_W/SALA_H cambiara de tamaño más adelante, esta forma
-          // necesitaría reexportarse desde la herramienta, no se escala
-          // sola con ESC_X/ESC_Y como "nicho"/"u"/etc.
+          // Sala pintada a mano (v2, ver MUROS_ARSENAL arriba). A
+          // diferencia de las demás, estas coordenadas asumen la sala a
+          // 1600x1000 tal cual (el tamaño del lienzo de
+          // tools/level-editor.html) -- si SALA_W/SALA_H cambiara de
+          // tamaño más adelante, esta forma necesitaría reexportarse desde
+          // la herramienta, no se escala sola con ESC_X/ESC_Y como
+          // "nicho"/"u"/etc.
           for (const m of MUROS_ARSENAL) G.muros.push({ ...m });
-          // hueco de la "puerta secreta" interior (fila 7, col 19 del
-          // diseño): un muro más que, a diferencia de los demás, se puede
-          // revelar acercándose y pulsando E (ver p.secretoParedObj en
+          // hueco de 120x80 (filas 5-6, cols 30-32 del diseño): un muro
+          // más que, a diferencia de los demás, se puede revelar
+          // acercándose y pulsando E (ver p.secretoParedObj en
           // core/loop.js e interactuar() en systems/abilities.js) -- hasta
           // entonces es indistinguible del resto del muro.
-          G.muros.push({ x: 760, y: 280, w: 40, h: 40, secreto: true });
+          G.muros.push({ x: 1200, y: 200, w: 120, h: 80, secreto: true });
         }
         agregarMurosPerimetro(direccionesConPuerta || []);
       }

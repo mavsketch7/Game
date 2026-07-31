@@ -255,12 +255,16 @@ export function update(dt) {
           // "arsenal" en floorgen.js) -- a diferencia de una puerta
           // secreta entre salas, este es un G.muros real que bloquea el
           // paso hasta que se revela con E; entonces se quita del array.
+          // Distancia al punto más cercano del rectángulo (no al centro):
+          // un muro secreto grande (varias celdas) tendría el centro muy
+          // lejos de alguien pegado a su borde.
           p.secretoParedObj =
-            (G.muros || []).find(
-              (m) =>
-                m.secreto &&
-                Math.hypot(m.x + m.w / 2 - p.x, m.y + m.h / 2 - p.y) < 60,
-            ) || null;
+            (G.muros || []).find((m) => {
+              if (!m.secreto) return false;
+              const dx = Math.max(m.x - p.x, 0, p.x - (m.x + m.w));
+              const dy = Math.max(m.y - p.y, 0, p.y - (m.y + m.h));
+              return Math.hypot(dx, dy) < 46;
+            }) || null;
           for (let i = p.trail.length - 1; i >= 0; i--) {
             p.trail[i].t -= dt;
             if (p.trail[i].t <= 0) p.trail.splice(i, 1);

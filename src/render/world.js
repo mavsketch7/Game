@@ -252,9 +252,13 @@ export function render() {
           if (!m.secreto) continue;
           const mcx = m.x + m.w / 2,
             mcy = m.y + m.h / 2;
-          if (G.players.some((p) => !p.ko && Math.hypot(p.x - mcx, p.y - mcy) < 60)) {
-            dibujarAvisoTecla(mcx, mcy - 26, "E");
-          }
+          const cerca = G.players.some((p) => {
+            if (p.ko) return false;
+            const dx = Math.max(m.x - p.x, 0, p.x - (m.x + m.w));
+            const dy = Math.max(m.y - p.y, 0, p.y - (m.y + m.h));
+            return Math.hypot(dx, dy) < 46;
+          });
+          if (cerca) dibujarAvisoTecla(mcx, m.y - 20, "E");
         }
 
         // puertas de la mazmorra (ver systems/floorgen.js: cargarSala/cruzarPuerta)
