@@ -10,7 +10,7 @@ import { M } from "./input.js";
 import { construirMenu } from "../ui/menu.js";
 import { banner, toast } from "../ui/notifications.js";
 import { mostrar, ocultar } from "../ui/overlays.js";
-import { az, clamp, ri } from "../utils/helpers.js";
+import { az, clamp, ri, rnd } from "../utils/helpers.js";
 import { sfxDropEpico } from "./audio.js";
 
 export function genItem(f, forceRar, forceSlot) {
@@ -86,7 +86,21 @@ export function genItem(f, forceRar, forceSlot) {
 // el sonido especial de legendario+ para que no haya que repetirlo en cada
 // sitio que llama a G.drops.push().
 export function dropItem(x, y, item) {
-        G.drops.push({ tipo: "item", x, y, item, t: 0 });
+        G.drops.push({
+          tipo: "item",
+          x,
+          y,
+          item,
+          t: 0,
+          // salto/giro/caída (ver render/world.js) antes de asentarse en el
+          // suelo -- saltoDX es una pequeña deriva horizontal aleatoria
+          // para que no todos caigan en línea recta, anguloSpin0 el ángulo
+          // de partida del giro. El golpe de aterrizaje (sfxAterrizaje) se
+          // dispara en core/loop.js cuando dr.t alcanza saltoDur.
+          saltoDur: 0.5,
+          anguloSpin0: rnd(0, 6.283),
+          saltoDX: rnd(-20, 20),
+        });
         if (item.rareza >= 3) sfxDropEpico(item.rareza);
       }
 

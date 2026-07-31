@@ -7,7 +7,7 @@ import { G } from "./state.js";
 import { NET, netAplicarInputs } from "../net/peer.js";
 import { fxOnda, fxParticulas, fxTexto } from "../render/effects.js";
 import { aplicarImbuido, atacar, danoPilar, dispararArcano, golpeObjeto } from "../systems/abilities.js";
-import { sfx } from "../systems/audio.js";
+import { sfx, sfxAterrizaje } from "../systems/audio.js";
 import { esJefe, escalaEnemigo } from "../systems/bosses.js";
 import { curarP, danoAEnemigo, danoAlJugador, explotarBomber, ganarXP, masCercano, matarEnemigo, spawnClon, spawnEnemigo, statsTot, tipoAleatorio, vivos } from "../systems/combat.js";
 import { aplicarLimites, colisionaMuro, cruzarPuerta, dentroForma, iniciarPlanta, salaActual } from "../systems/floorgen.js";
@@ -1137,7 +1137,21 @@ export function update(dt) {
         for (let i = G.drops.length - 1; i >= 0; i--) {
           const dr = G.drops[i];
           dr.t = (dr.t || 0) + dt; // edad del drop, ver el rayo de luz en render/world.js
-          if (dr.tipo === "item") continue;
+          if (dr.tipo === "item") {
+            // aterrizaje: salta/gira/cae (ver render/world.js) y, justo al
+            // tocar el suelo, un golpe grave+brillo que da "peso" al drop --
+            // una sola vez por objeto (dr.aterrizadoFx), aquí en vez de en
+            // render() porque solo el host debe disparar el sonido/fx, y
+            // este bucle es exclusivo del host (update() no corre en el
+            // invitado).
+            if (!dr.aterrizadoFx && dr.t >= (dr.saltoDur || 0.5)) {
+              dr.aterrizadoFx = true;
+              sfxAterrizaje(dr.item.rareza);
+              fxParticulas(dr.x, dr.y + 6, 6 + dr.item.rareza * 2, RAREZAS[dr.item.rareza].col);
+              fxOnda(dr.x, dr.y + 6, 16 + dr.item.rareza * 3, RAREZAS[dr.item.rareza].col);
+            }
+            continue;
+          }
           const p = vivos().find(
             (q) => Math.hypot(dr.x - q.x, dr.y - q.y) < 26,
           );

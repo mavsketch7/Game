@@ -873,14 +873,36 @@ export function render() {
           } else {
             const rareza = dr.item.rareza;
             const col = RAREZAS[rareza].col;
-            // Rayo de botín (estilo Diablo), más vistoso cuanto mayor la
-            // rareza -- ver SPRITES.md para el resto de la jerarquía visual
-            // por rareza. A diferencia del oro/vial, este objeto no se
-            // recoge solo al pisarlo (hay que pulsar E/botón, ver
-            // interactuar() en abilities.js), así que el rayo se mantiene
-            // mientras siga en el suelo -- solo un breve fade-in al caer,
-            // sin fade-out por tiempo.
-            const beamK = clamp((dr.t || 0) / 0.2, 0, 1);
+            // Salto/giro/caída antes de asentarse (ver dropItem() en
+            // systems/loot.js): el objeto aparece en el aire, gira y cae
+            // con un arco que se frena (ease-out), y solo al tocar el
+            // suelo (sfxAterrizaje en core/loop.js) empieza a contar el
+            // rayo de luz -- por eso beamK usa el tiempo DESDE el
+            // aterrizaje, no desde que apareció el drop.
+            const saltoDur = dr.saltoDur || 0.5;
+            const saltoK = clamp((dr.t || 0) / saltoDur, 0, 1);
+            const cayendo = saltoK < 1;
+            if (cayendo) {
+              const altura = (50 + rareza * 6) * (1 - saltoK) * (1 - saltoK);
+              const deriva = (dr.saltoDX || 0) * (1 - saltoK);
+              const angulo = (dr.anguloSpin0 || 0) + saltoK * TAU * 2.5;
+              cx.save();
+              cx.translate(dr.x + deriva, dr.y - altura);
+              cx.rotate(angulo);
+              const img = iconoDrop(dr.item);
+              cx.drawImage(img, -img.width / 2, -img.height / 2);
+              cx.restore();
+              // sombra en el suelo que se marca según se acerca la caída
+              cx.globalAlpha = 0.25 * saltoK;
+              cx.fillStyle = "#000";
+              cx.beginPath();
+              cx.ellipse(dr.x, dr.y + 8, 10 * saltoK, 4 * saltoK, 0, 0, TAU);
+              cx.fill();
+              cx.globalAlpha = 1;
+              continue;
+            }
+            const tPostAterrizaje = Math.max(0, (dr.t || 0) - saltoDur);
+            const beamK = clamp(tPostAterrizaje / 0.2, 0, 1);
             const beamH = 100 + rareza * 24; // más largo que antes (64+14·rar)
             const anchoGlow = 10 + rareza * 3.5; // más finito que antes (16+6·rar)
             const pulso = 0.85 + Math.sin(animGlobal * 5 + dr.x) * 0.15;

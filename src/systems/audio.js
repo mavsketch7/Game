@@ -93,6 +93,46 @@ export function sfxDropEpico(rareza) {
         if (mitico) capa(2000, 3200, "sine", 0.35, 0.18, 0.5); // guinda final solo Mítico
       }
 
+// Golpe de aterrizaje: se dispara para CUALQUIER objeto al tocar el suelo
+// (no solo legendario+, ver core/loop.js), justo cuando termina la
+// animación de salto/giro/caída en render/world.js -- un thump grave para
+// dar sensación de peso + un destello agudo breve encima que crece con la
+// rareza, para que un objeto mejor "suene" un poco más especial al caer
+// sin depender solo de sfxDropEpico (que es la fanfarria de aparición,
+// solo legendario+).
+export function sfxAterrizaje(rareza) {
+        if (AJ.silencio || !audioCtx) return;
+        reanudarAudio();
+        const now = audioCtx.currentTime;
+        const vol = AJ.volMaster * AJ.volSfx;
+        // grave: golpe seco, da la sensación de peso al caer
+        const oscGrave = audioCtx.createOscillator();
+        const gGrave = audioCtx.createGain();
+        oscGrave.type = "sine";
+        oscGrave.frequency.setValueAtTime(150, now);
+        oscGrave.frequency.exponentialRampToValueAtTime(35, now + 0.16);
+        gGrave.gain.setValueAtTime(0.55 * vol, now);
+        gGrave.gain.exponentialRampToValueAtTime(0.0001, now + 0.18);
+        oscGrave.connect(gGrave);
+        gGrave.connect(audioCtx.destination);
+        oscGrave.start(now);
+        oscGrave.stop(now + 0.2);
+        // brillante: destello agudo breve encima, más presente cuanto mayor
+        // la rareza (0=apenas se nota, 4=bien brillante)
+        const brillo = 0.1 + rareza * 0.05;
+        const oscBrillo = audioCtx.createOscillator();
+        const gBrillo = audioCtx.createGain();
+        oscBrillo.type = "triangle";
+        oscBrillo.frequency.setValueAtTime(1400 + rareza * 200, now);
+        oscBrillo.frequency.exponentialRampToValueAtTime(2400 + rareza * 200, now + 0.08);
+        gBrillo.gain.setValueAtTime(brillo * vol, now);
+        gBrillo.gain.exponentialRampToValueAtTime(0.0001, now + 0.14);
+        oscBrillo.connect(gBrillo);
+        gBrillo.connect(audioCtx.destination);
+        oscBrillo.start(now);
+        oscBrillo.stop(now + 0.16);
+      }
+
 const MUS_NOTAS = [
         110, 0, 146.83, 0, 130.81, 0, 164.81, 0, 110, 0, 98, 0, 130.81, 0,
         123.47, 0,
