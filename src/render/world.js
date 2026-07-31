@@ -908,6 +908,37 @@ export function render() {
             cx.fillRect(dr.x - anchoCore / 2, dr.y - beamH, anchoCore, beamH);
             cx.restore();
 
+            // hebras onduladas (solo épico+): dos cintas de energía que
+            // suben en espiral junto al núcleo, como el vídeo de
+            // referencia (Diablo 4, alijos míticos) -- un simple rayo recto
+            // se queda corto para transmitir "esto es importante".
+            if (rareza >= 2) {
+              cx.save();
+              for (let hebra = 0; hebra < 2; hebra++) {
+                cx.beginPath();
+                const nSeg = 14;
+                for (let i = 0; i <= nSeg; i++) {
+                  const t2 = i / nSeg;
+                  const hy = dr.y - t2 * beamH;
+                  const ondulacion =
+                    Math.sin(t2 * TAU * 2.2 + animGlobal * 2.4 + hebra * Math.PI) *
+                    (6 + rareza * 2.2) *
+                    (1 - t2 * 0.3);
+                  const hx = dr.x + ondulacion + (hebra === 0 ? -1 : 1) * 3;
+                  if (i === 0) cx.moveTo(hx, hy);
+                  else cx.lineTo(hx, hy);
+                }
+                const gradHebra = cx.createLinearGradient(dr.x, dr.y - beamH, dr.x, dr.y);
+                gradHebra.addColorStop(0, hexRgba(col, 0));
+                gradHebra.addColorStop(0.5, hexRgba(col, 0.55 * beamK));
+                gradHebra.addColorStop(1, hexRgba(col, 0));
+                cx.strokeStyle = gradHebra;
+                cx.lineWidth = 2;
+                cx.stroke();
+              }
+              cx.restore();
+            }
+
             // partículas ambiente ascendiendo por el rayo: densidad y
             // brillo suben con la rareza ("brillos ludópatas" -- cuanto
             // mejor el objeto, más refuerzo visual de recompensa). Todo
@@ -960,6 +991,26 @@ export function render() {
             cx.fill();
             cx.globalAlpha = 1;
             drawSprite(iconoDrop(dr.item), dr.x, dr.y + bob);
+
+            // etiqueta flotante con el nombre (épico+, para no saturar con
+            // objetos comunes) -- mismo espíritu que las etiquetas
+            // "Nombre (Ancestral)" del vídeo de referencia
+            if (rareza >= 2) {
+              const etiqueta = dr.item.nombre + " [" + RAREZAS[rareza].n + "]";
+              cx.font = "700 11px Alegreya Sans";
+              cx.textAlign = "center";
+              const anchoEtq = cx.measureText(etiqueta).width + 14;
+              const ey = dr.y + bob - 34;
+              cx.fillStyle = "rgba(10,8,17,.72)";
+              cx.beginPath();
+              cx.roundRect(dr.x - anchoEtq / 2, ey - 12, anchoEtq, 18, 8);
+              cx.fill();
+              cx.strokeStyle = hexRgba(col, 0.7);
+              cx.lineWidth = 1;
+              cx.stroke();
+              cx.fillStyle = col;
+              cx.fillText(etiqueta, dr.x, ey + 1);
+            }
             // aviso de tecla por distancia directa (no depende de p.dropObj,
             // que es estado solo del host) -- mismo patrón que el cofre.
             if (
@@ -967,7 +1018,7 @@ export function render() {
                 (p) => !p.ko && Math.hypot(p.x - dr.x, p.y - dr.y) < 40,
               )
             ) {
-              dibujarAvisoTecla(dr.x, dr.y - 26, "E");
+              dibujarAvisoTecla(dr.x, dr.y - (rareza >= 2 ? 50 : 26), "E");
             }
           }
         }
