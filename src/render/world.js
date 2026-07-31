@@ -875,6 +875,30 @@ export function render() {
           cx.font = "700 10px Alegreya Sans";
           cx.fillText("ARENA PvP — acércate", m.x, m.y + 34);
         }
+        // NPC de pruebas (QA, ?qa=1): sube de nivel al grupo por proximidad
+        if (G.nivelNpc) {
+          const m = G.nivelNpc;
+          for (let k = 0; k < 3; k++) {
+            cx.strokeStyle = "rgba(233,180,92," + (0.9 - k * 0.28) + ")";
+            cx.lineWidth = 3;
+            cx.beginPath();
+            cx.arc(
+              m.x,
+              m.y,
+              22 - k * 6 + Math.sin(animGlobal * 3 + k) * 2,
+              0,
+              TAU,
+            );
+            cx.stroke();
+          }
+          cx.fillStyle = "#ffd27f";
+          cx.font = "700 13px Alegreya Sans";
+          cx.textAlign = "center";
+          cx.fillText("★", m.x, m.y + 5);
+          cx.fillStyle = "#e9b45c";
+          cx.font = "700 10px Alegreya Sans";
+          cx.fillText("NPC NIVEL (QA) — acércate", m.x, m.y + 34);
+        }
 
         // drops
         for (const dr of G.drops) {

@@ -749,6 +749,7 @@ export function iniciarPlanta() {
         G.mercader = null;
         G.skinNpc = null;
         G.arenaNpc = null;
+        G.nivelNpc = null;
         G.clima = climaAleatorio();
 
         function reposicionarJugadores() {

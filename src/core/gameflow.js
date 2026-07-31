@@ -211,10 +211,16 @@ export function iniciarLobby() {
             abriendoT: 0,
             qa: true,
           });
+          // NPC de pruebas (QA): sube un nivel a todo el grupo cada vez que
+          // te acercas (y otra vez si te alejas y vuelves) -- para probar
+          // las tarjetas de mejora sin tener que jugar plantas enteras. Ver
+          // el disparador de proximidad en core/loop.js.
+          G.nivelNpc = { x: 250, y: 90 };
         }
         G.tiendaLock = false;
         G.skinLock = false;
         G.arenaLock = false;
+        G.nivelLock = false;
         const N = G.players.length;
         G.players.forEach((p, i) => {
           p.x = W / 2 + (i - (N - 1) / 2) * 46;

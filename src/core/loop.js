@@ -1238,6 +1238,28 @@ export function update(dt) {
           }
           if (!cerca) G.arenaLock = false;
         }
+        // NPC de pruebas (QA, ?qa=1 -- ver core/gameflow.js): sube un nivel
+        // a todo el grupo por cada acercamiento, para probar las tarjetas
+        // de mejora sin tener que jugar plantas enteras. G.nivelLock evita
+        // que se dispare cada frame mientras sigues cerca; se resetea al
+        // alejarte, así que puedes repetir el proceso volviendo a acercarte.
+        if (G.escena === "lobby" && G.nivelNpc) {
+          const cerca = vivos().some(
+            (q) => Math.hypot(G.nivelNpc.x - q.x, G.nivelNpc.y - q.y) < 50,
+          );
+          if (cerca && !G.nivelLock && !G.pausa) {
+            G.nivelLock = true;
+            for (const p of vivos()) ganarXP(p, Math.max(1, p.xpSig - p.xp));
+            const conCartas = G.players.filter((pl) => pl.cartasPendientes > 0);
+            if (conCartas.length) {
+              G.pausa = true;
+              abrirCartasParaJugador(conCartas, 0, () => {
+                G.pausa = false;
+              });
+            }
+          }
+          if (!cerca) G.nivelLock = false;
+        }
 
         // fogata
         if (G.fogata && !G.fogataUsada) {
