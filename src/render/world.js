@@ -243,6 +243,20 @@ export function render() {
           }
         }
 
+        // aviso de tecla sobre un muro secreto interior (ver forma
+        // "arsenal" en floorgen.js): el muro se ve exactamente igual que
+        // cualquier otro hasta que un jugador se acerca -- distancia
+        // directa, no depende de p.secretoParedObj (solo del host), mismo
+        // patrón que el resto de avisos.
+        for (const m of G.muros) {
+          if (!m.secreto) continue;
+          const mcx = m.x + m.w / 2,
+            mcy = m.y + m.h / 2;
+          if (G.players.some((p) => !p.ko && Math.hypot(p.x - mcx, p.y - mcy) < 60)) {
+            dibujarAvisoTecla(mcx, mcy - 26, "E");
+          }
+        }
+
         // puertas de la mazmorra (ver systems/floorgen.js: cargarSala/cruzarPuerta)
         const ANG_PUERTA = { N: -Math.PI / 2, S: Math.PI / 2, E: 0, O: Math.PI };
         for (const pu of G.puertas || []) {

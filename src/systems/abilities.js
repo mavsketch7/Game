@@ -305,7 +305,26 @@ export function interactuar(p) {
             // cruza al momento -- el jugador tiene que volver a acercarse
             // y entrar, igual que cualquier otra puerta ya visible.
             const pu = p.secretoObj;
-            if (!pu) return;
+            if (!pu) {
+              // tampoco hay puerta secreta: ¿un muro secreto INTERIOR
+              // cerca? (ver p.secretoParedObj en core/loop.js -- una sala
+              // como "arsenal" puede tener un tramo de muro que en
+              // realidad es un paso oculto). A diferencia de la puerta
+              // secreta, aquí se quita el muro directamente: no hace
+              // falta "cruzar" nada porque es la misma sala.
+              const muroSecreto = p.secretoParedObj;
+              if (!muroSecreto) return;
+              const idxMuro = G.muros.indexOf(muroSecreto);
+              if (idxMuro < 0) return;
+              G.muros.splice(idxMuro, 1);
+              p.secretoParedObj = null;
+              const cxMuro = muroSecreto.x + muroSecreto.w / 2,
+                cyMuro = muroSecreto.y + muroSecreto.h / 2;
+              fxOnda(cxMuro, cyMuro, 30, "#c084f0");
+              fxParticulas(cxMuro, cyMuro, 14, "#c084f0");
+              toast(p.nombre + " descubre un paso secreto en el muro", "#c084f0");
+              return;
+            }
             pu.oculta = false;
             p.secretoObj = null;
             fxOnda(pu.x, pu.y, 40, "#c084f0");

@@ -251,6 +251,16 @@ export function update(dt) {
             (G.puertas || []).find(
               (pu) => pu.oculta && Math.hypot(pu.x - p.x, pu.y - p.y) < 46,
             ) || null;
+          // muro secreto INTERIOR (dentro de una misma sala, ver forma
+          // "arsenal" en floorgen.js) -- a diferencia de una puerta
+          // secreta entre salas, este es un G.muros real que bloquea el
+          // paso hasta que se revela con E; entonces se quita del array.
+          p.secretoParedObj =
+            (G.muros || []).find(
+              (m) =>
+                m.secreto &&
+                Math.hypot(m.x + m.w / 2 - p.x, m.y + m.h / 2 - p.y) < 60,
+            ) || null;
           for (let i = p.trail.length - 1; i >= 0; i--) {
             p.trail[i].t -= dt;
             if (p.trail[i].t <= 0) p.trail.splice(i, 1);

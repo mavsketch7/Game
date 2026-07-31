@@ -100,6 +100,7 @@ export function nuevaPartida() {
             cofreObj: null,
             dropObj: null,
             secretoObj: null,
+            secretoParedObj: null,
             _retoAvisoT: 0,
             rootT: 0,
             hazTick: 0,
