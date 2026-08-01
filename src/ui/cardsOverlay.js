@@ -21,6 +21,9 @@ function cartaFrameUrl(rar) {
   if (!file) return "";
   return `${import.meta.env.BASE_URL}assets/sprites/${file}`;
 }
+function skillIconUrl(img) {
+  return `${import.meta.env.BASE_URL}assets/sprites/${img}.png`;
+}
 
 export function abrirCartasParaJugador(lista, idx, onDone) {
         if (idx >= lista.length) {
@@ -54,10 +57,14 @@ export function abrirCartasParaJugador(lista, idx, onDone) {
       <button class="carta-mejora ${c.rar ? "rar-" + c.rar : ""}" id="carta-${i}" onclick="elegirCarta(${i})" style="background-image:url('${cartaFrameUrl(c.rar)}')">
         <div class="rar-badge">${CARD_RAREZAS.find((r) => r.id === c.rar)?.nombre || c.rar}</div>
         <div class="carta-top">
-          <div class="carta-icono">${c.ico}</div>
-          <h3>${c.nombre}</h3>
+          ${
+            c.img
+              ? `<div class="carta-icono carta-icono-img" style="background-image:url('${skillIconUrl(c.img)}')"></div>`
+              : `<div class="carta-icono">${c.ico}</div>`
+          }
         </div>
         <div class="carta-bottom">
+          <h3>${c.nombre}</h3>
           <div class="carta-desc">${c.desc}</div>
           <div class="carta-val">${c.val}</div>
         </div>

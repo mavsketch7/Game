@@ -856,12 +856,15 @@ body.pantalla-completa #hint {
   animation: cartaEntra 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 .carta-top {
-  color: #1c1a24;
-  flex: 0 0 auto;
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 .carta-bottom {
   color: var(--ceniza);
-  flex: 1 1 auto;
+  flex: 0 0 auto;
   margin-top: 6%;
   overflow: hidden;
 }
@@ -915,12 +918,18 @@ body.pantalla-completa #hint {
 }
 .carta-mejora .carta-icono {
   width: 100%;
+  height: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 1.8rem;
-  margin-bottom: 6%;
   transition: transform 0.18s;
+}
+.carta-mejora .carta-icono-img {
+  background-size: contain;
+  background-position: center;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
 }
 .carta-mejora:hover .carta-icono {
   transform: scale(1.08) rotate(-4deg);
@@ -929,7 +938,8 @@ body.pantalla-completa #hint {
   font-size: 0.92rem;
   font-family: "Cinzel", serif;
   text-align: center;
-  color: #201d29;
+  color: var(--vespero);
+  margin-bottom: 4px;
 }
 .carta-mejora .carta-desc {
   font-size: 0.72rem;
@@ -986,7 +996,7 @@ body.pantalla-completa #hint {
 .rar-legendario::after {
   content: "";
   position: absolute;
-  inset: 15% 16% 60% 16%;
+  inset: 15% 16% 8% 16%;
   background: linear-gradient(
     115deg,
     transparent 30%,

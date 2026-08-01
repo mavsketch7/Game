@@ -23,6 +23,7 @@ function poolCartas(rol) {
           {
             rar: "normal",
             ico: "❤️",
+            img: "hp+",
             nombre: "Vitalidad",
             desc: "Incremento de vida máxima.",
             val: "+35 HP",
@@ -33,6 +34,7 @@ function poolCartas(rol) {
           {
             rar: "normal",
             ico: "⚡",
+            img: "atq+",
             nombre: "Adrenalina",
             desc: "Pequeño aumento de daño base.",
             val: "+3 daño",
@@ -43,6 +45,7 @@ function poolCartas(rol) {
           {
             rar: "normal",
             ico: "🛡️",
+            img: "def+",
             nombre: "Piel Dura",
             desc: "Incremento de armadura.",
             val: "+3 arm.",
@@ -53,6 +56,7 @@ function poolCartas(rol) {
           {
             rar: "normal",
             ico: "💨",
+            img: "agi+",
             nombre: "Paso Ligero",
             desc: "Pequeño aumento de velocidad de movimiento.",
             val: "+8 vel.",
@@ -63,6 +67,7 @@ function poolCartas(rol) {
           {
             rar: "magico",
             ico: "❤️",
+            img: "hp+",
             nombre: "Corazón Fuerte",
             desc: "Gran aumento de vida máxima.",
             val: "+70 HP",
@@ -73,6 +78,7 @@ function poolCartas(rol) {
           {
             rar: "magico",
             ico: "⚡",
+            img: "atq+",
             nombre: "Furia",
             desc: "Mejora notable de daño.",
             val: "+7 daño",
@@ -83,6 +89,7 @@ function poolCartas(rol) {
           {
             rar: "magico",
             ico: "⚔️",
+            img: "crit+",
             nombre: "Ojo Crítico",
             desc: "Probabilidad de crítico aumentada.",
             val: "+8% crítico",
@@ -93,6 +100,7 @@ function poolCartas(rol) {
           {
             rar: "magico",
             ico: "💎",
+            img: "def+",
             nombre: "Escama Arcana",
             desc: "Mejora de armadura y algo de daño.",
             val: "+4 arm/+2 atk",
@@ -104,6 +112,7 @@ function poolCartas(rol) {
           {
             rar: "raro",
             ico: "🌀",
+            img: "agi+",
             nombre: "Ímpetu Constante",
             desc: "+12% velocidad de ataque permanente.",
             val: "+12% vel.atk",
@@ -114,6 +123,7 @@ function poolCartas(rol) {
           {
             rar: "raro",
             ico: "❤️",
+            img: "hp+",
             nombre: "Reserva Vital",
             desc: "Gran aumento de vida máxima.",
             val: "+120 HP",
@@ -124,6 +134,7 @@ function poolCartas(rol) {
           {
             rar: "raro",
             ico: "⚡",
+            img: "atq+",
             nombre: "Poder Bruto",
             desc: "Alto aumento de daño base.",
             val: "+14 daño",
@@ -144,6 +155,7 @@ function poolCartas(rol) {
           {
             rar: "epico",
             ico: "⚡",
+            img: "atq+",
             nombre: "Heraldo del Daño",
             desc: "Muy alto aumento de daño.",
             val: "+22 daño",
@@ -154,6 +166,7 @@ function poolCartas(rol) {
           {
             rar: "epico",
             ico: "❤️",
+            img: "hp+",
             nombre: "Titán",
             desc: "Vida máxima muy aumentada.",
             val: "+200 HP",
@@ -164,6 +177,7 @@ function poolCartas(rol) {
           {
             rar: "epico",
             ico: "⚔️",
+            img: "crit+",
             nombre: "Maestro del Crítico",
             desc: "Gran bonificación de crítico.",
             val: "+18% crítico",
@@ -174,6 +188,7 @@ function poolCartas(rol) {
           {
             rar: "epico",
             ico: "🛡️",
+            img: "def+",
             nombre: "Muralla",
             desc: "Alta armadura y algo de HP.",
             val: "+12 arm/+80 HP",
@@ -185,6 +200,7 @@ function poolCartas(rol) {
           {
             rar: "legendario",
             ico: "⚡",
+            img: "atq+",
             nombre: "Furia del Véspero",
             desc: "Enorme aumento de daño. Para los valientes.",
             val: "+38 daño",
@@ -195,6 +211,7 @@ function poolCartas(rol) {
           {
             rar: "legendario",
             ico: "❤️",
+            img: "hp+",
             nombre: "Inmortalidad",
             desc: "Vida máxima masiva.",
             val: "+350 HP",
@@ -205,6 +222,7 @@ function poolCartas(rol) {
           {
             rar: "legendario",
             ico: "🌀",
+            img: "x2",
             nombre: "Doble Ejecución",
             desc: "La habilidad especial se lanza dos veces.",
             val: "×2 Ulti",
