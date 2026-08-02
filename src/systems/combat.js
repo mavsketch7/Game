@@ -393,7 +393,7 @@ export function ganarXP(p, cantidad) {
               p.nombre +
                 ": ⚡ ¡ULTI DESBLOQUEADA! (" +
                 ROLES[p.rol].skill.nombre +
-                " — E / Y)",
+                " — Q / Y)",
               "#e9b45c",
             );
             fxOnda(p.x, p.y, 64, "#ffd27f");

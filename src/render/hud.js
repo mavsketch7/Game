@@ -169,7 +169,7 @@ export function renderHUD() {
             cx.textAlign = "center";
             cx.fillText("🔒" + NIVEL_ULTI, x + 38, iy + 11);
           } else {
-            iconoCd(x + 30, iy, 16, "E", p.skillCd, b.skill.cd, "#e9b45c");
+            iconoCd(x + 30, iy, 16, "Q", p.skillCd, b.skill.cd, "#e9b45c");
           }
           if (p.rol === "mago") {
             ELEM_MAGO.forEach((el, k) => {
