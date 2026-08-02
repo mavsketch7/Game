@@ -15,11 +15,45 @@ export function initAudio() {
         musGain = audioCtx.createGain();
         musGain.connect(audioCtx.destination);
         musGain.gain.value = 0;
+        cargarMythicDropBuffer();
       }
 
 export function reanudarAudio() {
         if (audioCtx && audioCtx.state === "suspended") audioCtx.resume();
       }
+
+// Sonido de archivo real (no sintetizado) para el drop de objetos Míticos.
+// Se precarga en cuanto arranca el audio para que suene sin retardo al caer.
+let mythicDropBuffer = null;
+let mythicDropLoading = null;
+function cargarMythicDropBuffer() {
+  if (mythicDropBuffer || mythicDropLoading || !audioCtx) return mythicDropLoading;
+  const url = `${import.meta.env.BASE_URL}assets/audio/mythic_drop_sound.webm`;
+  mythicDropLoading = fetch(url)
+    .then((r) => r.arrayBuffer())
+    .then((buf) => audioCtx.decodeAudioData(buf))
+    .then((decoded) => {
+      mythicDropBuffer = decoded;
+    })
+    .catch(() => {});
+  return mythicDropLoading;
+}
+function reproducirMythicDrop() {
+  if (!audioCtx) return;
+  const vol = AJ.volMaster * AJ.volSfx;
+  const play = () => {
+    if (!mythicDropBuffer) return;
+    const src = audioCtx.createBufferSource();
+    src.buffer = mythicDropBuffer;
+    const g = audioCtx.createGain();
+    g.gain.value = vol;
+    src.connect(g);
+    g.connect(audioCtx.destination);
+    src.start();
+  };
+  if (mythicDropBuffer) play();
+  else cargarMythicDropBuffer()?.then(play);
+}
 
 export function sfx(tipo) {
         if (AJ.silencio || !audioCtx) return;
@@ -72,6 +106,7 @@ export function sfxDropEpico(rareza) {
         const now = audioCtx.currentTime;
         const vol = AJ.volMaster * AJ.volSfx;
         const mitico = rareza >= 4;
+        if (mitico) reproducirMythicDrop();
         const capa = (f0, f1, tipo, dur, v, delay) => {
           const t0 = now + delay;
           const osc = audioCtx.createOscillator();
@@ -90,7 +125,6 @@ export function sfxDropEpico(rareza) {
         capa(160, 45, "sawtooth", 0.22, 0.5, 0); // impacto grave: el "peso" del objeto
         capa(280, 1500, "sine", mitico ? 0.9 : 0.7, 0.4, 0.03); // barrido principal
         capa(900, 1800, "triangle", mitico ? 0.7 : 0.5, 0.22, 0.12); // brillo armónico ("campana")
-        if (mitico) capa(2000, 3200, "sine", 0.35, 0.18, 0.5); // guinda final solo Mítico
       }
 
 // Golpe de aterrizaje: se dispara para CUALQUIER objeto al tocar el suelo

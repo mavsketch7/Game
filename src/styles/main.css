@@ -833,7 +833,7 @@ body.pantalla-completa #hint {
   perspective: 900px;
 }
 .carta-mejora {
-  aspect-ratio: 500 / 633;
+  aspect-ratio: 500 / 630;
   max-width: 260px;
   margin: 0 auto;
   background-color: transparent;
@@ -842,7 +842,7 @@ body.pantalla-completa #hint {
   background-repeat: no-repeat;
   background-position: center;
   border-radius: 0;
-  padding: 15% 16% 6%;
+  padding: 0;
   cursor: pointer;
   transition:
     transform 0.18s cubic-bezier(0.34, 1.56, 0.64, 1),
@@ -851,22 +851,45 @@ body.pantalla-completa #hint {
   border: none;
   position: relative;
   overflow: hidden;
-  display: flex;
-  flex-direction: column;
+  display: block;
   animation: cartaEntra 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
+/* Insets medidos en píxel sobre el marco de 500x630: coinciden exactamente
+   con el recorte transparente de cada plantilla (normal/mágico/raro
+   comparten un marco; épico/legendario usan otro con el recorte algo
+   menor por los engarces de gema en el pilar izquierdo). */
 .carta-top {
-  flex: 1 1 auto;
-  min-height: 0;
+  position: absolute;
   display: flex;
   align-items: center;
   justify-content: center;
+  overflow: hidden;
+  top: 15.6%;
+  left: 12.4%;
+  right: 12%;
+  bottom: 37.8%;
+}
+.rar-epico .carta-top,
+.rar-legendario .carta-top {
+  top: 16.8%;
+  left: 13.4%;
+  right: 13.2%;
+  bottom: 40.8%;
 }
 .carta-bottom {
+  position: absolute;
   color: var(--ceniza);
-  flex: 0 0 auto;
-  margin-top: 6%;
   overflow: hidden;
+  top: 62.2%;
+  left: 12.4%;
+  right: 12%;
+  bottom: 6%;
+}
+.rar-epico .carta-bottom,
+.rar-legendario .carta-bottom {
+  top: 59.2%;
+  left: 13.4%;
+  right: 13.2%;
 }
 .carta-mejora:nth-child(1) {
   animation-delay: 0.05s;
@@ -905,7 +928,7 @@ body.pantalla-completa #hint {
 }
 .carta-mejora .rar-badge {
   position: absolute;
-  top: 4%;
+  top: 7%;
   left: 0;
   right: 0;
   text-align: center;
@@ -926,10 +949,9 @@ body.pantalla-completa #hint {
   transition: transform 0.18s;
 }
 .carta-mejora .carta-icono-img {
-  background-size: contain;
+  background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
-  image-rendering: pixelated;
 }
 .carta-mejora:hover .carta-icono {
   transform: scale(1.08) rotate(-4deg);
