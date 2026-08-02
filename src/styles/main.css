@@ -834,6 +834,7 @@ body.pantalla-completa #hint {
 }
 .carta-mejora {
   aspect-ratio: 500 / 630;
+  width: 100%;
   max-width: 260px;
   margin: 0 auto;
   background-color: transparent;
