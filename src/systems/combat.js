@@ -70,7 +70,9 @@ export function statsTot(p) {
         return t;
       }
 
-export const vivos = () => G.players.filter((p) => !p.ko);
+export function vivos() {
+  return G.players.filter((p) => !p.ko);
+}
 
 export function masCercano(x, y) {
         let mejor = null,

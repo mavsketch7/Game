@@ -7,7 +7,7 @@ async function unirseGremioPorId(guildId, playerId, playerName) {
   if (error) throw error;
 }
 
-export async function buscarGremioPorNombre(nombre) {
+async function buscarGremioPorNombre(nombre) {
   const { data, error } = await supabase
     .from("guilds")
     .select("id, name, tag")

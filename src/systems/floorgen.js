@@ -489,7 +489,7 @@ function conectar(a, b, dirDesdeA) {
 
 // Paseo aleatorio simple sobre una cuadrícula 3x3: basta para 3-5 salas,
 // no hace falta nada más sofisticado (BSP, etc.) para el alcance actual.
-export function generarGrafoPlanta() {
+function generarGrafoPlanta() {
         const nSalas = ri(3, 5);
         const ocupadas = new Map();
         const gxInicial = ri(0, GRID - 1),
@@ -581,7 +581,7 @@ function salaPorId2(salas, id) {
         return salas.find((s) => s.id === id);
       }
 
-export function salaPorId(id) {
+function salaPorId(id) {
         return G.mazmorra && G.mazmorra.salas.find((s) => s.id === id);
       }
 
@@ -646,7 +646,7 @@ function poblarSala(sala, f) {
 // hoy está en G"). La forma/muros se generan la primera vez que se visita
 // y se reutilizan después; los enemigos/pilares/objetos supervivientes de
 // una sala ya visitada NO se regeneran al volver a entrar.
-export function cargarSala(sala) {
+function cargarSala(sala) {
         G.mazmorra.salaActualId = sala.id;
         if (!sala.visitada) {
           generarMapa(

@@ -20,6 +20,23 @@ import { abrirTienda } from "../ui/shop.js";
 import { abrirSkins } from "../ui/skins.js";
 import { az, clamp, rnd } from "../utils/helpers.js";
 
+// Cooldowns simples que decrecen linealmente con dt cada frame para cada
+// jugador vivo -- hoisted fuera de update() para no crear un array nuevo
+// por jugador y por frame.
+const CDS_LINEALES = [
+  "atkCd",
+  "castCd",
+  "skillCd",
+  "dashCd",
+  "disparoCd",
+  "invulT",
+  "parryT",
+  "parryCd",
+  "golpeT",
+  "swingT",
+  "hasteT",
+];
+
 export function update(dt) {
         if (NET.modo === "host") netAplicarInputs();
         G.stats.tiempo += dt;
@@ -51,20 +68,7 @@ export function update(dt) {
           }
           const t = statsTot(p),
             b = ROLES[p.rol];
-          for (const k of [
-            "atkCd",
-            "castCd",
-            "skillCd",
-            "dashCd",
-            "disparoCd",
-            "invulT",
-            "parryT",
-            "parryCd",
-            "golpeT",
-            "swingT",
-            "hasteT",
-          ])
-            if (p[k] > 0) p[k] -= dt;
+          for (const k of CDS_LINEALES) if (p[k] > 0) p[k] -= dt;
           for (let i = 0; i < 3; i++) if (p.supCd[i] > 0) p.supCd[i] -= dt;
           if (p.formCd > 0) p.formCd -= dt;
           p.res = clamp(

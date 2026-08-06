@@ -1,6 +1,6 @@
 // Auto-generated during the modularization refactor (2026-07-23).
 import Peer from "peerjs";
-import { H, W } from "../core/canvas.js";
+import { H } from "../core/canvas.js";
 import { SALA_H, SALA_W } from "../core/constants.js";
 import { META } from "../core/save.js";
 import { G, setG } from "../core/state.js";
