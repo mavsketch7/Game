@@ -4,7 +4,7 @@ import { TAU } from "../core/canvas.js";
 // de enemigos DENTRO de la sala (mundo), no del viewport -- ver el mismo
 // truco en systems/floorgen.js.
 import { MAX_NIV_PJ, ROLES, SALA_H as H, SALA_W as W, SLOTS, XP_POR_PLANTA, XP_TABLA } from "../core/constants.js";
-import { META } from "../core/save.js";
+import { META, guardarMeta } from "../core/save.js";
 import { G } from "../core/state.js";
 import { fxOnda, fxParticulas, fxTexto } from "../render/effects.js";
 import { NIVEL_ULTI, danoPilar, golpeObjeto } from "./abilities.js";
@@ -13,6 +13,7 @@ import { NOMBRES_MINI, arquetipoJefe, escalaEnemigo, nombreJefe } from "./bosses
 import { posDropValida, puntoValido } from "./floorgen.js";
 import { dropItem, finPartida, genItem } from "./loot.js";
 import { tieneEfecto } from "./objetosMiticos.js";
+import { aplicarBonusAlma } from "./soul.js";
 import { banner, toast } from "../ui/notifications.js";
 import { az, clamp, ri, rnd } from "../utils/helpers.js";
 
@@ -49,6 +50,8 @@ export function statsTot(p) {
         t.vel += META.mejoras.vel * 4;
         t.crit += META.mejoras.crit * 2;
         t.cdr += META.mejoras.cdr * 3;
+        // fragmentos de Alma colocados (ver systems/soul.js)
+        aplicarBonusAlma(t);
         // formas del druida
         if (p.rol === "druida" && p.forma && p.forma !== "humano") {
           if (p.forma === "aguila") {
@@ -387,6 +390,11 @@ export function ganarXP(p, cantidad) {
           p.nivel++;
           sfx("nivel");
           p.xpSig = XP_TABLA[Math.min(p.nivel, MAX_NIV_PJ - 1)];
+          // cada nivel (de cualquier personaje, en cualquier partida) da
+          // derecho a romper una casilla más en la rejilla de Alma -- ver
+          // systems/soul.js. Es progreso de cuenta, se guarda ya mismo.
+          META.alma.puntos++;
+          guardarMeta();
           if (p.nivel % 4 === 0) {
             p.cartasPendientes++;
           }

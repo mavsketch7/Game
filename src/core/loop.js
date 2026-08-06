@@ -18,6 +18,7 @@ import { banner, toast } from "../ui/notifications.js";
 import { abrirArenaPvp } from "../ui/pvp.js";
 import { abrirTienda } from "../ui/shop.js";
 import { abrirSkins } from "../ui/skins.js";
+import { abrirYunque } from "../ui/workbench.js";
 import { az, clamp, rnd } from "../utils/helpers.js";
 
 // Cooldowns simples que decrecen linealmente con dt cada frame para cada
@@ -1231,6 +1232,17 @@ export function update(dt) {
             abrirSkins();
           }
           if (!cerca) G.skinLock = false;
+        }
+        // Mesa de Trabajo / Yunque (solo en lobby): desmantelar armas en
+        // Fragmentos de Alma -- ver ui/workbench.js y systems/soul.js.
+        if (G.escena === "lobby" && G.yunqueNpc) {
+          const cerca = vivos().some(
+            (q) => Math.hypot(G.yunqueNpc.x - q.x, G.yunqueNpc.y - q.y) < 50,
+          );
+          if (cerca && !G.yunqueLock && !G.pausa) {
+            abrirYunque();
+          }
+          if (!cerca) G.yunqueLock = false;
         }
         // portal de la Arena PvP (solo en lobby): jugadores contra jugadores
         if (G.escena === "lobby" && G.arenaNpc) {

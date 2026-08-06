@@ -157,6 +157,8 @@ export function nuevaPartida() {
           skinLock: false,
           arenaNpc: null,
           arenaLock: false,
+          yunqueNpc: null,
+          yunqueLock: false,
           oroRun: 0,
           shake: 0,
           banner: { txt: "", t: 0 },
@@ -197,6 +199,7 @@ export function iniciarLobby() {
         G.mercader = { x: W - 130, y: H / 2 - 40 };
         G.skinNpc = { x: 110, y: H / 2 - 40 };
         G.arenaNpc = { x: W / 2, y: H - 130 };
+        G.yunqueNpc = { x: W - 130, y: 90 };
         // Cofre de pruebas (QA): solo aparece con ?qa=1 en la URL -- a
         // propósito NO depende de import.meta.env.DEV para que se pueda
         // activar también en el build de producción sin tener que montar
@@ -221,6 +224,7 @@ export function iniciarLobby() {
         G.skinLock = false;
         G.arenaLock = false;
         G.nivelLock = false;
+        G.yunqueLock = false;
         const N = G.players.length;
         G.players.forEach((p, i) => {
           p.x = W / 2 + (i - (N - 1) / 2) * 46;

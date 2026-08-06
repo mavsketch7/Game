@@ -10,6 +10,19 @@ import { statsTot } from "../systems/combat.js";
 import { M } from "../systems/input.js";
 import { genItem } from "../systems/loot.js";
 import { genObjetoMitico } from "../systems/objetosMiticos.js";
+import {
+  ALMA_COLS,
+  ALMA_TOTAL,
+  colocarFragmento,
+  conexionesActivas,
+  costeCasillaAlma,
+  desbloquearCasillaAlma,
+  fragPorId,
+  idxAXY,
+  mapaOcupacion,
+  puedeDesbloquearCasilla,
+  quitarFragmento,
+} from "../systems/soul.js";
 import { banner, toast } from "./notifications.js";
 import { mostrar, ocultar } from "./overlays.js";
 import { clamp } from "../utils/helpers.js";
@@ -29,24 +42,29 @@ function escHtml(s) {
 const PESTANAS_INV = [
         { id: "personaje", ico: "🧑", nombre: "Personaje" },
         { id: "equipo", ico: "🎒", nombre: "Equipamiento" },
+        { id: "alma", ico: "🔮", nombre: "Alma" },
         { id: "stats", ico: "📊", nombre: "Estadísticas" },
         { id: "mapa", ico: "🗺", nombre: "Mapa" },
       ];
 let invTab = "personaje";
 // objeto de la bolsa seleccionado en la pestaña Equipamiento (-1 = ninguno)
 let idxSel = -1;
+// uid del fragmento de la bolsa de Alma elegido para colocar (null = ninguno)
+let fragSel = null;
 
 export function cambiarPestanaInv(dir) {
         const i = PESTANAS_INV.findIndex((t) => t.id === invTab);
         const n = PESTANAS_INV.length;
         invTab = PESTANAS_INV[(((i + dir) % n) + n) % n].id;
         idxSel = -1;
+        fragSel = null;
         abrirInv();
       }
 
 function irPestanaInv(id) {
         invTab = id;
         idxSel = -1;
+        fragSel = null;
         abrirInv();
       }
 
@@ -607,6 +625,223 @@ function tabMapa() {
         );
       }
 
+// ---- Pestaña Alma (Fragmentos, ver systems/soul.js) ----
+
+const DIR_FLECHA = { N: "↑", S: "↓", E: "→", W: "←" };
+
+function fmtStatsFrag(stat) {
+        return Object.entries(stat)
+          .map(([k, v]) => "+" + v + " " + (ETQ_CORTA[k] || k))
+          .join(" · ");
+      }
+
+// Miniatura de la forma del fragmento (bounding box en casillas) para la
+// lista de la bolsa -- igual de útil que un número para saber si un
+// fragmento de 3 casillas en L va a caber en el hueco que te queda.
+function miniFormaHtml(frag) {
+        const xs = frag.forma.map(([dx]) => dx),
+          ys = frag.forma.map(([, dy]) => dy);
+        const minX = Math.min(...xs),
+          maxX = Math.max(...xs),
+          minY = Math.min(...ys),
+          maxY = Math.max(...ys);
+        const w = maxX - minX + 1,
+          h = maxY - minY + 1;
+        const ocupadas = new Set(
+          frag.forma.map(([dx, dy]) => dx - minX + "," + (dy - minY)),
+        );
+        let celdas = "";
+        for (let y = 0; y < h; y++)
+          for (let x = 0; x < w; x++)
+            celdas +=
+              '<div class="mini-frag-cel' +
+              (ocupadas.has(x + "," + y) ? " on" : "") +
+              '"></div>';
+        return (
+          '<div class="mini-frag" style="grid-template-columns:repeat(' +
+          w +
+          ',1fr)">' +
+          celdas +
+          "</div>"
+        );
+      }
+
+function fragEnBolsaLinea(f) {
+        const frag = fragPorId(f.fragId);
+        if (!frag) return "";
+        const rar = RAREZAS[frag.rareza];
+        const seleccionado = fragSel === f.uid;
+        return (
+          '<div class="frag-item ' +
+          rar.cls +
+          (seleccionado ? " seleccionada" : "") +
+          '" style="border-color:' +
+          rar.col +
+          '" onclick="seleccionarFragAlma(\'' +
+          f.uid +
+          "')\">" +
+          '<div class="frag-item-cab"><span class="frag-item-ico">' +
+          frag.ico +
+          "</span>" +
+          miniFormaHtml(frag) +
+          "</div>" +
+          '<div class="frag-item-nombre ' +
+          rar.cls +
+          '">' +
+          escHtml(frag.nombre) +
+          "</div>" +
+          '<div class="frag-item-desc">' +
+          fmtStatsFrag(frag.stat) +
+          "</div>" +
+          (frag.bonusConexion
+            ? '<div class="frag-item-conexion">🔗 si conecta: +' +
+              fmtStatsFrag(frag.bonusConexion) +
+              "</div>"
+            : "") +
+          "</div>"
+        );
+      }
+
+function celdaAlmaHtml(idx) {
+        const { x, y } = idxAXY(idx);
+        const a = META.alma;
+        if (!a.desbloqueadas.includes(idx)) {
+          const coste = costeCasillaAlma(a.desbloqueadas.length);
+          const puede = puedeDesbloquearCasilla(idx);
+          return (
+            '<div class="alma-celda bloqueada' +
+            (puede ? " rompible" : "") +
+            '" title="Romper casilla: ' +
+            coste +
+            ' 🪙 + 1 punto de desbloqueo" onclick="intentarDesbloquearAlma(' +
+            idx +
+            ')">🔒<span class="alma-coste">' +
+            coste +
+            "</span></div>"
+          );
+        }
+        const oc = mapaOcupacion().get(idx);
+        if (oc) {
+          const frag = fragPorId(oc.fragId);
+          const rar = RAREZAS[frag.rareza];
+          const esAncla = oc.x === x && oc.y === y;
+          const conectado = conexionesActivas().has(oc.uid);
+          const lx = x - oc.x,
+            ly = y - oc.y;
+          let marca = "";
+          if (frag.entrada && frag.entrada.x === lx && frag.entrada.y === ly)
+            marca +=
+              '<span class="alma-dir entrada">' +
+              DIR_FLECHA[frag.entrada.dir] +
+              "</span>";
+          if (frag.salida && frag.salida.x === lx && frag.salida.y === ly)
+            marca +=
+              '<span class="alma-dir salida">' +
+              DIR_FLECHA[frag.salida.dir] +
+              "</span>";
+          return (
+            '<div class="alma-celda ocupada ' +
+            rar.cls +
+            (conectado ? " conectada" : "") +
+            '" style="border-color:' +
+            rar.col +
+            '" title="' +
+            escHtml(frag.nombre) +
+            (conectado ? " (conectado)" : "") +
+            '" onclick="quitarFragmentoAlma(\'' +
+            oc.uid +
+            "')\">" +
+            (esAncla ? frag.ico : "") +
+            marca +
+            "</div>"
+          );
+        }
+        return (
+          '<div class="alma-celda vacia' +
+          (fragSel ? " objetivo" : "") +
+          '" onclick="intentarColocarAlma(' +
+          idx +
+          ')"></div>'
+        );
+      }
+
+function tabAlma() {
+        const a = META.alma;
+        const celdas = Array.from({ length: ALMA_TOTAL }, (_, i) =>
+          celdaAlmaHtml(i),
+        ).join("");
+        const bolsaFrag = a.inventario.length
+          ? a.inventario.map(fragEnBolsaLinea).join("")
+          : '<p style="color:var(--ceniza);font-size:.8rem">Sin fragmentos sueltos. Desmantela armas en la Mesa de Trabajo del vestíbulo.</p>';
+        return (
+          '<div class="alma-cab">' +
+          '<b style="color:var(--vespero)">🔮 Rejilla del Alma</b>' +
+          '<div style="font-size:.75rem;color:var(--ceniza);margin-top:2px">Progreso de cuenta, compartido por todo el grupo. Rompe casillas con oro + puntos (uno por cada nivel que alcance cualquier personaje) y encaja fragmentos: si la salida de uno conecta con la entrada de otro, se activa su bonificación extra.</div>' +
+          '<div style="margin-top:6px;font-size:.8rem">🪙 ' +
+          META.oro +
+          " &nbsp;·&nbsp; ✦ " +
+          a.puntos +
+          " punto" +
+          (a.puntos === 1 ? "" : "s") +
+          " de desbloqueo &nbsp;·&nbsp; " +
+          a.desbloqueadas.length +
+          "/" +
+          ALMA_TOTAL +
+          " casillas rotas</div>" +
+          "</div>" +
+          '<div class="alma-grid" style="grid-template-columns:repeat(' +
+          ALMA_COLS +
+          ',1fr)">' +
+          celdas +
+          "</div>" +
+          '<h3 style="margin-top:14px;font-size:.85rem;color:var(--vespero)">Fragmentos sueltos (' +
+          a.inventario.length +
+          ")</h3>" +
+          (fragSel
+            ? '<div style="font-size:.72rem;color:var(--ceniza);margin:2px 0 6px">Fragmento seleccionado: haz clic en una casilla desbloqueada y vacía para colocarlo.</div>'
+            : "") +
+          '<div class="frag-bolsa">' +
+          bolsaFrag +
+          "</div>"
+        );
+      }
+
+function seleccionarFragAlma(uid) {
+        fragSel = fragSel === uid ? null : uid;
+        abrirInv();
+      }
+
+function intentarColocarAlma(idx) {
+        if (!fragSel) {
+          toast("Selecciona antes un fragmento de la bolsa", "#c9a35a");
+          return;
+        }
+        const { x, y } = idxAXY(idx);
+        const ok = colocarFragmento(fragSel, x, y);
+        if (ok) {
+          toast("Fragmento colocado", "#7fd4c1");
+          fragSel = null;
+        } else {
+          toast("No encaja ahí (forma o casillas bloqueadas)", "#d1545c");
+        }
+        abrirInv();
+      }
+
+function quitarFragmentoAlma(uid) {
+        quitarFragmento(uid);
+        abrirInv();
+      }
+
+function intentarDesbloquearAlma(idx) {
+        if (desbloquearCasillaAlma(idx)) toast("Casilla rota", "#ffd27f");
+        else
+          toast(
+            "No puedes romper esa casilla todavía (oro o puntos insuficientes)",
+            "#c9a35a",
+          );
+        abrirInv();
+      }
+
 // Panel con la descripción/acciones del objeto de la bolsa seleccionado en
 // la cuadrícula (equipar, fusión, vender, tirar, dar a otro jugador) --
 // separado de la celda para que la cuadrícula se mantenga compacta.
@@ -853,6 +1088,7 @@ export function abrirInv() {
         ).join("");
         let contenido;
         if (invTab === "equipo") contenido = tabEquipo(p);
+        else if (invTab === "alma") contenido = tabAlma();
         else if (invTab === "stats") contenido = tabStats(p, t);
         else if (invTab === "mapa") contenido = tabMapa();
         else contenido = tabPersonaje(p, t, b);
@@ -924,6 +1160,8 @@ export function toggleInv() {
         if (!document.getElementById("tienda").classList.contains("oculto"))
           return;
         if (!document.getElementById("skins").classList.contains("oculto"))
+          return;
+        if (!document.getElementById("yunque").classList.contains("oculto"))
           return;
         if (G.pausa) cerrarInv();
         else abrirInv();
@@ -999,10 +1237,14 @@ window.equipar = equipar;
 window.filtrarBolsa = filtrarBolsa;
 window.fusionRapida = fusionRapida;
 window.fusionar = fusionar;
+window.intentarColocarAlma = intentarColocarAlma;
+window.intentarDesbloquearAlma = intentarDesbloquearAlma;
 window.invSel = invSel;
 window.irPestanaInv = irPestanaInv;
 window.ordenarBolsa = ordenarBolsa;
+window.quitarFragmentoAlma = quitarFragmentoAlma;
 window.selItemInv = selItemInv;
+window.seleccionarFragAlma = seleccionarFragAlma;
 window.tirarItem = tirarItem;
 window.togFusion = togFusion;
 window.venderItem = venderItem;

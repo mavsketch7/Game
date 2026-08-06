@@ -875,6 +875,31 @@ export function render() {
           cx.font = "700 10px Alegreya Sans";
           cx.fillText("ARENA PvP — acércate", m.x, m.y + 34);
         }
+        // Mesa de Trabajo / Yunque (lobby): desmantelar armas en Fragmentos
+        // de Alma -- ver ui/workbench.js.
+        if (G.yunqueNpc) {
+          const m = G.yunqueNpc;
+          for (let k = 0; k < 3; k++) {
+            cx.strokeStyle = "rgba(201,163,90," + (0.9 - k * 0.28) + ")";
+            cx.lineWidth = 3;
+            cx.beginPath();
+            cx.arc(
+              m.x,
+              m.y,
+              22 - k * 6 + Math.sin(animGlobal * 3 + k) * 2,
+              0,
+              TAU,
+            );
+            cx.stroke();
+          }
+          cx.fillStyle = "#e9c98a";
+          cx.font = "700 13px Alegreya Sans";
+          cx.textAlign = "center";
+          cx.fillText("⚒", m.x, m.y + 5);
+          cx.fillStyle = "#c9a35a";
+          cx.font = "700 10px Alegreya Sans";
+          cx.fillText("MESA DE TRABAJO — acércate", m.x, m.y + 34);
+        }
         // NPC de pruebas (QA, ?qa=1): sube de nivel al grupo por proximidad
         if (G.nivelNpc) {
           const m = G.nivelNpc;

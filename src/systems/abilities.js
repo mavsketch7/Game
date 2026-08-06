@@ -11,6 +11,8 @@ import { curarP, danoAEnemigo, danoAlJugador, masCercano, statsTot, vivos } from
 import { posDropValida } from "./floorgen.js";
 import { dropItem, genItem } from "./loot.js";
 import { OBJETOS_MITICOS, genObjetoMitico, tieneEfecto } from "./objetosMiticos.js";
+import { FRAGMENTOS_CATALOGO } from "./soul.js";
+import { META, guardarMeta } from "../core/save.js";
 import { toast } from "../ui/notifications.js";
 import { clamp } from "../utils/helpers.js";
 
@@ -371,6 +373,19 @@ export function interactuar(p) {
             dropItem(pv.x, pv.y, item);
           });
           toast("🧪 Cofre de pruebas: set Mítico completo", "#ff5a36");
+          // set completo de Fragmentos de Alma (uno de cada tipo del
+          // catálogo, ver systems/soul.js) + puntos y oro de sobra para
+          // poder desbloquear casillas y probar la rejilla sin grindear.
+          FRAGMENTOS_CATALOGO.forEach((frag, i) => {
+            META.alma.inventario.push({
+              uid: "qa" + Date.now().toString(36) + i,
+              fragId: frag.id,
+            });
+          });
+          META.alma.puntos += 20;
+          META.oro += 2000;
+          guardarMeta();
+          toast("🔮 Cofre de pruebas: set de Fragmentos de Alma + 20 puntos + 2000 🪙", "#c9a35a");
           return;
         }
         const pv1 = posDropValida(cofre.x, cofre.y - 14);

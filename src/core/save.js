@@ -7,6 +7,22 @@ export const META = {
         mejoras: { hp: 0, atk: 0, armor: 0, vel: 0, fortuna: 0, crit: 0, cdr: 0 },
       };
 
+// Progreso del sistema de Fragmentos de Alma (ver systems/soul.js): es meta
+// -- de cuenta, no de personaje concreto -- igual que META.mejoras, así que
+// sus bonificaciones se aplican a todo el grupo en cualquier partida.
+//   - desbloqueadas: índices (0..48, rejilla 7x7) de casillas ya rotas.
+//   - colocados: fragmentos ya insertados en la rejilla ({uid, fragId, x, y}).
+//   - inventario: fragmentos sueltos sin colocar ({uid, fragId}).
+//   - puntos: "permiso" para romper una casilla, uno por cada nivel que
+//     alcance cualquier personaje en cualquier partida (ver ganarXP en
+//     systems/combat.js); romper una casilla gasta 1 punto + oro.
+META.alma = {
+  desbloqueadas: [24], // casilla central de la rejilla 7x7, gratis de partida
+  colocados: [],
+  inventario: [],
+  puntos: 0,
+};
+
 const CLAVE_META = "vespero_meta_v1";
 
 // Progreso entre partidas (oro, mejoras, skins) persistido en el propio
@@ -34,6 +50,16 @@ function cargarMeta() {
           if (Array.isArray(datos.skins.comprados))
             META.skins.comprados = datos.skins.comprados;
           if (datos.skins.equipada) META.skins.equipada = datos.skins.equipada;
+        }
+        if (datos.alma) {
+          if (Array.isArray(datos.alma.desbloqueadas))
+            META.alma.desbloqueadas = datos.alma.desbloqueadas;
+          if (Array.isArray(datos.alma.colocados))
+            META.alma.colocados = datos.alma.colocados;
+          if (Array.isArray(datos.alma.inventario))
+            META.alma.inventario = datos.alma.inventario;
+          if (typeof datos.alma.puntos === "number")
+            META.alma.puntos = datos.alma.puntos;
         }
       }
 

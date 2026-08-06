@@ -12,6 +12,7 @@ import { cerrarArenaPvp } from "../ui/pvp.js";
 import { abrirAjustes, cerrarAjustes, toggleSilencioRapido } from "../ui/settingsOverlay.js";
 import { cerrarTienda } from "../ui/shop.js";
 import { cerrarSkins } from "../ui/skins.js";
+import { cerrarYunque } from "../ui/workbench.js";
 
 export const keys = {};
 
@@ -171,6 +172,7 @@ const OVERLAYS_PAD = [
         "info-overlay",
         "tienda",
         "skins",
+        "yunque",
         "arena-pvp",
         "inv",
         "fin",
@@ -226,6 +228,7 @@ function padCierra() {
         if (ov === "inv") cerrarInv();
         else if (ov === "tienda") cerrarTienda();
         else if (ov === "skins") cerrarSkins();
+        else if (ov === "yunque") cerrarYunque();
         else if (ov === "arena-pvp") cerrarArenaPvp();
         else if (ov === "info-overlay") cerrarInfo();
         else if (ov === "ajustes") cerrarAjustes();
@@ -366,6 +369,12 @@ window.addEventListener("keydown", (e) => {
               !document.getElementById("skins").classList.contains("oculto")
             ) {
               cerrarSkins();
+              return;
+            }
+            if (
+              !document.getElementById("yunque").classList.contains("oculto")
+            ) {
+              cerrarYunque();
               return;
             }
             cerrarInv();
