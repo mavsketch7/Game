@@ -197,26 +197,51 @@ export function desbloquearCasillaAlma(idx) {
   return true;
 }
 
+// El "nivel de uso" solo existe para las armas Míticas y las Legendarias
+// ganadas por fusión (ver objetosMiticos.js / ui/inventory.js:fusionar()) --
+// el resto del loot no lleva la propiedad "kills" y estas dos constantes
+// simplemente no entran en juego para ellas (kills siempre 0 → sin bonus).
+const KILLS_POR_FRAGMENTO_EXTRA = 15;
+const MAX_FRAGMENTOS_EXTRA_POR_USO = 5;
+const KILLS_PARA_CALIDAD_GARANTIZADA = 30;
+
+function killsDe(item) {
+  return typeof item.kills === "number" ? item.kills : 0;
+}
+
 // Calidad del fragmento generado al desmantelar: normalmente igual o un
 // escalón por debajo de la rareza del arma (nunca por encima) -- un arma
 // Legendaria (3) puede soltar fragmentos Épicos o Legendarios, nunca Común.
-function calidadFragmento(rarezaArma) {
-  return clamp(rarezaArma - ri(0, 1), 0, 3);
+// Con suficientes kills encima (arma muy usada) se garantiza el escalón de
+// arriba, sin el escalón de abajo al azar.
+function calidadFragmento(rarezaArma, kills) {
+  const holgura = kills >= KILLS_PARA_CALIDAD_GARANTIZADA ? 0 : ri(0, 1);
+  return clamp(rarezaArma - holgura, 0, 3);
+}
+
+// Cuántos fragmentos suelta un arma al desmantelarla: escala con la rareza
+// (siempre) y, si el arma lleva contador de kills, también con cuánto se ha
+// usado -- un fragmento extra cada KILLS_POR_FRAGMENTO_EXTRA, con tope para
+// que no sea una fuente infinita si te dedicas a grindear con la misma arma.
+export function cantidadFragmentos(item) {
+  const extra = Math.min(
+    MAX_FRAGMENTOS_EXTRA_POR_USO,
+    Math.floor(killsDe(item) / KILLS_POR_FRAGMENTO_EXTRA),
+  );
+  return 1 + item.rareza + extra;
 }
 
 // Desmantela un arma (item de p.bolsa, slot === "arma") en varios
 // fragmentos: cantidad y calidad escalan con la rareza del arma -- cuanto
-// mejor el arma, más y mejores fragmentos. El "nivel de uso" descrito en el
-// diseño original (cuánto se ha usado el arma) no se rastrea todavía en el
-// modelo de item actual (ver systems/loot.js: genItem() no lleva contador
-// de golpes/kills) -- queda como mejora futura; de momento solo pesa la
-// rareza, igual que el resto de fórmulas de loot del juego.
+// mejor el arma (y, para Míticas/Legendarias de fusión, cuánto se haya
+// usado en combate) más y mejores fragmentos.
 export function desmantelarArma(item) {
   if (!item || item.slot !== "arma") return [];
-  const n = 1 + item.rareza;
+  const kills = killsDe(item);
+  const n = cantidadFragmentos(item);
   const nuevos = [];
   for (let i = 0; i < n; i++) {
-    const cal = calidadFragmento(item.rareza);
+    const cal = calidadFragmento(item.rareza, kills);
     const candidatos = FRAGMENTOS_CATALOGO.filter((f) => f.rareza === cal);
     const frag = az(candidatos.length ? candidatos : FRAGMENTOS_CATALOGO);
     const uid = "f" + Date.now().toString(36) + Math.random().toString(36).slice(2, 7) + i;

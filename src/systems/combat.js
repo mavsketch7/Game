@@ -321,6 +321,12 @@ export function danoAEnemigo(e, raw, duenio, puedeCrit, kbx, kby) {
 export function matarEnemigo(e, duenio) {
         G.stats.derrotados++;
         if (duenio) duenio.statDerrotados = (duenio.statDerrotados || 0) + 1;
+        // contador de kills del arma equipada -- solo las armas Míticas y
+        // las Legendarias ganadas por fusión lo llevan (ver
+        // objetosMiticos.js / ui/inventory.js:fusionar()); el resto del
+        // loot no tiene la propiedad "kills" y este bloque no hace nada.
+        if (duenio && duenio.equipo.arma && typeof duenio.equipo.arma.kills === "number")
+          duenio.equipo.arma.kills++;
         if (duenio && tieneEfecto(duenio, "robatiempo"))
           duenio.castCd = Math.max(0, duenio.castCd - 1);
         sfx(e.jefe ? "jefe" : "muerte");

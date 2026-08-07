@@ -102,5 +102,11 @@ export function genObjetoMitico(f, slot) {
           stats,
           efecto: base.efecto,
           efectoDesc: base.efectoDesc,
+          // solo las armas llevan contador de kills (ver systems/soul.js:
+          // desmantelarArma() lo usa para dar más y mejores fragmentos
+          // cuanto más se haya usado el arma) -- las Míticas, al ser
+          // únicas y con nombre propio, son de las pocas piezas que tiene
+          // sentido que "acumulen historia" en vez de venderse/tirarse.
+          ...(base.slot === "arma" ? { kills: 0 } : {}),
         };
       }

@@ -338,6 +338,9 @@ function celdaItem(it, idx, p, equipada) {
           (it.efectoDesc
             ? '<div class="tt-efecto">✦ ' + escHtml(it.efectoDesc) + "</div>"
             : "") +
+          (typeof it.kills === "number"
+            ? '<div class="tt-efecto">🗡 ' + it.kills + " kills con esta arma</div>"
+            : "") +
           impactoDetalleHtml(partes) +
           "</div>" +
           "</div>"
@@ -478,6 +481,10 @@ function fusionar() {
           // evolución garantizada a la rareza superior, conservando el slot del primero
           const nuevo = genItem(Math.max(1, G.planta), rarF + 1, base.slot);
           if (base.slot === "arma") nuevo.clase = base.clase;
+          // las armas Legendarias ganadas por fusión (no las que caen
+          // sueltas del loot normal) llevan contador de kills, igual que
+          // las Míticas -- ver systems/soul.js: desmantelarArma().
+          if (nuevo.slot === "arma" && nuevo.rareza === 3) nuevo.kills = 0;
           p.bolsa.push(nuevo);
           fxOnda(p.x, p.y, 40, RAREZAS[rarF + 1].col);
           fxParticulas(p.x, p.y, 14, RAREZAS[rarF + 1].col);
@@ -891,6 +898,9 @@ function panelAccionItem(p) {
           "</div>" +
           (it.efectoDesc
             ? '<div class="item-efecto">✦ ' + escHtml(it.efectoDesc) + "</div>"
+            : "") +
+          (typeof it.kills === "number"
+            ? '<div class="item-efecto">🗡 ' + it.kills + " kills con esta arma</div>"
             : "") +
           '<div class="panel-item-stats">' +
           fmtStatsComparativo(it, actual) +

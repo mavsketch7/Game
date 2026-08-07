@@ -4,13 +4,14 @@
 // conexiones) y ui/inventory.js (pestaña "Alma") para colocarlos.
 import { RAREZAS } from "../core/constants.js";
 import { G } from "../core/state.js";
-import { desmantelarArma, fragPorId } from "../systems/soul.js";
+import { cantidadFragmentos, desmantelarArma, fragPorId } from "../systems/soul.js";
 import { toast } from "./notifications.js";
 import { mostrar, ocultar } from "./overlays.js";
 
 function lineaArma(it, idx) {
   const rar = RAREZAS[it.rareza];
-  const nFrag = 1 + it.rareza;
+  const nFrag = cantidadFragmentos(it);
+  const conKills = typeof it.kills === "number";
   return (
     '<div class="mejora-linea">' +
     '<div class="mejora-info">' +
@@ -18,7 +19,13 @@ function lineaArma(it, idx) {
     rar.cls +
     '">' +
     rar.n +
-    "</span></h4>" +
+    "</span>" +
+    (conKills
+      ? ' <span style="color:var(--ceniza);font-weight:400;font-size:.72rem">· 🗡 ' +
+        it.kills +
+        " kills</span>"
+      : "") +
+    "</h4>" +
     '<div class="m-desc ' +
     rar.cls +
     '" style="font-weight:600">' +
@@ -28,7 +35,11 @@ function lineaArma(it, idx) {
     nFrag +
     " fragmento" +
     (nFrag > 1 ? "s" : "") +
-    " de Alma</div>" +
+    " de Alma" +
+    (conKills
+      ? " (más y mejores cuanto más se haya usado el arma)"
+      : "") +
+    "</div>" +
     "</div>" +
     '<button class="btn dorado" onclick="desmantelar(' +
     idx +
