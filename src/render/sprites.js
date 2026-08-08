@@ -861,37 +861,104 @@ for (const rolReal in REAL_SPRITE_SRC) {
         imgReal.src = REAL_SPRITE_SRC[rolReal];
       }
 
-const REAL_RUN_SRC = {};
+// Recorta una hoja de animación horizontal (pack "Pixel Crawler": frames
+// cuadrados, ancho = alto x N -- confirmado leyendo cabeceras PNG en varias
+// hojas del pack, tanto del héroe como de los mobs) en un array de canvases
+// ya redimensionados a `destSize`. Se redimensiona aquí, al cargar, en vez
+// de dejarlo al `esc` de drawSprite() en world.js, porque ese `esc` es
+// compartido con el sprite estático (idle) de la misma entidad -- si no se
+// iguala el tamaño de antemano, el idle se encogería/agrandaría en cuanto
+// hubiera frames de correr/atacar cargados.
+function cargarHojaFrames(url, destSize, onListo) {
+  const im = new Image();
+  im.onload = () => {
+    const frameSize = im.naturalHeight;
+    const frameCount = Math.max(1, Math.round(im.naturalWidth / frameSize));
+    const frames = [];
+    for (let i = 0; i < frameCount; i++) {
+      const c = document.createElement("canvas");
+      c.width = destSize;
+      c.height = destSize;
+      const g = c.getContext("2d");
+      g.imageSmoothingEnabled = false;
+      g.drawImage(im, i * frameSize, 0, frameSize, frameSize, 0, 0, destSize, destSize);
+      frames.push(c);
+    }
+    onListo(frames);
+  };
+  im.onerror = () => console.warn("No se pudo cargar hoja de animación: " + url);
+  im.src = url;
+}
+
+// Tamaño en pantalla de los iconos de clase/enemigo ya existentes: 16px
+// nativos x KENNEY_ICON_SCALE (por defecto 3, ver arriba) = 48px. Los
+// frames de correr/atacar del pack nuevo se normalizan a este mismo tamaño
+// para no desentonar con el icono estático (idle) al alternar entre ambos.
+const TAM_ICONO_HEROE = 48;
+
+// Correr: el pack trae hojas dedicadas para guerrero/pícaro/mago (más
+// fidelidad, mismo personaje con nombre que en Entities/Npc's) y un cuerpo
+// genérico ("Body_A") para las 3 clases sin NPC dedicado en el pack
+// (arquero/clérigo/druida) -- ver docs de la sesión de integración.
+const REAL_RUN_SRC = {
+  guerrero: assetUrl("characters/knight_run"),
+  picaro: assetUrl("characters/rogue_run"),
+  mago: assetUrl("characters/wizard_run"),
+  arquero: assetUrl("characters/bodyA_run_side"),
+  clerigo: assetUrl("characters/bodyA_run_side"),
+  druida: assetUrl("characters/bodyA_run_side"),
+};
 
 export const REAL_RUN = { guerrero: [], arquero: [], picaro: [], mago: [], clerigo: [], druida: [] };
 
-const REAL_ATTACK_SRC = {};
+for (const rolRun in REAL_RUN_SRC) {
+  cargarHojaFrames(REAL_RUN_SRC[rolRun], TAM_ICONO_HEROE, (frames) => { REAL_RUN[rolRun] = frames; });
+}
+
+// Ataque: solo guerrero (Slice = espadazo) y pícaro (Pierce = puñalada) tienen
+// una animación del pack que encaja temáticamente con su arma -- el resto de
+// clases (arquero/mago/clérigo/druida) se quedan sin REAL_ATTACK a propósito
+// (el pack no trae "disparar arco"/"lanzar hechizo"/"golpe de báculo"), así
+// que durante el ataque siguen mostrando el icono estático de siempre, sin
+// forzar una animación que no encajaría con lo que hace esa clase.
+const REAL_ATTACK_SRC = {
+  guerrero: assetUrl("characters/bodyA_slice_side"),
+  picaro: assetUrl("characters/bodyA_pierce_side"),
+};
 
 export const REAL_ATTACK = { guerrero: [], arquero: [], picaro: [] };
 
 for (const rolAtk in REAL_ATTACK_SRC) {
-        REAL_ATTACK_SRC[rolAtk].forEach((src, i) => {
-          const im = new Image();
-          im.onload = (() => {
-            const rr = rolAtk, ii = i;
-            return () => { REAL_ATTACK[rr][ii] = im; };
-          })();
-          im.src = src;
-        });
-      }
+  cargarHojaFrames(REAL_ATTACK_SRC[rolAtk], TAM_ICONO_HEROE, (frames) => { REAL_ATTACK[rolAtk] = frames; });
+}
 
 export const ATTACK_DUR = { guerrero: 0.22, arquero: 0.3, picaro: 0.1 };
 
-for (const rolRun in REAL_RUN_SRC) {
-        REAL_RUN_SRC[rolRun].forEach((src, i) => {
-          const im = new Image();
-          im.onload = (() => {
-            const rr = rolRun, ii = i;
-            return () => { REAL_RUN[rr][ii] = im; };
-          })();
-          im.src = src;
-        });
-      }
+// Correr para enemigos (ver renderEnemigo() en world.js): mismo mecanismo que
+// el héroe, indexado por `key` (el mismo nombre de SPR.* que ya se dibuja hoy)
+// para no tener que tocar más que un par de líneas por rama en world.js.
+// Sin match temático en el pack para bomber/mini/jefe -- se quedan 100%
+// procedurales como hasta ahora (MOB_RUN[key] undefined = no-op seguro).
+const MOB_RUN_SRC = {
+  esqueleto: assetUrl("mobs/skeletonBase_run"),
+  ojo: assetUrl("mobs/orcShaman_run"),
+  hechicero: assetUrl("mobs/skeletonMage_run"),
+  acechador: assetUrl("mobs/orcRogue_run"),
+  golem: assetUrl("mobs/orcWarrior_run"),
+  bruto: assetUrl("mobs/orc_run"),
+};
+
+export const MOB_RUN = {};
+
+for (const keyMob in MOB_RUN_SRC) {
+  // 16px nativo x su KENNEY_ICON_SCALE (mismo cálculo que el icono estático,
+  // ver más arriba) -- no se puede leer SPR[keyMob].width aquí porque ese
+  // icono real todavía no ha terminado de cargar (async) en el momento en
+  // que se ejecuta este bucle, y seguiría teniendo el tamaño del sprite
+  // procedural de relleno (esc=3 fijo, no necesariamente 16px de base).
+  const destSize = 16 * (KENNEY_ICON_SCALE[keyMob] || 3);
+  cargarHojaFrames(MOB_RUN_SRC[keyMob], destSize, (frames) => { MOB_RUN[keyMob] = frames; });
+}
 
 SPR.sastre = buildSprite(HERO_ROWS, {
         K,

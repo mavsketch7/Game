@@ -4,7 +4,7 @@ import { ELEMENTOS, MAX_PLANTA, RAREZAS, SALA_H, SALA_W, SUPS } from "../core/co
 import { G } from "../core/state.js";
 import { fxParticulas } from "./effects.js";
 import { barra, renderHUD } from "./hud.js";
-import { ATTACK_DUR, ESC_FORMA, KENNEY_TILE, NO_SCHEMATIC_WEAPON, REAL_ATTACK, REAL_RUN, REAL_SPRITE_SCALE, SHEETS, SPR, SPR_FORMAS, assetOK, iconoDrop, remateMuroPatron, spriteJugador, wallPatron } from "./sprites.js";
+import { ATTACK_DUR, ESC_FORMA, KENNEY_TILE, MOB_RUN, NO_SCHEMATIC_WEAPON, REAL_ATTACK, REAL_RUN, REAL_SPRITE_SCALE, SHEETS, SPR, SPR_FORMAS, assetOK, iconoDrop, remateMuroPatron, spriteJugador, wallPatron } from "./sprites.js";
 import { groundTarget } from "../systems/abilities.js";
 import { masCercano } from "../systems/combat.js";
 import { mouse } from "../systems/input.js";
@@ -2142,6 +2142,7 @@ function renderEnemigo(e) {
           cx.fillText("⭐ " + e.nombre + " ⭐", e.x, e.y - e.r * 2.5);
           return;
         }
+        let mobKey = null;
         if (e.jefe) {
           img = SPR.brutoB;
           esc = G.planta >= 90 ? 2.4 : 2;
@@ -2150,23 +2151,39 @@ function renderEnemigo(e) {
           esc = 1.7;
         } else if (e.tipo === "tank") {
           img = SPR.golem;
+          mobKey = "golem";
           esc = e.elite ? 1.5 : 1.25;
         } else if (e.tipo === "runner") {
           img = SPR.acechador;
+          mobKey = "acechador";
           esc = e.elite ? 1.1 : 0.85;
         } else if (e.tipo === "bomber") {
           img = SPR.bomber;
           esc = e.elite ? 1.3 : 1;
         } else if (e.tipo === "caster") {
           img = SPR.hechicero;
+          mobKey = "hechicero";
           esc = e.elite ? 1.2 : 0.95;
         } else if (e.elite) {
           img = SPR.bruto;
+          mobKey = "bruto";
           esc = 1.35;
         } else if (e.ranged) {
           img = SPR.ojo;
+          mobKey = "ojo";
         } else {
           img = SPR.esqueleto;
+          mobKey = "esqueleto";
+        }
+        // Animación de correr real (ver MOB_RUN en sprites.js): sustituye el
+        // icono estático por un frame de la hoja Run del pack mientras haya
+        // uno cargado para este tipo -- mismo mecanismo que dibujarHeroe()
+        // con REAL_RUN, indexado por el reloj de animación en vez de p.anim
+        // (los enemigos no llevan ese campo propio).
+        if (mobKey && MOB_RUN[mobKey] && MOB_RUN[mobKey].length) {
+          const frames = MOB_RUN[mobKey];
+          const fr = frames[Math.floor(animGlobal * 8 + e.x * 0.05) % frames.length];
+          if (fr) img = fr;
         }
 
         const obj = masCercano(e.x, e.y);
