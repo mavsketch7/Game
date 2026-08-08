@@ -4,7 +4,7 @@ import { ELEMENTOS, MAX_PLANTA, RAREZAS, SALA_H, SALA_W, SUPS } from "../core/co
 import { G } from "../core/state.js";
 import { fxParticulas } from "./effects.js";
 import { barra, renderHUD } from "./hud.js";
-import { ATTACK_DUR, ESC_FORMA, KENNEY_TILE, MOB_RUN, NO_SCHEMATIC_WEAPON, REAL_ATTACK, REAL_IDLE, REAL_RUN, REAL_SPRITE_SCALE, SHEETS, SPR, SPR_FORMAS, assetOK, iconoDrop, remateMuroPatron, spriteJugador, wallPatron } from "./sprites.js";
+import { ATTACK_DUR, ESC_FORMA, KENNEY_TILE, MOB_RUN, NO_SCHEMATIC_WEAPON, REAL_ATTACK, REAL_IDLE, REAL_RUN, REAL_SPRITE_SCALE, SHEETS, SPR, SPR_FORMAS, WEAPON_IMG, assetOK, iconoDrop, remateMuroPatron, spriteJugador, wallPatron } from "./sprites.js";
 import { groundTarget } from "../systems/abilities.js";
 import { masCercano } from "../systems/combat.js";
 import { mouse } from "../systems/input.js";
@@ -1733,7 +1733,26 @@ function renderJugador(p) {
           cx.translate(p.x, p.y + 3);
           cx.rotate(p.aim + (p.swingT > 0 ? (p.swingT / 0.18 - 0.5) * 1.6 : 0));
           cx.scale(1.3, 1.3);
-          if (p.rol === "guerrero") {
+          // Sprite real (ver WEAPON_IMG en sprites.js) para las 4 clases donde el
+          // pack tenía una silueta de arma reconocible -- madera por defecto,
+          // hueso a partir de Raro (rareza >= 1). Reutiliza el mismo pivote
+          // mano->punta que ya montaba el dibujo esquemático de abajo (GRIP=6
+          // ~ empuñadura, REACH=30 ~ alcance de la hoja de la espada actual)
+          // para que encaje igual de bien con el giro de puntería/swing.
+          const wimg = WEAPON_IMG[p.rol]
+            && WEAPON_IMG[p.rol][eq.arma && eq.arma.rareza >= 1 ? "bone" : "wood"];
+          if (wimg) {
+            const GRIP = 6, REACH = 30;
+            const s = (REACH - GRIP) / Math.max(wimg.naturalWidth, wimg.naturalHeight);
+            const ww = wimg.naturalWidth * s, wh = wimg.naturalHeight * s;
+            cx.translate(GRIP, 0);
+            cx.rotate(Math.PI / 2);
+            cx.drawImage(wimg, -ww / 2, -wh, ww, wh);
+            // El orbe de carga del mago es un efecto de gameplay (no una hoja
+            // física): tiene que seguir apareciendo aunque el arma en sí
+            // venga del sprite real de arriba, no solo en el dibujo procedural.
+            if (p.rol === "mago") dibujarCargaMago(p, 26, 0);
+          } else if (p.rol === "guerrero") {
             // espada larga: pomo, empuñadura, guarda cruzada y hoja biselada con filo
             cx.fillStyle = "#4a3624";
             cx.fillRect(3, -2, 6, 4);

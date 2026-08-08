@@ -972,6 +972,33 @@ for (const keyMob in MOB_RUN_SRC) {
   cargarHojaFrames(MOB_RUN_SRC[keyMob], destSize, (frames) => { MOB_RUN[keyMob] = frames; });
 }
 
+// Arma en mano: sprite real en vez del dibujo esquemático de siempre (ver
+// world.js, bloque "arma apuntando"), para las 4 clases donde el pack tenía
+// una silueta clara de su tipo de arma (hacha para guerrero, arco para
+// arquero, báculo para mago, cayado para clérigo). Pícaro/druida se quedan
+// con el dibujo procedural existente -- el pack no traía una daga ni un
+// bastón "de naturaleza" reconocibles entre las piezas disponibles.
+// Por defecto madera; a partir de Raro (rareza >= 1, ver RAREZAS en
+// core/constants.js) se usa la versión de hueso -- el pack solo trae estos
+// dos materiales, así que esa es toda la progresión posible hoy.
+const WEAPON_SRC = {
+  guerrero: { wood: assetUrl("weapons/wood_guerrero"), bone: assetUrl("weapons/bone_guerrero") },
+  arquero: { wood: assetUrl("weapons/wood_arquero"), bone: assetUrl("weapons/bone_arquero") },
+  mago: { wood: assetUrl("weapons/wood_mago"), bone: assetUrl("weapons/bone_mago") },
+  clerigo: { wood: assetUrl("weapons/wood_clerigo"), bone: assetUrl("weapons/bone_clerigo") },
+};
+
+export const WEAPON_IMG = { guerrero: {}, arquero: {}, mago: {}, clerigo: {} };
+
+for (const rolArma in WEAPON_SRC) {
+  for (const material in WEAPON_SRC[rolArma]) {
+    const im = new Image();
+    im.onload = () => { WEAPON_IMG[rolArma][material] = im; };
+    im.onerror = () => console.warn("No se pudo cargar arma: " + WEAPON_SRC[rolArma][material]);
+    im.src = WEAPON_SRC[rolArma][material];
+  }
+}
+
 SPR.sastre = buildSprite(HERO_ROWS, {
         K,
         S: PIEL,
