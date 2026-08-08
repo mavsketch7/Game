@@ -23,8 +23,9 @@ function crearItemPaleta(t) {
   const div = document.createElement("div");
   div.className = "paleta-item" + (t.id === estado.tipoActivo ? " activa" : "");
 
+  const esAnimado = t.frames && t.frames.length > 1;
   const txt = `<span class="swatch" style="${getSwatchStyle(t)}"></span>
-               <span style="flex:1">${t.label}</span>
+               <span style="flex:1">${t.label}${esAnimado ? ` <span class="badge-animado" title="Pincel animado (${t.frames.length} frames, ${t.fps || 6} fps) -- solo se ve en bucle en este editor, no se exporta al motor">🎞️</span>` : ""}</span>
                <span class="tecla">${t.tecla}</span>`;
 
   div.innerHTML = txt;

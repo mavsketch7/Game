@@ -18,6 +18,20 @@ export function dibujarTile(ctx, idTipo, x, y, ancho, alto, sinFondo) {
     ctx.fillRect(x, y, ancho, alto);
   }
 
+  // Pincel animado (ver "Modo animación" en picker.js): elige el frame según el reloj
+  // real, sin depender de que main.js reprograme redibujados -- solo hace falta que
+  // algo repinte el lienzo de vez en cuando mientras haya un frame distinto que mostrar
+  // (ver el ticker en main.js). Cada frame ya viene normalizado a TAM_MAX_RECORTE
+  // cuadrado, así que se dibuja entero, sin sx/sy/sw/sh.
+  if (t.frames && t.frames.length > 1) {
+    const idx = Math.floor((Date.now() / 1000) * (t.fps || 6)) % t.frames.length;
+    const frame = t.frames[idx];
+    if (frame && frame.complete && frame.naturalWidth > 0) {
+      ctx.drawImage(frame, x, y, ancho, alto);
+      return;
+    }
+  }
+
   // Si tiene imagen y está cargada
   if (t.img && t.img.complete && t.img.naturalWidth > 0) {
     // sw/sh en 0 o sin definir => usar el sprite completo (assets sueltos, no spritesheet).

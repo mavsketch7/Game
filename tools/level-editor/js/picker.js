@@ -20,10 +20,23 @@ const btnAjustar = document.getElementById("btn-picker-ajustar");
 const inputResizeW = document.getElementById("picker-resize-w");
 const inputResizeH = document.getElementById("picker-resize-h");
 const btnPixelArt = document.getElementById("btn-picker-pixelart");
+const btnAnimModo = document.getElementById("btn-picker-animacion");
+const panelAnim = document.getElementById("animacion-panel");
+const contFrames = document.getElementById("animacion-frames");
+const inputFps = document.getElementById("animacion-fps");
+const btnAnimVaciar = document.getElementById("btn-animacion-vaciar");
+const btnAnimGuardar = document.getElementById("btn-animacion-guardar");
 
 let tipoEditando = null;
 let activePickerImg = null;
 let arrastreLibre = null; // {x0, y0, x1, y1} en px de imagen, mientras se arrastra con Alt
+
+// Modo animación: mientras está activo, un clic en la rejilla o confirmar un arrastre
+// libre AÑADE un frame a esta lista (normalizado a TAM_MAX_RECORTE x TAM_MAX_RECORTE,
+// igual que el resto de recortes) en vez de asignar el pincel y cerrar el modal. Solo
+// para el editor -- no se exporta al JSON del motor, ver docs/LEVEL_FORMAT.md.
+let modoAnimacion = false;
+let framesAnimacion = [];
 
 // Imágenes cargadas por el usuario (PNG/JPG/WebP propios), aparte de las de ASSETS.
 // Clave -> HTMLImageElement. Se guardan aquí (no en ASSETS/ASSETS_PATHS) porque no
@@ -108,6 +121,11 @@ export function abrirPicker(tipo) {
   tipoEditando = tipo;
   arrastreLibre = null;
   cerrarPixelArt();
+  modoAnimacion = false;
+  framesAnimacion = [];
+  btnAnimModo.classList.remove("activa-tool");
+  panelAnim.classList.add("oculto");
+  contFrames.innerHTML = "";
   pickerUI.classList.remove("oculto");
 
   // Auto-seleccionar el select basado en la imagen actual del tipo (si existe),
@@ -192,6 +210,64 @@ setOnUsarPixelArt((img, tam) => {
   cerrarPixelArt();
 });
 
+// --- Modo animación ---
+btnAnimModo.onclick = () => {
+  modoAnimacion = !modoAnimacion;
+  btnAnimModo.classList.toggle("activa-tool", modoAnimacion);
+  panelAnim.classList.toggle("oculto", !modoAnimacion);
+};
+
+function dibujarFramesAnimacion() {
+  contFrames.innerHTML = "";
+  framesAnimacion.forEach((img, i) => {
+    const div = document.createElement("div");
+    div.className = "frame-thumb";
+    div.style.backgroundImage = `url('${img.src}')`;
+    div.innerHTML = `<span class="frame-num">${i + 1}</span><button class="frame-quitar" title="Quitar frame">✕</button>`;
+    div.querySelector(".frame-quitar").onclick = () => {
+      framesAnimacion.splice(i, 1);
+      dibujarFramesAnimacion();
+    };
+    contFrames.appendChild(div);
+  });
+}
+
+// Recorta `origen` (imagen completa o región) y lo añade como un frame más de la
+// animación en curso -- reutiliza reencuadrar() para que todos los frames midan
+// exactamente TAM_MAX_RECORTE x TAM_MAX_RECORTE, igual que un recorte normal.
+function agregarFrameAnimacion(origen, region) {
+  const img = new Image();
+  img.onload = () => {
+    framesAnimacion.push(img);
+    dibujarFramesAnimacion();
+  };
+  img.src = reencuadrar(origen, TAM_MAX_RECORTE, TAM_MAX_RECORTE, region).toDataURL("image/png");
+}
+
+btnAnimVaciar.onclick = () => { framesAnimacion = []; dibujarFramesAnimacion(); };
+
+btnAnimGuardar.onclick = () => {
+  if (!tipoEditando || framesAnimacion.length < 1) return;
+
+  tipoEditando.frames = framesAnimacion.slice();
+  tipoEditando.fps = Math.max(1, Math.min(30, parseInt(inputFps.value) || 6));
+  tipoEditando.img = framesAnimacion[0];
+  tipoEditando.sx = 0;
+  tipoEditando.sy = 0;
+  tipoEditando.sw = TAM_MAX_RECORTE;
+  tipoEditando.sh = TAM_MAX_RECORTE;
+
+  framesAnimacion = [];
+  dibujarFramesAnimacion();
+  modoAnimacion = false;
+  btnAnimModo.classList.remove("activa-tool");
+  panelAnim.classList.add("oculto");
+
+  pickerUI.classList.add("oculto");
+  construirPaleta();
+  onCambio();
+};
+
 canvasPicker.addEventListener("pointerdown", (e) => {
   if (!tipoEditando || !activePickerImg) return;
   canvasPicker.setPointerCapture(e.pointerId);
@@ -207,9 +283,17 @@ canvasPicker.addEventListener("pointerdown", (e) => {
 
   // Selección clásica alineada a la grid.
   const gridSize = parseInt(inputGridSize.value) || 32;
+  const sx = Math.floor(pos.x / gridSize) * gridSize;
+  const sy = Math.floor(pos.y / gridSize) * gridSize;
+
+  if (modoAnimacion) {
+    agregarFrameAnimacion(activePickerImg, { rx: sx, ry: sy, rw: TAM_MAX_RECORTE, rh: TAM_MAX_RECORTE });
+    return;
+  }
+
   tipoEditando.img = activePickerImg;
-  tipoEditando.sx = Math.floor(pos.x / gridSize) * gridSize;
-  tipoEditando.sy = Math.floor(pos.y / gridSize) * gridSize;
+  tipoEditando.sx = sx;
+  tipoEditando.sy = sy;
   tipoEditando.sw = TAM_MAX_RECORTE;
   tipoEditando.sh = TAM_MAX_RECORTE;
 
@@ -230,6 +314,11 @@ canvasPicker.addEventListener("pointerup", () => {
   if (!arrastreLibre || !tipoEditando) { arrastreLibre = null; return; }
   const region = rectoDeArrastre(arrastreLibre);
   arrastreLibre = null;
+
+  if (modoAnimacion) {
+    agregarFrameAnimacion(activePickerImg, region);
+    return;
+  }
 
   // El rango de selección es libre (cualquier tamaño), pero el tile final siempre se
   // reencuadra a TAM_MAX_RECORTE x TAM_MAX_RECORTE conservando proporción, para que

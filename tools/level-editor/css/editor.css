@@ -111,6 +111,23 @@ textarea { height: 120px; resize: vertical; font-family: "Courier New", monospac
 }
 #picker-canvas { display: block; image-rendering: pixelated; cursor: crosshair; }
 
+/* Modo animación: tira de miniaturas de frames capturados */
+.frame-thumb {
+  position: relative; width: 40px; height: 40px; border: 1px solid var(--borde);
+  border-radius: 4px; background-color: #000; background-size: cover;
+  image-rendering: pixelated; flex-shrink: 0;
+}
+.frame-thumb .frame-num {
+  position: absolute; top: 1px; left: 2px; font-size: 0.6rem; color: var(--vespero);
+  text-shadow: 0 0 2px #000;
+}
+.frame-thumb .frame-quitar {
+  position: absolute; top: -6px; right: -6px; width: 16px; height: 16px; line-height: 14px;
+  border-radius: 50%; background: #ff7675; color: #2a0e0e; border: none; cursor: pointer;
+  font-size: 0.65rem; padding: 0;
+}
+.badge-animado { font-size: 0.7rem; margin-left: 4px; }
+
 /* --- Responsive: tablet/móvil, vertical y horizontal --- */
 
 /* Pantallas medianas (tablet, móvil en horizontal): el panel lateral (340px fijos)

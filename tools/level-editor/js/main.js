@@ -1,5 +1,5 @@
 // --- Punto de entrada: inicialización y wiring de módulos ---
-import { cargarAssets } from "./config.js";
+import { cargarAssets, TIPOS } from "./config.js";
 import { dibujar } from "./render.js";
 import { construirPaleta, construirListaSalas, setOnCambio as setOnCambioUI } from "./ui.js";
 import { setOnCambio as setOnCambioPicker } from "./picker.js";
@@ -64,3 +64,21 @@ redibujar();
 if (huboAutoguardado) {
   document.getElementById("copiaEstado").textContent = "♻️ Sesión recuperada desde autoguardado.";
 }
+
+// --- Ticker de pinceles animados (ver "Modo animación" en picker.js) ---
+// redibujar() (arriba) solo se dispara desde eventos discretos y además reprograma el
+// autoguardado -- para reproducir un bucle de frames hace falta repintar sola de vez en
+// cuando, sin spamear localStorage. Se usa dibujar() directo (no redibujar()) y solo
+// cuando de verdad hay algún pincel animado en uso, para no gastar ciclos si nadie usa
+// la función. ~12 fps de repintado es de sobra para que el ojo vea el ciclo fluido.
+const INTERVALO_TICK_ANIM_MS = 1000 / 12;
+let ultimoTickAnim = 0;
+
+function tickAnimacion(ts) {
+  if (ts - ultimoTickAnim >= INTERVALO_TICK_ANIM_MS) {
+    ultimoTickAnim = ts;
+    if (TIPOS.some(t => t.frames && t.frames.length > 1)) dibujar(cv, cx);
+  }
+  requestAnimationFrame(tickAnimacion);
+}
+requestAnimationFrame(tickAnimacion);

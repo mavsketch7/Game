@@ -113,6 +113,22 @@ Los sprites reales del juego (`public/assets/sprites/`) no siguen esta regla
 porque se dibujan a tamaño natural sin recorte — son referencia de arte del
 motor, no de este flujo de pinceles personalizados.
 
+## Pinceles animados: solo ayuda visual del editor, no se exportan
+
+El picker (⚙️ → "🎞️ Modo animación") deja guardar varios frames en un pincel
+y verlos reproducirse en bucle en el lienzo del propio editor (útil para
+marcar dónde iría una antorcha, una luz parpadeante, etc. mientras diseñas).
+Esos frames **no viajan al JSON** que exporta "Exportar JSON (motor)": el
+motor (`src/render/world.js`) no tiene ningún sistema de animación por
+sprites hoy — brasero/cristal se dibujan 100% procedural
+(`Math.sin(animGlobal * k + offset)`, sin frames de imagen) y
+`objetos[]`/`enemigos[]`/`pilares[]` en el JSON son siempre `{ tipo, x, y }`
+estáticos. Si el pincel animado tiene una `categoria` exportable (objeto,
+enemigo, pilar), se exporta igual que cualquier otro tile de esa categoría
+— solo que en el juego real se verá con el frame 0, sin animar. Añadir
+reproducción de frames en el motor sería un desarrollo de motor aparte, no
+de este editor.
+
 ## Elementos sin mapeo todavía (solo referencia visual)
 
 Estos pinceles existen en el editor para poder diseñar visualmente, pero

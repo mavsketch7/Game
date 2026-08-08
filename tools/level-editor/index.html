@@ -129,11 +129,27 @@
       </label>
       <button id="btn-picker-ajustar" class="mini" title="Redimensiona la imagen mostrada al ancho/alto indicados, conservando proporción">📐 Redimensionar</button>
       <button id="btn-picker-pixelart" class="mini">🖍️ Pintar píxel a píxel</button>
+      <button id="btn-picker-animacion" class="mini" title="En vez de asignar el pincel de golpe, cada acción (clic, cargar imagen, dibujar a mano...) añade un frame a una animación en bucle">🎞️ Modo animación</button>
     </div>
     <div id="picker-wrap">
       <canvas id="picker-canvas"></canvas>
     </div>
     <p style="margin:0; font-size:0.8rem; color:var(--ceniza);">Haz clic en la zona de la imagen que quieres asignar al pincel actual. Mantén <strong>Alt</strong> y arrastra para recortar una región libre de cualquier tamaño — se reencuadra sola a 32×32 al soltar. "Cargar imagen…" añade tu propio PNG a la lista; "Redimensionar" lo ajusta al ancho/alto que escribas conservando proporción (con márgenes transparentes).</p>
+
+    <!-- Modo animación: recopila varios frames (uno por cada acción de asignación) y los
+         guarda como un pincel que se reproduce en bucle en el editor (solo en el editor:
+         no se exporta al JSON del motor, ver docs/LEVEL_FORMAT.md). -->
+    <div id="animacion-panel" class="oculto" style="border:1px solid var(--borde); border-radius:6px; padding:10px; margin-top:10px; background:#000;">
+      <p style="margin:0 0 8px; font-size:0.8rem; color:var(--ceniza);">Modo animación activo: cada acción de arriba (clic en la rejilla, arrastre libre, cargar imagen, redimensionar, o "Usar este dibujo" del píxel a píxel) añade un frame en vez de asignar y cerrar. Añade al menos 2 frames.</p>
+      <div id="animacion-frames" style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:10px;"></div>
+      <div class="fila-btn" style="margin:0; align-items:center;">
+        <label style="font-size:0.8rem; display:flex; align-items:center; gap:4px;">FPS:
+          <input type="number" id="animacion-fps" value="6" min="1" max="30" style="width:55px;" />
+        </label>
+        <button id="btn-animacion-vaciar" class="mini rojo">🗑️ Vaciar</button>
+        <button id="btn-animacion-guardar" class="mini dorado">✅ Guardar animación</button>
+      </div>
+    </div>
 
     <!-- Mini editor de píxel a píxel: dibuja un tile a mano o genera uno de partida -->
     <div id="pixelart-panel" class="oculto" style="border:1px solid var(--borde); border-radius:6px; padding:10px; margin-top:10px; background:#000;">

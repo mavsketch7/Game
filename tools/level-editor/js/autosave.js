@@ -22,13 +22,22 @@ function esTipoCustom(t) {
 function serializar() {
   const tiposCustom = TIPOS
     .filter(esTipoCustom)
-    .map(t => ({
-      id: t.id, ch: t.ch, color: t.color, label: t.label, tecla: t.tecla,
-      imgSrc: t.img && t.img.complete ? t.img.src : null,
-      sx: t.sx, sy: t.sy, sw: t.sw, sh: t.sh,
-      capa: t.capa, capaExport: t.capaExport, categoria: t.categoria,
-      ...(t.motorTipo ? { motorTipo: t.motorTipo } : {}),
-    }));
+    .map(t => {
+      const animado = t.frames && t.frames.length > 1;
+      return {
+        id: t.id, ch: t.ch, color: t.color, label: t.label, tecla: t.tecla,
+        imgSrc: t.img && t.img.complete ? t.img.src : null,
+        sx: t.sx, sy: t.sy, sw: t.sw, sh: t.sh,
+        capa: t.capa, capaExport: t.capaExport, categoria: t.categoria,
+        ...(t.motorTipo ? { motorTipo: t.motorTipo } : {}),
+        // Pincel animado (ver picker.js): persiste todos los frames como data URL
+        // en vez de una sola imagen, para no perder la animación al recargar.
+        ...(animado ? {
+          frames: t.frames.filter(f => f.complete).map(f => f.src),
+          fps: t.fps,
+        } : {}),
+      };
+    });
 
   return {
     version: 1,
@@ -75,7 +84,12 @@ export function cargarLocal() {
       img.src = t.imgSrc;
       registrarImagenCustom(t.id, "📁 " + t.label, img);
     }
-    TIPOS.push({ ...t, img });
+    let frames;
+    if (Array.isArray(t.frames) && t.frames.length > 1) {
+      frames = t.frames.map(src => Object.assign(new Image(), { src }));
+      img = frames[0]; // mantiene img/sx/sy/sw/sh sincronizados con el frame 0
+    }
+    TIPOS.push({ ...t, img, ...(frames ? { frames } : {}) });
   }
   actualizarDiccionarios();
 
