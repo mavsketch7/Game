@@ -166,24 +166,32 @@ export function tipoAleatorio(f) {
         return az(pool);
       }
 
-export function spawnEnemigo(f, tipo, esElite) {
+// posFija ({x,y}, opcional): coloca el enemigo exactamente ahí en vez de
+// sortear una posición -- la usa colocarContenidoFijo() en floorgen.js para
+// las salas diseñadas a mano con contenido fijo (ver customRooms.js).
+export function spawnEnemigo(f, tipo, esElite, posFija) {
         const N = G.players.length;
         let x,
           y,
           it = 0;
-        do {
-          const lado = ri(0, 3);
-          x = lado < 2 ? rnd(60, W - 60) : lado === 2 ? 60 : W - 60;
-          y = lado === 0 ? 60 : lado === 1 ? H - 60 : rnd(60, H - 60);
-          it++;
-        } while (
-          (G.players.some((p) => Math.hypot(x - p.x, y - p.y) < 220) ||
-            !puntoValido(x, y, 18)) &&
-          it < 40
-        );
-        if (!puntoValido(x, y, 18)) {
-          x = W / 2 + rnd(-40, 40);
-          y = H * 0.3;
+        if (posFija) {
+          x = posFija.x;
+          y = posFija.y;
+        } else {
+          do {
+            const lado = ri(0, 3);
+            x = lado < 2 ? rnd(60, W - 60) : lado === 2 ? 60 : W - 60;
+            y = lado === 0 ? 60 : lado === 1 ? H - 60 : rnd(60, H - 60);
+            it++;
+          } while (
+            (G.players.some((p) => Math.hypot(x - p.x, y - p.y) < 220) ||
+              !puntoValido(x, y, 18)) &&
+            it < 40
+          );
+          if (!puntoValido(x, y, 18)) {
+            x = W / 2 + rnd(-40, 40);
+            y = H * 0.3;
+          }
         }
 
         const jefe = tipo === "jefe";

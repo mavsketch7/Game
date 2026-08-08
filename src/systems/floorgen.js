@@ -10,6 +10,7 @@ import { NOMBRE_CLIMA, SALA_H as H, SALA_W as W } from "../core/constants.js";
 import { G } from "../core/state.js";
 import { DESC_ARQ, arquetipoJefe, esJefe, nombreJefe } from "./bosses.js";
 import { spawnClon, spawnEnemigo, statsTot, tipoAleatorio } from "./combat.js";
+import { CUSTOM_ROOMS } from "./customRooms.js";
 import { banner, toast } from "../ui/notifications.js";
 import { az, clamp, ri, rnd } from "../utils/helpers.js";
 
@@ -31,6 +32,13 @@ function climaAleatorio() {
 // su disposición base, como mucho con algún parámetro puntual tipo el `gy`
 // de "partida"), verificada para dejar siempre libres con margen los 4
 // puntos cardinales donde caen las puertas de la mazmorra multi-sala.
+//
+// Las formas proceduales de abajo conviven con las "CUSTOM_ROOMS": salas
+// diseñadas a mano en tools/level-editor/, exportadas como JSON a
+// src/systems/customRooms/*.json y cargadas automáticamente por
+// customRooms.js -- añadir una sala nueva diseñada a mano NO requiere tocar
+// este archivo, solo soltar el JSON en esa carpeta (ver generarMapa() más
+// abajo, rama `CUSTOM_ROOMS[forma]`).
 const FORMAS_MAPA = [
         "sala",
         "sala",
@@ -45,7 +53,7 @@ const FORMAS_MAPA = [
         "antesala",
         "herradura",
         "escalonada",
-        "arsenal",
+        ...Object.keys(CUSTOM_ROOMS),
       ];
 
 const NOMBRE_FORMA = {
@@ -61,48 +69,10 @@ const NOMBRE_FORMA = {
         antesala: "Antesala angosta",
         herradura: "Herradura",
         escalonada: "Sala escalonada",
-        arsenal: "Cámara del Arsenal",
+        ...Object.fromEntries(
+          Object.values(CUSTOM_ROOMS).map((sala) => [sala.id, sala.nombre]),
+        ),
       };
-
-// "arsenal": la primera sala diseñada a mano con tools/level-editor.html
-// (el usuario la pintó como "Test1" y la pasó por chat). Los muros son una
-// conversión fiel de esa cuadrícula (celdas de 40px fusionadas en
-// rectángulos); ver agregarMuroSecreto() para el hueco marcado como
-// "secreta" en el diseño. Los pilares/atrezo/puntos de interés que
-// también pintó NO se han fijado aquí -- hoy esos los coloca
-// poblarSala()/ponPilares() de forma procedural en cualquier forma, y
-// fijarlos exactamente como los pintó requeriría una plantilla de
-// contenido por forma que todavía no existe (ver conversación).
-// v2 (sustituye al primer boceto): esta vez el usuario alineó sus dos
-// puertas normales EXACTAMENTE con las anclas reales (N en fila0/col20, E
-// en fila12/col39 -- ver ANCLAS_PUERTA en tools/level-editor.html), así
-// que no hace falta ningún hueco especial para ellas: el muro de borde
-// automático (agregarMurosPerimetro) ya abre el hueco justo ahí en
-// cuanto el grafo le asigna una puerta real a esta sala en esa
-// dirección, exactamente igual que en cualquier otra forma.
-// Se omite además una celda de muro suelta de 40x40 en (0,480) que caía
-// justo sobre la ancla de la puerta O -- casi seguro un resto accidental
-// del pintado, y de dejarla habría bloqueado esa puerta si el grafo
-// llegara a asignarle una conexión al oeste.
-const MUROS_ARSENAL = [
-        { x: 160, y: 200, w: 360, h: 80 },
-        { x: 160, y: 280, w: 80, h: 400 },
-        { x: 160, y: 680, w: 360, h: 80 },
-        { x: 680, y: 200, w: 80, h: 560 },
-        { x: 920, y: 200, w: 280, h: 80 },
-        // -- hueco de 120x80 en (1200,200): la puerta secreta que marcó el
-        // usuario (filas 5-6, cols 30-32) -- se añade aparte, más abajo,
-        // como muro "secreto" revelable con E.
-        { x: 1320, y: 200, w: 120, h: 80 },
-        { x: 920, y: 280, w: 80, h: 480 },
-        { x: 920, y: 760, w: 200, h: 40 },
-        { x: 920, y: 800, w: 520, h: 40 },
-        { x: 1160, y: 280, w: 40, h: 40 },
-        { x: 1280, y: 760, w: 160, h: 40 },
-        { x: 1360, y: 280, w: 80, h: 360 },
-        { x: 1360, y: 640, w: 120, h: 80 },
-        { x: 1360, y: 720, w: 80, h: 40 },
-      ];
 
 // Algunas formas (nicho/u/herradura/escalonada) se diseñaron a mano con
 // coordenadas absolutas en píxeles, pensadas para la sala-pantalla de
@@ -270,21 +240,18 @@ export function generarMapa(forma, direccionesConPuerta) {
             { x: 445 * ESC_X, y: 250 * ESC_Y, w: 70, h: 70 },
             { x: 690 * ESC_X, y: 350 * ESC_Y, w: 70, h: 70 },
           );
-        } else if (forma === "arsenal") {
-          // Sala pintada a mano (v2, ver MUROS_ARSENAL arriba). A
-          // diferencia de las demás, estas coordenadas asumen la sala a
-          // 1600x1000 tal cual (el tamaño del lienzo de
-          // tools/level-editor.html) -- si SALA_W/SALA_H cambiara de
-          // tamaño más adelante, esta forma necesitaría reexportarse desde
-          // la herramienta, no se escala sola con ESC_X/ESC_Y como
-          // "nicho"/"u"/etc.
-          for (const m of MUROS_ARSENAL) G.muros.push({ ...m });
-          // hueco de 120x80 (filas 5-6, cols 30-32 del diseño): un muro
-          // más que, a diferencia de los demás, se puede revelar
+        } else if (CUSTOM_ROOMS[forma]) {
+          // Sala diseñada a mano en tools/level-editor/, exportada como JSON
+          // (ver src/systems/customRooms/*.json y customRooms.js). Los
+          // rectángulos ya vienen fusionados y en píxeles reales -- estas
+          // coordenadas asumen la sala a 1600x1000 tal cual (el tamaño del
+          // lienzo del editor); si SALA_W/SALA_H cambiara de tamaño más
+          // adelante, habría que reexportar el JSON desde la herramienta, no
+          // se escala sola con ESC_X/ESC_Y como "nicho"/"u"/etc. Los muros
+          // marcados `secreto: true` en el JSON se pueden revelar
           // acercándose y pulsando E (ver p.secretoParedObj en
-          // core/loop.js e interactuar() en systems/abilities.js) -- hasta
-          // entonces es indistinguible del resto del muro.
-          G.muros.push({ x: 1200, y: 200, w: 120, h: 80, secreto: true });
+          // core/loop.js e interactuar() en systems/abilities.js).
+          for (const m of CUSTOM_ROOMS[forma].muros) G.muros.push({ ...m });
         }
         agregarMurosPerimetro(direccionesConPuerta || []);
       }
@@ -505,7 +472,7 @@ function generarGrafoPlanta() {
         // QA (?qa=1 en la URL, mismo interruptor que el cofre de pruebas en
         // core/gameflow.js): la sala de entrada de la planta 1 (justo al
         // subir las escaleras desde el lobby) es siempre "arsenal" -- la
-        // primera sala diseñada a mano con tools/level-editor.html -- para
+        // primera sala diseñada a mano con tools/level-editor/ (index.html) -- para
         // poder probarla sin esperar a que el sorteo la saque por azar.
         if (
           G.planta === 1 &&
@@ -602,10 +569,54 @@ const PERFILES_SALA = [
         { nombre: "arena", pilares: [0, 1], hazardMult: 0.2, objMult: 0.3 },
       ];
 
+// Objetos con campos extra fijos según su tipo, iguales a los que pone
+// ponHazardsYObjetos() aleatoriamente -- se usan al colocar el contenido
+// EXACTO que se diseñó a mano en el editor (ver colocarContenidoFijo()).
+function crearObjetoFijo(tipo, x, y) {
+        if (tipo === "barril") return { tipo, x, y, hp: 10 };
+        if (tipo === "cofre") return { tipo, x, y, hp: 1, abierto: false };
+        return { tipo, x, y }; // cristal, brasero
+      }
+
+// Si la sala es una CUSTOM_ROOM con objetos/enemigos/pilares definidos en su
+// JSON (ver tools/level-editor/, botón "Exportar JSON (motor)"), coloca ese
+// contenido EXACTO en vez de sortearlo -- sustituye a
+// ponPilares/ponHazardsYObjetos/el sorteo de enemigos de poblarSala().
+// Devuelve true si había contenido fijo que colocar (para que poblarSala()
+// sepa que debe saltarse el poblado procedural).
+function colocarContenidoFijo(sala, f) {
+        const datos = CUSTOM_ROOMS[sala.forma];
+        if (!datos) return false;
+        const hayContenido =
+          (datos.objetos && datos.objetos.length) ||
+          (datos.enemigos && datos.enemigos.length) ||
+          (datos.pilares && datos.pilares.length);
+        if (!hayContenido) return false;
+
+        for (const o of datos.objetos || [])
+          G.objetos.push(crearObjetoFijo(o.tipo, o.x, o.y));
+        for (const e of datos.enemigos || [])
+          spawnEnemigo(f, e.tipo, false, { x: e.x, y: e.y });
+        for (const p of datos.pilares || []) {
+          const dest = p.destructible !== false;
+          G.pilares.push({
+            x: p.x,
+            y: p.y,
+            r: 24,
+            destructible: dest,
+            hp: dest ? 60 + f * 3 : 0,
+            hpMax: dest ? 60 + f * 3 : 0,
+            hurtT: 0,
+          });
+        }
+        return true;
+      }
+
 // Puebla pilares/hazards/objetos/enemigos de una sala normal la PRIMERA vez
 // que se visita (ver cargarSala) -- no se regenera si se vuelve a entrar.
 function poblarSala(sala, f) {
         const N = G.players.length;
+        if (colocarContenidoFijo(sala, f)) return;
         const perfil = az(PERFILES_SALA);
         ponPilares(f, ri(perfil.pilares[0], perfil.pilares[1]));
         if (sala.tipo === "reto_parry") {

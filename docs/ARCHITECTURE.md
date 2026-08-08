@@ -33,6 +33,7 @@ el grafo de módulos), define el `bucle(ts)` principal y lo arranca con
 | `systems/` | `input.js` | teclado/ratón + Gamepad API, navegación de menús con mando |
 | | `audio.js` | sonido sintetizado (Web Audio, sin archivos de audio) |
 | | `floorgen.js` | generación procedural de plantas/mapas |
+| | `customRooms.js` | registro de salas diseñadas a mano (carga `customRooms/*.json`) |
 | | `combat.js` | daño, muerte, XP, curación, invocación de enemigos |
 | | `abilities.js` | ataques y habilidades de las 6 clases |
 | | `bosses.js` | arquetipos y escalado de jefes |
@@ -67,6 +68,16 @@ La UI construye buena parte de su HTML dinámicamente con
 se asignan explícitamente a `window` al final de su módulo (búscalo como
 `window.nombreFuncion = nombreFuncion;`). Es un detalle a tener en cuenta
 si se renombra o se elimina alguna de esas funciones.
+
+## Pipeline de niveles: editor → JSON → motor
+
+Las salas de una mazmorra se generan proceduralmente en `systems/floorgen.js`
+(`generarMapa()`), pero también pueden diseñarse a mano en `tools/level-editor/`
+(editor visual con capas, deshacer, picker de sprites) y exportarse como JSON al
+motor. Ese JSON se guarda en `systems/customRooms/*.json` y `systems/customRooms.js`
+lo carga automáticamente con `import.meta.glob` — añadir una sala diseñada a mano no
+requiere tocar `floorgen.js`, solo soltar el archivo ahí. Formato del JSON, catálogo
+de tipos válidos y reglas de las puertas: ver [`docs/LEVEL_FORMAT.md`](LEVEL_FORMAT.md).
 
 ## Sprites: de base64 inline a archivos reales
 
