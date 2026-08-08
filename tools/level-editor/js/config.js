@@ -102,6 +102,62 @@ export const TIPOS = [
 
 export const TAM_MAX_RECORTE = 32; // máx. ancho/alto (px) de un recorte de sprite, = tamaño de tile
 
+// --- Categorías de comportamiento para pinceles nuevos (ver "Nuevo Pincel" en io.js) ---
+// Un pincel no es solo un dibujo: su capa/capaExport/motorTipo determina si bloquea el
+// paso, si se fusiona en muros, si spawnea un enemigo real, etc. -- ver el comentario
+// grande de TIPOS más arriba y docs/LEVEL_FORMAT.md para el porqué de cada campo. Antes,
+// "Nuevo Pincel" creaba SIEMPRE un tile puramente decorativo (capaExport:"ninguno"); esta
+// lista deja elegir la categoría real, incluyendo reskins de enemigos/objetos/pilares
+// existentes (mismo motorTipo, arte propio vía el picker ⚙️).
+export const CATEGORIAS_PINCEL = [
+  {
+    value: "suelo", label: "Suelo (capa base)", grupo: "Estructural",
+    desc: "Ocupa el fondo de la celda. No bloquea el paso ni se exporta como geometría.",
+    capa: "suelo", capaExport: "ninguno", categoria: "suelo",
+  },
+  {
+    value: "muro", label: "Muro", grupo: "Estructural",
+    desc: "Bloquea el paso. Las celdas contiguas se fusionan en rectángulos de colisión al exportar.",
+    capa: "elemento", capaExport: "muro", categoria: "estructura",
+  },
+  {
+    value: "secreta", label: "Muro secreto", grupo: "Estructural",
+    desc: "Como un muro, pero revelable en el juego acercándose y pulsando E.",
+    capa: "elemento", capaExport: "secreta", categoria: "estructura",
+  },
+  {
+    value: "puerta", label: "Puerta (solo referencia)", grupo: "Estructural",
+    desc: "No bloquea ni se exporta: guía visual. Las puertas reales las coloca el motor en posiciones fijas.",
+    capa: "elemento", capaExport: "ninguno", categoria: "estructura",
+  },
+  {
+    value: "referencia", label: "Solo referencia visual (no se exporta)", grupo: "Estructural",
+    desc: "No se exporta al JSON del motor; útil para anotar la sala mientras se diseña.",
+    capa: "elemento", capaExport: "ninguno", categoria: "referencia",
+  },
+  ...[
+    ["melee", "Sombra (melee)"], ["ranged", "Vigía (ranged)"], ["runner", "Acechador (runner)"],
+    ["tank", "Gólem (tank)"], ["caster", "Hechicero (caster)"], ["bomber", "Detonante (bomber)"],
+    ["mini", "Minijefe (mini)"],
+  ].map(([motorTipo, nombre]) => ({
+    value: "enemigo_" + motorTipo, label: "Enemigo: " + nombre, grupo: "Enemigo (reskin, mismo comportamiento)",
+    desc: "Spawnea un enemigo real de tipo \"" + motorTipo + "\" -- solo cambia el arte, no las stats ni el comportamiento.",
+    capa: "elemento", capaExport: "punto", categoria: "enemigo", motorTipo,
+  })),
+  ...[
+    ["barril", "Barril"], ["cofre", "Cofre del tesoro"], ["cristal", "Cristal"], ["brasero", "Brasero"],
+  ].map(([motorTipo, nombre]) => ({
+    value: "objeto_" + motorTipo, label: "Objeto: " + nombre, grupo: "Objeto (reskin, mismo comportamiento)",
+    desc: "Coloca un objeto real de tipo \"" + motorTipo + "\" -- solo cambia el arte, no la función.",
+    capa: "elemento", capaExport: "punto", categoria: "objeto", motorTipo,
+  })),
+  {
+    value: "pilar", label: "Pilar", grupo: "Otros",
+    desc: "Columna destructible real del motor -- solo cambia el arte.",
+    capa: "elemento", capaExport: "punto", categoria: "pilar",
+  },
+];
+
 export let POR_ID = {};
 export let POR_CH = {};
 export function actualizarDiccionarios() {

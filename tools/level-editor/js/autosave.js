@@ -10,14 +10,24 @@ const CLAVE = "vespero-level-editor-autosave-v1";
 const RETARDO_MS = 600;
 let temporizador = null;
 
+// Los pinceles creados en el editor (a diferencia de los base de config.js) llevan
+// id "custom_<timestamp>" (Nuevo Pincel, io.js) o "import_<char>" (importados desde
+// texto con leyenda, io.js:registrarTipoImportado) -- NO se distinguen ya por
+// `categoria`, porque desde que "Nuevo Pincel" deja elegir la categoría real
+// (suelo/muro/enemigo/...) esa categoría puede ser cualquiera de las del motor.
+function esTipoCustom(t) {
+  return t.id.startsWith("custom_") || t.id.startsWith("import_");
+}
+
 function serializar() {
   const tiposCustom = TIPOS
-    .filter(t => t.categoria === "personalizado")
+    .filter(esTipoCustom)
     .map(t => ({
       id: t.id, ch: t.ch, color: t.color, label: t.label, tecla: t.tecla,
       imgSrc: t.img && t.img.complete ? t.img.src : null,
       sx: t.sx, sy: t.sy, sw: t.sw, sh: t.sh,
       capa: t.capa, capaExport: t.capaExport, categoria: t.categoria,
+      ...(t.motorTipo ? { motorTipo: t.motorTipo } : {}),
     }));
 
   return {

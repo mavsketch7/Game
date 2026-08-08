@@ -1,5 +1,5 @@
 // --- Exportar / Importar texto y gestión de Salas y Pinceles ---
-import { COLS, ROWS, CELL, TIPOS, ASSETS, POR_ID, POR_CH, actualizarDiccionarios } from "./config.js";
+import { COLS, ROWS, CELL, TIPOS, ASSETS, POR_ID, POR_CH, actualizarDiccionarios, CATEGORIAS_PINCEL } from "./config.js";
 import { estado, crearGridVacia, crearSalaVacia, guardarEstado, clonarGrid, capaDe } from "./state.js";
 import { construirPaleta, construirListaSalas } from "./ui.js";
 import { abrirPicker } from "./picker.js";
@@ -186,15 +186,21 @@ export function inicializarIO(redibujar) {
     }
   };
 
-  // Creación dinámica de pinceles
+  // Creación dinámica de pinceles: nombre + categoría de comportamiento (ver
+  // CATEGORIAS_PINCEL en config.js -- un pincel de suelo, muro o puerta no son
+  // intercambiables, cada uno provoca un efecto distinto al exportar/jugar).
   document.getElementById("btn-nuevo-pincel").onclick = () => {
     mostrarDialogo({
       titulo: "Nuevo Pincel",
-      mensaje: "Nombre para identificar este elemento:",
+      mensaje: "Nombre y categoría de comportamiento (determina si bloquea el paso, si spawnea un enemigo real, etc. -- no solo el dibujo):",
       conInput: true,
+      opciones: CATEGORIAS_PINCEL,
       btnOk: "Crear"
-    }, (nombre) => {
-      if (!nombre) return;
+    }, (resultado) => {
+      if (!resultado || !resultado.texto) return;
+      const { texto: nombre, opcion } = resultado;
+
+      const cat = CATEGORIAS_PINCEL.find(c => c.value === opcion) || CATEGORIAS_PINCEL[0];
 
       const id = "custom_" + Date.now();
       const usedChs = TIPOS.map(t => t.ch);
@@ -207,8 +213,9 @@ export function inicializarIO(redibujar) {
 
       const nuevoTipo = {
         id: id, ch: newCh, color: "#8854d0", label: nombre, tecla: newKey,
-        img: ASSETS.wall, sx: 0, sy: 0, sw: 32, sh: 32, capa: "elemento",
-        capaExport: "ninguno", categoria: "personalizado"
+        img: ASSETS.wall, sx: 0, sy: 0, sw: 32, sh: 32,
+        capa: cat.capa, capaExport: cat.capaExport, categoria: cat.categoria,
+        ...(cat.motorTipo ? { motorTipo: cat.motorTipo } : {}),
       };
 
       TIPOS.push(nuevoTipo);
