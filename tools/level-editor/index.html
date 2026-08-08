@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Editor de salas — La Torre de Véspero</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="./css/editor.css">
+</head>
+<body>
+
+<div>
+  <h1>Editor de salas — La Torre de Véspero</h1>
+  <p class="nota">
+    Diseña las salas del juego. Usa las herramientas de dibujo, simetría y crea tus propios pinceles. Al terminar, usa "Exportar todo" para generar el mapa procesable por el motor del juego. Las 4 cruces marcan las puertas obligatorias.
+  </p>
+
+  <div class="caja barra-herramientas">
+    <div class="fila-btn grid-tools">
+      <button id="tool-pincel" class="activa-tool" data-tool="pincel">🖌️ Pincel</button>
+      <button id="tool-rect" data-tool="rect">🔲 Rectángulo</button>
+      <button id="tool-cubo" data-tool="cubo">🪣 Rellenar</button>
+      <button id="tool-cuentagotas" data-tool="cuentagotas">💧 Cuentagotas</button>
+      <button id="btn-modo-borrar" class="mini" title="En pantallas táctiles no hay clic derecho: activa este modo para que pintar borre en su lugar (equivale a mantener pulsado el botón derecho en escritorio).">🧹 Modo Borrar</button>
+    </div>
+    <div class="sym-tools">
+      <span>Simetría:</span>
+      <label><input type="checkbox" id="sym-x"> ↔️ H</label>
+      <label><input type="checkbox" id="sym-y"> ↕️ V</label>
+    </div>
+    <div class="fila-btn">
+      <button id="btn-zoom-out" class="mini">🔍−</button>
+      <button id="btn-zoom-reset" class="mini">100%</button>
+      <button id="btn-zoom-in" class="mini">🔍+</button>
+      <button id="btn-undo" class="mini">↩️ Deshacer</button>
+      <button id="btn-redo" class="mini">↪️ Rehacer</button>
+    </div>
+  </div>
+
+  <div id="lienzo-wrap">
+    <canvas id="lienzo" width="1600" height="1000"></canvas>
+  </div>
+  <p id="coord" style="font-size: 0.8rem; color: var(--ceniza); margin-top: 5px;">&nbsp;</p>
+</div>
+
+<div class="panel">
+  <div class="caja">
+    <h2>Salas</h2>
+    <div id="listaSalas"></div>
+    <div class="fila-btn">
+      <button id="btn-nueva-sala" class="mini">➕ Nueva</button>
+      <button id="btn-renombrar-sala" class="mini">✏️ Renombrar</button>
+      <button id="btn-borrar-sala" class="mini rojo">🗑️ Borrar</button>
+    </div>
+    <input type="text" id="notaSala" placeholder="Notas sobre la sala (opcional)" style="margin-top:10px" />
+  </div>
+
+  <div class="caja">
+    <h2>
+      <span>Paleta de Tiles</span>
+      <button id="btn-nuevo-pincel" class="mini">➕ Nuevo Pincel</button>
+    </h2>
+    <div id="paleta"></div>
+  </div>
+
+  <div class="caja">
+    <h2>Acciones y Datos</h2>
+    <div class="fila-btn">
+      <button id="btn-limpiar" class="rojo">Limpiar sala</button>
+      <button id="btn-exportar" class="dorado">Exportar texto</button>
+      <button id="btn-importar">Importar texto</button>
+      <button id="btn-exportar-json" class="dorado">Exportar JSON (motor)</button>
+    </div>
+    <textarea id="texto" placeholder="Pulsa 'Exportar' para generar el texto o pega aquí uno existente y pulsa 'Importar'." style="margin-top:10px"></textarea>
+    <div id="copiaEstado" style="font-size: 0.8rem; color: var(--vespero);">&nbsp;</div>
+    <div class="fila-btn">
+      <button id="btn-borrar-autoguardado" class="mini" title="El editor guarda tu progreso automáticamente en este navegador. Este botón borra ese respaldo local (no afecta a lo que ya exportaste).">🧹 Borrar autoguardado</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Genérico (Reemplazo prompt/confirm) -->
+<div id="dialog-modal" class="modal-overlay oculto">
+  <div class="modal-box chico">
+    <h3 id="dialog-title" style="margin:0; color:var(--vespero)">Título</h3>
+    <p id="dialog-message" style="margin:0; font-size:0.9rem"></p>
+    <input type="text" id="dialog-input" style="display:none;" />
+    <div class="fila-btn" style="justify-content: flex-end; margin-top:10px;">
+      <button id="dialog-cancel">Cancelar</button>
+      <button id="dialog-ok" class="dorado">Aceptar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Selector de Sprites -->
+<div id="picker-modal" class="modal-overlay oculto">
+  <div class="modal-box">
+    <h3 style="margin:0; color:var(--vespero); display:flex; justify-content:space-between;">
+      Selector Visual de Casillas
+      <button id="btn-cerrar-picker" class="mini rojo">Cerrar</button>
+    </h3>
+    <div class="picker-fila-imagen" style="display:flex; gap:15px; align-items:center; background:#000; padding:10px; border-radius:6px; border:1px solid var(--borde);">
+      <label style="font-size:0.85rem;">Imagen (Spritesheet):</label>
+      <select id="picker-img-select" style="width: auto; flex: 1;">
+        <option value="suelo1">suelo1.png</option>
+        <option value="suelo2">suelo2.png</option>
+        <option value="wall">wall.png</option>
+        <option value="wallRemate">wallRemate.png</option>
+        <option value="paredIntermedia">Pared-intermedia.png</option>
+        <option value="door1">door1.png</option>
+        <option value="door2">door2.png</option>
+        <option value="escaleras">escaleras.png</option>
+        <option value="cofre">cofre_f0.png</option>
+        <option value="barril">barril.png</option>
+      </select>
+      <label style="font-size:0.85rem;">Tamaño Grid:</label>
+      <input type="number" id="picker-grid-size" value="32" style="width: 60px;" />
+    </div>
+    <div class="fila-btn" style="margin:0 0 10px;">
+      <button id="btn-picker-cargar" class="mini">📂 Cargar imagen…</button>
+      <input type="file" id="picker-file-input" accept="image/png,image/webp,image/jpeg,image/gif" style="display:none;" />
+      <label style="font-size:0.8rem; display:flex; align-items:center; gap:4px;">Ancho:
+        <input type="number" id="picker-resize-w" value="32" min="1" max="256" style="width:55px;" />
+      </label>
+      <label style="font-size:0.8rem; display:flex; align-items:center; gap:4px;">Alto:
+        <input type="number" id="picker-resize-h" value="32" min="1" max="256" style="width:55px;" />
+      </label>
+      <button id="btn-picker-ajustar" class="mini" title="Redimensiona la imagen mostrada al ancho/alto indicados, conservando proporción">📐 Redimensionar</button>
+      <button id="btn-picker-pixelart" class="mini">🖍️ Pintar píxel a píxel</button>
+    </div>
+    <div id="picker-wrap">
+      <canvas id="picker-canvas"></canvas>
+    </div>
+    <p style="margin:0; font-size:0.8rem; color:var(--ceniza);">Haz clic en la zona de la imagen que quieres asignar al pincel actual. Mantén <strong>Alt</strong> y arrastra para recortar una región libre de cualquier tamaño — se reencuadra sola a 32×32 al soltar. "Cargar imagen…" añade tu propio PNG a la lista; "Redimensionar" lo ajusta al ancho/alto que escribas conservando proporción (con márgenes transparentes).</p>
+
+    <!-- Mini editor de píxel a píxel: dibuja un tile a mano o genera uno de partida -->
+    <div id="pixelart-panel" class="oculto" style="border:1px solid var(--borde); border-radius:6px; padding:10px; margin-top:10px; background:#000;">
+      <div class="fila-btn" style="margin:0 0 10px; align-items:center;">
+        <input type="color" id="pixelart-color" value="#e9b45c" title="Color de pincel" />
+        <button id="pixelart-borrador" class="mini">🧽 Borrador</button>
+        <label style="font-size:0.8rem; display:flex; align-items:center; gap:4px;">Tamaño:
+          <input type="number" id="pixelart-size" value="32" min="4" max="64" style="width:55px;" />
+        </label>
+        <button id="btn-pixelart-autogenerar" class="mini">🎲 Autogenerar</button>
+        <button id="btn-pixelart-limpiar" class="mini rojo">🗑️ Limpiar</button>
+        <button id="btn-pixelart-cerrar" class="mini">✖️ Cerrar</button>
+        <button id="btn-pixelart-usar" class="mini dorado">✅ Usar este dibujo</button>
+      </div>
+      <div style="overflow:auto; max-width:100%; max-height:50vh; border:1px solid var(--borde); display:inline-block;">
+        <canvas id="pixelart-canvas" style="image-rendering: pixelated; cursor: crosshair; display:block;"></canvas>
+      </div>
+      <p style="margin:8px 0 0; font-size:0.8rem; color:var(--ceniza);">Clic izquierdo pinta, mantén pulsado para dibujar en línea. "Autogenerar" crea un patrón simétrico aleatorio de partida para retocar a mano.</p>
+    </div>
+  </div>
+</div>
+
+<script type="module" src="./js/main.js"></script>
+
+</body>
+</html>
