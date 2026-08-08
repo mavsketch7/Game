@@ -4,7 +4,7 @@ import { ELEMENTOS, MAX_PLANTA, RAREZAS, SALA_H, SALA_W, SUPS } from "../core/co
 import { G } from "../core/state.js";
 import { fxParticulas } from "./effects.js";
 import { barra, renderHUD } from "./hud.js";
-import { ATTACK_DUR, ESC_FORMA, KENNEY_TILE, MOB_RUN, NO_SCHEMATIC_WEAPON, REAL_ATTACK, REAL_RUN, REAL_SPRITE_SCALE, SHEETS, SPR, SPR_FORMAS, assetOK, iconoDrop, remateMuroPatron, spriteJugador, wallPatron } from "./sprites.js";
+import { ATTACK_DUR, ESC_FORMA, KENNEY_TILE, MOB_RUN, NO_SCHEMATIC_WEAPON, REAL_ATTACK, REAL_IDLE, REAL_RUN, REAL_SPRITE_SCALE, SHEETS, SPR, SPR_FORMAS, assetOK, iconoDrop, remateMuroPatron, spriteJugador, wallPatron } from "./sprites.js";
 import { groundTarget } from "../systems/abilities.js";
 import { masCercano } from "../systems/combat.js";
 import { mouse } from "../systems/input.js";
@@ -138,7 +138,13 @@ function drawSprite(img, x, y, flip, esc) {
       }
 
 function dibujarHeroe(p, x, y, mov) {
-        let img = spriteJugador(p);
+        // Base: frame de idle del cuerpo real (ver REAL_IDLE en sprites.js) si ya
+        // cargó; si no (arranque de la página, un instante), cae al icono
+        // estático de siempre para no dejar un hueco en blanco.
+        const idleFrames = REAL_IDLE[p.rol];
+        let img = (idleFrames && idleFrames.length)
+          ? idleFrames[Math.floor(p.anim * 4) % idleFrames.length]
+          : spriteJugador(p);
         const atkFrames = REAL_ATTACK[p.rol];
         const runFrames = REAL_RUN[p.rol];
         if (p.swingT > 0 && atkFrames && atkFrames.length) {
@@ -2183,7 +2189,13 @@ function renderEnemigo(e) {
         if (mobKey && MOB_RUN[mobKey] && MOB_RUN[mobKey].length) {
           const frames = MOB_RUN[mobKey];
           const fr = frames[Math.floor(animGlobal * 8 + e.x * 0.05) % frames.length];
-          if (fr) img = fr;
+          // El frame real ya viene normalizado al tamaño de la hitbox (ver
+          // MOB_R/FACTOR_SPRITE_HITBOX en sprites.js) -- los `esc` de arriba
+          // estaban afinados a mano para el icono pequeño anterior, así que
+          // aplicarlos aquí también volvería a desproporcionar el tamaño.
+          // e.elite conserva un ligero extra (mismo criterio que su radio
+          // real, r = tp.r+4) para que se note un poco más grande.
+          if (fr) { img = fr; esc = e.elite ? 1.15 : 1; }
         }
 
         const obj = masCercano(e.x, e.y);

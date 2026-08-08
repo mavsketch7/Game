@@ -890,53 +890,70 @@ function cargarHojaFrames(url, destSize, onListo) {
   im.src = url;
 }
 
-// Tamaño en pantalla de los iconos de clase/enemigo ya existentes: 16px
-// nativos x KENNEY_ICON_SCALE (por defecto 3, ver arriba) = 48px. Los
-// frames de correr/atacar del pack nuevo se normalizan a este mismo tamaño
-// para no desentonar con el icono estático (idle) al alternar entre ambos.
-const TAM_ICONO_HEROE = 48;
+// Tamaño del sprite = radio de colisión (hitbox) x este factor, en vez de un
+// tamaño de icono arbitrario desconectado del gameplay -- así el personaje
+// "llena" un hueco visualmente coherente con lo grande que es de verdad para
+// golpear/ser golpeado, y quieto/corriendo/atacando miden siempre lo mismo
+// (antes el idle usaba el icono KENNEY de 48px y correr/atacar un tamaño
+// distinto sacado del pack, de ahí el salto de tamaño al moverse).
+const FACTOR_SPRITE_HITBOX = 4;
 
-// Correr: el pack trae hojas dedicadas para guerrero/pícaro/mago (más
-// fidelidad, mismo personaje con nombre que en Entities/Npc's) y un cuerpo
-// genérico ("Body_A") para las 3 clases sin NPC dedicado en el pack
-// (arquero/clérigo/druida) -- ver docs de la sesión de integración.
-const REAL_RUN_SRC = {
-  guerrero: assetUrl("characters/knight_run"),
-  picaro: assetUrl("characters/rogue_run"),
-  mago: assetUrl("characters/wizard_run"),
-  arquero: assetUrl("characters/bodyA_run_side"),
-  clerigo: assetUrl("characters/bodyA_run_side"),
-  druida: assetUrl("characters/bodyA_run_side"),
-};
+// Héroe: p.r = 17 fijo para las 6 clases (ver core/gameflow.js).
+const TAM_HEROE = 17 * FACTOR_SPRITE_HITBOX;
 
-export const REAL_RUN = { guerrero: [], arquero: [], picaro: [], mago: [], clerigo: [], druida: [] };
-
-for (const rolRun in REAL_RUN_SRC) {
-  cargarHojaFrames(REAL_RUN_SRC[rolRun], TAM_ICONO_HEROE, (frames) => { REAL_RUN[rolRun] = frames; });
+// Un único cuerpo base ("Body_A" del pack) para las 6 clases -- antes se
+// mezclaba con Knight/Rogue/Wizard (otro personaje, otro estilo de pixel art)
+// para 3 de ellas, lo que además del salto de tamaño hacía que cada clase se
+// viera "distinta" entre sí y respecto al icono quieto. Ahora quieto/correr/
+// atacar salen siempre del mismo cuerpo, mismo estilo, mismo tamaño.
+const REAL_IDLE_SRC = {};
+const REAL_RUN_SRC = {};
+for (const rolCuerpo of ["guerrero", "arquero", "mago", "clerigo", "picaro", "druida"]) {
+  REAL_IDLE_SRC[rolCuerpo] = assetUrl("characters/bodyA_idle_side");
+  REAL_RUN_SRC[rolCuerpo] = assetUrl("characters/bodyA_run_side");
 }
 
-// Ataque: solo guerrero (Slice = espadazo) y pícaro (Pierce = puñalada) tienen
-// una animación del pack que encaja temáticamente con su arma -- el resto de
-// clases (arquero/mago/clérigo/druida) se quedan sin REAL_ATTACK a propósito
-// (el pack no trae "disparar arco"/"lanzar hechizo"/"golpe de báculo"), así
-// que durante el ataque siguen mostrando el icono estático de siempre, sin
-// forzar una animación que no encajaría con lo que hace esa clase.
+export const REAL_IDLE = { guerrero: [], arquero: [], picaro: [], mago: [], clerigo: [], druida: [] };
+export const REAL_RUN = { guerrero: [], arquero: [], picaro: [], mago: [], clerigo: [], druida: [] };
+
+for (const rolIdle in REAL_IDLE_SRC) {
+  cargarHojaFrames(REAL_IDLE_SRC[rolIdle], TAM_HEROE, (frames) => { REAL_IDLE[rolIdle] = frames; });
+}
+for (const rolRun in REAL_RUN_SRC) {
+  cargarHojaFrames(REAL_RUN_SRC[rolRun], TAM_HEROE, (frames) => { REAL_RUN[rolRun] = frames; });
+}
+
+// Ataque: guerrero (Slice = espadazo), pícaro (Pierce = puñalada) y mago
+// (Crush = golpe de báculo) tienen una animación del "Body_A" que encaja
+// temáticamente con su arma. Arquero/clérigo/druida se quedan sin
+// REAL_ATTACK a propósito (el pack no trae "disparar arco"/"lanzar
+// hechizo"), así que durante el ataque siguen mostrando el frame de idle en
+// vez de forzar una animación que no encajaría con lo que hace esa clase.
 const REAL_ATTACK_SRC = {
   guerrero: assetUrl("characters/bodyA_slice_side"),
   picaro: assetUrl("characters/bodyA_pierce_side"),
+  mago: assetUrl("characters/bodyA_crush_side"),
 };
 
-export const REAL_ATTACK = { guerrero: [], arquero: [], picaro: [] };
+export const REAL_ATTACK = { guerrero: [], arquero: [], picaro: [], mago: [] };
 
 for (const rolAtk in REAL_ATTACK_SRC) {
-  cargarHojaFrames(REAL_ATTACK_SRC[rolAtk], TAM_ICONO_HEROE, (frames) => { REAL_ATTACK[rolAtk] = frames; });
+  cargarHojaFrames(REAL_ATTACK_SRC[rolAtk], TAM_HEROE, (frames) => { REAL_ATTACK[rolAtk] = frames; });
 }
 
-export const ATTACK_DUR = { guerrero: 0.22, arquero: 0.3, picaro: 0.1 };
+export const ATTACK_DUR = { guerrero: 0.22, arquero: 0.3, picaro: 0.1, mago: 0.25 };
+
+// Enemigos: mismo criterio de tamaño (radio de colisión x FACTOR_SPRITE_HITBOX)
+// en vez del tamaño de icono KENNEY anterior. Radios tomados de la tabla TIPOS
+// en systems/combat.js (melee 14, ranged 13, caster 13, runner 11, tank 19;
+// "bruto" es el reskin de cualquier elite no-tank/runner/bomber/caster/mini,
+// que suele salir de melee o ranged con +4 -- 18 es un término medio
+// razonable, no depende de una sola fórmula exacta aquí).
+const MOB_R = { esqueleto: 14, ojo: 13, hechicero: 13, acechador: 11, golem: 19, bruto: 18 };
 
 // Correr para enemigos (ver renderEnemigo() en world.js): mismo mecanismo que
-// el héroe, indexado por `key` (el mismo nombre de SPR.* que ya se dibuja hoy)
-// para no tener que tocar más que un par de líneas por rama en world.js.
+// el héroe, indexado por `mobKey` (el mismo nombre de SPR.* que ya se dibuja
+// hoy) para no tener que tocar más que un par de líneas por rama en world.js.
 // Sin match temático en el pack para bomber/mini/jefe -- se quedan 100%
 // procedurales como hasta ahora (MOB_RUN[key] undefined = no-op seguro).
 const MOB_RUN_SRC = {
@@ -951,12 +968,7 @@ const MOB_RUN_SRC = {
 export const MOB_RUN = {};
 
 for (const keyMob in MOB_RUN_SRC) {
-  // 16px nativo x su KENNEY_ICON_SCALE (mismo cálculo que el icono estático,
-  // ver más arriba) -- no se puede leer SPR[keyMob].width aquí porque ese
-  // icono real todavía no ha terminado de cargar (async) en el momento en
-  // que se ejecuta este bucle, y seguiría teniendo el tamaño del sprite
-  // procedural de relleno (esc=3 fijo, no necesariamente 16px de base).
-  const destSize = 16 * (KENNEY_ICON_SCALE[keyMob] || 3);
+  const destSize = (MOB_R[keyMob] || 14) * FACTOR_SPRITE_HITBOX;
   cargarHojaFrames(MOB_RUN_SRC[keyMob], destSize, (frames) => { MOB_RUN[keyMob] = frames; });
 }
 
