@@ -29,7 +29,12 @@ const btnAnimGuardar = document.getElementById("btn-animacion-guardar");
 
 let tipoEditando = null;
 let activePickerImg = null;
-let arrastreLibre = null; // {x0, y0, x1, y1} en px de imagen, mientras se arrastra con Alt
+let arrastreLibre = null; // {x0, y0, x1, y1} en px de imagen, en cuanto el gesto se reconoce como arrastre
+let clicInicio = null; // pos (px de imagen) del pointerdown, hasta que se sepa si es clic o arrastre
+
+// A partir de este desplazamiento (px de imagen) un gesto deja de considerarse
+// "clic" (celda alineada a rejilla) y pasa a "arrastre" (selección libre).
+const UMBRAL_ARRASTRE = 3;
 
 // Modo animación: mientras está activo, un clic en la rejilla o confirmar un arrastre
 // libre AÑADE un frame a esta lista (normalizado a TAM_MAX_RECORTE x TAM_MAX_RECORTE,
@@ -268,74 +273,67 @@ btnAnimGuardar.onclick = () => {
   onCambio();
 };
 
-canvasPicker.addEventListener("pointerdown", (e) => {
-  if (!tipoEditando || !activePickerImg) return;
-  canvasPicker.setPointerCapture(e.pointerId);
-  const pos = posicionEnImagen(e);
-
-  if (e.altKey) {
-    // Inicia selección libre: se confirma al soltar (desktop, con Alt). En táctil no
-    // hay tecla Alt, así que en móvil se usa siempre la selección clásica de rejilla.
-    arrastreLibre = { x0: pos.x, y0: pos.y, x1: pos.x, y1: pos.y };
-    dibujarCanvasPicker();
-    return;
-  }
-
-  // Selección clásica alineada a la grid.
-  const gridSize = parseInt(inputGridSize.value) || 32;
-  const sx = Math.floor(pos.x / gridSize) * gridSize;
-  const sy = Math.floor(pos.y / gridSize) * gridSize;
-
-  if (modoAnimacion) {
-    agregarFrameAnimacion(activePickerImg, { rx: sx, ry: sy, rw: TAM_MAX_RECORTE, rh: TAM_MAX_RECORTE });
-    return;
-  }
-
-  tipoEditando.img = activePickerImg;
-  tipoEditando.sx = sx;
-  tipoEditando.sy = sy;
-  tipoEditando.sw = TAM_MAX_RECORTE;
-  tipoEditando.sh = TAM_MAX_RECORTE;
-
-  pickerUI.classList.add("oculto");
-  construirPaleta();
-  onCambio();
-});
-
-canvasPicker.addEventListener("pointermove", (e) => {
-  if (!arrastreLibre) return;
-  const pos = posicionEnImagen(e);
-  arrastreLibre.x1 = pos.x;
-  arrastreLibre.y1 = pos.y;
-  dibujarCanvasPicker();
-});
-
-canvasPicker.addEventListener("pointerup", () => {
-  if (!arrastreLibre || !tipoEditando) { arrastreLibre = null; return; }
-  const region = rectoDeArrastre(arrastreLibre);
-  arrastreLibre = null;
-
+// Asigna (o, en modo animación, añade como frame) una región exacta de la imagen
+// activa -- sx/sy/sw/sh se guardan tal cual, en su tamaño real de píxeles, SIN
+// normalizar a un cuadrado: el que un recorte sea alto/estrecho o ancho/bajo
+// (un arma, una puerta, un enemigo grande...) es información real que hay que
+// conservar, no un defecto a corregir -- dibujarConProporcion() en render.js se
+// encarga de encajarlo en la celda sin deformarlo.
+function aplicarRegion(region) {
   if (modoAnimacion) {
     agregarFrameAnimacion(activePickerImg, region);
     return;
   }
+  tipoEditando.img = activePickerImg;
+  tipoEditando.sx = region.rx;
+  tipoEditando.sy = region.ry;
+  tipoEditando.sw = region.rw;
+  tipoEditando.sh = region.rh;
 
-  // El rango de selección es libre (cualquier tamaño), pero el tile final siempre se
-  // reencuadra a TAM_MAX_RECORTE x TAM_MAX_RECORTE conservando proporción, para que
-  // el pincel resultante pinte igual de bien que uno recortado con la rejilla clásica.
-  const img = new Image();
-  img.onload = () => {
-    tipoEditando.img = img;
-    tipoEditando.sx = 0;
-    tipoEditando.sy = 0;
-    tipoEditando.sw = TAM_MAX_RECORTE;
-    tipoEditando.sh = TAM_MAX_RECORTE;
+  pickerUI.classList.add("oculto");
+  construirPaleta();
+  onCambio();
+}
 
-    pickerUI.classList.add("oculto");
-    construirPaleta();
-    onCambio();
-  };
-  img.src = reencuadrar(activePickerImg, TAM_MAX_RECORTE, TAM_MAX_RECORTE, region).toDataURL("image/png");
+canvasPicker.addEventListener("pointerdown", (e) => {
+  if (!tipoEditando || !activePickerImg) return;
+  canvasPicker.setPointerCapture(e.pointerId);
+  // No se decide todavía si es un clic (celda de rejilla) o un arrastre
+  // (selección libre píxel a píxel) -- eso se sabe en el primer pointermove
+  // que supere UMBRAL_ARRASTRE, o en pointerup si nunca lo superó.
+  clicInicio = posicionEnImagen(e);
+  arrastreLibre = null;
+});
+
+canvasPicker.addEventListener("pointermove", (e) => {
+  if (!clicInicio) return;
+  const pos = posicionEnImagen(e);
+  if (!arrastreLibre) {
+    if (Math.hypot(pos.x - clicInicio.x, pos.y - clicInicio.y) < UMBRAL_ARRASTRE) return;
+    arrastreLibre = { x0: clicInicio.x, y0: clicInicio.y, x1: pos.x, y1: pos.y };
+  } else {
+    arrastreLibre.x1 = pos.x;
+    arrastreLibre.y1 = pos.y;
+  }
+  dibujarCanvasPicker();
+});
+
+canvasPicker.addEventListener("pointerup", () => {
+  if (!tipoEditando || !clicInicio) { clicInicio = null; arrastreLibre = null; return; }
+
+  if (arrastreLibre) {
+    // Arrastre: selección libre, tamaño real conservado (ver aplicarRegion arriba).
+    aplicarRegion(rectoDeArrastre(arrastreLibre));
+  } else {
+    // Sin arrastre: clic simple = una celda alineada a la rejilla configurada,
+    // el atajo rápido de siempre para spritesheets con grid regular.
+    const gridSize = parseInt(inputGridSize.value) || 32;
+    const sx = Math.floor(clicInicio.x / gridSize) * gridSize;
+    const sy = Math.floor(clicInicio.y / gridSize) * gridSize;
+    aplicarRegion({ rx: sx, ry: sy, rw: gridSize, rh: gridSize });
+  }
+  clicInicio = null;
+  arrastreLibre = null;
 });
 
 document.getElementById("btn-cerrar-picker").onclick = () => {

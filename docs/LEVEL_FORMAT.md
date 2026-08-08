@@ -83,35 +83,34 @@ como geometría, ya que las puertas reales las coloca el motor.
 
 ## Dimensionado de sprites (para pinceles nuevos)
 
-El editor dibuja cada tile estirando la imagen de origen al tamaño de celda
-(`CELL` = 40×40 px, ver `dibujarTile()` en `js/render.js`) **sin preservar el
-aspect ratio**. Esto es indiferente para los sprites reales del motor (se usan
-sueltos, a tamaño natural completo, `sw:0/sh:0`), pero si vas a importar un PNG
-propio como pincel nuevo (botón "➕ Nuevo Pincel" → selector ⚙️) conviene
-dimensionarlo bien para que no salga deformado:
+El editor dibuja cada tile **conservando su proporción real** (`dibujarConProporcion()`
+en `js/render.js`): encaja el sprite dentro de la celda (`CELL` = 40×40 px) por su
+lado más largo, centrado, sin estirarlo a un cuadrado -- un sprite alto/estrecho
+(una puerta, un arma) o ancho/bajo se ve tan alto/ancho como es de verdad, no
+deformado. Si vas a importar un PNG propio como pincel nuevo (botón "➕ Nuevo
+Pincel" → selector ⚙️):
 
-- **Cuadrado.** El tile final siempre se pinta en un cuadrado de 40×40 px, así
-  que cualquier sprite no cuadrado (p. ej. una puerta de 160×29 o una pared de
-  16×128) se verá estirado/aplastado al encajarlo. Usa lienzos cuadrados.
-- **Múltiplo de 32 px.** El selector visual (picker) superpone una rejilla de
-  recorte configurable (por defecto 32 px, `TAM_MAX_RECORTE` en `js/config.js`)
-  y el recorte máximo que admite es 32×32. Si tu imagen es un spritesheet con
-  varios tiles, que cada casilla mida 32×32 (o un múltiplo exacto, p. ej.
-  64×64 con `picker-grid-size = 64`) para que los clics caigan justo en los
-  bordes de cada sprite.
-- **Spritesheet vs. sprite suelto.** Da igual cuál de los dos uses: el picker
-  funciona tanto con una imagen que contenga un único tile de 32×32 como con
-  una hoja grande de varios tiles — solo cambia si necesitas recortar
-  (clic normal, alineado a rejilla) o arrastrar con Alt para una selección
-  libre de hasta 32×32 px.
+- **No hace falta que sea cuadrado.** El recorte se dibuja con su forma real;
+  usa el tamaño y proporción que tenga sentido para ese objeto en concreto.
+- **Selección**: en el selector visual (picker), un **clic** asigna una celda
+  alineada a la rejilla configurable (`picker-grid-size`, atajo rápido para
+  spritesheets con grid regular); **arrastrar** hace una selección libre
+  píxel a píxel de cualquier tamaño, que se asigna con sus dimensiones
+  exactas (sin recortar ni normalizar a un cuadrado).
 - **Fondo transparente (PNG con alfa).** El editor no rellena un color de
   fondo detrás del sprite (solo un placeholder oscuro si la imagen falla o no
   hay ninguna asignada), así que exporta con transparencia si el tile no debe
   tapar completamente la celda.
 
-Los sprites reales del juego (`public/assets/sprites/`) no siguen esta regla
-porque se dibujan a tamaño natural sin recorte — son referencia de arte del
-motor, no de este flujo de pinceles personalizados.
+Los sprites reales del juego (`public/assets/sprites/`) siempre se han dibujado
+a tamaño natural sin recorte en el motor -- ahora el editor sigue el mismo
+criterio (proporción real) al previsualizarlos, así que ya no hace falta la
+distinción de antes entre "cómo se ve en el editor" y "cómo se ve en el juego".
+
+Nota sobre "Modo animación" (frames en bucle, ver más abajo): ahí los frames
+capturados **sí** se normalizan a un cuadrado fijo (`TAM_MAX_RECORTE`, 32×32),
+a propósito -- para que el bucle no salte de tamaño entre frames. Es la única
+excepción a "se conserva el tamaño real".
 
 ## Pinceles animados: solo ayuda visual del editor, no se exportan
 

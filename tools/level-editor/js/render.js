@@ -6,6 +6,21 @@ export function varColor(name) {
   return getComputedStyle(document.body).getPropertyValue(name).trim();
 }
 
+// Dibuja `img` (o una región sx,sy,sw,sh de ella) centrada en el rectángulo
+// x,y,ancho,alto conservando su proporción real ("contain"), en vez de
+// estirarla para rellenar la celda entera -- así un recorte alto/estrecho o
+// ancho/bajo (una puerta, un arma, unas escaleras...) no sale deformado solo
+// porque la rejilla del editor use celdas cuadradas. Si sw/sh no se pasan, se
+// usa el tamaño natural completo de `img`.
+function dibujarConProporcion(ctx, img, x, y, ancho, alto, sx, sy, sw, sh) {
+  sx = sx || 0; sy = sy || 0;
+  sw = sw || img.naturalWidth || img.width;
+  sh = sh || img.naturalHeight || img.height;
+  const escala = Math.min(ancho / sw, alto / sh);
+  const w = sw * escala, h = sh * escala;
+  ctx.drawImage(img, sx, sy, sw, sh, x + (ancho - w) / 2, y + (alto - h) / 2, w, h);
+}
+
 // sinFondo: no rellenar el fondo de la celda (se usa para dibujar la capa "elemento"
 // encima de la capa "suelo" ya dibujada, sin tapar el suelo bajo ella).
 export function dibujarTile(ctx, idTipo, x, y, ancho, alto, sinFondo) {
@@ -27,7 +42,7 @@ export function dibujarTile(ctx, idTipo, x, y, ancho, alto, sinFondo) {
     const idx = Math.floor((Date.now() / 1000) * (t.fps || 6)) % t.frames.length;
     const frame = t.frames[idx];
     if (frame && frame.complete && frame.naturalWidth > 0) {
-      ctx.drawImage(frame, x, y, ancho, alto);
+      dibujarConProporcion(ctx, frame, x, y, ancho, alto);
       return;
     }
   }
@@ -36,7 +51,7 @@ export function dibujarTile(ctx, idTipo, x, y, ancho, alto, sinFondo) {
   if (t.img && t.img.complete && t.img.naturalWidth > 0) {
     // sw/sh en 0 o sin definir => usar el sprite completo (assets sueltos, no spritesheet).
     const sw = t.sw || t.img.naturalWidth, sh = t.sh || t.img.naturalHeight;
-    ctx.drawImage(t.img, t.sx || 0, t.sy || 0, sw, sh, x, y, ancho, alto);
+    dibujarConProporcion(ctx, t.img, x, y, ancho, alto, t.sx || 0, t.sy || 0, sw, sh);
   } else if (t.id !== "vacio") {
     // Fallback visual si falla la imagen o no tiene
     ctx.fillStyle = t.color;
