@@ -1,3 +1,4 @@
+import { fileURLToPath, URL } from "node:url";
 import { defineConfig } from "vite";
 
 export default defineConfig({
@@ -8,5 +9,17 @@ export default defineConfig({
   base: "./",
   build: {
     outDir: "dist",
+    rollupOptions: {
+      // Vite solo empaqueta index.html por defecto -- tools/level-editor/ es
+      // una segunda página independiente (propio HTML/JS/CSS, sin relación
+      // con src/main.js) y hay que declararla aquí explícitamente o el botón
+      // "Editor de niveles" del menú da 404 en el build de producción.
+      input: {
+        main: fileURLToPath(new URL("./index.html", import.meta.url)),
+        editorNiveles: fileURLToPath(
+          new URL("./tools/level-editor/index.html", import.meta.url),
+        ),
+      },
+    },
   },
 });
