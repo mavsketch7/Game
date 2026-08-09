@@ -4,7 +4,7 @@ import { ELEMENTOS, MAX_PLANTA, RAREZAS, SALA_H, SALA_W, SUPS } from "../core/co
 import { G } from "../core/state.js";
 import { fxParticulas } from "./effects.js";
 import { barra, renderHUD } from "./hud.js";
-import { ATTACK_DUR, ESC_FORMA, KENNEY_TILE, MOB_RUN, NO_SCHEMATIC_WEAPON, OFFHAND_IMG, OFFHAND_IMG_RAREZA, REAL_ATTACK, REAL_IDLE, REAL_RUN, REAL_SPRITE_SCALE, SHEETS, SPR, SPR_FORMAS, WEAPON_IMG, WEAPON_IMG_RAREZA, assetOK, iconoDrop, remateMuroPatron, spriteJugador, wallPatron } from "./sprites.js";
+import { ARQUERO_BOW, ARQUERO_BOW_DUR, ATTACK_DUR, ESC_FORMA, KENNEY_TILE, MOB_RUN, NO_SCHEMATIC_WEAPON, OFFHAND_IMG, OFFHAND_IMG_RAREZA, REAL_ATTACK, REAL_IDLE, REAL_RUN, REAL_SPRITE_SCALE, SHEETS, SPR, SPR_FORMAS, WEAPON_IMG, WEAPON_IMG_RAREZA, assetOK, iconoDrop, remateMuroPatron, spriteJugador, wallPatron } from "./sprites.js";
 import { groundTarget } from "../systems/abilities.js";
 import { masCercano } from "../systems/combat.js";
 import { mouse } from "../systems/input.js";
@@ -1687,6 +1687,14 @@ function renderJugador(p) {
         const flip = Math.cos(p.aim) < 0;
         const formaAnimal =
           p.rol === "druida" && p.forma && p.forma !== "humano";
+        // Sombra de contacto en el suelo (mismo criterio que renderEnemigo() con
+        // e.r) -- sin esto el personaje no tenía ningún ancla visual al suelo y
+        // el sprite (más grande desde que mide según la hitbox) se notaba
+        // "flotando", sobre todo con el bob del idle/andar.
+        cx.fillStyle = "rgba(0,0,0,.35)";
+        cx.beginPath();
+        cx.ellipse(p.x, p.y + p.r * 0.9, p.r * 0.8, p.r * 0.3, 0, 0, TAU);
+        cx.fill();
         if (formaAnimal) {
           const esc2 = ESC_FORMA[p.forma];
           drawSprite(
@@ -1731,46 +1739,56 @@ function renderJugador(p) {
         if (!formaAnimal && !NO_SCHEMATIC_WEAPON[p.rol]) {
           cx.save();
           cx.translate(p.x, p.y + 3);
-          cx.rotate(p.aim + (p.swingT > 0 ? (p.swingT / 0.18 - 0.5) * 1.6 : 0));
+          // El bamboleo de swing (giro extra tipo "espadazo") no pega con un
+          // arco -- el arquero no gira el arma al atacar, tensa la cuerda (ver
+          // ARQUERO_BOW más abajo), así que solo él se queda con el aim puro.
+          cx.rotate(p.aim + (p.swingT > 0 && p.rol !== "arquero" ? (p.swingT / 0.18 - 0.5) * 1.6 : 0));
           cx.scale(1.3, 1.3);
-          // Sprite real (ver WEAPON_IMG/WEAPON_IMG_RAREZA en sprites.js), recorte
-          // individual limpio por clase (espada/dagas/arco/varita/maza/báculo),
-          // recoloreado según la rareza del arma equipada (mismo color que
-          // RAREZAS[].col usa en el resto de la UI) + un halo a partir de Raro
-          // para que se note de un vistazo sin tener que leer el tooltip.
-          // Reutiliza el mismo pivote mano->punta que ya montaba el dibujo
-          // esquemático de abajo (GRIP=6 ~ empuñadura, REACH=30 ~ alcance de la
-          // hoja de la espada actual) para que encaje igual con puntería/swing.
           const rarezaArma = eq.arma ? eq.arma.rareza : 0;
-          const wimg = (WEAPON_IMG_RAREZA[p.rol] && WEAPON_IMG_RAREZA[p.rol][rarezaArma]) || WEAPON_IMG[p.rol];
-          if (wimg) {
-            const ww0 = wimg.naturalWidth || wimg.width, wh0 = wimg.naturalHeight || wimg.height;
-            if (rarezaArma >= 1 && wcol) {
-              cx.shadowColor = wcol;
-              cx.shadowBlur = 3 + rarezaArma * 2;
-            }
-            if (p.rol === "arquero") {
-              // Un arco no "apunta hacia delante" como una hoja: se sostiene con
-              // su eje largo perpendicular a la puntería (igual que el dibujo
-              // esquemático de abajo, que traza el arco con arc(bx,0,br,...) en
-              // vertical) -- se dibuja tal cual, sin el giro de 90° ni el
-              // desplazamiento hacia delante que sí necesitan las armas de hoja.
+          if (rarezaArma >= 1 && wcol) {
+            cx.shadowColor = wcol;
+            cx.shadowBlur = 3 + rarezaArma * 2;
+          }
+          if (p.rol === "arquero") {
+            // Arco real de 3 frames (relajado/medio tensado/tensado del todo,
+            // ver ARQUERO_BOW en sprites.js): en reposo se queda relajado; al
+            // atacar (p.swingT cuenta atrás desde ARQUERO_BOW_DUR) avanza por
+            // los 3 frames tensando la cuerda, en vez de sprite fijo o del
+            // giro de "hoja" que no pega con un arco. Se sostiene con el eje
+            // perpendicular a la puntería (igual que el dibujo esquemático de
+            // antes, arc(bx,0,br,...) en vertical), sin el giro de 90° ni el
+            // desplazamiento hacia delante que sí necesitan las armas de hoja.
+            const frames = ARQUERO_BOW[rarezaArma] || ARQUERO_BOW[0];
+            if (frames && frames.length) {
+              const prog = p.swingT > 0 ? clamp(1 - p.swingT / ARQUERO_BOW_DUR, 0, 0.999) : 0;
+              const fr = frames[Math.floor(prog * frames.length)] || frames[0];
+              const ww0 = fr.naturalWidth || fr.width, wh0 = fr.naturalHeight || fr.height;
               const s2 = 22 / Math.max(ww0, wh0);
-              cx.drawImage(wimg, 8 - (ww0 * s2) / 2, -(wh0 * s2) / 2, ww0 * s2, wh0 * s2);
-            } else {
+              cx.drawImage(fr, 8 - (ww0 * s2) / 2, -(wh0 * s2) / 2, ww0 * s2, wh0 * s2);
+            }
+            cx.shadowBlur = 0;
+          } else {
+            // Sprite real (ver WEAPON_IMG/WEAPON_IMG_RAREZA en sprites.js), recorte
+            // individual limpio por clase (espada/dagas/varita/maza/báculo),
+            // recoloreado según la rareza del arma equipada (mismo color que
+            // RAREZAS[].col usa en el resto de la UI) + un halo a partir de Raro.
+            // Reutiliza el pivote mano->punta que ya montaba el dibujo
+            // esquemático de abajo (GRIP=6 ~ empuñadura, REACH=30 ~ alcance de
+            // la hoja de la espada) para que encaje con puntería/swing.
+            const wimg = (WEAPON_IMG_RAREZA[p.rol] && WEAPON_IMG_RAREZA[p.rol][rarezaArma]) || WEAPON_IMG[p.rol];
+            if (wimg) {
+              const ww0 = wimg.naturalWidth || wimg.width, wh0 = wimg.naturalHeight || wimg.height;
               const GRIP = 6, REACH = 30;
               const s = (REACH - GRIP) / Math.max(ww0, wh0);
               const ww = ww0 * s, wh = wh0 * s;
               cx.translate(GRIP, 0);
               cx.rotate(Math.PI / 2);
               cx.drawImage(wimg, -ww / 2, -wh, ww, wh);
-            }
-            cx.shadowBlur = 0;
-            // El orbe de carga del mago es un efecto de gameplay (no una hoja
-            // física): tiene que seguir apareciendo aunque el arma en sí
-            // venga del sprite real de arriba, no solo en el dibujo procedural.
-            if (p.rol === "mago") dibujarCargaMago(p, 26, 0);
-          } else if (p.rol === "guerrero") {
+              // El orbe de carga del mago es un efecto de gameplay (no una hoja
+              // física): tiene que seguir apareciendo aunque el arma en sí
+              // venga del sprite real de arriba, no solo en el dibujo procedural.
+              if (p.rol === "mago") dibujarCargaMago(p, 26, 0);
+            } else if (p.rol === "guerrero") {
             // espada larga: pomo, empuñadura, guarda cruzada y hoja biselada con filo
             cx.fillStyle = "#4a3624";
             cx.fillRect(3, -2, 6, 4);
@@ -1958,6 +1976,8 @@ function renderJugador(p) {
             cx.fillStyle = "#fff7e0";
             cx.fillRect(25, -4, 2, 8);
             cx.fillRect(23, -1, 6, 2);
+          }
+          cx.shadowBlur = 0;
           }
           cx.restore();
         }

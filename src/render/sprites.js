@@ -980,10 +980,11 @@ for (const keyMob in MOB_RUN_SRC) {
 // generan las 5 variantes de RAREZAS recoloreando esta misma pieza por
 // código (ver teñirSprite() más abajo): mismo sombreado del pixel art
 // original, solo cambia el tono, más un halo de color para rareza alta.
+// arquero no está aquí: usa ARQUERO_BOW más abajo (3 frames animados, no un
+// sprite fijo) en vez de este mecanismo de imagen única.
 const WEAPON_SRC = {
   guerrero: assetUrl("weapons/wood-weapons/sword-wood"),
   picaro: assetUrl("weapons/wood-weapons/dagger-wood"),
-  arquero: assetUrl("weapons/wood-weapons/bow-wood"),
   mago: assetUrl("weapons/wood-weapons/magic-wood"),
   clerigo: assetUrl("weapons/wood-weapons/hammer-wood"),
   druida: assetUrl("weapons/wood-weapons/staff-wood"),
@@ -1003,8 +1004,8 @@ const OFFHAND_SRC = {
 // incluidas las zonas transparentes). Devuelve un <canvas>, no un <img>.
 function teñirSprite(img, color) {
   const c = document.createElement("canvas");
-  c.width = img.naturalWidth;
-  c.height = img.naturalHeight;
+  c.width = img.naturalWidth || img.width;
+  c.height = img.naturalHeight || img.height;
   const g = c.getContext("2d");
   g.imageSmoothingEnabled = false;
   g.drawImage(img, 0, 0);
@@ -1046,6 +1047,22 @@ for (const rolOff in OFFHAND_SRC) {
     OFFHAND_IMG_RAREZA[rolOff] = variantes;
   });
 }
+
+// Arco del arquero: 3 frames (relajado / medio tensado / tensado del todo,
+// recortados de Weapons/Wood/Wood.png -- animación real "Bow", no un giro de
+// hoja) en vez de un sprite fijo. ARQUERO_BOW[tier][frame] -- cada uno de los
+// 3 frames se recolorea igual que el resto de armas por tier de rareza.
+export const ARQUERO_BOW = RAREZAS.map(() => []);
+
+cargarHojaFrames(assetUrl("weapons/wood-weapons/bow-tension"), 32, (frames) => {
+  frames.forEach((frame, i) => {
+    RAREZAS.forEach((r, tier) => {
+      ARQUERO_BOW[tier][i] = tier === 0 ? frame : teñirSprite(frame, r.col);
+    });
+  });
+});
+
+export const ARQUERO_BOW_DUR = 0.35; // duración del gesto de tensar el arco al atacar
 
 SPR.sastre = buildSprite(HERO_ROWS, {
         K,
