@@ -1744,16 +1744,27 @@ function renderJugador(p) {
           const rarezaArma = eq.arma ? eq.arma.rareza : 0;
           const wimg = (WEAPON_IMG_RAREZA[p.rol] && WEAPON_IMG_RAREZA[p.rol][rarezaArma]) || WEAPON_IMG[p.rol];
           if (wimg) {
-            const GRIP = 6, REACH = 30;
-            const s = (REACH - GRIP) / Math.max(wimg.naturalWidth || wimg.width, wimg.naturalHeight || wimg.height);
-            const ww = (wimg.naturalWidth || wimg.width) * s, wh = (wimg.naturalHeight || wimg.height) * s;
-            cx.translate(GRIP, 0);
-            cx.rotate(Math.PI / 2);
+            const ww0 = wimg.naturalWidth || wimg.width, wh0 = wimg.naturalHeight || wimg.height;
             if (rarezaArma >= 1 && wcol) {
               cx.shadowColor = wcol;
               cx.shadowBlur = 3 + rarezaArma * 2;
             }
-            cx.drawImage(wimg, -ww / 2, -wh, ww, wh);
+            if (p.rol === "arquero") {
+              // Un arco no "apunta hacia delante" como una hoja: se sostiene con
+              // su eje largo perpendicular a la puntería (igual que el dibujo
+              // esquemático de abajo, que traza el arco con arc(bx,0,br,...) en
+              // vertical) -- se dibuja tal cual, sin el giro de 90° ni el
+              // desplazamiento hacia delante que sí necesitan las armas de hoja.
+              const s2 = 22 / Math.max(ww0, wh0);
+              cx.drawImage(wimg, 8 - (ww0 * s2) / 2, -(wh0 * s2) / 2, ww0 * s2, wh0 * s2);
+            } else {
+              const GRIP = 6, REACH = 30;
+              const s = (REACH - GRIP) / Math.max(ww0, wh0);
+              const ww = ww0 * s, wh = wh0 * s;
+              cx.translate(GRIP, 0);
+              cx.rotate(Math.PI / 2);
+              cx.drawImage(wimg, -ww / 2, -wh, ww, wh);
+            }
             cx.shadowBlur = 0;
             // El orbe de carga del mago es un efecto de gameplay (no una hoja
             // física): tiene que seguir apareciendo aunque el arma en sí

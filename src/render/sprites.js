@@ -901,32 +901,19 @@ const FACTOR_SPRITE_HITBOX = 4;
 // Héroe: p.r = 17 fijo para las 6 clases (ver core/gameflow.js).
 const TAM_HEROE = 17 * FACTOR_SPRITE_HITBOX;
 
-// Un personaje dedicado por clase (colección "Tiny Questers" de Bobddadoo,
-// bobddadoo.itch.io -- licencia libre, ver conversación) en vez del cuerpo
-// genérico "Body_A" de antes: guerrero (espada+escudo), pícaro (dagas), mago
-// (varita), clérigo (libro en reposo, báculo al andar) y druida (báculo) ya
-// tienen su propio arte real, no una silueta reutilizada entre clases.
-// arquero usa el sprite de arquera del mismo autor (única pieza disponible).
-// Los frames se extrajeron de las hojas de vista previa de cada personaje con
-// un detector de componentes conexas (sin asumir un grid, esas hojas no
-// tienen celdas uniformes) y se recompusieron en tiras cuadradas -- ver
-// conversación de la sesión para el script; no se commitea, es un paso único.
-const REAL_IDLE_SRC = {
-  guerrero: assetUrl("characters/guerrero_idle"),
-  arquero: assetUrl("characters/arquero_idle"),
-  mago: assetUrl("characters/mago_idle"),
-  clerigo: assetUrl("characters/clerigo_idle"),
-  picaro: assetUrl("characters/picaro_idle"),
-  druida: assetUrl("characters/druida_idle"),
-};
-const REAL_RUN_SRC = {
-  guerrero: assetUrl("characters/guerrero_walk"),
-  arquero: assetUrl("characters/arquero_walk"),
-  mago: assetUrl("characters/mago_walk"),
-  clerigo: assetUrl("characters/clerigo_walk"),
-  picaro: assetUrl("characters/picaro_walk"),
-  druida: assetUrl("characters/druida_walk"),
-};
+// Cuerpo "Body_A" (pack Pixel Crawler) como personaje estándar y único para
+// las 6 clases -- la diferencia visual entre clases la da el arma en mano
+// (ver WEAPON_IMG más abajo: espada/dagas/arco/varita/maza/báculo) y el
+// color de piel/ropa vía el sistema de skins existente, no un cuerpo
+// distinto por clase. Body_A trae el set completo (idle/correr/atacar en
+// las 3 direcciones), a diferencia del intento anterior con personajes de
+// otro pack que solo tenían idle+andar recortados a mano de una vista previa.
+const REAL_IDLE_SRC = {};
+const REAL_RUN_SRC = {};
+for (const rolCuerpo of ["guerrero", "arquero", "mago", "clerigo", "picaro", "druida"]) {
+  REAL_IDLE_SRC[rolCuerpo] = assetUrl("characters/bodyA_idle_side");
+  REAL_RUN_SRC[rolCuerpo] = assetUrl("characters/bodyA_run_side");
+}
 
 export const REAL_IDLE = { guerrero: [], arquero: [], picaro: [], mago: [], clerigo: [], druida: [] };
 export const REAL_RUN = { guerrero: [], arquero: [], picaro: [], mago: [], clerigo: [], druida: [] };
@@ -938,11 +925,22 @@ for (const rolRun in REAL_RUN_SRC) {
   cargarHojaFrames(REAL_RUN_SRC[rolRun], TAM_HEROE, (frames) => { REAL_RUN[rolRun] = frames; });
 }
 
-// Ataque: ninguna clase tiene todavía una animación de ataque dedicada
-// extraída de este set (las hojas de vista previa no incluyen un swing claro
-// por personaje, a diferencia de idle/andar) -- durante el ataque se sigue
-// mostrando el frame de idle en vez de forzar una animación que no encajaría.
+// Ataque: guerrero (Slice = espadazo), pícaro (Pierce = puñalada) y mago
+// (Crush = golpe de báculo) usan la animación de Body_A que encaja con su
+// arma. Arquero/clérigo/druida se quedan sin REAL_ATTACK a propósito (Body_A
+// no trae "disparar arco"/"lanzar hechizo"), así que durante el ataque
+// siguen mostrando el frame de idle en vez de forzar una animación floja.
+const REAL_ATTACK_SRC = {
+  guerrero: assetUrl("characters/bodyA_slice_side"),
+  picaro: assetUrl("characters/bodyA_pierce_side"),
+  mago: assetUrl("characters/bodyA_crush_side"),
+};
+
 export const REAL_ATTACK = { guerrero: [], arquero: [], picaro: [], mago: [] };
+
+for (const rolAtk in REAL_ATTACK_SRC) {
+  cargarHojaFrames(REAL_ATTACK_SRC[rolAtk], TAM_HEROE, (frames) => { REAL_ATTACK[rolAtk] = frames; });
+}
 
 export const ATTACK_DUR = { guerrero: 0.22, arquero: 0.3, picaro: 0.1, mago: 0.25 };
 
