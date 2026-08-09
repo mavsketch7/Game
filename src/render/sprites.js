@@ -977,10 +977,11 @@ for (const keyMob in MOB_RUN_SRC) {
 
 // Arma en mano: sprite real (recorte individual y limpio, no una hoja
 // compartida) en vez del dibujo esquemático de siempre (ver world.js,
-// bloque "arma apuntando"). Por ahora solo tramo "madera" -- el tramo de
-// hueso/superior para rareza alta se añadirá cuando haya un set de piezas
-// igual de bien recortado para ese material (hoy Weapons/Bone/Bone.png en
-// el pack es una hoja compartida sin recortar, no piezas sueltas).
+// bloque "arma apuntando"). Solo existe la pieza de madera -- en vez de
+// necesitar un set de piezas distinto por material/rareza (hueso, etc.), se
+// generan las 5 variantes de RAREZAS recoloreando esta misma pieza por
+// código (ver teñirSprite() más abajo): mismo sombreado del pixel art
+// original, solo cambia el tono, más un halo de color para rareza alta.
 const WEAPON_SRC = {
   guerrero: assetUrl("weapons/wood-weapons/sword-wood"),
   picaro: assetUrl("weapons/wood-weapons/dagger-wood"),
@@ -990,15 +991,6 @@ const WEAPON_SRC = {
   druida: assetUrl("weapons/wood-weapons/staff-wood"),
 };
 
-export const WEAPON_IMG = {};
-
-for (const rolArma in WEAPON_SRC) {
-  const im = new Image();
-  im.onload = () => { WEAPON_IMG[rolArma] = im; };
-  im.onerror = () => console.warn("No se pudo cargar arma: " + WEAPON_SRC[rolArma]);
-  im.src = WEAPON_SRC[rolArma];
-}
-
 // Mano secundaria (no gira con la puntería, se lleva más estática): escudo
 // para guerrero, libro para clérigo -- el resto de clases no lleva nada aquí.
 const OFFHAND_SRC = {
@@ -1006,13 +998,55 @@ const OFFHAND_SRC = {
   clerigo: assetUrl("weapons/wood-weapons/book-w"),
 };
 
-export const OFFHAND_IMG = {};
+// Recolorea `img` al tono de `color` conservando su sombreado (blend "hue":
+// toma el matiz del color de relleno pero conserva luminosidad/saturación
+// de cada píxel original) y lo vuelve a recortar exactamente a su silueta
+// original (si no, el relleno del blend deja opaco todo el rectángulo,
+// incluidas las zonas transparentes). Devuelve un <canvas>, no un <img>.
+function teñirSprite(img, color) {
+  const c = document.createElement("canvas");
+  c.width = img.naturalWidth;
+  c.height = img.naturalHeight;
+  const g = c.getContext("2d");
+  g.imageSmoothingEnabled = false;
+  g.drawImage(img, 0, 0);
+  g.globalCompositeOperation = "hue";
+  g.fillStyle = color;
+  g.fillRect(0, 0, c.width, c.height);
+  g.globalCompositeOperation = "destination-in";
+  g.drawImage(img, 0, 0);
+  return c;
+}
 
-for (const rolOff in OFFHAND_SRC) {
+// Carga la pieza base y, en cuanto está lista, pre-genera sus 5 variantes de
+// rareza (RAREZAS, ver core/constants.js) -- baratas de calcular (iconos
+// pequeños) así que se hacen todas de una vez, no bajo demanda.
+function cargarConVariantesRareza(src, onListo) {
   const im = new Image();
-  im.onload = () => { OFFHAND_IMG[rolOff] = im; };
-  im.onerror = () => console.warn("No se pudo cargar mano secundaria: " + OFFHAND_SRC[rolOff]);
-  im.src = OFFHAND_SRC[rolOff];
+  im.onload = () => {
+    const variantes = RAREZAS.map((r) => teñirSprite(im, r.col));
+    onListo(im, variantes);
+  };
+  im.onerror = () => console.warn("No se pudo cargar: " + src);
+  im.src = src;
+}
+
+export const WEAPON_IMG = {}; // WEAPON_IMG[rol] = imagen base (rareza Común, sin recolorear)
+export const WEAPON_IMG_RAREZA = {}; // WEAPON_IMG_RAREZA[rol] = [canvas por cada tier de RAREZAS]
+export const OFFHAND_IMG = {};
+export const OFFHAND_IMG_RAREZA = {};
+
+for (const rolArma in WEAPON_SRC) {
+  cargarConVariantesRareza(WEAPON_SRC[rolArma], (im, variantes) => {
+    WEAPON_IMG[rolArma] = im;
+    WEAPON_IMG_RAREZA[rolArma] = variantes;
+  });
+}
+for (const rolOff in OFFHAND_SRC) {
+  cargarConVariantesRareza(OFFHAND_SRC[rolOff], (im, variantes) => {
+    OFFHAND_IMG[rolOff] = im;
+    OFFHAND_IMG_RAREZA[rolOff] = variantes;
+  });
 }
 
 SPR.sastre = buildSprite(HERO_ROWS, {

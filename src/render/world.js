@@ -4,7 +4,7 @@ import { ELEMENTOS, MAX_PLANTA, RAREZAS, SALA_H, SALA_W, SUPS } from "../core/co
 import { G } from "../core/state.js";
 import { fxParticulas } from "./effects.js";
 import { barra, renderHUD } from "./hud.js";
-import { ATTACK_DUR, ESC_FORMA, KENNEY_TILE, MOB_RUN, NO_SCHEMATIC_WEAPON, OFFHAND_IMG, REAL_ATTACK, REAL_IDLE, REAL_RUN, REAL_SPRITE_SCALE, SHEETS, SPR, SPR_FORMAS, WEAPON_IMG, assetOK, iconoDrop, remateMuroPatron, spriteJugador, wallPatron } from "./sprites.js";
+import { ATTACK_DUR, ESC_FORMA, KENNEY_TILE, MOB_RUN, NO_SCHEMATIC_WEAPON, OFFHAND_IMG, OFFHAND_IMG_RAREZA, REAL_ATTACK, REAL_IDLE, REAL_RUN, REAL_SPRITE_SCALE, SHEETS, SPR, SPR_FORMAS, WEAPON_IMG, WEAPON_IMG_RAREZA, assetOK, iconoDrop, remateMuroPatron, spriteJugador, wallPatron } from "./sprites.js";
 import { groundTarget } from "../systems/abilities.js";
 import { masCercano } from "../systems/combat.js";
 import { mouse } from "../systems/input.js";
@@ -1733,19 +1733,28 @@ function renderJugador(p) {
           cx.translate(p.x, p.y + 3);
           cx.rotate(p.aim + (p.swingT > 0 ? (p.swingT / 0.18 - 0.5) * 1.6 : 0));
           cx.scale(1.3, 1.3);
-          // Sprite real (ver WEAPON_IMG en sprites.js), recorte individual limpio
-          // por clase (espada/dagas/arco/varita/maza/báculo). Reutiliza el mismo
-          // pivote mano->punta que ya montaba el dibujo esquemático de abajo
-          // (GRIP=6 ~ empuñadura, REACH=30 ~ alcance de la hoja de la espada
-          // actual) para que encaje igual de bien con el giro de puntería/swing.
-          const wimg = WEAPON_IMG[p.rol];
+          // Sprite real (ver WEAPON_IMG/WEAPON_IMG_RAREZA en sprites.js), recorte
+          // individual limpio por clase (espada/dagas/arco/varita/maza/báculo),
+          // recoloreado según la rareza del arma equipada (mismo color que
+          // RAREZAS[].col usa en el resto de la UI) + un halo a partir de Raro
+          // para que se note de un vistazo sin tener que leer el tooltip.
+          // Reutiliza el mismo pivote mano->punta que ya montaba el dibujo
+          // esquemático de abajo (GRIP=6 ~ empuñadura, REACH=30 ~ alcance de la
+          // hoja de la espada actual) para que encaje igual con puntería/swing.
+          const rarezaArma = eq.arma ? eq.arma.rareza : 0;
+          const wimg = (WEAPON_IMG_RAREZA[p.rol] && WEAPON_IMG_RAREZA[p.rol][rarezaArma]) || WEAPON_IMG[p.rol];
           if (wimg) {
             const GRIP = 6, REACH = 30;
-            const s = (REACH - GRIP) / Math.max(wimg.naturalWidth, wimg.naturalHeight);
-            const ww = wimg.naturalWidth * s, wh = wimg.naturalHeight * s;
+            const s = (REACH - GRIP) / Math.max(wimg.naturalWidth || wimg.width, wimg.naturalHeight || wimg.height);
+            const ww = (wimg.naturalWidth || wimg.width) * s, wh = (wimg.naturalHeight || wimg.height) * s;
             cx.translate(GRIP, 0);
             cx.rotate(Math.PI / 2);
+            if (rarezaArma >= 1 && wcol) {
+              cx.shadowColor = wcol;
+              cx.shadowBlur = 3 + rarezaArma * 2;
+            }
             cx.drawImage(wimg, -ww / 2, -wh, ww, wh);
+            cx.shadowBlur = 0;
             // El orbe de carga del mago es un efecto de gameplay (no una hoja
             // física): tiene que seguir apareciendo aunque el arma en sí
             // venga del sprite real de arriba, no solo en el dibujo procedural.
@@ -1942,15 +1951,18 @@ function renderJugador(p) {
           cx.restore();
         }
 
-        // Mano secundaria (ver OFFHAND_IMG en sprites.js): escudo/libro, no gira
-        // con la puntería ni el swing -- se lleva pegada al cuerpo, en el lado
-        // contrario a la mano del arma (que sí sigue la puntería), volteándose
-        // solo con el mismo flip que ya usa el propio cuerpo del personaje.
-        const oimg = !formaAnimal && OFFHAND_IMG[p.rol];
+        // Mano secundaria (ver OFFHAND_IMG/OFFHAND_IMG_RAREZA en sprites.js):
+        // escudo/libro, no gira con la puntería ni el swing -- se lleva pegada
+        // al cuerpo, en el lado contrario a la mano del arma (que sí sigue la
+        // puntería), volteándose solo con el mismo flip del propio personaje.
+        // Comparte tier de rareza con el arma principal (mismo equipo).
+        const oimg = !formaAnimal
+          && ((OFFHAND_IMG_RAREZA[p.rol] && OFFHAND_IMG_RAREZA[p.rol][eq.arma ? eq.arma.rareza : 0]) || OFFHAND_IMG[p.rol]);
         if (oimg) {
+          const ow0 = oimg.naturalWidth || oimg.width, oh0 = oimg.naturalHeight || oimg.height;
           const OFF_TAM = 16;
-          const so = OFF_TAM / Math.max(oimg.naturalWidth, oimg.naturalHeight);
-          const ow = oimg.naturalWidth * so, oh = oimg.naturalHeight * so;
+          const so = OFF_TAM / Math.max(ow0, oh0);
+          const ow = ow0 * so, oh = oh0 * so;
           cx.save();
           cx.translate(p.x, p.y - 2);
           if (flip) cx.scale(-1, 1);
