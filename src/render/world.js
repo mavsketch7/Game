@@ -4,7 +4,7 @@ import { ELEMENTOS, MAX_PLANTA, RAREZAS, SALA_H, SALA_W, SUPS } from "../core/co
 import { G } from "../core/state.js";
 import { fxParticulas } from "./effects.js";
 import { barra, renderHUD } from "./hud.js";
-import { ATTACK_DUR, ESC_FORMA, KENNEY_TILE, MOB_RUN, NO_SCHEMATIC_WEAPON, REAL_ATTACK, REAL_IDLE, REAL_RUN, REAL_SPRITE_SCALE, SHEETS, SPR, SPR_FORMAS, WEAPON_IMG, assetOK, iconoDrop, remateMuroPatron, spriteJugador, wallPatron } from "./sprites.js";
+import { ATTACK_DUR, ESC_FORMA, KENNEY_TILE, MOB_RUN, NO_SCHEMATIC_WEAPON, OFFHAND_IMG, REAL_ATTACK, REAL_IDLE, REAL_RUN, REAL_SPRITE_SCALE, SHEETS, SPR, SPR_FORMAS, WEAPON_IMG, assetOK, iconoDrop, remateMuroPatron, spriteJugador, wallPatron } from "./sprites.js";
 import { groundTarget } from "../systems/abilities.js";
 import { masCercano } from "../systems/combat.js";
 import { mouse } from "../systems/input.js";
@@ -1733,14 +1733,12 @@ function renderJugador(p) {
           cx.translate(p.x, p.y + 3);
           cx.rotate(p.aim + (p.swingT > 0 ? (p.swingT / 0.18 - 0.5) * 1.6 : 0));
           cx.scale(1.3, 1.3);
-          // Sprite real (ver WEAPON_IMG en sprites.js) para las 4 clases donde el
-          // pack tenía una silueta de arma reconocible -- madera por defecto,
-          // hueso a partir de Raro (rareza >= 1). Reutiliza el mismo pivote
-          // mano->punta que ya montaba el dibujo esquemático de abajo (GRIP=6
-          // ~ empuñadura, REACH=30 ~ alcance de la hoja de la espada actual)
-          // para que encaje igual de bien con el giro de puntería/swing.
-          const wimg = WEAPON_IMG[p.rol]
-            && WEAPON_IMG[p.rol][eq.arma && eq.arma.rareza >= 1 ? "bone" : "wood"];
+          // Sprite real (ver WEAPON_IMG en sprites.js), recorte individual limpio
+          // por clase (espada/dagas/arco/varita/maza/báculo). Reutiliza el mismo
+          // pivote mano->punta que ya montaba el dibujo esquemático de abajo
+          // (GRIP=6 ~ empuñadura, REACH=30 ~ alcance de la hoja de la espada
+          // actual) para que encaje igual de bien con el giro de puntería/swing.
+          const wimg = WEAPON_IMG[p.rol];
           if (wimg) {
             const GRIP = 6, REACH = 30;
             const s = (REACH - GRIP) / Math.max(wimg.naturalWidth, wimg.naturalHeight);
@@ -1941,6 +1939,22 @@ function renderJugador(p) {
             cx.fillRect(25, -4, 2, 8);
             cx.fillRect(23, -1, 6, 2);
           }
+          cx.restore();
+        }
+
+        // Mano secundaria (ver OFFHAND_IMG en sprites.js): escudo/libro, no gira
+        // con la puntería ni el swing -- se lleva pegada al cuerpo, en el lado
+        // contrario a la mano del arma (que sí sigue la puntería), volteándose
+        // solo con el mismo flip que ya usa el propio cuerpo del personaje.
+        const oimg = !formaAnimal && OFFHAND_IMG[p.rol];
+        if (oimg) {
+          const OFF_TAM = 16;
+          const so = OFF_TAM / Math.max(oimg.naturalWidth, oimg.naturalHeight);
+          const ow = oimg.naturalWidth * so, oh = oimg.naturalHeight * so;
+          cx.save();
+          cx.translate(p.x, p.y - 2);
+          if (flip) cx.scale(-1, 1);
+          cx.drawImage(oimg, -6 - ow / 2, -oh / 2, ow, oh);
           cx.restore();
         }
 

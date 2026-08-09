@@ -26,6 +26,9 @@ const contFrames = document.getElementById("animacion-frames");
 const inputFps = document.getElementById("animacion-fps");
 const btnAnimVaciar = document.getElementById("btn-animacion-vaciar");
 const btnAnimGuardar = document.getElementById("btn-animacion-guardar");
+const btnZoomOut = document.getElementById("btn-picker-zoom-out");
+const btnZoomReset = document.getElementById("btn-picker-zoom-reset");
+const btnZoomIn = document.getElementById("btn-picker-zoom-in");
 
 let tipoEditando = null;
 let activePickerImg = null;
@@ -74,11 +77,31 @@ export function registrarImagenCustom(key, label, img) {
   selectImage.appendChild(opt);
 }
 
+// Zoom de selección: escala solo la presentación en pantalla (CSS), no la
+// resolución interna del canvas -- así posicionEnImagen() (que ya convierte
+// coordenadas de pantalla a píxeles de imagen usando el ratio real/mostrado)
+// no necesita ningún cambio, y las coordenadas de recorte siguen siendo
+// píxeles nativos de la imagen de origen pase lo que pase con el zoom.
+let zoomPicker = 1;
+const ZOOM_PICKER_MIN = 0.5, ZOOM_PICKER_MAX = 8, ZOOM_PICKER_PASO = 0.5;
+
+function aplicarZoomPicker() {
+  if (!activePickerImg || !activePickerImg.complete) return;
+  canvasPicker.style.width = (activePickerImg.naturalWidth * zoomPicker) + "px";
+  canvasPicker.style.height = (activePickerImg.naturalHeight * zoomPicker) + "px";
+  btnZoomReset.textContent = Math.round(zoomPicker * 100) + "%";
+}
+
+btnZoomIn.onclick = () => { zoomPicker = Math.min(ZOOM_PICKER_MAX, zoomPicker + ZOOM_PICKER_PASO); aplicarZoomPicker(); };
+btnZoomOut.onclick = () => { zoomPicker = Math.max(ZOOM_PICKER_MIN, zoomPicker - ZOOM_PICKER_PASO); aplicarZoomPicker(); };
+btnZoomReset.onclick = () => { zoomPicker = 1; aplicarZoomPicker(); };
+
 function dibujarCanvasPicker() {
   if (!activePickerImg || !activePickerImg.complete) return;
 
   canvasPicker.width = activePickerImg.naturalWidth;
   canvasPicker.height = activePickerImg.naturalHeight;
+  aplicarZoomPicker();
   ctxPicker.drawImage(activePickerImg, 0, 0);
 
   const gridSize = parseInt(inputGridSize.value) || 32;
@@ -125,6 +148,7 @@ function posicionEnImagen(e) {
 export function abrirPicker(tipo) {
   tipoEditando = tipo;
   arrastreLibre = null;
+  zoomPicker = 1;
   cerrarPixelArt();
   modoAnimacion = false;
   framesAnimacion = [];

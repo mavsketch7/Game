@@ -901,17 +901,32 @@ const FACTOR_SPRITE_HITBOX = 4;
 // Héroe: p.r = 17 fijo para las 6 clases (ver core/gameflow.js).
 const TAM_HEROE = 17 * FACTOR_SPRITE_HITBOX;
 
-// Un único cuerpo base ("Body_A" del pack) para las 6 clases -- antes se
-// mezclaba con Knight/Rogue/Wizard (otro personaje, otro estilo de pixel art)
-// para 3 de ellas, lo que además del salto de tamaño hacía que cada clase se
-// viera "distinta" entre sí y respecto al icono quieto. Ahora quieto/correr/
-// atacar salen siempre del mismo cuerpo, mismo estilo, mismo tamaño.
-const REAL_IDLE_SRC = {};
-const REAL_RUN_SRC = {};
-for (const rolCuerpo of ["guerrero", "arquero", "mago", "clerigo", "picaro", "druida"]) {
-  REAL_IDLE_SRC[rolCuerpo] = assetUrl("characters/bodyA_idle_side");
-  REAL_RUN_SRC[rolCuerpo] = assetUrl("characters/bodyA_run_side");
-}
+// Un personaje dedicado por clase (colección "Tiny Questers" de Bobddadoo,
+// bobddadoo.itch.io -- licencia libre, ver conversación) en vez del cuerpo
+// genérico "Body_A" de antes: guerrero (espada+escudo), pícaro (dagas), mago
+// (varita), clérigo (libro en reposo, báculo al andar) y druida (báculo) ya
+// tienen su propio arte real, no una silueta reutilizada entre clases.
+// arquero usa el sprite de arquera del mismo autor (única pieza disponible).
+// Los frames se extrajeron de las hojas de vista previa de cada personaje con
+// un detector de componentes conexas (sin asumir un grid, esas hojas no
+// tienen celdas uniformes) y se recompusieron en tiras cuadradas -- ver
+// conversación de la sesión para el script; no se commitea, es un paso único.
+const REAL_IDLE_SRC = {
+  guerrero: assetUrl("characters/guerrero_idle"),
+  arquero: assetUrl("characters/arquero_idle"),
+  mago: assetUrl("characters/mago_idle"),
+  clerigo: assetUrl("characters/clerigo_idle"),
+  picaro: assetUrl("characters/picaro_idle"),
+  druida: assetUrl("characters/druida_idle"),
+};
+const REAL_RUN_SRC = {
+  guerrero: assetUrl("characters/guerrero_walk"),
+  arquero: assetUrl("characters/arquero_walk"),
+  mago: assetUrl("characters/mago_walk"),
+  clerigo: assetUrl("characters/clerigo_walk"),
+  picaro: assetUrl("characters/picaro_walk"),
+  druida: assetUrl("characters/druida_walk"),
+};
 
 export const REAL_IDLE = { guerrero: [], arquero: [], picaro: [], mago: [], clerigo: [], druida: [] };
 export const REAL_RUN = { guerrero: [], arquero: [], picaro: [], mago: [], clerigo: [], druida: [] };
@@ -923,23 +938,11 @@ for (const rolRun in REAL_RUN_SRC) {
   cargarHojaFrames(REAL_RUN_SRC[rolRun], TAM_HEROE, (frames) => { REAL_RUN[rolRun] = frames; });
 }
 
-// Ataque: guerrero (Slice = espadazo), pícaro (Pierce = puñalada) y mago
-// (Crush = golpe de báculo) tienen una animación del "Body_A" que encaja
-// temáticamente con su arma. Arquero/clérigo/druida se quedan sin
-// REAL_ATTACK a propósito (el pack no trae "disparar arco"/"lanzar
-// hechizo"), así que durante el ataque siguen mostrando el frame de idle en
-// vez de forzar una animación que no encajaría con lo que hace esa clase.
-const REAL_ATTACK_SRC = {
-  guerrero: assetUrl("characters/bodyA_slice_side"),
-  picaro: assetUrl("characters/bodyA_pierce_side"),
-  mago: assetUrl("characters/bodyA_crush_side"),
-};
-
+// Ataque: ninguna clase tiene todavía una animación de ataque dedicada
+// extraída de este set (las hojas de vista previa no incluyen un swing claro
+// por personaje, a diferencia de idle/andar) -- durante el ataque se sigue
+// mostrando el frame de idle en vez de forzar una animación que no encajaría.
 export const REAL_ATTACK = { guerrero: [], arquero: [], picaro: [], mago: [] };
-
-for (const rolAtk in REAL_ATTACK_SRC) {
-  cargarHojaFrames(REAL_ATTACK_SRC[rolAtk], TAM_HEROE, (frames) => { REAL_ATTACK[rolAtk] = frames; });
-}
 
 export const ATTACK_DUR = { guerrero: 0.22, arquero: 0.3, picaro: 0.1, mago: 0.25 };
 
@@ -972,31 +975,44 @@ for (const keyMob in MOB_RUN_SRC) {
   cargarHojaFrames(MOB_RUN_SRC[keyMob], destSize, (frames) => { MOB_RUN[keyMob] = frames; });
 }
 
-// Arma en mano: sprite real en vez del dibujo esquemático de siempre (ver
-// world.js, bloque "arma apuntando"), para las 4 clases donde el pack tenía
-// una silueta clara de su tipo de arma (hacha para guerrero, arco para
-// arquero, báculo para mago, cayado para clérigo). Pícaro/druida se quedan
-// con el dibujo procedural existente -- el pack no traía una daga ni un
-// bastón "de naturaleza" reconocibles entre las piezas disponibles.
-// Por defecto madera; a partir de Raro (rareza >= 1, ver RAREZAS en
-// core/constants.js) se usa la versión de hueso -- el pack solo trae estos
-// dos materiales, así que esa es toda la progresión posible hoy.
+// Arma en mano: sprite real (recorte individual y limpio, no una hoja
+// compartida) en vez del dibujo esquemático de siempre (ver world.js,
+// bloque "arma apuntando"). Por ahora solo tramo "madera" -- el tramo de
+// hueso/superior para rareza alta se añadirá cuando haya un set de piezas
+// igual de bien recortado para ese material (hoy Weapons/Bone/Bone.png en
+// el pack es una hoja compartida sin recortar, no piezas sueltas).
 const WEAPON_SRC = {
-  guerrero: { wood: assetUrl("weapons/wood_guerrero"), bone: assetUrl("weapons/bone_guerrero") },
-  arquero: { wood: assetUrl("weapons/wood_arquero"), bone: assetUrl("weapons/bone_arquero") },
-  mago: { wood: assetUrl("weapons/wood_mago"), bone: assetUrl("weapons/bone_mago") },
-  clerigo: { wood: assetUrl("weapons/wood_clerigo"), bone: assetUrl("weapons/bone_clerigo") },
+  guerrero: assetUrl("weapons/wood-weapons/sword-wood"),
+  picaro: assetUrl("weapons/wood-weapons/dagger-wood"),
+  arquero: assetUrl("weapons/wood-weapons/bow-wood"),
+  mago: assetUrl("weapons/wood-weapons/magic-wood"),
+  clerigo: assetUrl("weapons/wood-weapons/hammer-wood"),
+  druida: assetUrl("weapons/wood-weapons/staff-wood"),
 };
 
-export const WEAPON_IMG = { guerrero: {}, arquero: {}, mago: {}, clerigo: {} };
+export const WEAPON_IMG = {};
 
 for (const rolArma in WEAPON_SRC) {
-  for (const material in WEAPON_SRC[rolArma]) {
-    const im = new Image();
-    im.onload = () => { WEAPON_IMG[rolArma][material] = im; };
-    im.onerror = () => console.warn("No se pudo cargar arma: " + WEAPON_SRC[rolArma][material]);
-    im.src = WEAPON_SRC[rolArma][material];
-  }
+  const im = new Image();
+  im.onload = () => { WEAPON_IMG[rolArma] = im; };
+  im.onerror = () => console.warn("No se pudo cargar arma: " + WEAPON_SRC[rolArma]);
+  im.src = WEAPON_SRC[rolArma];
+}
+
+// Mano secundaria (no gira con la puntería, se lleva más estática): escudo
+// para guerrero, libro para clérigo -- el resto de clases no lleva nada aquí.
+const OFFHAND_SRC = {
+  guerrero: assetUrl("weapons/wood-weapons/shield-md-wood"),
+  clerigo: assetUrl("weapons/wood-weapons/book-w"),
+};
+
+export const OFFHAND_IMG = {};
+
+for (const rolOff in OFFHAND_SRC) {
+  const im = new Image();
+  im.onload = () => { OFFHAND_IMG[rolOff] = im; };
+  im.onerror = () => console.warn("No se pudo cargar mano secundaria: " + OFFHAND_SRC[rolOff]);
+  im.src = OFFHAND_SRC[rolOff];
 }
 
 SPR.sastre = buildSprite(HERO_ROWS, {
