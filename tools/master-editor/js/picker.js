@@ -6,6 +6,9 @@
 //   - Clic simple  -> usa la imagen entera tal cual (caso común: ya viene recortada).
 //   - Arrastrar     -> selección libre píxel a píxel de una región, tamaño real
 //                      conservado (sin forzar a un cuadrado).
+// Modo "marcar anclaje" (ver setModoAncla): un clic coloca un punto en vez de
+// recortar -- para señalar la empuñadura de un arma, el punto de la cabeza en
+// el cuerpo, etc. (ver personajes.js/compositor.js).
 const canvas = document.getElementById("picker-canvas-me");
 const ctx = canvas.getContext("2d");
 const btnZoomIn = document.getElementById("btn-zoom-in-me");
@@ -20,7 +23,25 @@ let zoom = 1;
 const UMBRAL_ARRASTRE = 3;
 const ZOOM_MIN = 0.5, ZOOM_MAX = 8, ZOOM_PASO = 0.5;
 
+let modoAncla = false;
+let onAnclaCb = () => {};
+let anclaMostrada = null; // {x,y} | null -- el punto ya guardado para la pieza/anclaje actual, se dibuja como referencia
+
 export function onSeleccion(cb) { onSeleccionCb = cb; }
+
+// activo: true para entrar en modo "el próximo clic coloca el punto" (se
+// desactiva solo tras colocarlo). cb recibe {x,y} en píxeles locales de la
+// imagen cargada actualmente.
+export function setModoAncla(activo, cb) {
+  modoAncla = activo;
+  if (cb) onAnclaCb = cb;
+  canvas.style.cursor = activo ? "crosshair" : "";
+}
+
+export function mostrarAncla(punto) {
+  anclaMostrada = punto;
+  dibujar();
+}
 
 export function cargarImagenPicker(src) {
   const img = new Image();
@@ -35,6 +56,7 @@ export function cargarImagenPicker(src) {
 
 export function limpiarPicker() {
   imagenActual = null;
+  anclaMostrada = null;
   canvas.width = 0;
   canvas.height = 0;
 }
@@ -64,6 +86,18 @@ function dibujar() {
     ctx.fillStyle = "rgba(233,180,92,0.2)";
     ctx.fillRect(rx, ry, rw, rh);
   }
+  if (anclaMostrada) {
+    const { x, y } = anclaMostrada;
+    ctx.strokeStyle = "#ff5a36";
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(x - 6, y); ctx.lineTo(x + 6, y);
+    ctx.moveTo(x, y - 6); ctx.lineTo(x, y + 6);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(x, y, 3, 0, Math.PI * 2);
+    ctx.stroke();
+  }
 }
 
 function rectoDeArrastre(a) {
@@ -86,12 +120,21 @@ function posicionEnImagen(e) {
 canvas.addEventListener("pointerdown", (e) => {
   if (!imagenActual) return;
   canvas.setPointerCapture(e.pointerId);
+  if (modoAncla) {
+    const pos = posicionEnImagen(e);
+    modoAncla = false;
+    canvas.style.cursor = "";
+    anclaMostrada = pos;
+    onAnclaCb(pos);
+    dibujar();
+    return;
+  }
   clicInicio = posicionEnImagen(e);
   arrastreLibre = null;
 });
 
 canvas.addEventListener("pointermove", (e) => {
-  if (!clicInicio) return;
+  if (!clicInicio || modoAncla) return;
   const pos = posicionEnImagen(e);
   if (!arrastreLibre) {
     if (Math.hypot(pos.x - clicInicio.x, pos.y - clicInicio.y) < UMBRAL_ARRASTRE) return;

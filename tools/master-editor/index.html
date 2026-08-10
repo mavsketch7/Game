@@ -59,6 +59,15 @@
           <button id="btn-pixelart-capa" class="mini">🖍️ Pintar píxel a píxel</button>
           <button id="btn-quitar-capa" class="mini rojo">🗑️ Quitar de esta capa</button>
         </div>
+        <div class="fila-btn" style="margin:0 0 10px;">
+          <select id="select-ancla-cuerpo-me" class="oculto" style="width:auto;">
+            <option value="cabeza">🎯 Cabeza (para el casco)</option>
+            <option value="torso">🎯 Torso (para el peto)</option>
+            <option value="cadera">🎯 Cadera (para las piernas)</option>
+            <option value="mano">🎯 Mano (para el arma)</option>
+          </select>
+          <button id="btn-marcar-ancla-me" class="mini dorado">🎯 Marcar anclaje</button>
+        </div>
         <div id="picker-wrap-me">
           <canvas id="picker-canvas-me"></canvas>
         </div>
@@ -67,7 +76,7 @@
           <button id="btn-zoom-reset-me" class="mini">100%</button>
           <button id="btn-zoom-in-me" class="mini">🔍+</button>
         </div>
-        <p class="nota">Clic = celda de rejilla. Arrastra = selección libre píxel a píxel, conserva su tamaño real (no se fuerza a un cuadrado).</p>
+        <p class="nota">Clic = celda de rejilla. Arrastra = selección libre píxel a píxel, conserva su tamaño real (no se fuerza a un cuadrado). "🎯 Marcar anclaje": el siguiente clic en la imagen coloca el punto de enganche (la empuñadura del arma, el punto de la cabeza en el cuerpo...) -- la pieza se alinea sola a ese punto en la vista previa en vez de tener que centrarla a ojo.</p>
 
         <div id="pixelart-panel-me" class="oculto">
           <div class="fila-btn" style="margin:0 0 10px; align-items:center;">

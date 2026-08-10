@@ -1,10 +1,11 @@
 // --- UI principal de la pestaña "Sprites" ---
 import { REGISTRO_ASSETS } from "./registro-assets.js";
 import {
-  CAPAS_CON_TIER, estado, personajeActivo, crearPersonaje, borrarPersonaje,
-  asignarCapa, ajustarTransformCapa, resetearTransformCapa, piezaParaTier, cargarLocal, exportarJSON,
+  CAPAS_CON_TIER, ANCLAS_CUERPO, estado, personajeActivo, crearPersonaje, borrarPersonaje,
+  asignarCapa, ajustarTransformCapa, resetearTransformCapa, establecerAncla, establecerAnclaCuerpo,
+  piezaParaTier, cargarLocal, exportarJSON,
 } from "./personajes.js";
-import { cargarImagenPicker, limpiarPicker, onSeleccion } from "./picker.js";
+import { cargarImagenPicker, limpiarPicker, onSeleccion, setModoAncla, mostrarAncla } from "./picker.js";
 import { abrirPixelArt, cerrarPixelArt, setOnUsar } from "./pixelart.js";
 import { dibujarComposicion, RAREZAS } from "./compositor.js";
 
@@ -25,6 +26,8 @@ const btnBorrarPersonaje = document.getElementById("btn-borrar-personaje-me");
 const btnEscalaMenos = document.getElementById("btn-escala-menos-me");
 const btnEscalaMas = document.getElementById("btn-escala-mas-me");
 const btnEscalaReset = document.getElementById("btn-escala-reset-me");
+const btnMarcarAncla = document.getElementById("btn-marcar-ancla-me");
+const selectAnclaCuerpo = document.getElementById("select-ancla-cuerpo-me");
 
 // --- Modal genérico (nombre de personaje nuevo) ---
 const modal = document.getElementById("dialog-modal-me");
@@ -113,14 +116,25 @@ function construirTabsCapa() {
 function refrescarEditorCapa() {
   const p = personajeActivo();
   cerrarPixelArt();
+  setModoAncla(false);
+  const esCuerpo = estado.capaActiva === "cuerpo";
   const conTier = CAPAS_CON_TIER.includes(estado.capaActiva);
   selectRareza.disabled = !conTier;
+  selectAnclaCuerpo.classList.toggle("oculto", !esCuerpo);
   if (!p) { limpiarPicker(); notaTier.textContent = ""; return; }
   const { pieza, esFallback } = piezaParaTier(p, estado.capaActiva, estado.tierActivo);
-  if (pieza) cargarImagenPicker(pieza.src);
-  else limpiarPicker();
-  notaTier.textContent = !conTier
-    ? "El cuerpo no tiene tiers: es la referencia fija."
+  if (pieza) {
+    cargarImagenPicker(pieza.src);
+    const ancla = esCuerpo ? p.capas.cuerpo.anclas[selectAnclaCuerpo.value] : p.capas[estado.capaActiva].ancla;
+    // mostrarAncla() dibuja sobre el picker en cuanto la imagen cargue; como
+    // cargarImagenPicker es async, este valor puede llegar antes de que haya
+    // canvas -- picker.js simplemente lo recuerda para el próximo dibujar().
+    mostrarAncla(ancla || null);
+  } else {
+    limpiarPicker();
+  }
+  notaTier.textContent = esCuerpo
+    ? "El cuerpo no tiene tiers: es la referencia fija. Marca aquí los 4 puntos de enganche (cabeza/torso/cadera/mano)."
     : esFallback
       ? `Este tier no tiene pieza propia: se ve el recoloreado automático de "Común". Usa el picker o pinta a mano para asignarle una pieza propia.`
       : `Editando la pieza propia de "${RAREZAS[estado.tierActivo].n}".`;
@@ -164,6 +178,27 @@ btnQuitarCapa.onclick = () => {
   refrescarEditorCapa();
   refrescarComposicion();
   construirListas();
+};
+
+// --- Marcar anclaje: el siguiente clic en el picker coloca el punto ---
+for (const a of ANCLAS_CUERPO) {
+  // Las <option> ya están fijas en el HTML (mismo orden que ANCLAS_CUERPO);
+  // esto solo confirma que no se han desincronizado si alguien las toca.
+  if (!selectAnclaCuerpo.querySelector(`option[value="${a}"]`)) {
+    console.warn("Falta <option> para el anclaje de cuerpo: " + a);
+  }
+}
+selectAnclaCuerpo.onchange = refrescarEditorCapa;
+
+btnMarcarAncla.onclick = () => {
+  const p = personajeActivo();
+  if (!p) return;
+  const esCuerpo = estado.capaActiva === "cuerpo";
+  setModoAncla(true, (punto) => {
+    if (esCuerpo) establecerAnclaCuerpo(p.id, selectAnclaCuerpo.value, punto);
+    else establecerAncla(p.id, estado.capaActiva, punto);
+    refrescarComposicion();
+  });
 };
 
 // --- Selector de tier (vista previa Y objetivo de edición para picker/pixelart) ---

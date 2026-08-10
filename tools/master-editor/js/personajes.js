@@ -8,7 +8,15 @@ export const CAPAS = ["cuerpo", "arma", "casco", "peto", "piernas"];
 export const CAPAS_CON_TIER = ["arma", "casco", "peto", "piernas"];
 export const N_TIERS = 5;
 
-const CLAVE = "vespero-master-editor-personajes-v2"; // v2: capas con tier -- ver nota más abajo
+// Anclajes con nombre en el cuerpo, y a cuál se engancha cada capa -- para
+// que el compositor pueda alinear una pieza exactamente en su sitio (la
+// empuñadura del arma en la mano, el casco en la cabeza...) en vez de tener
+// que centrarla a ojo. Ver picker.js (colocar un ancla con un clic) y
+// compositor.js (usarlo para posicionar).
+export const ANCLAS_CUERPO = ["cabeza", "torso", "cadera", "mano"];
+export const CAPA_A_ANCLA = { casco: "cabeza", peto: "torso", piernas: "cadera", arma: "mano" };
+
+const CLAVE = "vespero-master-editor-personajes-v3"; // v3: anclajes -- ver nota más abajo
 const RETARDO_MS = 600;
 let temporizador = null;
 
@@ -17,18 +25,27 @@ export const estado = {
   activoId: null,
   capaActiva: "cuerpo",
   tierActivo: 0, // qué tier se ve/edita para la capa activa (Común..Mítico)
+  anclaCuerpoActiva: "cabeza", // qué anclaje del cuerpo se coloca al marcar (solo aplica con capaActiva==="cuerpo")
 };
 
 function crearCapaConTierVacia() {
   return {
-    offset: { x: 0, y: 0 }, // desplazamiento manual sobre la escala común (ver compositor.js)
+    offset: { x: 0, y: 0 }, // desplazamiento manual, fino, encima del anclaje (o del centrado si no hay anclaje)
     escala: 1, // multiplicador manual sobre la escala común
+    ancla: null, // {x,y} en píxeles locales de la pieza (0..sw, 0..sh) -- el punto que se alinea al anclaje del cuerpo
     tiers: new Array(N_TIERS).fill(null), // { src, sx, sy, sw, sh } | null, uno por RAREZA
   };
 }
 
+function crearCuerpoVacio() {
+  return {
+    pieza: null, // { src, sx, sy, sw, sh } | null
+    anclas: { cabeza: null, torso: null, cadera: null, mano: null }, // cada una {x,y} en píxeles locales | null
+  };
+}
+
 function crearPersonajeVacio(nombre, tipo) {
-  const capas = { cuerpo: null }; // cuerpo: { src, sx, sy, sw, sh } | null, sin tiers
+  const capas = { cuerpo: crearCuerpoVacio() };
   for (const c of CAPAS_CON_TIER) capas[c] = crearCapaConTierVacia();
   return { id: "custom_" + Date.now(), nombre, tipo: tipo || "heroe", capas };
 }
@@ -69,14 +86,18 @@ function recortarARegion(region) {
 
 // region: { img: HTMLImageElement, sx, sy, sw, sh } | null (null = quitar)
 // tier: índice 0..4, ignorado para capa === "cuerpo" (no tiene tiers).
+// Al reasignar la pieza se borra el ancla existente (ver picker.js): un
+// recorte nuevo puede tener otra forma/tamaño, así que el punto marcado
+// antes ya no es de fiar -- toca volver a marcarlo.
 export function asignarCapa(idPersonaje, capa, tier, region) {
   const p = estado.personajes.find((x) => x.id === idPersonaje);
   if (!p || !CAPAS.includes(capa)) return;
   const pieza = region ? recortarARegion(region) : null;
   if (capa === "cuerpo") {
-    p.capas.cuerpo = pieza;
+    p.capas.cuerpo.pieza = pieza;
   } else {
     p.capas[capa].tiers[tier] = pieza;
+    p.capas[capa].ancla = null;
   }
   programarGuardado();
 }
@@ -93,11 +114,28 @@ export function resetearTransformCapa(idPersonaje, capa) {
   ajustarTransformCapa(idPersonaje, capa, { offset: { x: 0, y: 0 }, escala: 1 });
 }
 
+// punto: {x,y} en píxeles locales de la pieza cargada en el picker en ese
+// momento (ver picker.js) -- para capas con tier, el ancla es única por
+// capa (no por tier: se asume que las variantes de rareza comparten forma).
+export function establecerAncla(idPersonaje, capa, punto) {
+  const p = estado.personajes.find((x) => x.id === idPersonaje);
+  if (!p || capa === "cuerpo" || !p.capas[capa]) return;
+  p.capas[capa].ancla = punto;
+  programarGuardado();
+}
+
+export function establecerAnclaCuerpo(idPersonaje, nombreAncla, punto) {
+  const p = estado.personajes.find((x) => x.id === idPersonaje);
+  if (!p || !ANCLAS_CUERPO.includes(nombreAncla)) return;
+  p.capas.cuerpo.anclas[nombreAncla] = punto;
+  programarGuardado();
+}
+
 // Pieza a dibujar/editar para una capa+tier concreto -- true si es la pieza
 // propia de ese tier, o la de Común como fallback (ver compositor.js, que
 // además la recolorea cuando es fallback). Devuelve { pieza, esFallback }.
 export function piezaParaTier(personaje, capa, tier) {
-  if (capa === "cuerpo") return { pieza: personaje.capas.cuerpo, esFallback: false };
+  if (capa === "cuerpo") return { pieza: personaje.capas.cuerpo.pieza, esFallback: false };
   const c = personaje.capas[capa];
   if (!c) return { pieza: null, esFallback: false };
   if (c.tiers[tier]) return { pieza: c.tiers[tier], esFallback: false };
@@ -112,7 +150,7 @@ export function programarGuardado() {
 export function guardarLocal() {
   try {
     localStorage.setItem(CLAVE, JSON.stringify({
-      version: 2,
+      version: 3,
       personajes: estado.personajes,
       activoId: estado.activoId,
     }));
