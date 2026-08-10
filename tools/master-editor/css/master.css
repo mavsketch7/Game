@@ -97,6 +97,8 @@ button.dorado:hover { background: #f2c77d; }
 button.mini { padding: 4px 8px; font-size: 0.75rem; }
 button.rojo { background: #3a1a1a; color: #ff7675; border-color: #ff7675; }
 button.activa-tool { background: var(--vespero); color: #1a1206; border-color: var(--vespero); }
+button:disabled { opacity: 0.4; cursor: default; }
+button:disabled:hover { border-color: var(--borde); background: var(--piedra2); }
 .fila-btn { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
 
 input[type="text"], input[type="number"], select {

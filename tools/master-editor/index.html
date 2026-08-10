@@ -79,9 +79,26 @@
         <p class="nota">Clic = celda de rejilla. Arrastra = selección libre píxel a píxel, conserva su tamaño real (no se fuerza a un cuadrado). "🎯 Marcar anclaje": el siguiente clic en la imagen coloca el punto de enganche (la empuñadura del arma, el punto de la cabeza en el cuerpo...) -- la pieza se alinea sola a ese punto en la vista previa en vez de tener que centrarla a ojo.</p>
 
         <div id="pixelart-panel-me" class="oculto">
+          <div class="fila-btn" style="margin:0 0 8px; align-items:center;">
+            <button class="mini herramienta-pixelart activa-tool" data-herramienta="lapiz" title="Lápiz">✏️</button>
+            <button class="mini herramienta-pixelart" data-herramienta="borrador" title="Borrador">🧽</button>
+            <button class="mini herramienta-pixelart" data-herramienta="cubo" title="Relleno (cubo)">🪣</button>
+            <button class="mini herramienta-pixelart" data-herramienta="linea" title="Línea">📏</button>
+            <button class="mini herramienta-pixelart" data-herramienta="rectangulo" title="Rectángulo">⬜</button>
+            <button class="mini herramienta-pixelart" data-herramienta="elipse" title="Elipse">⭕</button>
+            <button class="mini herramienta-pixelart" data-herramienta="cuentagotas" title="Cuentagotas: coge el color de un píxel">💧</button>
+            <span style="width:1px; align-self:stretch; background:var(--borde);"></span>
+            <button id="btn-pixelart-deshacer-me" class="mini" title="Deshacer (Ctrl+Z)">↩️</button>
+            <button id="btn-pixelart-rehacer-me" class="mini" title="Rehacer (Ctrl+Y)">↪️</button>
+          </div>
           <div class="fila-btn" style="margin:0 0 10px; align-items:center;">
             <input type="color" id="pixelart-color-me" value="#e9b45c" />
-            <button id="pixelart-borrador-me" class="mini">🧽 Borrador</button>
+            <label style="font-size:0.8rem; display:flex; align-items:center; gap:4px;">
+              <input type="checkbox" id="pixelart-relleno-me" /> Relleno (rectángulo/elipse)
+            </label>
+            <label style="font-size:0.8rem; display:flex; align-items:center; gap:4px;">
+              <input type="checkbox" id="pixelart-simetria-me" /> Simetría ↔
+            </label>
             <label style="font-size:0.8rem; display:flex; align-items:center; gap:4px;">Tamaño:
               <input type="number" id="pixelart-size-me" value="32" min="4" max="64" style="width:55px;" />
             </label>
