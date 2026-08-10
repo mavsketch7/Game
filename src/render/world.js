@@ -137,14 +137,30 @@ function drawSprite(img, x, y, flip, esc) {
         cx.restore();
       }
 
-function dibujarHeroe(p, x, y, mov) {
+// Como drawSprite(), pero ancla por el borde INFERIOR (pies) en vez del
+// centro geométrico del cuadro -- para los frames de REAL_IDLE/REAL_RUN/
+// REAL_ATTACK, que ya vienen recolocados por cargarHojaFrames() (sprites.js)
+// para que los pies queden justo en el borde inferior del cuadro. Con
+// drawSprite() (centrado) el margen vacío desigual de la hoja de origen
+// desplazaba el punto de apoyo real y el personaje se veía "flotando".
+function drawSpriteBottom(img, x, yPies, flip, esc) {
+        esc = esc || 1;
+        cx.save();
+        cx.translate(Math.round(x), Math.round(yPies));
+        if (flip) cx.scale(-1, 1);
+        cx.scale(esc, esc);
+        cx.drawImage(img, -img.width / 2, -img.height);
+        cx.restore();
+      }
+
+function dibujarHeroe(p, x, yPies, mov) {
         // Base: frame de idle del cuerpo real (ver REAL_IDLE en sprites.js) si ya
         // cargó; si no (arranque de la página, un instante), cae al icono
         // estático de siempre para no dejar un hueco en blanco.
         const idleFrames = REAL_IDLE[p.rol];
         let img = (idleFrames && idleFrames.length)
           ? idleFrames[Math.floor(p.anim * 4) % idleFrames.length]
-          : spriteJugador(p);
+          : null;
         const atkFrames = REAL_ATTACK[p.rol];
         const runFrames = REAL_RUN[p.rol];
         if (p.swingT > 0 && atkFrames && atkFrames.length) {
@@ -156,7 +172,14 @@ function dibujarHeroe(p, x, y, mov) {
           const fr = runFrames[Math.floor(p.anim * 10) % runFrames.length];
           if (fr) img = fr;
         }
-        drawSprite(img, x, y - 6, Math.cos(p.aim) < 0, REAL_SPRITE_SCALE[p.rol] || 1);
+        if (img) {
+          drawSpriteBottom(img, x, yPies, Math.cos(p.aim) < 0, REAL_SPRITE_SCALE[p.rol] || 1);
+        } else {
+          // Los assets reales todavía no cargaron (un instante, al arrancar):
+          // icono estático de siempre, centrado -- no viene recolocado por
+          // pies como los frames de arriba, así que se ancla como antes.
+          drawSprite(spriteJugador(p), x, yPies - 6, Math.cos(p.aim) < 0, REAL_SPRITE_SCALE[p.rol] || 1);
+        }
       }
 
 export function render() {
@@ -1687,13 +1710,13 @@ function renderJugador(p) {
         const flip = Math.cos(p.aim) < 0;
         const formaAnimal =
           p.rol === "druida" && p.forma && p.forma !== "humano";
-        // Sombra de contacto en el suelo (mismo criterio que renderEnemigo() con
-        // e.r) -- sin esto el personaje no tenía ningún ancla visual al suelo y
-        // el sprite (más grande desde que mide según la hitbox) se notaba
-        // "flotando", sobre todo con el bob del idle/andar.
+        // Sombra de contacto en el suelo, justo bajo los pies (p.y -- el sprite
+        // real ya se ancla exactamente ahí, ver drawSpriteBottom()/dibujarHeroe()
+        // y cargarHojaFrames() en sprites.js). Sin esto el personaje no tenía
+        // ningún ancla visual al suelo y se notaba "flotando".
         cx.fillStyle = "rgba(0,0,0,.35)";
         cx.beginPath();
-        cx.ellipse(p.x, p.y + p.r * 0.9, p.r * 0.8, p.r * 0.3, 0, 0, TAU);
+        cx.ellipse(p.x, p.y + 2, p.r * 0.8, p.r * 0.3, 0, 0, TAU);
         cx.fill();
         if (formaAnimal) {
           const esc2 = ESC_FORMA[p.forma];

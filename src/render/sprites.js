@@ -861,27 +861,67 @@ for (const rolReal in REAL_SPRITE_SRC) {
         imgReal.src = REAL_SPRITE_SRC[rolReal];
       }
 
+// Bbox real (no transparente) de un frame ya volcado en un canvas -- para
+// anclar el personaje por los PIES, no por el centro geométrico del cuadro
+// de origen. Las hojas del pack dejan un margen vacío por encima/debajo del
+// personaje que NO es simétrico (más aire arriba que abajo, o al revés según
+// la pose); centrar el cuadro completo (como se hacía antes) desplaza el
+// punto de apoyo real unos píxeles arriba o abajo del suelo -- de ahí que el
+// personaje se viera "flotando". Devuelve null si el frame está vacío.
+function bboxAlfa(ctx, w, h) {
+  const { data } = ctx.getImageData(0, 0, w, h);
+  let minX = w, maxX = -1, minY = h, maxY = -1;
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      if (data[(y * w + x) * 4 + 3] > 10) {
+        if (x < minX) minX = x;
+        if (x > maxX) maxX = x;
+        if (y < minY) minY = y;
+        if (y > maxY) maxY = y;
+      }
+    }
+  }
+  if (maxX < 0) return null;
+  return { x: minX, y: minY, w: maxX - minX + 1, h: maxY - minY + 1 };
+}
+
 // Recorta una hoja de animación horizontal (pack "Pixel Crawler": frames
 // cuadrados, ancho = alto x N -- confirmado leyendo cabeceras PNG en varias
 // hojas del pack, tanto del héroe como de los mobs) en un array de canvases
-// ya redimensionados a `destSize`. Se redimensiona aquí, al cargar, en vez
-// de dejarlo al `esc` de drawSprite() en world.js, porque ese `esc` es
-// compartido con el sprite estático (idle) de la misma entidad -- si no se
-// iguala el tamaño de antemano, el idle se encogería/agrandaría en cuanto
-// hubiera frames de correr/atacar cargados.
+// ya redimensionados a `destSize`. Cada frame se recoloca por su bbox real
+// (ver bboxAlfa) para que los PIES queden siempre justo en el borde inferior
+// del cuadro -- así drawSpriteBottom() (world.js) puede anclar por ahí sin
+// adivinar un desplazamiento a ojo. Una sola escala para toda la hoja
+// (a partir del bbox más alto de todos los frames) para que el personaje no
+// cambie de tamaño entre frames de una misma animación al alternar poses.
 function cargarHojaFrames(url, destSize, onListo) {
   const im = new Image();
   im.onload = () => {
     const frameSize = im.naturalHeight;
     const frameCount = Math.max(1, Math.round(im.naturalWidth / frameSize));
+    const tmp = document.createElement("canvas");
+    tmp.width = frameSize;
+    tmp.height = frameSize;
+    const tg = tmp.getContext("2d");
+    tg.imageSmoothingEnabled = false;
+    const bboxes = [];
+    for (let i = 0; i < frameCount; i++) {
+      tg.clearRect(0, 0, frameSize, frameSize);
+      tg.drawImage(im, i * frameSize, 0, frameSize, frameSize, 0, 0, frameSize, frameSize);
+      bboxes.push(bboxAlfa(tg, frameSize, frameSize) || { x: 0, y: 0, w: frameSize, h: frameSize });
+    }
+    const altoMax = Math.max(...bboxes.map((b) => b.h));
+    const escala = (destSize * 0.86) / altoMax; // 0.86: deja un margen inferior para la sombra de contacto
     const frames = [];
     for (let i = 0; i < frameCount; i++) {
+      const b = bboxes[i];
       const c = document.createElement("canvas");
       c.width = destSize;
       c.height = destSize;
       const g = c.getContext("2d");
       g.imageSmoothingEnabled = false;
-      g.drawImage(im, i * frameSize, 0, frameSize, frameSize, 0, 0, destSize, destSize);
+      const w = b.w * escala, h = b.h * escala;
+      g.drawImage(im, i * frameSize + b.x, b.y, b.w, b.h, (destSize - w) / 2, destSize - h, w, h);
       frames.push(c);
     }
     onListo(frames);
