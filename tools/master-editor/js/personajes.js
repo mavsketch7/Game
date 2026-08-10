@@ -16,7 +16,15 @@ export const N_TIERS = 5;
 export const ANCLAS_CUERPO = ["cabeza", "torso", "cadera", "mano"];
 export const CAPA_A_ANCLA = { casco: "cabeza", peto: "torso", piernas: "cadera", arma: "mano" };
 
-const CLAVE = "vespero-master-editor-personajes-v3"; // v3: anclajes -- ver nota más abajo
+// Estados de animación del cuerpo -- nombres 1:1 con REAL_IDLE_SRC/REAL_RUN_SRC/
+// REAL_ATTACK_SRC de src/render/sprites.js, para que un futuro importador pueda
+// mapear directo. Solo el cuerpo anima: arma/casco/peto/piernas son siempre una
+// imagen estática por tier (el pack de assets real no trae hojas de animación
+// para armas/armadura, solo para el cuerpo -- ver Body_A/Animations/*).
+export const ESTADOS_CUERPO = ["idle", "run", "attack"];
+const FPS_CUERPO_DEFECTO = 8;
+
+const CLAVE = "vespero-master-editor-personajes-v4"; // v4: estados de animación (idle/run/attack) en el cuerpo -- ver nota más abajo
 const RETARDO_MS = 600;
 let temporizador = null;
 
@@ -26,6 +34,7 @@ export const estado = {
   capaActiva: "cuerpo",
   tierActivo: 0, // qué tier se ve/edita para la capa activa (Común..Mítico)
   anclaCuerpoActiva: "cabeza", // qué anclaje del cuerpo se coloca al marcar (solo aplica con capaActiva==="cuerpo")
+  estadoAnimActivo: "idle", // qué estado del cuerpo se edita/previsualiza (Idle/Run/Attack)
 };
 
 function crearCapaConTierVacia() {
@@ -37,10 +46,16 @@ function crearCapaConTierVacia() {
   };
 }
 
+function crearEstadoCuerpoVacio() {
+  return { frames: [], fps: FPS_CUERPO_DEFECTO }; // frames: [{src,sx,sy,sw,sh}, ...]
+}
+
 function crearCuerpoVacio() {
+  const estados = {};
+  for (const e of ESTADOS_CUERPO) estados[e] = crearEstadoCuerpoVacio();
   return {
-    pieza: null, // { src, sx, sy, sw, sh } | null
-    anclas: { cabeza: null, torso: null, cadera: null, mano: null }, // cada una {x,y} en píxeles locales | null
+    estados, // { idle: {frames,fps}, run: {...}, attack: {...} }
+    anclas: { cabeza: null, torso: null, cadera: null, mano: null }, // cada una {x,y} en píxeles locales | null -- se marcan siempre sobre el frame de referencia (idle[0]), independientes del estado/frame en reproducción
   };
 }
 
@@ -56,6 +71,7 @@ export function crearPersonaje(nombre, tipo) {
   estado.activoId = p.id;
   estado.capaActiva = "cuerpo";
   estado.tierActivo = 0;
+  estado.estadoAnimActivo = "idle";
   programarGuardado();
   return p;
 }
@@ -72,7 +88,7 @@ export function borrarPersonaje(id) {
   programarGuardado();
 }
 
-function recortarARegion(region) {
+export function recortarARegion(region) {
   // Se guarda como data URL propio (recorte ya aplicado), no una referencia a
   // la imagen de origen -- así el JSON exportado es autocontenido.
   const c = document.createElement("canvas");
@@ -85,21 +101,38 @@ function recortarARegion(region) {
 }
 
 // region: { img: HTMLImageElement, sx, sy, sw, sh } | null (null = quitar)
-// tier: índice 0..4, ignorado para capa === "cuerpo" (no tiene tiers).
+// tier: índice 0..4. Solo para arma/casco/peto/piernas -- el cuerpo ya no se
+// asigna aquí (tiene frames por estado, ver establecerFramesCuerpo() abajo).
 // Al reasignar la pieza se borra el ancla existente (ver picker.js): un
 // recorte nuevo puede tener otra forma/tamaño, así que el punto marcado
 // antes ya no es de fiar -- toca volver a marcarlo.
 export function asignarCapa(idPersonaje, capa, tier, region) {
   const p = estado.personajes.find((x) => x.id === idPersonaje);
-  if (!p || !CAPAS.includes(capa)) return;
+  if (!p || !CAPAS_CON_TIER.includes(capa)) return;
   const pieza = region ? recortarARegion(region) : null;
-  if (capa === "cuerpo") {
-    p.capas.cuerpo.pieza = pieza;
-  } else {
-    p.capas[capa].tiers[tier] = pieza;
-    p.capas[capa].ancla = null;
-  }
+  p.capas[capa].tiers[tier] = pieza;
+  p.capas[capa].ancla = null;
   programarGuardado();
+}
+
+// Único punto de escritura de cuerpo.estados[x] -- sirve tanto para guardar
+// una animación capturada (frames.length >= 1) como para vaciarla
+// (frames: []), sin rama especial en ningún otro sitio del código.
+export function establecerFramesCuerpo(idPersonaje, estadoAnim, frames, fps) {
+  const p = estado.personajes.find((x) => x.id === idPersonaje);
+  if (!p || !ESTADOS_CUERPO.includes(estadoAnim)) return;
+  p.capas.cuerpo.estados[estadoAnim] = {
+    frames: frames.slice(),
+    fps: Math.max(1, Math.min(30, fps || FPS_CUERPO_DEFECTO)),
+  };
+  programarGuardado();
+}
+
+// Accesor null-safe -- análogo en espíritu a piezaParaTier() pero para el
+// cuerpo, que no tiene tiers: devuelve siempre {frames,fps}, nunca undefined.
+export function estadoCuerpo(personaje, estadoAnim) {
+  const est = personaje.capas.cuerpo.estados && personaje.capas.cuerpo.estados[estadoAnim];
+  return est || crearEstadoCuerpoVacio();
 }
 
 export function ajustarTransformCapa(idPersonaje, capa, cambios) {
@@ -135,7 +168,6 @@ export function establecerAnclaCuerpo(idPersonaje, nombreAncla, punto) {
 // propia de ese tier, o la de Común como fallback (ver compositor.js, que
 // además la recolorea cuando es fallback). Devuelve { pieza, esFallback }.
 export function piezaParaTier(personaje, capa, tier) {
-  if (capa === "cuerpo") return { pieza: personaje.capas.cuerpo.pieza, esFallback: false };
   const c = personaje.capas[capa];
   if (!c) return { pieza: null, esFallback: false };
   if (c.tiers[tier]) return { pieza: c.tiers[tier], esFallback: false };
@@ -150,7 +182,7 @@ export function programarGuardado() {
 export function guardarLocal() {
   try {
     localStorage.setItem(CLAVE, JSON.stringify({
-      version: 3,
+      version: 4,
       personajes: estado.personajes,
       activoId: estado.activoId,
     }));

@@ -3,7 +3,7 @@
 // del arma ni el anclaje por pies que tiene src/render/world.js (eso es render
 // de gameplay real; esto es para colocar las piezas juntas al diseñarlas). El
 // orden de dibujado sí es el mismo criterio que usa el juego.
-import { piezaParaTier, CAPA_A_ANCLA } from "./personajes.js";
+import { piezaParaTier, CAPA_A_ANCLA, estadoCuerpo } from "./personajes.js";
 
 export const RAREZAS = [
   { n: "Común", col: "#b9b2c6" },
@@ -52,6 +52,17 @@ function obtenerTeñido(img, src, color) {
 
 const ORDEN_CAPAS = ["piernas", "peto", "casco", "arma"]; // cuerpo se dibuja aparte, siempre primero
 
+// Frame a mostrar de un estado del cuerpo en el instante tMs -- sin estado
+// persistido (igual que el level-editor: Math.floor((Date.now()/1000)*fps) %
+// frames.length en tools/level-editor/js/render.js), así que reproducir no
+// requiere guardar "frame actual" en ningún sitio.
+function frameCuerpoEnTiempo(est, tMs) {
+  if (!est.frames.length) return null;
+  if (est.frames.length === 1) return est.frames[0];
+  const idx = Math.floor((tMs / 1000) * (est.fps || 8)) % est.frames.length;
+  return est.frames[idx];
+}
+
 // Devuelve { x, y, w, h } del rectángulo ya transformado donde se dibuja
 // `pieza` de `capa` -- se reutiliza tanto para dibujar como para saber, en
 // panel.js, sobre qué capa cae un arrastre.
@@ -77,37 +88,56 @@ export function rectanguloCapa(canvas, capa, pieza, escalaComun, anclaCuerpoCanv
 
 // tierActivo/capaActiva: para resaltar con un contorno la capa que se movería
 // al arrastrar sobre el lienzo (ver panel.js) -- puramente visual.
-export function dibujarComposicion(canvas, personaje, tierActivo, capaActiva) {
+// estadoAnimActivo/tMs: qué estado del cuerpo se previsualiza y en qué
+// instante (para elegir el frame en bucle, ver frameCuerpoEnTiempo arriba).
+export function dibujarComposicion(canvas, personaje, tierActivo, capaActiva, estadoAnimActivo = "idle", tMs = 0) {
   const ctx = canvas.getContext("2d");
   ctx.imageSmoothingEnabled = false;
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   if (!personaje) return;
 
-  // El cuerpo fija la escala común (su propio "contain" contra el lienzo) y
-  // se dibuja siempre de referencia, sin recolorear ni desplazar. Sus
-  // anclajes marcados (cabeza/torso/cadera/mano) se convierten aquí a
-  // coordenadas de lienzo para que las demás capas se puedan enganchar.
-  let escalaComun = 1, cuerpoRect = null;
+  // La escala común y los anclajes SIEMPRE se derivan del frame de
+  // referencia de "idle" (frame 0), fijo, aunque se esté reproduciendo Run/
+  // Attack en la vista previa -- así el arma/armadura no cambian de tamaño
+  // al alternar de estado (un frame de ataque puede tener otra bbox que el
+  // idle). El cuerpo se dibuja siempre primero, sin recolorear ni desplazar.
+  let escalaComun = 1, cuerpoRectRef = null, cuerpoRectMostrado = null;
   const anclasCuerpoCanvas = {};
   const cuerpo = personaje.capas.cuerpo;
-  if (cuerpo && cuerpo.pieza) {
-    const b = cuerpo.pieza;
-    const img = obtenerImagen(b.src);
-    if (img.complete && img.naturalWidth > 0) {
-      escalaComun = Math.min(canvas.width / b.sw, canvas.height / b.sh);
-      const w = b.sw * escalaComun, h = b.sh * escalaComun;
-      cuerpoRect = { x: (canvas.width - w) / 2, y: (canvas.height - h) / 2, w, h };
-      ctx.drawImage(img, b.sx, b.sy, b.sw, b.sh, cuerpoRect.x, cuerpoRect.y, w, h);
+  const frameRef = estadoCuerpo(personaje, "idle").frames[0] || null;
+  const estadoMostrado = estadoCuerpo(personaje, estadoAnimActivo);
+  // Si el estado que se está previsualizando aún no tiene frames propios,
+  // cae al de referencia (idle) -- mismo espíritu que el fallback de tier.
+  const frameMostrado = frameCuerpoEnTiempo(estadoMostrado, tMs) || frameRef;
+  const frameParaEscala = frameRef || frameMostrado;
+
+  if (cuerpo && frameParaEscala) {
+    const imgRef = obtenerImagen(frameParaEscala.src);
+    if (imgRef.complete && imgRef.naturalWidth > 0) {
+      escalaComun = Math.min(canvas.width / frameParaEscala.sw, canvas.height / frameParaEscala.sh);
+      const w = frameParaEscala.sw * escalaComun, h = frameParaEscala.sh * escalaComun;
+      cuerpoRectRef = { x: (canvas.width - w) / 2, y: (canvas.height - h) / 2, w, h };
       for (const nombreAncla in cuerpo.anclas) {
         const a = cuerpo.anclas[nombreAncla];
-        if (a) anclasCuerpoCanvas[nombreAncla] = { x: cuerpoRect.x + a.x * escalaComun, y: cuerpoRect.y + a.y * escalaComun };
+        if (a) anclasCuerpoCanvas[nombreAncla] = { x: cuerpoRectRef.x + a.x * escalaComun, y: cuerpoRectRef.y + a.y * escalaComun };
       }
     } else {
-      img.onload = () => dibujarComposicion(canvas, personaje, tierActivo, capaActiva);
+      imgRef.onload = () => dibujarComposicion(canvas, personaje, tierActivo, capaActiva, estadoAnimActivo, tMs);
     }
   }
 
-  let rectActivo = capaActiva === "cuerpo" ? cuerpoRect : null;
+  if (frameMostrado) {
+    const img = obtenerImagen(frameMostrado.src);
+    if (img.complete && img.naturalWidth > 0) {
+      const w = frameMostrado.sw * escalaComun, h = frameMostrado.sh * escalaComun;
+      cuerpoRectMostrado = { x: (canvas.width - w) / 2, y: (canvas.height - h) / 2, w, h };
+      ctx.drawImage(img, frameMostrado.sx, frameMostrado.sy, frameMostrado.sw, frameMostrado.sh, cuerpoRectMostrado.x, cuerpoRectMostrado.y, w, h);
+    } else {
+      img.onload = () => dibujarComposicion(canvas, personaje, tierActivo, capaActiva, estadoAnimActivo, tMs);
+    }
+  }
+
+  let rectActivo = capaActiva === "cuerpo" ? cuerpoRectMostrado : null;
 
   for (const nombreCapa of ORDEN_CAPAS) {
     const capa = personaje.capas[nombreCapa];
@@ -116,7 +146,7 @@ export function dibujarComposicion(canvas, personaje, tierActivo, capaActiva) {
     if (!pieza) continue;
     const img = obtenerImagen(pieza.src);
     if (!img.complete || img.naturalWidth === 0) {
-      img.onload = () => dibujarComposicion(canvas, personaje, tierActivo, capaActiva);
+      img.onload = () => dibujarComposicion(canvas, personaje, tierActivo, capaActiva, estadoAnimActivo, tMs);
       continue;
     }
     const fuente = esFallback ? obtenerTeñido(img, pieza.src, RAREZAS[tierActivo].col) : img;

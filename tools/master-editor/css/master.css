@@ -106,6 +106,41 @@ button.tab-capa.activa {
   background: var(--vespero); color: #1a1206;
   border-color: var(--bisel-oscuro) var(--bisel-claro) var(--bisel-claro) var(--bisel-oscuro);
 }
+
+/* Pestañas de estado de animación del cuerpo (Idle/Run/Attack) -- mismo
+   bisel que .tab-capa, solo cambia el nombre para no mezclar los dos
+   conceptos (capa vs. estado de animación). */
+button.tab-estado {
+  font-family: var(--font-ui); font-size: 1rem; letter-spacing: 0.01em;
+  background: var(--piedra2); color: var(--hueso); border: 2px solid;
+  border-color: var(--bisel-claro) var(--bisel-oscuro) var(--bisel-oscuro) var(--bisel-claro);
+  border-radius: 0; padding: 8px 12px; min-height: 40px; cursor: pointer; font-weight: 700;
+}
+button.tab-estado:hover { background: var(--piedra3); }
+button.tab-estado.activa {
+  background: var(--vespero); color: #1a1206;
+  border-color: var(--bisel-oscuro) var(--bisel-claro) var(--bisel-claro) var(--bisel-oscuro);
+}
+
+.caja-anidada { background: var(--noche); border: 2px solid var(--borde); padding: 10px; margin-top: 10px; }
+
+/* Modo animación: tira de miniaturas de frames capturados -- portado de
+   tools/level-editor/css/editor.css (mismos tokens, ya unificados). */
+.fila-frames { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
+.frame-thumb {
+  position: relative; width: 40px; height: 40px; border: 2px solid var(--borde);
+  background-color: #000; background-size: cover; image-rendering: pixelated; flex-shrink: 0;
+}
+.frame-thumb .frame-num {
+  position: absolute; top: 1px; left: 2px; font-family: var(--font-ui); font-size: 0.8rem;
+  color: var(--vespero); text-shadow: 0 0 2px #000;
+}
+.frame-thumb .frame-quitar {
+  position: absolute; top: -7px; right: -7px; width: 17px; height: 17px; min-height: 0; line-height: 13px;
+  border-radius: 50%; background: #ff7675; color: #2a0e0e; border: 1px solid #200a0a; cursor: pointer;
+  font-size: 0.7rem; padding: 0;
+}
+
 #capas-cabecera { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 12px; }
 #nombre-personaje-activo {
   margin: 0; font-family: var(--font-ui); font-size: 1.3rem; color: var(--hueso);
