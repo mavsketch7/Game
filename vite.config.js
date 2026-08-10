@@ -19,6 +19,9 @@ export default defineConfig({
         editorNiveles: fileURLToPath(
           new URL("./tools/level-editor/index.html", import.meta.url),
         ),
+        masterEditor: fileURLToPath(
+          new URL("./tools/master-editor/index.html", import.meta.url),
+        ),
       },
     },
   },

@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Master Editor — La Torre de Véspero</title>
+<link rel="stylesheet" href="./css/master.css">
+</head>
+<body>
+
+<header id="cabecera">
+  <h1>🛠️ Master Editor — La Torre de Véspero</h1>
+  <nav id="pestañas">
+    <button id="tab-niveles" class="tab activa" data-tab="niveles">🗺️ Niveles</button>
+    <button id="tab-sprites" class="tab" data-tab="sprites">🎨 Sprites</button>
+  </nav>
+</header>
+
+<!-- Pestaña Niveles: el editor de salas de siempre, embebido tal cual, sin tocarlo. -->
+<section id="panel-niveles" class="panel-tab activa">
+  <iframe id="iframe-niveles" src="../level-editor/index.html" title="Editor de niveles"></iframe>
+</section>
+
+<!-- Pestaña Sprites: editor nuevo (personajes/NPCs/mobs, capas de armadura, pintar a mano). -->
+<section id="panel-sprites" class="panel-tab">
+  <div id="sprites-layout">
+
+    <aside id="lista-personajes" class="caja">
+      <h2>Personajes</h2>
+      <div id="grupo-registro">
+        <h3>En uso hoy <span class="etiqueta-snapshot" title="Foto fija de lo que carga src/render/sprites.js -- no se actualiza sola si cambia el código del juego">📷 snapshot</span></h3>
+        <div id="lista-registro"></div>
+      </div>
+      <div id="grupo-creados">
+        <h3>Creados aquí</h3>
+        <div id="lista-creados"></div>
+      </div>
+      <div class="fila-btn">
+        <button id="btn-nuevo-personaje" class="mini dorado">➕ Nuevo personaje</button>
+      </div>
+    </aside>
+
+    <main id="editor-capas" class="caja">
+      <div id="capas-cabecera">
+        <h2 id="nombre-personaje-activo">Selecciona un personaje</h2>
+        <div class="fila-btn" id="fila-capas" style="margin:0;">
+          <button class="tab-capa activa" data-capa="cuerpo">🧍 Cuerpo</button>
+          <button class="tab-capa" data-capa="arma">⚔️ Arma</button>
+          <button class="tab-capa" data-capa="casco">🪖 Casco</button>
+          <button class="tab-capa" data-capa="peto">🛡️ Peto</button>
+          <button class="tab-capa" data-capa="piernas">👖 Piernas</button>
+        </div>
+      </div>
+
+      <div id="capas-cuerpo-edicion">
+        <div class="fila-btn" style="margin:0 0 10px;">
+          <button id="btn-cargar-capa" class="mini">📂 Cargar imagen…</button>
+          <input type="file" id="input-cargar-capa" accept="image/png,image/webp,image/jpeg,image/gif" style="display:none;" />
+          <button id="btn-pixelart-capa" class="mini">🖍️ Pintar píxel a píxel</button>
+          <button id="btn-quitar-capa" class="mini rojo">🗑️ Quitar de esta capa</button>
+        </div>
+        <div id="picker-wrap-me">
+          <canvas id="picker-canvas-me"></canvas>
+        </div>
+        <div class="fila-btn" id="picker-zoom-me" style="margin-top:6px;">
+          <button id="btn-zoom-out-me" class="mini">🔍−</button>
+          <button id="btn-zoom-reset-me" class="mini">100%</button>
+          <button id="btn-zoom-in-me" class="mini">🔍+</button>
+        </div>
+        <p class="nota">Clic = celda de rejilla. Arrastra = selección libre píxel a píxel, conserva su tamaño real (no se fuerza a un cuadrado).</p>
+
+        <div id="pixelart-panel-me" class="oculto">
+          <div class="fila-btn" style="margin:0 0 10px; align-items:center;">
+            <input type="color" id="pixelart-color-me" value="#e9b45c" />
+            <button id="pixelart-borrador-me" class="mini">🧽 Borrador</button>
+            <label style="font-size:0.8rem; display:flex; align-items:center; gap:4px;">Tamaño:
+              <input type="number" id="pixelart-size-me" value="32" min="4" max="64" style="width:55px;" />
+            </label>
+            <button id="btn-pixelart-limpiar-me" class="mini rojo">🗑️ Limpiar</button>
+            <button id="btn-pixelart-usar-me" class="mini dorado">✅ Usar este dibujo</button>
+          </div>
+          <canvas id="pixelart-canvas-me"></canvas>
+        </div>
+      </div>
+    </main>
+
+    <aside id="vista-previa" class="caja">
+      <h2>Vista previa compuesta</h2>
+      <canvas id="canvas-compositor" width="200" height="200"></canvas>
+      <label class="etiqueta-rareza">Tier de rareza (solo vista previa):
+        <select id="select-rareza-me"></select>
+      </label>
+      <p class="nota">Cuerpo → piernas → peto → casco → arma. Orden aproximado al del juego real, no reproduce el pivote exacto de mano/rotación de <code>world.js</code> -- esto es una vista de diseño.</p>
+      <div class="fila-btn">
+        <button id="btn-exportar-json-me" class="mini dorado">💾 Exportar JSON</button>
+        <button id="btn-borrar-personaje-me" class="mini rojo">🗑️ Borrar personaje</button>
+      </div>
+    </aside>
+
+  </div>
+</section>
+
+<!-- Modal genérico (nombre de personaje nuevo, confirmaciones) -->
+<div id="dialog-modal-me" class="modal-overlay oculto">
+  <div class="modal-box chico">
+    <h3 id="dialog-title-me">Título</h3>
+    <p id="dialog-message-me"></p>
+    <input type="text" id="dialog-input-me" style="display:none;" />
+    <div class="fila-btn" style="justify-content: flex-end; margin-top:10px;">
+      <button id="dialog-cancel-me">Cancelar</button>
+      <button id="dialog-ok-me" class="dorado">Aceptar</button>
+    </div>
+  </div>
+</div>
+
+<script type="module" src="./js/main.js"></script>
+
+</body>
+</html>
