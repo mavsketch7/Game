@@ -86,10 +86,17 @@
 
     <aside id="vista-previa" class="caja">
       <h2>Vista previa compuesta</h2>
-      <canvas id="canvas-compositor" width="200" height="200"></canvas>
-      <label class="etiqueta-rareza">Tier de rareza (solo vista previa):
+      <canvas id="canvas-compositor" width="300" height="300"></canvas>
+      <p class="nota">El cuerpo es la referencia fija. Arrastra sobre el lienzo para mover la capa seleccionada (recuadro punteado); rueda del ratón o ➖/➕ para escalarla.</p>
+      <div class="fila-btn" style="margin-top:0;">
+        <button id="btn-escala-menos-me" class="mini">➖</button>
+        <button id="btn-escala-reset-me" class="mini" title="Restablece posición y escala de la capa seleccionada">↺ Reset</button>
+        <button id="btn-escala-mas-me" class="mini">➕</button>
+      </div>
+      <label class="etiqueta-rareza">Tier en edición/vista previa:
         <select id="select-rareza-me"></select>
       </label>
+      <p class="nota" id="nota-tier-me"></p>
       <p class="nota">Cuerpo → piernas → peto → casco → arma. Orden aproximado al del juego real, no reproduce el pivote exacto de mano/rotación de <code>world.js</code> -- esto es una vista de diseño.</p>
       <div class="fila-btn">
         <button id="btn-exportar-json-me" class="mini dorado">💾 Exportar JSON</button>

@@ -79,7 +79,9 @@ button.tab-capa.activa { background: var(--vespero); color: #1a1206; border-colo
 #canvas-compositor {
   display: block; width: 100%; aspect-ratio: 1; background: repeating-conic-gradient(#1d1929 0% 25%, #26213a 0% 50%) 0 0 / 16px 16px;
   border: 1px solid var(--borde); border-radius: 6px; image-rendering: pixelated; margin-bottom: 10px;
+  cursor: grab; touch-action: none;
 }
+#canvas-compositor:active { cursor: grabbing; }
 .etiqueta-rareza { display: block; font-size: 0.8rem; margin-bottom: 10px; }
 
 p.nota { color: var(--ceniza); font-size: 0.78rem; line-height: 1.4; margin: 8px 0; }

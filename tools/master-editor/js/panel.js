@@ -1,6 +1,9 @@
 // --- UI principal de la pestaña "Sprites" ---
 import { REGISTRO_ASSETS } from "./registro-assets.js";
-import { CAPAS, estado, personajeActivo, crearPersonaje, borrarPersonaje, asignarCapa, cargarLocal, exportarJSON } from "./personajes.js";
+import {
+  CAPAS_CON_TIER, estado, personajeActivo, crearPersonaje, borrarPersonaje,
+  asignarCapa, ajustarTransformCapa, resetearTransformCapa, piezaParaTier, cargarLocal, exportarJSON,
+} from "./personajes.js";
 import { cargarImagenPicker, limpiarPicker, onSeleccion } from "./picker.js";
 import { abrirPixelArt, cerrarPixelArt, setOnUsar } from "./pixelart.js";
 import { dibujarComposicion, RAREZAS } from "./compositor.js";
@@ -16,8 +19,12 @@ const btnPixelartCapa = document.getElementById("btn-pixelart-capa");
 const btnQuitarCapa = document.getElementById("btn-quitar-capa");
 const canvasCompositor = document.getElementById("canvas-compositor");
 const selectRareza = document.getElementById("select-rareza-me");
+const notaTier = document.getElementById("nota-tier-me");
 const btnExportarJSON = document.getElementById("btn-exportar-json-me");
 const btnBorrarPersonaje = document.getElementById("btn-borrar-personaje-me");
+const btnEscalaMenos = document.getElementById("btn-escala-menos-me");
+const btnEscalaMas = document.getElementById("btn-escala-mas-me");
+const btnEscalaReset = document.getElementById("btn-escala-reset-me");
 
 // --- Modal genérico (nombre de personaje nuevo) ---
 const modal = document.getElementById("dialog-modal-me");
@@ -75,19 +82,20 @@ function construirListas() {
 function clonarDesdeRegistro(r) {
   pedirTexto("Nuevo personaje desde el registro", `Nombre para la copia editable de "${r.nombre}":`, r.nombre, (nombre) => {
     const p = crearPersonaje(nombre, r.tipo);
-    // Precarga cuerpo/arma tal cual desde el registro -- el usuario puede
-    // recortar/repintar encima después, es solo un punto de partida.
-    if (r.cuerpoSrc) precargarCapaDesdeUrl(p.id, "cuerpo", r.cuerpoSrc);
-    if (r.armaSrc) precargarCapaDesdeUrl(p.id, "arma", r.armaSrc);
+    // Precarga cuerpo/arma (tier Común) tal cual desde el registro -- el
+    // usuario puede recortar/repintar encima después, es solo un punto de
+    // partida.
+    if (r.cuerpoSrc) precargarCapaDesdeUrl(p.id, "cuerpo", 0, r.cuerpoSrc);
+    if (r.armaSrc) precargarCapaDesdeUrl(p.id, "arma", 0, r.armaSrc);
     refrescarTodo();
   });
 }
 
-function precargarCapaDesdeUrl(idPersonaje, capa, url) {
+function precargarCapaDesdeUrl(idPersonaje, capa, tier, url) {
   const img = new Image();
   img.crossOrigin = "anonymous";
   img.onload = () => {
-    asignarCapa(idPersonaje, capa, { img, sx: 0, sy: 0, sw: img.naturalWidth, sh: img.naturalHeight });
+    asignarCapa(idPersonaje, capa, tier, { img, sx: 0, sy: 0, sw: img.naturalWidth, sh: img.naturalHeight });
     refrescarTodo();
   };
   img.onerror = () => console.warn("No se pudo precargar " + url + " (¿el editor no se está sirviendo desde el mismo origen que el juego?)");
@@ -98,23 +106,31 @@ function precargarCapaDesdeUrl(idPersonaje, capa, url) {
 function construirTabsCapa() {
   filaCapas.querySelectorAll(".tab-capa").forEach((btn) => {
     btn.classList.toggle("activa", btn.dataset.capa === estado.capaActiva);
-    btn.onclick = () => { estado.capaActiva = btn.dataset.capa; refrescarEditorCapa(); };
+    btn.onclick = () => { estado.capaActiva = btn.dataset.capa; refrescarEditorCapa(); refrescarComposicion(); };
   });
 }
 
 function refrescarEditorCapa() {
   const p = personajeActivo();
   cerrarPixelArt();
-  if (!p) { limpiarPicker(); return; }
-  const datos = p.capas[estado.capaActiva];
-  if (datos) cargarImagenPicker(datos.src);
+  const conTier = CAPAS_CON_TIER.includes(estado.capaActiva);
+  selectRareza.disabled = !conTier;
+  if (!p) { limpiarPicker(); notaTier.textContent = ""; return; }
+  const { pieza, esFallback } = piezaParaTier(p, estado.capaActiva, estado.tierActivo);
+  if (pieza) cargarImagenPicker(pieza.src);
   else limpiarPicker();
+  notaTier.textContent = !conTier
+    ? "El cuerpo no tiene tiers: es la referencia fija."
+    : esFallback
+      ? `Este tier no tiene pieza propia: se ve el recoloreado automático de "Común". Usa el picker o pinta a mano para asignarle una pieza propia.`
+      : `Editando la pieza propia de "${RAREZAS[estado.tierActivo].n}".`;
 }
 
 onSeleccion((region) => {
   const p = personajeActivo();
   if (!p) return;
-  asignarCapa(p.id, estado.capaActiva, region);
+  asignarCapa(p.id, estado.capaActiva, estado.tierActivo, region);
+  refrescarEditorCapa();
   refrescarComposicion();
   construirListas();
 });
@@ -122,7 +138,7 @@ onSeleccion((region) => {
 setOnUsar((img) => {
   const p = personajeActivo();
   if (!p) return;
-  asignarCapa(p.id, estado.capaActiva, { img, sx: 0, sy: 0, sw: img.width, sh: img.height });
+  asignarCapa(p.id, estado.capaActiva, estado.tierActivo, { img, sx: 0, sy: 0, sw: img.width, sh: img.height });
   cerrarPixelArt();
   refrescarEditorCapa();
   refrescarComposicion();
@@ -144,24 +160,89 @@ btnPixelartCapa.onclick = () => abrirPixelArt();
 btnQuitarCapa.onclick = () => {
   const p = personajeActivo();
   if (!p) return;
-  asignarCapa(p.id, estado.capaActiva, null);
+  asignarCapa(p.id, estado.capaActiva, estado.tierActivo, null);
   refrescarEditorCapa();
   refrescarComposicion();
   construirListas();
 };
 
-// --- Vista previa compuesta ---
+// --- Selector de tier (vista previa Y objetivo de edición para picker/pixelart) ---
 for (const r of RAREZAS) {
   const opt = document.createElement("option");
   opt.value = RAREZAS.indexOf(r);
   opt.textContent = r.n;
   selectRareza.appendChild(opt);
 }
-selectRareza.onchange = refrescarComposicion;
+selectRareza.onchange = () => {
+  estado.tierActivo = parseInt(selectRareza.value) || 0;
+  refrescarEditorCapa();
+  refrescarComposicion();
+};
 
+// --- Vista previa: arrastrar mueve, rueda/botones escalan la capa seleccionada ---
 function refrescarComposicion() {
-  dibujarComposicion(canvasCompositor, personajeActivo(), parseInt(selectRareza.value) || 0);
+  dibujarComposicion(canvasCompositor, personajeActivo(), estado.tierActivo, estado.capaActiva);
 }
+
+let arrastreCompositor = null; // {x0,y0, offsetInicial}
+
+function capaTransformable() {
+  const p = personajeActivo();
+  if (!p || estado.capaActiva === "cuerpo") return null;
+  return p.capas[estado.capaActiva];
+}
+
+canvasCompositor.addEventListener("pointerdown", (e) => {
+  const capa = capaTransformable();
+  if (!capa) return;
+  canvasCompositor.setPointerCapture(e.pointerId);
+  const rect = canvasCompositor.getBoundingClientRect();
+  arrastreCompositor = {
+    x0: (e.clientX - rect.left) * (canvasCompositor.width / rect.width),
+    y0: (e.clientY - rect.top) * (canvasCompositor.height / rect.height),
+    offsetInicial: { ...capa.offset },
+  };
+});
+
+canvasCompositor.addEventListener("pointermove", (e) => {
+  if (!arrastreCompositor) return;
+  const p = personajeActivo();
+  const rect = canvasCompositor.getBoundingClientRect();
+  const x = (e.clientX - rect.left) * (canvasCompositor.width / rect.width);
+  const y = (e.clientY - rect.top) * (canvasCompositor.height / rect.height);
+  const dx = x - arrastreCompositor.x0, dy = y - arrastreCompositor.y0;
+  ajustarTransformCapa(p.id, estado.capaActiva, {
+    offset: { x: arrastreCompositor.offsetInicial.x + dx, y: arrastreCompositor.offsetInicial.y + dy },
+  });
+  refrescarComposicion();
+});
+
+canvasCompositor.addEventListener("pointerup", () => { arrastreCompositor = null; });
+
+canvasCompositor.addEventListener("wheel", (e) => {
+  const capa = capaTransformable();
+  if (!capa) return;
+  e.preventDefault();
+  cambiarEscala(e.deltaY < 0 ? 0.1 : -0.1);
+}, { passive: false });
+
+function cambiarEscala(delta) {
+  const p = personajeActivo();
+  const capa = capaTransformable();
+  if (!p || !capa) return;
+  const nueva = Math.max(0.2, Math.min(4, capa.escala + delta));
+  ajustarTransformCapa(p.id, estado.capaActiva, { escala: nueva });
+  refrescarComposicion();
+}
+
+btnEscalaMas.onclick = () => cambiarEscala(0.1);
+btnEscalaMenos.onclick = () => cambiarEscala(-0.1);
+btnEscalaReset.onclick = () => {
+  const p = personajeActivo();
+  if (!p || estado.capaActiva === "cuerpo") return;
+  resetearTransformCapa(p.id, estado.capaActiva);
+  refrescarComposicion();
+};
 
 btnExportarJSON.onclick = () => {
   const p = personajeActivo();
