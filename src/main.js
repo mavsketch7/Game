@@ -10,6 +10,7 @@ import { construirMenu } from "./ui/menu.js";
 import "./ui/cursor.js";
 import "./ui/guildRankings.js";
 import "./ui/intro.js";
+import "./ui/pauseMenu.js";
 
 let ultimo = 0;
 
@@ -25,9 +26,9 @@ function bucle(ts) {
               render();
             }
             else {
-              cx.fillStyle = "#12101c";
+              cx.fillStyle = "#17110b";
               cx.fillRect(0, 0, W, H);
-              cx.fillStyle = "#e9b45c";
+              cx.fillStyle = "#e2c489";
               cx.font = "700 20px Cinzel";
               cx.textAlign = "center";
               cx.fillText("Conectando a la sala…", W / 2, H / 2);

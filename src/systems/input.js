@@ -6,8 +6,9 @@ import { NET } from "../net/peer.js";
 import { activarParry, atacar, castSup, cicloElem, disparoSecundario, esquivar, habilidad, interactuar, transformar } from "./abilities.js";
 import { aplicarMusica, initAudio, reanudarAudio } from "./audio.js";
 import { abrirInfo, cerrarInfo } from "../ui/info.js";
-import { cambiarPestanaInv, cerrarInv, toggleInv } from "../ui/inventory.js";
+import { cambiarPestanaInv, cerrarInv } from "../ui/inventory.js";
 import { construirMenu } from "../ui/menu.js";
+import { toggleMenuPausa } from "../ui/pauseMenu.js";
 import { cerrarArenaPvp } from "../ui/pvp.js";
 import { abrirAjustes, cerrarAjustes, toggleSilencioRapido } from "../ui/settingsOverlay.js";
 import { cerrarTienda } from "../ui/shop.js";
@@ -107,7 +108,7 @@ export function pollPads() {
               if (edge(13) || edge(15)) padNavega(1);
               if (edge(0)) padActiva();
               if (edge(1)) padCierra();
-              if (edge(9)) toggleInv();
+              if (edge(9)) toggleMenuPausa();
               // LB/RB cambian de pestaña en la ficha de personaje (Personaje/
               // Equipamiento/Estadísticas/Mapa) -- libres aquí porque durante
               // el juego LB (4) se usa para parry y solo en la rama de abajo
@@ -123,7 +124,7 @@ export function pollPads() {
               (pl) => pl.ctrl.tipo === "pad" && pl.ctrl.idx === i,
             );
             if (p) {
-              if (edge(9)) toggleInv();
+              if (edge(9)) toggleMenuPausa();
               if (edge(8)) {
                 initAudio();
                 reanudarAudio();
@@ -348,7 +349,7 @@ window.addEventListener("keydown", (e) => {
         if (!G || !G.activo) return;
         if (k === "tab") {
           e.preventDefault();
-          toggleInv();
+          toggleMenuPausa();
           return;
         }
         if (G.pausa) {

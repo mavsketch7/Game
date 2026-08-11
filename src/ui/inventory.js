@@ -1158,25 +1158,6 @@ export function cerrarInv() {
         }
       }
 
-export function toggleInv() {
-        if (!G || !G.activo) return;
-        // no alternar si hay cartas, tienda o sastre abiertos
-        if (
-          !document
-            .getElementById("cartas-overlay")
-            .classList.contains("oculto")
-        )
-          return;
-        if (!document.getElementById("tienda").classList.contains("oculto"))
-          return;
-        if (!document.getElementById("skins").classList.contains("oculto"))
-          return;
-        if (!document.getElementById("yunque").classList.contains("oculto"))
-          return;
-        if (G.pausa) cerrarInv();
-        else abrirInv();
-      }
-
 function equipar(idx) {
         const p = G.players[G.invSel] || G.players[0];
         const it = p.bolsa[idx];
