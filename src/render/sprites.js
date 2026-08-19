@@ -935,18 +935,20 @@ function cargarHojaFrames(url, destSize, onListo, sinAmpliar) {
   im.src = url;
 }
 
-// Nombre del hitbox (herramienta de marcado de manos del plugin de
-// Aseprite que se está usando -- exporta un JSON con un hitbox con
-// nombre por punto marcado, agrupado por tag de animación, ver
-// puntosPorFrameDesdeHitbox más abajo) que se usa como ancla del arma.
-// "m-d" (mano derecha) confirmado en el primer archivo marcado
-// (Hero-Sword-atack-right-left.aseprite) como la mano que se mueve
-// durante el ataque -- "m-i" (mano izquierda) se ignora por ahora, no
-// tenía datos para la animación de ataque en ese archivo. Si en algún
-// personaje/animación resulta ser la otra mano, esto tendrá que pasar a
-// ser una tabla por archivo en vez de un nombre fijo -- de momento solo
-// hay un archivo marcado, no hace falta esa complejidad todavía.
-const NOMBRE_HITBOX_MANO_ARMA = "m-d";
+// Nombres de hitbox (herramienta de marcado del plugin de Aseprite que se
+// está usando -- exporta un JSON con un hitbox con nombre por punto
+// marcado, agrupado por tag de animación, ver puntosPorFrameDesdeHitbox
+// más abajo) que sirven como ancla del arma, en orden de preferencia --
+// el arma usa el PRIMERO que tenga datos en el archivo cargado. Distinto
+// nombre según qué sostiene el personaje: "m-d" (mano derecha) para las
+// clases que empuñan directamente (guerrero, confirmado en
+// Hero-Sword-atack-right-left.aseprite -- es la mano que se mueve
+// durante el ataque, "m-i"/mano izquierda no tenía datos ahí), "b-pl"
+// (posición del arco) para el arquero (confirmado en su hoja de ataque,
+// 12 frames repartidos en idle/charge/throw/rest que cuadran con los 12
+// frames reales de heroB_attack_arquero_side). Si algún personaje nuevo
+// necesita otro nombre, basta con añadirlo a esta lista.
+const NOMBRES_HITBOX_ARMA = ["m-d", "b-pl"];
 
 // El JSON de este plugin no es plano por frame: es un array de hitboxes
 // con nombre, cada uno con sus datos agrupados por TAG de animación
@@ -1029,12 +1031,26 @@ function cargarHojaFramesConAncla(url, destSize, onListo, sinAmpliar) {
           frames.push(c);
         }
 
-        // Punto por frame de la mano del arma (ver puntosPorFrameDesdeHitbox
-        // más arriba) -- ya viene en índice GLOBAL de frame, uno por cada
+        // Punto por frame del arma (ver puntosPorFrameDesdeHitbox más
+        // arriba) -- ya viene en índice GLOBAL de frame, uno por cada
         // frame que el usuario haya marcado en Aseprite (puede haber menos
         // frames marcados que `frameCount` si algún tramo no se marcó
         // todavía; esos quedan en `null` y caen al pivote fijo de siempre).
-        const puntosGlobales = puntosPorFrameDesdeHitbox(meta, NOMBRE_HITBOX_MANO_ARMA);
+        // Se prueba cada nombre de NOMBRES_HITBOX_ARMA en orden y se usa
+        // el primero que tenga datos -- distintas clases usan distinto
+        // nombre según qué sostienen (mano vs arco).
+        let puntosGlobales = null;
+        for (const nombre of NOMBRES_HITBOX_ARMA) {
+          const candidato = puntosPorFrameDesdeHitbox(meta, nombre);
+          // tagData puede existir pero venir vacío (nada marcado todavía,
+          // ver hands-walkdown.json antes de marcarlo) -- eso no cuenta
+          // como "encontrado", si no el candidato siguiente (con datos de
+          // verdad) nunca se llegaría a probar.
+          if (candidato && Object.keys(candidato).length) {
+            puntosGlobales = candidato;
+            break;
+          }
+        }
         const anclas = new Array(frameCount).fill(null);
         if (puntosGlobales) {
           for (let i = 0; i < frameCount; i++) {
