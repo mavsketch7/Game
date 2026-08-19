@@ -1701,25 +1701,28 @@ function renderJugador(p) {
         // Sombra de contacto en el suelo, justo bajo los pies (p.y -- el sprite
         // real ya se ancla exactamente ahí, ver drawSpriteBottom()/dibujarHeroe()
         // y cargarHojaFrames() en sprites.js). Sin esto el personaje no tenía
-        // ningún ancla visual al suelo y se notaba "flotando". Suma `bob` (el
-        // mismo rebote de idle/correr que recibe el cuerpo, ver dibujarHeroe()
-        // más abajo) para que la sombra no se desincronice de los pies durante
-        // la animación -- antes se quedaba fija mientras el cuerpo subía/bajaba.
+        // ningún ancla visual al suelo y se notaba "flotando". FIJA en el
+        // suelo, sin `bob` -- el rebote de idle/correr es del cuerpo, no del
+        // suelo; si la sombra/aro también botan, se pierde la referencia fija
+        // que hace que el rebote se lea como "el cuerpo sube y baja" en vez
+        // de "todo el conjunto flota junto" (bug señalado tras el pase
+        // anterior, que sí sumaba `bob` aquí).
         cx.fillStyle = "rgba(0,0,0,.35)";
         cx.beginPath();
-        cx.ellipse(p.x, p.y + 2 + bob, p.r * 0.8, p.r * 0.3, 0, 0, TAU);
+        cx.ellipse(p.x, p.y + 2, p.r * 0.8, p.r * 0.3, 0, 0, TAU);
         cx.fill();
         // Anillo de color del jugador (identifica de un vistazo quién es
         // quién en cooperativo): antes vivía al principio de la función,
         // fijo en p.y+16 -- con el cuerpo heroB ya a su tamaño real esos
         // 16px lo dejaban muy por debajo de los pies de verdad, "flotando"
         // igual que le pasaba al arma. Movido aquí para compartir posición
-        // exacta (mismo p.y+2+bob) y tamaño (mismo p.r) con la sombra real.
+        // exacta (mismo p.y+2, también fijo/sin bob) y tamaño (mismo p.r)
+        // con la sombra real.
         cx.strokeStyle = p.color;
         cx.globalAlpha = 0.75;
         cx.lineWidth = 2;
         cx.beginPath();
-        cx.ellipse(p.x, p.y + 2 + bob, p.r * 0.8 + 2, p.r * 0.3 + 1, 0, 0, TAU);
+        cx.ellipse(p.x, p.y + 2, p.r * 0.8 + 2, p.r * 0.3 + 1, 0, 0, TAU);
         cx.stroke();
         cx.globalAlpha = 1;
         if (formaAnimal) {
