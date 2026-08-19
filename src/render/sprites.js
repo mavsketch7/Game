@@ -935,6 +935,99 @@ function cargarHojaFrames(url, destSize, onListo, sinAmpliar) {
   im.src = url;
 }
 
+// Nombre del slice de Aseprite que marca dónde va la mano en cada frame
+// (ver docs del sistema de anclaje -- se coloca/recoloca a mano en el
+// propio Aseprite, uno por frame donde haga falta). Convención única para
+// que el código sepa qué buscar sin tener que configurarlo por archivo.
+const SLICE_ANCLA_MANO = "ancla_mano";
+
+// Como cargarHojaFrames(), pero además intenta leer un JSON de metadatos
+// (mismo nombre que la hoja, .json en vez de .png -- exportado con
+// `aseprite -b origen.aseprite --sheet hoja.png --data hoja.json --format
+// json-array`) y de ahí un slice animado llamado SLICE_ANCLA_MANO para
+// devolver, junto a los frames de siempre, un array paralelo de puntos de
+// anclaje (mismo índice que `frames`, `null` en los frames sin slice o si
+// el JSON no existe todavía -- es aditivo, no hace falta tenerlo en todas
+// las hojas). El punto se pasa por la MISMA transformación de recorte+
+// escala que ya sufre cada frame (bboxAlfa + `escala`), así queda en el
+// mismo espacio de coordenadas en el que se dibuja el sprite final -- sin
+// mantener la matemática de encaje en dos sitios distintos.
+// onListo(frames, anclas)
+function cargarHojaFramesConAncla(url, destSize, onListo, sinAmpliar) {
+  const jsonUrl = url.replace(/\.png(\?.*)?$/, ".json$1");
+  const im = new Image();
+  im.onload = () => {
+    // no-store: este JSON no lleva hash de contenido en el nombre de
+    // archivo (a diferencia de los bundles de Vite) -- sin esto, un
+    // navegador (o el propio servidor de Vite en dev, que en la práctica
+    // devuelve 200 con el index.html de siempre para rutas que no
+    // reconoce en vez de un 404 limpio) puede servir una versión cacheada
+    // vieja del ancla después de que el usuario actualice el archivo.
+    fetch(jsonUrl, { cache: "no-store" })
+      .then((r) => (r.ok ? r.json() : null))
+      .catch(() => null)
+      .then((meta) => {
+        const frameSize = im.naturalHeight;
+        const frameCount = Math.max(1, Math.round(im.naturalWidth / frameSize));
+        const tmp = document.createElement("canvas");
+        tmp.width = frameSize;
+        tmp.height = frameSize;
+        const tg = tmp.getContext("2d");
+        tg.imageSmoothingEnabled = false;
+        const bboxes = [];
+        for (let i = 0; i < frameCount; i++) {
+          tg.clearRect(0, 0, frameSize, frameSize);
+          tg.drawImage(im, i * frameSize, 0, frameSize, frameSize, 0, 0, frameSize, frameSize);
+          bboxes.push(bboxAlfa(tg, frameSize, frameSize) || { x: 0, y: 0, w: frameSize, h: frameSize });
+        }
+        const altoMax = Math.max(...bboxes.map((b) => b.h));
+        const escala = sinAmpliar
+          ? Math.min(1, (destSize * 0.86) / altoMax)
+          : (destSize * 0.86) / altoMax;
+        const frames = [];
+        for (let i = 0; i < frameCount; i++) {
+          const b = bboxes[i];
+          const c = document.createElement("canvas");
+          c.width = destSize;
+          c.height = destSize;
+          const g = c.getContext("2d");
+          g.imageSmoothingEnabled = false;
+          const w = b.w * escala, h = b.h * escala;
+          g.drawImage(im, i * frameSize + b.x, b.y, b.w, b.h, (destSize - w) / 2, destSize - h, w, h);
+          frames.push(c);
+        }
+
+        // Slice animado -> punto por frame ("key" más reciente para cada
+        // frame, igual que un fotograma clave en cualquier timeline --
+        // vale para varios frames seguidos si la mano no se movió).
+        const sliceData = meta?.meta?.slices?.find((s) => s.name === SLICE_ANCLA_MANO);
+        const anclas = new Array(frameCount).fill(null);
+        if (sliceData && sliceData.keys && sliceData.keys.length) {
+          const keys = [...sliceData.keys].sort((a, b2) => a.frame - b2.frame);
+          for (let i = 0; i < frameCount; i++) {
+            let key = keys[0];
+            for (const k of keys) {
+              if (k.frame > i) break;
+              key = k;
+            }
+            const b = bboxes[i];
+            const sx = key.bounds.x + key.bounds.w / 2;
+            const sy = key.bounds.y + key.bounds.h / 2;
+            const w = b.w * escala, h = b.h * escala;
+            anclas[i] = {
+              x: (destSize - w) / 2 + (sx - b.x) * escala,
+              y: destSize - h + (sy - b.y) * escala,
+            };
+          }
+        }
+
+        onListo(frames, anclas);
+      });
+  };
+  im.onerror = () => console.warn("No se pudo cargar hoja de animación: " + url);
+  im.src = url;
+}
+
 // Tamaño del sprite = radio de colisión (hitbox) x este factor, en vez de un
 // tamaño de icono arbitrario desconectado del gameplay -- así el personaje
 // "llena" un hueco visualmente coherente con lo grande que es de verdad para
@@ -943,8 +1036,11 @@ function cargarHojaFrames(url, destSize, onListo, sinAmpliar) {
 // distinto sacado del pack, de ahí el salto de tamaño al moverse).
 const FACTOR_SPRITE_HITBOX = 4;
 
-// Héroe: p.r = 17 fijo para las 6 clases (ver core/gameflow.js).
-const TAM_HEROE = 17 * FACTOR_SPRITE_HITBOX;
+// Héroe: p.r = 17 fijo para las 6 clases (ver core/gameflow.js). Exportado
+// porque world.js lo necesita para convertir el ancla de mano (ver
+// REAL_ATTACK_ANCLA/cargarHojaFramesConAncla) de espacio local del canvas
+// a coordenadas de mundo, con la misma cuenta que ya hace drawSpriteBottom().
+export const TAM_HEROE = 17 * FACTOR_SPRITE_HITBOX;
 
 // Cuerpo "heroB" (pack propio en torre-vespero-assets/Hero-sprites, estilo
 // silueta monocromo) como personaje estándar y único para las 4 clases
@@ -1006,10 +1102,18 @@ const REAL_ATTACK_SRC = {
 };
 
 export const REAL_ATTACK = { guerrero: {}, arquero: {}, picaro: {}, mago: {} };
+// Punto de anclaje de la mano por frame (ver cargarHojaFramesConAncla() y
+// SLICE_ANCLA_MANO más arriba) -- mismo índice que REAL_ATTACK[rol][dir],
+// `null` en los frames/hojas sin slice todavía (fallback al pivote fijo
+// en world.js). Aditivo: no hace falta que todas las hojas lo tengan.
+export const REAL_ATTACK_ANCLA = { guerrero: {}, arquero: {}, picaro: {}, mago: {} };
 
 for (const rolAtk in REAL_ATTACK_SRC) {
   for (const dirAtk in REAL_ATTACK_SRC[rolAtk]) {
-    cargarHojaFrames(REAL_ATTACK_SRC[rolAtk][dirAtk], TAM_HEROE, (frames) => { REAL_ATTACK[rolAtk][dirAtk] = frames; }, true);
+    cargarHojaFramesConAncla(REAL_ATTACK_SRC[rolAtk][dirAtk], TAM_HEROE, (frames, anclas) => {
+      REAL_ATTACK[rolAtk][dirAtk] = frames;
+      REAL_ATTACK_ANCLA[rolAtk][dirAtk] = anclas;
+    }, true);
   }
 }
 

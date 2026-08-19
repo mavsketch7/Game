@@ -4,7 +4,7 @@ import { ELEMENTOS, MAX_PLANTA, RAREZAS, SALA_H, SALA_W, SUPS } from "../core/co
 import { G } from "../core/state.js";
 import { fxParticulas } from "./effects.js";
 import { barra, renderHUD } from "./hud.js";
-import { ARQUERO_BOW, ARQUERO_BOW_DUR, ATTACK_DUR, ESC_FORMA, KENNEY_TILE, MIRA_IZQUIERDA_POR_DEFECTO, MOB_RUN, OFFHAND_IMG, OFFHAND_IMG_RAREZA, REAL_ATTACK, REAL_IDLE, REAL_RUN, REAL_SPRITE_SCALE, SHEETS, SPR, SPR_FORMAS, WEAPON_IMG, WEAPON_IMG_RAREZA, assetOK, iconoDrop, remateMuroPatron, spriteJugador, wallPatron } from "./sprites.js";
+import { ARQUERO_BOW, ARQUERO_BOW_DUR, ATTACK_DUR, ESC_FORMA, KENNEY_TILE, MIRA_IZQUIERDA_POR_DEFECTO, MOB_RUN, OFFHAND_IMG, OFFHAND_IMG_RAREZA, REAL_ATTACK, REAL_ATTACK_ANCLA, REAL_IDLE, REAL_RUN, REAL_SPRITE_SCALE, SHEETS, SPR, SPR_FORMAS, TAM_HEROE, WEAPON_IMG, WEAPON_IMG_RAREZA, assetOK, iconoDrop, remateMuroPatron, spriteJugador, wallPatron } from "./sprites.js";
 import { groundTarget } from "../systems/abilities.js";
 import { masCercano } from "../systems/combat.js";
 import { mouse } from "../systems/input.js";
@@ -186,11 +186,20 @@ function dibujarHeroe(p, x, yPies, mov) {
         // ahora que hay pose real por dirección, antes solo era un espejo
         // izq/der sutil).
         let dir = dirAim, anguloFacing = p.aim;
+        // Ancla de mano de ESTE frame de ataque (ver REAL_ATTACK_ANCLA/
+        // cargarHojaFramesConAncla en sprites.js) -- null si esa hoja
+        // todavía no tiene el slice "ancla_mano" colocado, el bloque
+        // "arma apuntando" (más abajo, mismo archivo) cae al pivote fijo
+        // de siempre en ese caso.
+        let anclaLocal = null;
         if (p.swingT > 0 && atkFrames && atkFrames.length) {
           const dur = ATTACK_DUR[p.rol] || 0.2;
           const prog = clamp(1 - p.swingT / dur, 0, 0.999);
-          const fr = atkFrames[Math.floor(prog * atkFrames.length)];
+          const frameIdx = Math.floor(prog * atkFrames.length);
+          const fr = atkFrames[frameIdx];
           if (fr) img = fr;
+          const anclasDir = REAL_ATTACK_ANCLA[p.rol]?.[dirAim] || REAL_ATTACK_ANCLA[p.rol]?.side;
+          anclaLocal = anclasDir ? anclasDir[frameIdx] : null;
         } else if (mov && p.inp) {
           anguloFacing = Math.atan2(p.inp.my, p.inp.mx);
           dir = direccionDesdeAim(anguloFacing);
@@ -214,6 +223,17 @@ function dibujarHeroe(p, x, yPies, mov) {
           // pies como los frames de arriba, así que se ancla como antes.
           drawSprite(spriteJugador(p), x, yPies - 6, flip, REAL_SPRITE_SCALE[p.rol] || 1);
         }
+        // Convierte el ancla (espacio local del canvas TAM_HEROE x TAM_HEROE,
+        // ver cargarHojaFramesConAncla) a coordenadas de mundo, mismo cálculo
+        // que hace drawSpriteBottom() para colocar el propio sprite -- para
+        // que el bloque "arma apuntando" (world.js, más abajo) pueda usarlo
+        // directamente como pivote sin repetir esta cuenta.
+        if (!anclaLocal) return null;
+        const centroLocal = TAM_HEROE / 2;
+        return {
+          x: x + (flip ? -(anclaLocal.x - centroLocal) : (anclaLocal.x - centroLocal)),
+          y: yPies - TAM_HEROE + anclaLocal.y,
+        };
       }
 
 export function render() {
@@ -1759,6 +1779,10 @@ function renderJugador(p) {
         cx.ellipse(p.x, p.y + 2, p.r * 0.8 + 2, p.r * 0.3 + 1, 0, 0, TAU);
         cx.stroke();
         cx.globalAlpha = 1;
+        // Ancla de mano del frame que se acaba de dibujar (null si esa hoja
+        // no tiene el slice todavía, o si es una forma animal de druida sin
+        // arma) -- la usa el bloque "arma apuntando" más abajo.
+        let anclaMano = null;
         if (formaAnimal) {
           const esc2 = ESC_FORMA[p.forma];
           drawSprite(
@@ -1781,7 +1805,7 @@ function renderJugador(p) {
           cx.stroke();
           cx.globalAlpha = 1;
         } else {
-          dibujarHeroe(p, p.x, p.y + bob, mov);
+          anclaMano = dibujarHeroe(p, p.x, p.y + bob, mov);
         }
         cx.globalAlpha = 1;
 
@@ -1821,18 +1845,30 @@ function renderJugador(p) {
         const ESCALA_ARMA = 0.75;
         if (!formaAnimal) {
           cx.save();
-          cx.translate(p.x, p.y + 3);
-          // El bamboleo de swing (giro extra tipo "espadazo") no pega con un
-          // arco -- el arquero no gira el arma al atacar, tensa la cuerda (ver
-          // ARQUERO_BOW más abajo) -- ni con un cetro que apunta y dispara,
-          // el mago se queda quieto apuntando igual que el arquero, no
-          // "espadea". Duración del bamboleo tomada de ATTACK_DUR (por
-          // clase) en vez de un 0.18 fijo pensado solo para guerrero -- con
-          // picaro (0.1s) o mago (0.25s) ese fijo desincronizaba el giro del
-          // golpe real, dando un arma que se notaba "flotando"/errática en
-          // vez de un giro limpio de principio a fin del golpe.
-          const SIN_BAMBOLEO = p.rol === "arquero" || p.rol === "mago";
-          cx.rotate(p.aim + (p.swingT > 0 && !SIN_BAMBOLEO ? (p.swingT / (ATTACK_DUR[p.rol] || 0.18) - 0.5) * 1.6 : 0));
+          if (anclaMano) {
+            // Ancla real de este frame (slice "ancla_mano" en Aseprite, ver
+            // REAL_ATTACK_ANCLA/cargarHojaFramesConAncla en sprites.js): el
+            // propio dibujo del golpe ya mueve la mano por su swing real,
+            // así que no hace falta el bamboleo artificial de más abajo --
+            // sumarlo aquí duplicaría el giro.
+            cx.translate(anclaMano.x, anclaMano.y);
+            cx.rotate(p.aim);
+          } else {
+            cx.translate(p.x, p.y + 3);
+            // El bamboleo de swing (giro extra tipo "espadazo") no pega con un
+            // arco -- el arquero no gira el arma al atacar, tensa la cuerda (ver
+            // ARQUERO_BOW más abajo) -- ni con un cetro que apunta y dispara,
+            // el mago se queda quieto apuntando igual que el arquero, no
+            // "espadea". Duración del bamboleo tomada de ATTACK_DUR (por
+            // clase) en vez de un 0.18 fijo pensado solo para guerrero -- con
+            // picaro (0.1s) o mago (0.25s) ese fijo desincronizaba el giro del
+            // golpe real, dando un arma que se notaba "flotando"/errática en
+            // vez de un giro limpio de principio a fin del golpe. Este pivote
+            // fijo + bamboleo es el fallback para hojas sin "ancla_mano"
+            // todavía -- ver el `if (anclaMano)` de arriba.
+            const SIN_BAMBOLEO = p.rol === "arquero" || p.rol === "mago";
+            cx.rotate(p.aim + (p.swingT > 0 && !SIN_BAMBOLEO ? (p.swingT / (ATTACK_DUR[p.rol] || 0.18) - 0.5) * 1.6 : 0));
+          }
           cx.scale(ESCALA_ARMA, ESCALA_ARMA);
           const rarezaArma = eq.arma ? eq.arma.rareza : 0;
           if (rarezaArma >= 1 && wcol) {
