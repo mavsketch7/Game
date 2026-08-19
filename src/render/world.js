@@ -1824,9 +1824,21 @@ function renderJugador(p) {
               const GRIP = 6, REACH = 30;
               const s = (REACH - GRIP) / Math.max(ww0, wh0);
               const ww = ww0 * s, wh = wh0 * s;
+              // El pack "wood-weapons" no es consistente en cómo recortó cada
+              // pieza: espada/daga/maza/báculo vienen en vertical (más alto
+              // que ancho, punta arriba -- p.ej. sword-wood.png 10x41), pero
+              // magic-wood.png (mago) viene ya en horizontal, 29x10, apuntando
+              // a la derecha. Con el giro de 90° fijo de antes, el báculo del
+              // mago quedaba apuntando hacia abajo en vez de hacia la
+              // puntería. Se detecta la orientación de origen por su propio
+              // aspect ratio en vez de asumir "todas vienen en vertical".
               cx.translate(GRIP, 0);
-              cx.rotate(Math.PI / 2);
-              cx.drawImage(wimg, -ww / 2, -wh, ww, wh);
+              if (ww0 >= wh0) {
+                cx.drawImage(wimg, 0, -wh / 2, ww, wh);
+              } else {
+                cx.rotate(Math.PI / 2);
+                cx.drawImage(wimg, -ww / 2, -wh, ww, wh);
+              }
             } else if (p.rol === "guerrero") {
             // espada larga: pomo, empuñadura, guarda cruzada y hoja biselada con filo
             cx.fillStyle = "#4a3624";
