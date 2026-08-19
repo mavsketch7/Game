@@ -9,7 +9,7 @@ import { ELEMENTOS, RAREZAS, SUPS } from "../core/constants.js";
 import { G } from "../core/state.js";
 import { fxParticulas } from "./effects.js";
 import { drawSprite, drawSpriteBottom } from "./spriteDraw.js";
-import { ARQUERO_BOW, ARQUERO_BOW_DUR, ATTACK_DUR, ESC_FORMA, MIRA_IZQUIERDA_POR_DEFECTO, MOB_RUN, OFFHAND_IMG, OFFHAND_IMG_RAREZA, REAL_ATTACK, REAL_ATTACK_ANCLA, REAL_IDLE, REAL_RUN, REAL_SPRITE_SCALE, SHEETS, SPR, SPR_FORMAS, TAM_HEROE, WEAPON_IMG, WEAPON_IMG_RAREZA, assetOK, spriteJugador } from "./sprites.js";
+import { ARQUERO_BOW, ARQUERO_BOW_DUR, ATTACK_DUR, CONFIG_ARMA, ESC_FORMA, MIRA_IZQUIERDA_POR_DEFECTO, MOB_RUN, OFFHAND_IMG, OFFHAND_IMG_RAREZA, REAL_ATTACK, REAL_ATTACK_ANCLA, REAL_IDLE, REAL_RUN, REAL_SPRITE_SCALE, SHEETS, SPR, SPR_FORMAS, TAM_HEROE, WEAPON_IMG, WEAPON_IMG_RAREZA, assetOK, spriteJugador } from "./sprites.js";
 import { groundTarget } from "../systems/abilities.js";
 import { masCercano } from "../systems/combat.js";
 import { mouse } from "../systems/input.js";
@@ -460,17 +460,16 @@ export function renderJugador(p) {
         // atque superior"), saldrá duplicada hasta que se limpie ese
         // archivo en origen -- no se intenta ocultar por código.
         const wcol = eq.arma ? RAREZAS[eq.arma.rareza].col : null;
-        // ESCALA_ARMA: recalibrado tras encoger el cuerpo heroB a su tamaño
-        // real (sinAmpliar, sprites.js) -- este dibujo esquemático (imagen
-        // real o los trazos vectoriales de más abajo) nunca cambió de escala
-        // junto con el cuerpo. No hay forma de derivar el punto de la mano
-        // del arte de origen: los .aseprite de este pack no separan
-        // cuerpo/arma en capas limpias (comprobado con --list-layers --
-        // nombres genéricos "Layer 2/3/4", varios aplanados a una sola
-        // capa), así que se calibra a ojo contra el cuerpo real hasta que la
-        // punta del arma quede pegada a la mano. Compartida con el orbe de
-        // carga del mago (más abajo) para que ambos midan igual.
-        const ESCALA_ARMA = 0.75;
+        // Calibración del arma (escala/pivote/bamboleo) centralizada en
+        // CONFIG_ARMA (sprites.js) -- sin ancla real (ver más abajo) es el
+        // único sitio que tocar para recalibrar. No hay forma de derivar el
+        // punto de la mano del arte de origen: los .aseprite de este pack
+        // no separan cuerpo/arma en capas limpias (comprobado con
+        // --list-layers -- nombres genéricos "Layer 2/3/4", varios
+        // aplanados a una sola capa), así que sigue calibrado a ojo contra
+        // el cuerpo real hasta que la punta del arma quede pegada a la
+        // mano. Compartida con el orbe de carga del mago (más abajo) para
+        // que ambos midan igual.
         if (!formaAnimal) {
           cx.save();
           if (anclaMano) {
@@ -487,17 +486,19 @@ export function renderJugador(p) {
             // arco -- el arquero no gira el arma al atacar, tensa la cuerda (ver
             // ARQUERO_BOW más abajo) -- ni con un cetro que apunta y dispara,
             // el mago se queda quieto apuntando igual que el arquero, no
-            // "espadea". Duración del bamboleo tomada de ATTACK_DUR (por
-            // clase) en vez de un 0.18 fijo pensado solo para guerrero -- con
-            // picaro (0.1s) o mago (0.25s) ese fijo desincronizaba el giro del
-            // golpe real, dando un arma que se notaba "flotando"/errática en
-            // vez de un giro limpio de principio a fin del golpe. Este pivote
-            // fijo + bamboleo es el fallback para hojas sin "ancla_mano"
-            // todavía -- ver el `if (anclaMano)` de arriba.
-            const SIN_BAMBOLEO = p.rol === "arquero" || p.rol === "mago";
-            cx.rotate(p.aim + (p.swingT > 0 && !SIN_BAMBOLEO ? (p.swingT / (ATTACK_DUR[p.rol] || 0.18) - 0.5) * 1.6 : 0));
+            // "espadea" (ver CONFIG_ARMA.bamboleo.sinBamboleo). Duración del
+            // bamboleo tomada de ATTACK_DUR (por clase) en vez de un fijo
+            // pensado solo para guerrero -- con picaro (0.1s) o mago (0.25s)
+            // un fijo desincronizaba el giro del golpe real, dando un arma
+            // que se notaba "flotando"/errática en vez de un giro limpio de
+            // principio a fin del golpe. Este pivote fijo + bamboleo es el
+            // fallback para hojas sin "ancla_mano" todavía -- ver el
+            // `if (anclaMano)` de arriba.
+            const { multiplicador, duracionPorDefecto, sinBamboleo } = CONFIG_ARMA.bamboleo;
+            const dur = ATTACK_DUR[p.rol] || duracionPorDefecto;
+            cx.rotate(p.aim + (p.swingT > 0 && !sinBamboleo.has(p.rol) ? (p.swingT / dur - 0.5) * multiplicador : 0));
           }
-          cx.scale(ESCALA_ARMA, ESCALA_ARMA);
+          cx.scale(CONFIG_ARMA.escala, CONFIG_ARMA.escala);
           const rarezaArma = eq.arma ? eq.arma.rareza : 0;
           if (rarezaArma >= 1 && wcol) {
             cx.shadowColor = wcol;
@@ -527,12 +528,13 @@ export function renderJugador(p) {
             // recoloreado según la rareza del arma equipada (mismo color que
             // RAREZAS[].col usa en el resto de la UI) + un halo a partir de Raro.
             // Reutiliza el pivote mano->punta que ya montaba el dibujo
-            // esquemático de abajo (GRIP=6 ~ empuñadura, REACH=30 ~ alcance de
-            // la hoja de la espada) para que encaje con puntería/swing.
+            // esquemático de abajo (CONFIG_ARMA.grip ~ empuñadura,
+            // CONFIG_ARMA.reach ~ alcance de la hoja) para que encaje con
+            // puntería/swing.
             const wimg = (WEAPON_IMG_RAREZA[p.rol] && WEAPON_IMG_RAREZA[p.rol][rarezaArma]) || WEAPON_IMG[p.rol];
             if (wimg) {
               const ww0 = wimg.naturalWidth || wimg.width, wh0 = wimg.naturalHeight || wimg.height;
-              const GRIP = 6, REACH = 30;
+              const { grip: GRIP, reach: REACH } = CONFIG_ARMA;
               const s = (REACH - GRIP) / Math.max(ww0, wh0);
               const ww = ww0 * s, wh = wh0 * s;
               // El pack "wood-weapons" no es consistente en cómo recortó cada
@@ -753,7 +755,7 @@ export function renderJugador(p) {
           cx.save();
           cx.translate(p.x, p.y + 3);
           cx.rotate(p.aim);
-          cx.scale(ESCALA_ARMA, ESCALA_ARMA);
+          cx.scale(CONFIG_ARMA.escala, CONFIG_ARMA.escala);
           dibujarCargaMago(p, 26, 0);
           cx.restore();
         }
@@ -767,8 +769,7 @@ export function renderJugador(p) {
           && ((OFFHAND_IMG_RAREZA[p.rol] && OFFHAND_IMG_RAREZA[p.rol][eq.arma ? eq.arma.rareza : 0]) || OFFHAND_IMG[p.rol]);
         if (oimg) {
           const ow0 = oimg.naturalWidth || oimg.width, oh0 = oimg.naturalHeight || oimg.height;
-          const OFF_TAM = 16;
-          const so = OFF_TAM / Math.max(ow0, oh0);
+          const so = CONFIG_ARMA.offTam / Math.max(ow0, oh0);
           const ow = ow0 * so, oh = oh0 * so;
           cx.save();
           cx.translate(p.x, p.y - 2);

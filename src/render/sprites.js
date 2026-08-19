@@ -1037,10 +1037,42 @@ function cargarHojaFramesConAncla(url, destSize, onListo, sinAmpliar) {
 const FACTOR_SPRITE_HITBOX = 4;
 
 // Héroe: p.r = 17 fijo para las 6 clases (ver core/gameflow.js). Exportado
-// porque world.js lo necesita para convertir el ancla de mano (ver
-// REAL_ATTACK_ANCLA/cargarHojaFramesConAncla) de espacio local del canvas
-// a coordenadas de mundo, con la misma cuenta que ya hace drawSpriteBottom().
+// porque render/character.js lo necesita para convertir el ancla de mano
+// (ver REAL_ATTACK_ANCLA/cargarHojaFramesConAncla) de espacio local del
+// canvas a coordenadas de mundo, con la misma cuenta que ya hace
+// drawSpriteBottom().
 export const TAM_HEROE = 17 * FACTOR_SPRITE_HITBOX;
+
+// Calibración del arma dibujada por código (ver render/character.js, bloque
+// "arma apuntando") -- centralizado aquí en vez de números sueltos
+// repartidos por ese archivo, para que la próxima recalibración (nuevo
+// pack de arte, nueva clase...) tenga un único sitio que tocar.
+export const CONFIG_ARMA = {
+  // Escala general del dibujo esquemático (imagen real o trazos
+  // vectoriales de fallback) contra el cuerpo heroB a tamaño real
+  // (sinAmpliar, más arriba). Sin ancla real (ver REAL_ATTACK_ANCLA) es
+  // el único punto de ajuste si el arma se ve grande/pequeña de más.
+  escala: 0.75,
+  // Pivote mano→punta del dibujo esquemático: GRIP ~ empuñadura (offset
+  // desde el hombro/mano), REACH ~ alcance total hasta la punta de la
+  // hoja. Solo se usa cuando no hay ancla real de Aseprite para el frame
+  // (ver REAL_ATTACK_ANCLA) -- con ancla real, el punto ya viene dado.
+  grip: 6,
+  reach: 30,
+  // Tamaño del icono de mano secundaria (escudo/libro, ver OFFHAND_IMG).
+  offTam: 16,
+  // Bamboleo de swing (giro extra tipo "espadazo" durante el golpe, solo
+  // fallback sin ancla real): multiplicador de la curva y duración por
+  // defecto si la clase no tiene ATTACK_DUR propio. `sinBamboleo` son las
+  // clases que no deben recibir este giro -- apuntan y disparan/tensan en
+  // vez de "espadear" (arquero tensa la cuerda con su propio mecanismo,
+  // ARQUERO_BOW; mago apunta el cetro quieto, como el arco).
+  bamboleo: {
+    multiplicador: 1.6,
+    duracionPorDefecto: 0.18,
+    sinBamboleo: new Set(["arquero", "mago"]),
+  },
+};
 
 // Cuerpo "heroB" (pack propio en torre-vespero-assets/Hero-sprites, estilo
 // silueta monocromo) como personaje estándar y único para las 4 clases
