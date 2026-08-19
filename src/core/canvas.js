@@ -19,6 +19,18 @@ export const W = cv.width,
 
 export let maximizado = false;
 
+// Reloj de animación global (segundos acumulados, ver render() en
+// render/world.js) -- vive aquí en vez de en world.js porque tanto
+// world.js como render/character.js (dibujo de jugador/enemigos) lo leen
+// constantemente para pulsos/ondas, y este módulo no depende de ninguno
+// de los dos -- evita un ciclo entre ellos. Solo world.js debe avanzarlo
+// (una vez por frame, en su render()); el resto solo lo lee.
+export let animGlobal = 0;
+
+export function avanzarAnimGlobal(dt) {
+  animGlobal += dt;
+}
+
 const _marco = document.getElementById("marco");
 
 // Por debajo de 1x (ventana más pequeña que el lienzo nativo) no hay forma

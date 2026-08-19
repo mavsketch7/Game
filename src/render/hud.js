@@ -1,10 +1,9 @@
 // Auto-generated during the modularization refactor (2026-07-23).
-import { H, W, cx } from "../core/canvas.js";
+import { H, W, animGlobal, cx } from "../core/canvas.js";
 import { ELEMENTOS, ELEM_MAGO, FORMAS_DRUIDA, FORMAS_INFO, MAX_NIV_PJ, MAX_PLANTA, NOMBRE_CLIMA, RAREZAS, ROLES, SUPS } from "../core/constants.js";
 import { META } from "../core/save.js";
 import { G } from "../core/state.js";
 import { K, spriteJugador } from "./sprites.js";
-import { animGlobal } from "./world.js";
 import { NIVEL_ULTI } from "../systems/abilities.js";
 import { statsTot, vivos } from "../systems/combat.js";
 import { banner } from "../ui/notifications.js";
