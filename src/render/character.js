@@ -537,8 +537,18 @@ export function renderJugador(p) {
             if (wimg) {
               const ww0 = wimg.naturalWidth || wimg.width, wh0 = wimg.naturalHeight || wimg.height;
               const { grip: GRIP, reach: REACH } = CONFIG_ARMA;
+              // GRIP sigue marcando el tamaño real de la hoja (REACH-GRIP =
+              // longitud empuñadura->punta, no cambia según haya ancla o
+              // no) -- pero el DESPLAZAMIENTO de dibujo solo hace falta
+              // cuando el pivote es el fallback fijo (p.x,p.y+3, que no es
+              // la mano de verdad, así que hay que empujar la espada hacia
+              // fuera para que se vea sujeta). Con ancla real (anclaMano)
+              // el pivote YA ES la mano marcada en Aseprite -- empujar
+              // GRIP px más allá dejaba el mango separado de la mano en
+              // vez de sujeto desde ahí, que es justo lo que se pidió.
               const s = (REACH - GRIP) / Math.max(ww0, wh0);
               const ww = ww0 * s, wh = wh0 * s;
+              const gripDibujo = anclaMano ? 0 : GRIP;
               // El pack "wood-weapons" no es consistente en cómo recortó cada
               // pieza: espada/daga/maza/báculo vienen en vertical (más alto
               // que ancho, punta arriba -- p.ej. sword-wood.png 10x41), pero
@@ -547,7 +557,7 @@ export function renderJugador(p) {
               // mago quedaba apuntando hacia abajo en vez de hacia la
               // puntería. Se detecta la orientación de origen por su propio
               // aspect ratio en vez de asumir "todas vienen en vertical".
-              cx.translate(GRIP, 0);
+              cx.translate(gripDibujo, 0);
               if (ww0 >= wh0) {
                 cx.drawImage(wimg, 0, -wh / 2, ww, wh);
               } else {
