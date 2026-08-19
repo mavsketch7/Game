@@ -894,7 +894,7 @@ function bboxAlfa(ctx, w, h) {
 // adivinar un desplazamiento a ojo. Una sola escala para toda la hoja
 // (a partir del bbox más alto de todos los frames) para que el personaje no
 // cambie de tamaño entre frames de una misma animación al alternar poses.
-function cargarHojaFrames(url, destSize, onListo) {
+function cargarHojaFrames(url, destSize, onListo, sinAmpliar) {
   const im = new Image();
   im.onload = () => {
     const frameSize = im.naturalHeight;
@@ -911,7 +911,14 @@ function cargarHojaFrames(url, destSize, onListo) {
       bboxes.push(bboxAlfa(tg, frameSize, frameSize) || { x: 0, y: 0, w: frameSize, h: frameSize });
     }
     const altoMax = Math.max(...bboxes.map((b) => b.h));
-    const escala = (destSize * 0.86) / altoMax; // 0.86: deja un margen inferior para la sombra de contacto
+    // sinAmpliar (pack heroB): el arte ya viene dibujado a su tamaño real
+    // (32x32) a propósito -- si destSize es mayor no hay que ampliarlo (se
+    // vería borroso/a bloques más grandes de lo que pintó el artista), solo
+    // reducirlo si hiciera falta. Sin este tope, MOB_RUN (Pixel Crawler,
+    // arte más pequeño en origen) sigue ampliándose como hasta ahora.
+    const escala = sinAmpliar
+      ? Math.min(1, (destSize * 0.86) / altoMax)
+      : (destSize * 0.86) / altoMax; // 0.86: deja un margen inferior para la sombra de contacto
     const frames = [];
     for (let i = 0; i < frameCount; i++) {
       const b = bboxes[i];
@@ -962,10 +969,10 @@ export const REAL_IDLE = { guerrero: [], arquero: [], picaro: [], mago: [], cler
 export const REAL_RUN = { guerrero: [], arquero: [], picaro: [], mago: [], clerigo: [], druida: [] };
 
 for (const rolIdle in REAL_IDLE_SRC) {
-  cargarHojaFrames(REAL_IDLE_SRC[rolIdle], TAM_HEROE, (frames) => { REAL_IDLE[rolIdle] = frames; });
+  cargarHojaFrames(REAL_IDLE_SRC[rolIdle], TAM_HEROE, (frames) => { REAL_IDLE[rolIdle] = frames; }, true);
 }
 for (const rolRun in REAL_RUN_SRC) {
-  cargarHojaFrames(REAL_RUN_SRC[rolRun], TAM_HEROE, (frames) => { REAL_RUN[rolRun] = frames; });
+  cargarHojaFrames(REAL_RUN_SRC[rolRun], TAM_HEROE, (frames) => { REAL_RUN[rolRun] = frames; }, true);
 }
 
 // Ataque: cada clase usa el fotograma de ataque real del pack heroB que
@@ -987,7 +994,7 @@ const REAL_ATTACK_SRC = {
 export const REAL_ATTACK = { guerrero: [], arquero: [], picaro: [], mago: [] };
 
 for (const rolAtk in REAL_ATTACK_SRC) {
-  cargarHojaFrames(REAL_ATTACK_SRC[rolAtk], TAM_HEROE, (frames) => { REAL_ATTACK[rolAtk] = frames; });
+  cargarHojaFrames(REAL_ATTACK_SRC[rolAtk], TAM_HEROE, (frames) => { REAL_ATTACK[rolAtk] = frames; }, true);
 }
 
 export const ATTACK_DUR = { guerrero: 0.22, arquero: 0.3, picaro: 0.1, mago: 0.25 };
