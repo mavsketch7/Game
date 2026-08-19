@@ -1542,18 +1542,6 @@ function dibujarCargaMago(p, tx, ty) {
 
 function renderJugador(p) {
         const eq = p.equipo;
-        cx.fillStyle = "rgba(0,0,0,.35)";
-        cx.beginPath();
-        cx.ellipse(p.x, p.y + 16, 11, 4, 0, 0, TAU);
-        cx.fill();
-        // anillo de color del jugador
-        cx.strokeStyle = p.color;
-        cx.globalAlpha = 0.75;
-        cx.lineWidth = 2;
-        cx.beginPath();
-        cx.ellipse(p.x, p.y + 16, 13, 5, 0, 0, TAU);
-        cx.stroke();
-        cx.globalAlpha = 1;
 
         if (p.ko) {
           cx.save();
@@ -1721,6 +1709,19 @@ function renderJugador(p) {
         cx.beginPath();
         cx.ellipse(p.x, p.y + 2 + bob, p.r * 0.8, p.r * 0.3, 0, 0, TAU);
         cx.fill();
+        // Anillo de color del jugador (identifica de un vistazo quién es
+        // quién en cooperativo): antes vivía al principio de la función,
+        // fijo en p.y+16 -- con el cuerpo heroB ya a su tamaño real esos
+        // 16px lo dejaban muy por debajo de los pies de verdad, "flotando"
+        // igual que le pasaba al arma. Movido aquí para compartir posición
+        // exacta (mismo p.y+2+bob) y tamaño (mismo p.r) con la sombra real.
+        cx.strokeStyle = p.color;
+        cx.globalAlpha = 0.75;
+        cx.lineWidth = 2;
+        cx.beginPath();
+        cx.ellipse(p.x, p.y + 2 + bob, p.r * 0.8 + 2, p.r * 0.3 + 1, 0, 0, TAU);
+        cx.stroke();
+        cx.globalAlpha = 1;
         if (formaAnimal) {
           const esc2 = ESC_FORMA[p.forma];
           drawSprite(

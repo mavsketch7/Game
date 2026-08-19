@@ -973,15 +973,17 @@ for (const rolRun in REAL_RUN_SRC) {
   cargarHojaFrames(REAL_RUN_SRC[rolRun], TAM_HEROE, (frames) => { REAL_RUN[rolRun] = frames; }, true);
 }
 
-// Ataque: cada clase usa el fotograma de ataque real del pack heroB que
-// mejor encaja con su arma -- guerrero (espadazo, WarriorRightAttack02),
-// pícaro (puñalada/Pierce), arquero (tiro con arco, HeroBowLeftAttack01).
-// mago usa MageLeftAttack03 a propósito como ataque "especial" (llamativo,
-// frames con efecto de fuego) en vez de MageLeftAttack01/02 (más discretos)
-// -- decisión del usuario, no un descarte por defecto. Clérigo/druida se
-// quedan sin REAL_ATTACK a propósito (el pack no trae animación para su
-// arma), así que durante el ataque siguen mostrando el frame de idle en vez
-// de forzar una animación que no encaja.
+// Ataque básico: cada clase usa el fotograma "ataque básico" real del pack
+// heroB (torre-vespero-assets/Hero-sprites) que mejor encaja con su arma --
+// guerrero (espadazo, Hero-Sword-atack-right-left), pícaro (puñalada/
+// Pierce), arquero (tiro con arco, Arquero-ataque lateral basico 01), mago
+// (Mago ataque basico 1). El pack trae también variantes "especial"/"dash"/
+// "aereo" por clase (Guerrero ataque especial 2, Mago ataque especial 2/3
+// invoca circulo...) sin usar todavía -- no hay mecánica de ataque especial
+// en el juego, solo un REAL_ATTACK por clase. Clérigo/druida se quedan sin
+// REAL_ATTACK a propósito (el pack no trae animación para su arma), así que
+// durante el ataque siguen mostrando el frame de idle en vez de forzar una
+// animación que no encaja.
 const REAL_ATTACK_SRC = {
   guerrero: assetUrl("characters/heroB_attack_guerrero_side"),
   picaro: assetUrl("characters/heroB_attack_picaro_side"),
@@ -1043,10 +1045,11 @@ const WEAPON_SRC = {
   druida: assetUrl("weapons/wood-weapons/staff-wood"),
 };
 
-// Mano secundaria (no gira con la puntería, se lleva más estática): escudo
-// para guerrero, libro para clérigo -- el resto de clases no lleva nada aquí.
+// Mano secundaria (no gira con la puntería, se lleva más estática): libro
+// para clérigo -- el resto de clases no lleva nada aquí. Escudo de guerrero
+// quitado de momento (a petición del usuario) mientras se verifica el
+// encaje del pack heroB nuevo sin ese elemento de por medio.
 const OFFHAND_SRC = {
-  guerrero: assetUrl("weapons/wood-weapons/shield-md-wood"),
   clerigo: assetUrl("weapons/wood-weapons/book-w"),
 };
 
