@@ -941,18 +941,21 @@ const FACTOR_SPRITE_HITBOX = 4;
 // Héroe: p.r = 17 fijo para las 6 clases (ver core/gameflow.js).
 const TAM_HEROE = 17 * FACTOR_SPRITE_HITBOX;
 
-// Cuerpo "Body_A" (pack Pixel Crawler) como personaje estándar y único para
-// las 6 clases -- la diferencia visual entre clases la da el arma en mano
-// (ver WEAPON_IMG más abajo: espada/dagas/arco/varita/maza/báculo) y el
-// color de piel/ropa vía el sistema de skins existente, no un cuerpo
-// distinto por clase. Body_A trae el set completo (idle/correr/atacar en
-// las 3 direcciones), a diferencia del intento anterior con personajes de
-// otro pack que solo tenían idle+andar recortados a mano de una vista previa.
+// Cuerpo "heroB" (pack propio en torre-vespero-assets/Hero-sprites, estilo
+// silueta monocromo) como personaje estándar y único para las 6 clases --
+// la diferencia visual entre clases la da el arma en mano (ver WEAPON_IMG
+// más abajo) y el color de piel/ropa vía el sistema de skins existente, no
+// un cuerpo distinto por clase. Sustituye al Body_A (Pixel Crawler, pack
+// coloreado) para que idle/correr no choquen de estilo con las animaciones
+// de ataque reales del mismo pack (ver REAL_ATTACK_SRC más abajo). Solo hay
+// vista lateral (_side) -- este pack trae también down/up, pero el motor
+// (dibujarHeroe en world.js) no soporta encarado direccional todavía, solo
+// espejo izquierda/derecha.
 const REAL_IDLE_SRC = {};
 const REAL_RUN_SRC = {};
 for (const rolCuerpo of ["guerrero", "arquero", "mago", "clerigo", "picaro", "druida"]) {
-  REAL_IDLE_SRC[rolCuerpo] = assetUrl("characters/bodyA_idle_side");
-  REAL_RUN_SRC[rolCuerpo] = assetUrl("characters/bodyA_run_side");
+  REAL_IDLE_SRC[rolCuerpo] = assetUrl("characters/heroB_idle_side");
+  REAL_RUN_SRC[rolCuerpo] = assetUrl("characters/heroB_run_side");
 }
 
 export const REAL_IDLE = { guerrero: [], arquero: [], picaro: [], mago: [], clerigo: [], druida: [] };
@@ -965,15 +968,20 @@ for (const rolRun in REAL_RUN_SRC) {
   cargarHojaFrames(REAL_RUN_SRC[rolRun], TAM_HEROE, (frames) => { REAL_RUN[rolRun] = frames; });
 }
 
-// Ataque: guerrero (Slice = espadazo), pícaro (Pierce = puñalada) y mago
-// (Crush = golpe de báculo) usan la animación de Body_A que encaja con su
-// arma. Arquero/clérigo/druida se quedan sin REAL_ATTACK a propósito (Body_A
-// no trae "disparar arco"/"lanzar hechizo"), así que durante el ataque
-// siguen mostrando el frame de idle en vez de forzar una animación floja.
+// Ataque: cada clase usa el fotograma de ataque real del pack heroB que
+// mejor encaja con su arma -- guerrero (espadazo, WarriorRightAttack02),
+// pícaro (puñalada/Pierce), arquero (tiro con arco, HeroBowLeftAttack01).
+// mago usa MageLeftAttack03 a propósito como ataque "especial" (llamativo,
+// frames con efecto de fuego) en vez de MageLeftAttack01/02 (más discretos)
+// -- decisión del usuario, no un descarte por defecto. Clérigo/druida se
+// quedan sin REAL_ATTACK a propósito (el pack no trae animación para su
+// arma), así que durante el ataque siguen mostrando el frame de idle en vez
+// de forzar una animación que no encaja.
 const REAL_ATTACK_SRC = {
-  guerrero: assetUrl("characters/bodyA_slice_side"),
-  picaro: assetUrl("characters/bodyA_pierce_side"),
-  mago: assetUrl("characters/bodyA_crush_side"),
+  guerrero: assetUrl("characters/heroB_attack_guerrero_side"),
+  picaro: assetUrl("characters/heroB_attack_picaro_side"),
+  mago: assetUrl("characters/heroB_attack_mago_side"),
+  arquero: assetUrl("characters/heroB_attack_arquero_side"),
 };
 
 export const REAL_ATTACK = { guerrero: [], arquero: [], picaro: [], mago: [] };

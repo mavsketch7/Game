@@ -85,6 +85,7 @@ export function atacar(p) {
           }
           p.res -= 8;
           p.castCd = (0.45 * cdHaste(p)) / (1 + (p._hasteBonus || 0));
+          p.swingT = 0.25; // ver ATTACK_DUR.mago en render/sprites.js -- mismo valor
           if (p.elemento === "fuego") {
             dispararProy(p, p.aim, t.atk * 0.9, "bola", "#ff7d4d", 400);
             G.projs[G.projs.length - 1].quema = true;
