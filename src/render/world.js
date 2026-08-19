@@ -4,7 +4,7 @@ import { ELEMENTOS, MAX_PLANTA, RAREZAS, SALA_H, SALA_W, SUPS } from "../core/co
 import { G } from "../core/state.js";
 import { fxParticulas } from "./effects.js";
 import { barra, renderHUD } from "./hud.js";
-import { ARQUERO_BOW, ARQUERO_BOW_DUR, ATTACK_DUR, ESC_FORMA, KENNEY_TILE, MOB_RUN, NO_SCHEMATIC_WEAPON, OFFHAND_IMG, OFFHAND_IMG_RAREZA, REAL_ATTACK, REAL_IDLE, REAL_RUN, REAL_SPRITE_SCALE, SHEETS, SPR, SPR_FORMAS, WEAPON_IMG, WEAPON_IMG_RAREZA, assetOK, iconoDrop, remateMuroPatron, spriteJugador, wallPatron } from "./sprites.js";
+import { ARQUERO_BOW, ARQUERO_BOW_DUR, ATTACK_DUR, ESC_FORMA, KENNEY_TILE, MOB_RUN, OFFHAND_IMG, OFFHAND_IMG_RAREZA, REAL_ATTACK, REAL_IDLE, REAL_RUN, REAL_SPRITE_SCALE, SHEETS, SPR, SPR_FORMAS, WEAPON_IMG, WEAPON_IMG_RAREZA, assetOK, iconoDrop, remateMuroPatron, spriteJugador, wallPatron } from "./sprites.js";
 import { groundTarget } from "../systems/abilities.js";
 import { masCercano } from "../systems/combat.js";
 import { mouse } from "../systems/input.js";
@@ -1713,10 +1713,13 @@ function renderJugador(p) {
         // Sombra de contacto en el suelo, justo bajo los pies (p.y -- el sprite
         // real ya se ancla exactamente ahí, ver drawSpriteBottom()/dibujarHeroe()
         // y cargarHojaFrames() en sprites.js). Sin esto el personaje no tenía
-        // ningún ancla visual al suelo y se notaba "flotando".
+        // ningún ancla visual al suelo y se notaba "flotando". Suma `bob` (el
+        // mismo rebote de idle/correr que recibe el cuerpo, ver dibujarHeroe()
+        // más abajo) para que la sombra no se desincronice de los pies durante
+        // la animación -- antes se quedaba fija mientras el cuerpo subía/bajaba.
         cx.fillStyle = "rgba(0,0,0,.35)";
         cx.beginPath();
-        cx.ellipse(p.x, p.y + 2, p.r * 0.8, p.r * 0.3, 0, 0, TAU);
+        cx.ellipse(p.x, p.y + 2 + bob, p.r * 0.8, p.r * 0.3, 0, 0, TAU);
         cx.fill();
         if (formaAnimal) {
           const esc2 = ESC_FORMA[p.forma];
@@ -1756,17 +1759,34 @@ function renderJugador(p) {
         }
 
         // arma apuntando: dibujo esquemático (pomo/hoja/arco/báculo…) que
-        // sigue la puntería continua del jugador; el orbe de carga del mago
-        // se dibuja aparte porque es un efecto mágico, no una hoja física.
+        // sigue la puntería continua del jugador. Se apaga durante el golpe
+        // para las clases con animación de ataque real (REAL_ATTACK,
+        // sprites.js) -- esa hoja/arco ya viene pintada en el propio frame,
+        // dibujar las dos a la vez duplicaba/desalineaba el arma (el
+        // "flotando" de las capturas). El orbe de carga del mago se dibuja
+        // aparte más abajo, siempre, porque es un efecto mágico, no una hoja
+        // física -- no depende de si esta capa esquemática está activa.
         const wcol = eq.arma ? RAREZAS[eq.arma.rareza].col : null;
-        if (!formaAnimal && !NO_SCHEMATIC_WEAPON[p.rol]) {
+        const armaEnSprite = p.swingT > 0 && REAL_ATTACK[p.rol] && REAL_ATTACK[p.rol].length > 0;
+        // ESCALA_ARMA: recalibrado tras encoger el cuerpo heroB a su tamaño
+        // real (sinAmpliar, sprites.js) -- este dibujo esquemático (imagen
+        // real o los trazos vectoriales de más abajo) nunca cambió de escala
+        // junto con el cuerpo. No hay forma de derivar el punto de la mano
+        // del arte de origen: los .aseprite de este pack no separan
+        // cuerpo/arma en capas limpias (comprobado con --list-layers --
+        // nombres genéricos "Layer 2/3/4", varios aplanados a una sola
+        // capa), así que se calibra a ojo contra el cuerpo real hasta que la
+        // punta del arma quede pegada a la mano. Compartida con el orbe de
+        // carga del mago (más abajo) para que ambos midan igual.
+        const ESCALA_ARMA = 0.75;
+        if (!formaAnimal && !armaEnSprite) {
           cx.save();
           cx.translate(p.x, p.y + 3);
           // El bamboleo de swing (giro extra tipo "espadazo") no pega con un
           // arco -- el arquero no gira el arma al atacar, tensa la cuerda (ver
           // ARQUERO_BOW más abajo), así que solo él se queda con el aim puro.
           cx.rotate(p.aim + (p.swingT > 0 && p.rol !== "arquero" ? (p.swingT / 0.18 - 0.5) * 1.6 : 0));
-          cx.scale(1.3, 1.3);
+          cx.scale(ESCALA_ARMA, ESCALA_ARMA);
           const rarezaArma = eq.arma ? eq.arma.rareza : 0;
           if (rarezaArma >= 1 && wcol) {
             cx.shadowColor = wcol;
@@ -1807,10 +1827,6 @@ function renderJugador(p) {
               cx.translate(GRIP, 0);
               cx.rotate(Math.PI / 2);
               cx.drawImage(wimg, -ww / 2, -wh, ww, wh);
-              // El orbe de carga del mago es un efecto de gameplay (no una hoja
-              // física): tiene que seguir apareciendo aunque el arma en sí
-              // venga del sprite real de arriba, no solo en el dibujo procedural.
-              if (p.rol === "mago") dibujarCargaMago(p, 26, 0);
             } else if (p.rol === "guerrero") {
             // espada larga: pomo, empuñadura, guarda cruzada y hoja biselada con filo
             cx.fillStyle = "#4a3624";
@@ -1907,7 +1923,6 @@ function renderJugador(p) {
             cx.moveTo(21, 3);
             cx.quadraticCurveTo(26, 6.5, 29, 2);
             cx.stroke();
-            dibujarCargaMago(p, 26, 0);
           } else if (p.rol === "picaro") {
             // par de dagas con guarda, empuñadura envuelta y hoja afilada
             // (poco recorrido vertical: a esta escala, subir demasiado la
@@ -2002,6 +2017,21 @@ function renderJugador(p) {
           }
           cx.shadowBlur = 0;
           }
+          cx.restore();
+        }
+
+        // Orbe de carga del mago: efecto de gameplay (no una hoja física),
+        // independiente de si la capa esquemática de arriba está activa --
+        // tiene que seguir viéndose durante el golpe (cuando esa capa se
+        // apaga porque el báculo ya viene en el frame de REAL_ATTACK) igual
+        // que en reposo. Mismo pivote/escala que usaba la capa esquemática
+        // para que no salte de sitio al activarse/desactivarse esa capa.
+        if (!formaAnimal && p.rol === "mago") {
+          cx.save();
+          cx.translate(p.x, p.y + 3);
+          cx.rotate(p.aim);
+          cx.scale(ESCALA_ARMA, ESCALA_ARMA);
+          dibujarCargaMago(p, 26, 0);
           cx.restore();
         }
 

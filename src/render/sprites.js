@@ -846,8 +846,6 @@ const REAL_SPRITE_SRC = {};
 
 export const REAL_SPRITE_SCALE = {};
 
-export const NO_SCHEMATIC_WEAPON = {};
-
 for (const rolReal in REAL_SPRITE_SRC) {
         const imgReal = new Image();
         imgReal.onload = (() => {
