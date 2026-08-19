@@ -163,35 +163,49 @@ function direccionDesdeAim(aim) {
 }
 
 function dibujarHeroe(p, x, yPies, mov) {
-        const dir = direccionDesdeAim(p.aim);
+        const dirAim = direccionDesdeAim(p.aim);
         // Base: frame de idle del cuerpo real (ver REAL_IDLE en sprites.js) si ya
         // cargó; si no (arranque de la página, un instante), cae al icono
         // estático de siempre para no dejar un hueco en blanco.
-        const idleFrames = REAL_IDLE[dir];
+        const idleFrames = REAL_IDLE[dirAim];
         let img = (idleFrames && idleFrames.length)
           ? idleFrames[Math.floor(p.anim * 4) % idleFrames.length]
           : null;
-        // Ataque real de esta clase para `dir`; si esa clase no tiene arte
+        // Ataque real de esta clase para `dirAim`; si esa clase no tiene arte
         // para arriba/abajo todavía (mago/pícaro, ver REAL_ATTACK_SRC en
         // sprites.js) cae a la hoja lateral antes que no mostrar nada.
         const atkPorClase = REAL_ATTACK[p.rol] || {};
-        const atkFrames = atkPorClase[dir] || atkPorClase.side;
-        const runFrames = REAL_RUN[dir];
+        const atkFrames = atkPorClase[dirAim] || atkPorClase.side;
+        // Encarado a usar para ESTE frame: por defecto el de la puntería
+        // (idle/ataque -- miras hacia donde apuntas). Correr es la
+        // excepción -- encara hacia donde te MUEVES, no hacia donde
+        // apuntas: si no, al esquivar/strafear (moverte en una dirección
+        // distinta a tu puntería, algo habitual apuntando con el ratón) el
+        // personaje "caminaba" mirando siempre al ratón aunque se
+        // desplazara al lado contrario (bug reportado -- se nota mucho más
+        // ahora que hay pose real por dirección, antes solo era un espejo
+        // izq/der sutil).
+        let dir = dirAim, anguloFacing = p.aim;
         if (p.swingT > 0 && atkFrames && atkFrames.length) {
           const dur = ATTACK_DUR[p.rol] || 0.2;
           const prog = clamp(1 - p.swingT / dur, 0, 0.999);
           const fr = atkFrames[Math.floor(prog * atkFrames.length)];
           if (fr) img = fr;
-        } else if (mov && runFrames && runFrames.length) {
-          const fr = runFrames[Math.floor(p.anim * 10) % runFrames.length];
-          if (fr) img = fr;
+        } else if (mov && p.inp) {
+          anguloFacing = Math.atan2(p.inp.my, p.inp.mx);
+          dir = direccionDesdeAim(anguloFacing);
+          const runFrames = REAL_RUN[dir];
+          if (runFrames && runFrames.length) {
+            const fr = runFrames[Math.floor(p.anim * 10) % runFrames.length];
+            if (fr) img = fr;
+          }
         }
         // Espejo izq/derecha: solo tiene sentido en el bucket lateral (arriba/
         // abajo se dibujan de frente, sin voltear). Dentro de "side", el arte
         // de arquero/mago mira a la izquierda por defecto (ver
         // MIRA_IZQUIERDA_POR_DEFECTO en sprites.js) -- se invierte la regla
         // normal para esas clases en vez de aplicarla igual a las 4.
-        const flip = dir === "side" && (Math.cos(p.aim) < 0) !== !!MIRA_IZQUIERDA_POR_DEFECTO[p.rol];
+        const flip = dir === "side" && (Math.cos(anguloFacing) < 0) !== !!MIRA_IZQUIERDA_POR_DEFECTO[p.rol];
         if (img) {
           drawSpriteBottom(img, x, yPies, flip, REAL_SPRITE_SCALE[p.rol] || 1);
         } else {
@@ -1810,8 +1824,15 @@ function renderJugador(p) {
           cx.translate(p.x, p.y + 3);
           // El bamboleo de swing (giro extra tipo "espadazo") no pega con un
           // arco -- el arquero no gira el arma al atacar, tensa la cuerda (ver
-          // ARQUERO_BOW más abajo), así que solo él se queda con el aim puro.
-          cx.rotate(p.aim + (p.swingT > 0 && p.rol !== "arquero" ? (p.swingT / 0.18 - 0.5) * 1.6 : 0));
+          // ARQUERO_BOW más abajo) -- ni con un cetro que apunta y dispara,
+          // el mago se queda quieto apuntando igual que el arquero, no
+          // "espadea". Duración del bamboleo tomada de ATTACK_DUR (por
+          // clase) en vez de un 0.18 fijo pensado solo para guerrero -- con
+          // picaro (0.1s) o mago (0.25s) ese fijo desincronizaba el giro del
+          // golpe real, dando un arma que se notaba "flotando"/errática en
+          // vez de un giro limpio de principio a fin del golpe.
+          const SIN_BAMBOLEO = p.rol === "arquero" || p.rol === "mago";
+          cx.rotate(p.aim + (p.swingT > 0 && !SIN_BAMBOLEO ? (p.swingT / (ATTACK_DUR[p.rol] || 0.18) - 0.5) * 1.6 : 0));
           cx.scale(ESCALA_ARMA, ESCALA_ARMA);
           const rarezaArma = eq.arma ? eq.arma.rareza : 0;
           if (rarezaArma >= 1 && wcol) {
