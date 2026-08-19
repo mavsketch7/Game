@@ -9,7 +9,7 @@ import { ELEMENTOS, RAREZAS, SUPS } from "../core/constants.js";
 import { G } from "../core/state.js";
 import { fxParticulas } from "./effects.js";
 import { drawSprite, drawSpriteBottom } from "./spriteDraw.js";
-import { ARQUERO_BOW, ARQUERO_BOW_DUR, ATTACK_DUR, CONFIG_ARMA, ESC_FORMA, MIRA_IZQUIERDA_POR_DEFECTO, MOB_RUN, OFFHAND_IMG, OFFHAND_IMG_RAREZA, REAL_ATTACK, REAL_ATTACK_ANCLA, REAL_IDLE, REAL_RUN, REAL_SPRITE_SCALE, SHEETS, SPR, SPR_FORMAS, TAM_HEROE, WEAPON_IMG, WEAPON_IMG_RAREZA, assetOK, spriteJugador } from "./sprites.js";
+import { ARQUERO_BOW, ARQUERO_BOW_DUR, ATTACK_DUR, CONFIG_ARMA, ESC_FORMA, MIRA_IZQUIERDA_POR_DEFECTO, MOB_RUN, OFFHAND_IMG, OFFHAND_IMG_RAREZA, REAL_ATTACK, REAL_ATTACK_ANCLA, REAL_IDLE, REAL_IDLE_ANCLA, REAL_RUN, REAL_RUN_ANCLA, REAL_SPRITE_SCALE, SHEETS, SPR, SPR_FORMAS, TAM_HEROE, WEAPON_IMG, WEAPON_IMG_RAREZA, assetOK, spriteJugador } from "./sprites.js";
 import { groundTarget } from "../systems/abilities.js";
 import { masCercano } from "../systems/combat.js";
 import { mouse } from "../systems/input.js";
@@ -30,9 +30,8 @@ function dibujarHeroe(p, x, yPies, mov) {
         // cargó; si no (arranque de la página, un instante), cae al icono
         // estático de siempre para no dejar un hueco en blanco.
         const idleFrames = REAL_IDLE[dirAim];
-        let img = (idleFrames && idleFrames.length)
-          ? idleFrames[Math.floor(p.anim * 4) % idleFrames.length]
-          : null;
+        const idleFrameIdx = (idleFrames && idleFrames.length) ? Math.floor(p.anim * 4) % idleFrames.length : -1;
+        let img = idleFrameIdx >= 0 ? idleFrames[idleFrameIdx] : null;
         // Ataque real de esta clase para `dirAim`; si esa clase no tiene arte
         // para arriba/abajo todavía (mago/pícaro, ver REAL_ATTACK_SRC en
         // sprites.js) cae a la hoja lateral antes que no mostrar nada.
@@ -48,12 +47,13 @@ function dibujarHeroe(p, x, yPies, mov) {
         // ahora que hay pose real por dirección, antes solo era un espejo
         // izq/der sutil).
         let dir = dirAim, anguloFacing = p.aim;
-        // Ancla de mano de ESTE frame de ataque (ver REAL_ATTACK_ANCLA/
-        // cargarHojaFramesConAncla en sprites.js) -- null si esa hoja
-        // todavía no tiene el slice "ancla_mano" colocado, el bloque
-        // "arma apuntando" (más abajo, mismo archivo) cae al pivote fijo
-        // de siempre en ese caso.
-        let anclaLocal = null;
+        // Ancla de mano de ESTE frame (ver REAL_IDLE_ANCLA/REAL_RUN_ANCLA/
+        // REAL_ATTACK_ANCLA y cargarHojaFramesConAncla en sprites.js) --
+        // null si esa hoja todavía no tiene datos para este frame, el
+        // bloque "arma apuntando" (más abajo, mismo archivo) cae al pivote
+        // fijo de siempre en ese caso. Por defecto la del frame de idle
+        // base -- ataque/correr la reemplazan si aplican.
+        let anclaLocal = idleFrameIdx >= 0 ? (REAL_IDLE_ANCLA[dirAim]?.[idleFrameIdx] || null) : null;
         if (p.swingT > 0 && atkFrames && atkFrames.length) {
           const dur = ATTACK_DUR[p.rol] || 0.2;
           const prog = clamp(1 - p.swingT / dur, 0, 0.999);
@@ -67,8 +67,10 @@ function dibujarHeroe(p, x, yPies, mov) {
           dir = direccionDesdeAim(anguloFacing);
           const runFrames = REAL_RUN[dir];
           if (runFrames && runFrames.length) {
-            const fr = runFrames[Math.floor(p.anim * 10) % runFrames.length];
+            const runFrameIdx = Math.floor(p.anim * 10) % runFrames.length;
+            const fr = runFrames[runFrameIdx];
             if (fr) img = fr;
+            anclaLocal = REAL_RUN_ANCLA[dir]?.[runFrameIdx] || null;
           }
         }
         // Espejo izq/derecha: solo tiene sentido en el bucket lateral (arriba/

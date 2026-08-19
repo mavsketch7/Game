@@ -1142,12 +1142,24 @@ const REAL_RUN_SRC = {
 
 export const REAL_IDLE = { side: [], down: [], up: [] };
 export const REAL_RUN = { side: [], down: [], up: [] };
+// Ancla de mano por frame de idle/correr (mismo mecanismo que
+// REAL_ATTACK_ANCLA más abajo, ver cargarHojaFramesConAncla) -- el cuerpo
+// heroB es compartido entre clases, así que el ancla también lo es, no
+// hay que repetirla por clase.
+export const REAL_IDLE_ANCLA = { side: [], down: [], up: [] };
+export const REAL_RUN_ANCLA = { side: [], down: [], up: [] };
 
 for (const dirIdle in REAL_IDLE_SRC) {
-  cargarHojaFrames(REAL_IDLE_SRC[dirIdle], TAM_HEROE, (frames) => { REAL_IDLE[dirIdle] = frames; }, true);
+  cargarHojaFramesConAncla(REAL_IDLE_SRC[dirIdle], TAM_HEROE, (frames, anclas) => {
+    REAL_IDLE[dirIdle] = frames;
+    REAL_IDLE_ANCLA[dirIdle] = anclas;
+  }, true);
 }
 for (const dirRun in REAL_RUN_SRC) {
-  cargarHojaFrames(REAL_RUN_SRC[dirRun], TAM_HEROE, (frames) => { REAL_RUN[dirRun] = frames; }, true);
+  cargarHojaFramesConAncla(REAL_RUN_SRC[dirRun], TAM_HEROE, (frames, anclas) => {
+    REAL_RUN[dirRun] = frames;
+    REAL_RUN_ANCLA[dirRun] = anclas;
+  }, true);
 }
 
 // Ataque básico: cada clase usa el fotograma "ataque básico" real del pack
