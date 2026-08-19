@@ -15,3 +15,8 @@ backups/
 
 .vercel
 .env*
+!.env.local.example
+
+# Capturas generadas por tools/smoke/verificar.mjs (npm run smoke) --
+# desechables, se regeneran en cada ejecución.
+tools/smoke/output/
