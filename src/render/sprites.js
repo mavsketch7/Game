@@ -935,23 +935,55 @@ function cargarHojaFrames(url, destSize, onListo, sinAmpliar) {
   im.src = url;
 }
 
-// Nombre del slice de Aseprite que marca dónde va la mano en cada frame
-// (ver docs del sistema de anclaje -- se coloca/recoloca a mano en el
-// propio Aseprite, uno por frame donde haga falta). Convención única para
-// que el código sepa qué buscar sin tener que configurarlo por archivo.
-const SLICE_ANCLA_MANO = "ancla_mano";
+// Nombre del hitbox (herramienta de marcado de manos del plugin de
+// Aseprite que se está usando -- exporta un JSON con un hitbox con
+// nombre por punto marcado, agrupado por tag de animación, ver
+// puntosPorFrameDesdeHitbox más abajo) que se usa como ancla del arma.
+// "m-d" (mano derecha) confirmado en el primer archivo marcado
+// (Hero-Sword-atack-right-left.aseprite) como la mano que se mueve
+// durante el ataque -- "m-i" (mano izquierda) se ignora por ahora, no
+// tenía datos para la animación de ataque en ese archivo. Si en algún
+// personaje/animación resulta ser la otra mano, esto tendrá que pasar a
+// ser una tabla por archivo en vez de un nombre fijo -- de momento solo
+// hay un archivo marcado, no hace falta esa complejidad todavía.
+const NOMBRE_HITBOX_MANO_ARMA = "m-d";
+
+// El JSON de este plugin no es plano por frame: es un array de hitboxes
+// con nombre, cada uno con sus datos agrupados por TAG de animación
+// (idle/Atack/...) tal como están definidos en el timeline de Aseprite.
+// `frameIndex` es LOCAL a cada tag (0, 1, 2... dentro de ese tramo), no
+// global a toda la hoja exportada -- así que hay que reconstruir el
+// índice global sumando cuántos frames llevan los tags anteriores, en
+// el mismo orden en que aparecen (el orden real del timeline). Devuelve
+// un objeto { [frameGlobal]: {x,y,width,height} } o null si no se
+// encuentra el hitbox pedido.
+function puntosPorFrameDesdeHitbox(meta, nombreHitbox) {
+  if (!Array.isArray(meta)) return null;
+  const entry = meta.find((h) => h.hitBoxName === nombreHitbox);
+  if (!entry || !Array.isArray(entry.tagData)) return null;
+  const porFrameGlobal = {};
+  let offset = 0;
+  for (const tag of entry.tagData) {
+    for (const f of tag.frames || []) {
+      porFrameGlobal[offset + f.frameIndex] = f.bounds;
+    }
+    offset += (tag.frames || []).length;
+  }
+  return porFrameGlobal;
+}
 
 // Como cargarHojaFrames(), pero además intenta leer un JSON de metadatos
-// (mismo nombre que la hoja, .json en vez de .png -- exportado con
-// `aseprite -b origen.aseprite --sheet hoja.png --data hoja.json --format
-// json-array`) y de ahí un slice animado llamado SLICE_ANCLA_MANO para
-// devolver, junto a los frames de siempre, un array paralelo de puntos de
-// anclaje (mismo índice que `frames`, `null` en los frames sin slice o si
-// el JSON no existe todavía -- es aditivo, no hace falta tenerlo en todas
-// las hojas). El punto se pasa por la MISMA transformación de recorte+
-// escala que ya sufre cada frame (bboxAlfa + `escala`), así queda en el
-// mismo espacio de coordenadas en el que se dibuja el sprite final -- sin
-// mantener la matemática de encaje en dos sitios distintos.
+// (mismo nombre que la hoja, .json en vez de .png -- exportado desde
+// Aseprite con el plugin de marcado de manos, ver
+// puntosPorFrameDesdeHitbox) y de ahí el hitbox NOMBRE_HITBOX_MANO_ARMA
+// para devolver, junto a los frames de siempre, un array paralelo de
+// puntos de anclaje (mismo índice que `frames`, `null` en los frames sin
+// dato o si el JSON no existe todavía -- es aditivo, no hace falta
+// tenerlo en todas las hojas). El punto se pasa por la MISMA
+// transformación de recorte+escala que ya sufre cada frame (bboxAlfa +
+// `escala`), así queda en el mismo espacio de coordenadas en el que se
+// dibuja el sprite final -- sin mantener la matemática de encaje en dos
+// sitios distintos.
 // onListo(frames, anclas)
 function cargarHojaFramesConAncla(url, destSize, onListo, sinAmpliar) {
   const jsonUrl = url.replace(/\.png(\?.*)?$/, ".json$1");
@@ -997,22 +1029,20 @@ function cargarHojaFramesConAncla(url, destSize, onListo, sinAmpliar) {
           frames.push(c);
         }
 
-        // Slice animado -> punto por frame ("key" más reciente para cada
-        // frame, igual que un fotograma clave en cualquier timeline --
-        // vale para varios frames seguidos si la mano no se movió).
-        const sliceData = meta?.meta?.slices?.find((s) => s.name === SLICE_ANCLA_MANO);
+        // Punto por frame de la mano del arma (ver puntosPorFrameDesdeHitbox
+        // más arriba) -- ya viene en índice GLOBAL de frame, uno por cada
+        // frame que el usuario haya marcado en Aseprite (puede haber menos
+        // frames marcados que `frameCount` si algún tramo no se marcó
+        // todavía; esos quedan en `null` y caen al pivote fijo de siempre).
+        const puntosGlobales = puntosPorFrameDesdeHitbox(meta, NOMBRE_HITBOX_MANO_ARMA);
         const anclas = new Array(frameCount).fill(null);
-        if (sliceData && sliceData.keys && sliceData.keys.length) {
-          const keys = [...sliceData.keys].sort((a, b2) => a.frame - b2.frame);
+        if (puntosGlobales) {
           for (let i = 0; i < frameCount; i++) {
-            let key = keys[0];
-            for (const k of keys) {
-              if (k.frame > i) break;
-              key = k;
-            }
+            const bounds = puntosGlobales[i];
+            if (!bounds) continue;
             const b = bboxes[i];
-            const sx = key.bounds.x + key.bounds.w / 2;
-            const sy = key.bounds.y + key.bounds.h / 2;
+            const sx = bounds.x + bounds.width / 2;
+            const sy = bounds.y + bounds.height / 2;
             const w = b.w * escala, h = b.h * escala;
             anclas[i] = {
               x: (destSize - w) / 2 + (sx - b.x) * escala,
