@@ -4,7 +4,7 @@ import { ELEMENTOS, MAX_PLANTA, RAREZAS, SALA_H, SALA_W, SUPS } from "../core/co
 import { G } from "../core/state.js";
 import { fxParticulas } from "./effects.js";
 import { barra, renderHUD } from "./hud.js";
-import { ARQUERO_BOW, ARQUERO_BOW_DUR, ATTACK_DUR, ESC_FORMA, KENNEY_TILE, MOB_RUN, OFFHAND_IMG, OFFHAND_IMG_RAREZA, REAL_ATTACK, REAL_IDLE, REAL_RUN, REAL_SPRITE_SCALE, SHEETS, SPR, SPR_FORMAS, WEAPON_IMG, WEAPON_IMG_RAREZA, assetOK, iconoDrop, remateMuroPatron, spriteJugador, wallPatron } from "./sprites.js";
+import { ARQUERO_BOW, ARQUERO_BOW_DUR, ATTACK_DUR, ESC_FORMA, KENNEY_TILE, MIRA_IZQUIERDA_POR_DEFECTO, MOB_RUN, OFFHAND_IMG, OFFHAND_IMG_RAREZA, REAL_ATTACK, REAL_IDLE, REAL_RUN, REAL_SPRITE_SCALE, SHEETS, SPR, SPR_FORMAS, WEAPON_IMG, WEAPON_IMG_RAREZA, assetOK, iconoDrop, remateMuroPatron, spriteJugador, wallPatron } from "./sprites.js";
 import { groundTarget } from "../systems/abilities.js";
 import { masCercano } from "../systems/combat.js";
 import { mouse } from "../systems/input.js";
@@ -153,16 +153,30 @@ function drawSpriteBottom(img, x, yPies, flip, esc) {
         cx.restore();
       }
 
+// Reparte los 360° de puntería en 4 cuadrantes: abajo/arriba (cuando el
+// componente vertical del aim domina) o lateral (el resto, espejado por
+// izq/derecha como siempre). Mismo ángulo que ya usaba el espejo -- no es
+// un valor nuevo, solo una lectura más fina de él.
+function direccionDesdeAim(aim) {
+  const ax = Math.cos(aim), ay = Math.sin(aim);
+  return Math.abs(ay) > Math.abs(ax) ? (ay > 0 ? "down" : "up") : "side";
+}
+
 function dibujarHeroe(p, x, yPies, mov) {
+        const dir = direccionDesdeAim(p.aim);
         // Base: frame de idle del cuerpo real (ver REAL_IDLE en sprites.js) si ya
         // cargó; si no (arranque de la página, un instante), cae al icono
         // estático de siempre para no dejar un hueco en blanco.
-        const idleFrames = REAL_IDLE[p.rol];
+        const idleFrames = REAL_IDLE[dir];
         let img = (idleFrames && idleFrames.length)
           ? idleFrames[Math.floor(p.anim * 4) % idleFrames.length]
           : null;
-        const atkFrames = REAL_ATTACK[p.rol];
-        const runFrames = REAL_RUN[p.rol];
+        // Ataque real de esta clase para `dir`; si esa clase no tiene arte
+        // para arriba/abajo todavía (mago/pícaro, ver REAL_ATTACK_SRC en
+        // sprites.js) cae a la hoja lateral antes que no mostrar nada.
+        const atkPorClase = REAL_ATTACK[p.rol] || {};
+        const atkFrames = atkPorClase[dir] || atkPorClase.side;
+        const runFrames = REAL_RUN[dir];
         if (p.swingT > 0 && atkFrames && atkFrames.length) {
           const dur = ATTACK_DUR[p.rol] || 0.2;
           const prog = clamp(1 - p.swingT / dur, 0, 0.999);
@@ -172,13 +186,19 @@ function dibujarHeroe(p, x, yPies, mov) {
           const fr = runFrames[Math.floor(p.anim * 10) % runFrames.length];
           if (fr) img = fr;
         }
+        // Espejo izq/derecha: solo tiene sentido en el bucket lateral (arriba/
+        // abajo se dibujan de frente, sin voltear). Dentro de "side", el arte
+        // de arquero/mago mira a la izquierda por defecto (ver
+        // MIRA_IZQUIERDA_POR_DEFECTO en sprites.js) -- se invierte la regla
+        // normal para esas clases en vez de aplicarla igual a las 4.
+        const flip = dir === "side" && (Math.cos(p.aim) < 0) !== !!MIRA_IZQUIERDA_POR_DEFECTO[p.rol];
         if (img) {
-          drawSpriteBottom(img, x, yPies, Math.cos(p.aim) < 0, REAL_SPRITE_SCALE[p.rol] || 1);
+          drawSpriteBottom(img, x, yPies, flip, REAL_SPRITE_SCALE[p.rol] || 1);
         } else {
           // Los assets reales todavía no cargaron (un instante, al arrancar):
           // icono estático de siempre, centrado -- no viene recolocado por
           // pies como los frames de arriba, así que se ancla como antes.
-          drawSprite(spriteJugador(p), x, yPies - 6, Math.cos(p.aim) < 0, REAL_SPRITE_SCALE[p.rol] || 1);
+          drawSprite(spriteJugador(p), x, yPies - 6, flip, REAL_SPRITE_SCALE[p.rol] || 1);
         }
       }
 
@@ -1763,15 +1783,17 @@ function renderJugador(p) {
         }
 
         // arma apuntando: dibujo esquemático (pomo/hoja/arco/báculo…) que
-        // sigue la puntería continua del jugador. Se apaga durante el golpe
-        // para las clases con animación de ataque real (REAL_ATTACK,
-        // sprites.js) -- esa hoja/arco ya viene pintada en el propio frame,
-        // dibujar las dos a la vez duplicaba/desalineaba el arma (el
-        // "flotando" de las capturas). El orbe de carga del mago se dibuja
-        // aparte más abajo, siempre, porque es un efecto mágico, no una hoja
-        // física -- no depende de si esta capa esquemática está activa.
+        // sigue la puntería continua del jugador -- decisión del usuario:
+        // el arma se dibuja 100% por código, en todo momento (idle/correr/
+        // golpe), en vez de venir pintada a mano en cada frame de ataque.
+        // El "golpe" lo vende el giro extra de más abajo (swingT), no un
+        // frame de ataque con el arma incluida -- por eso los .aseprite de
+        // ataque nuevos se están dejando sin arma dibujada (ver
+        // REAL_ATTACK_SRC en sprites.js). Si algún frame de ataque TODAVÍA
+        // trae el arma a mano (caso conocido: guerrero arriba, "Guerrero
+        // atque superior"), saldrá duplicada hasta que se limpie ese
+        // archivo en origen -- no se intenta ocultar por código.
         const wcol = eq.arma ? RAREZAS[eq.arma.rareza].col : null;
-        const armaEnSprite = p.swingT > 0 && REAL_ATTACK[p.rol] && REAL_ATTACK[p.rol].length > 0;
         // ESCALA_ARMA: recalibrado tras encoger el cuerpo heroB a su tamaño
         // real (sinAmpliar, sprites.js) -- este dibujo esquemático (imagen
         // real o los trazos vectoriales de más abajo) nunca cambió de escala
@@ -1783,7 +1805,7 @@ function renderJugador(p) {
         // punta del arma quede pegada a la mano. Compartida con el orbe de
         // carga del mago (más abajo) para que ambos midan igual.
         const ESCALA_ARMA = 0.75;
-        if (!formaAnimal && !armaEnSprite) {
+        if (!formaAnimal) {
           cx.save();
           cx.translate(p.x, p.y + 3);
           // El bamboleo de swing (giro extra tipo "espadazo") no pega con un

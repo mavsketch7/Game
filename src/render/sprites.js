@@ -947,57 +947,84 @@ const FACTOR_SPRITE_HITBOX = 4;
 const TAM_HEROE = 17 * FACTOR_SPRITE_HITBOX;
 
 // Cuerpo "heroB" (pack propio en torre-vespero-assets/Hero-sprites, estilo
-// silueta monocromo) como personaje estándar y único para las 6 clases --
-// la diferencia visual entre clases la da el arma en mano (ver WEAPON_IMG
-// más abajo) y el color de piel/ropa vía el sistema de skins existente, no
-// un cuerpo distinto por clase. Sustituye al Body_A (Pixel Crawler, pack
-// coloreado) para que idle/correr no choquen de estilo con las animaciones
-// de ataque reales del mismo pack (ver REAL_ATTACK_SRC más abajo). Solo hay
-// vista lateral (_side) -- este pack trae también down/up, pero el motor
-// (dibujarHeroe en world.js) no soporta encarado direccional todavía, solo
-// espejo izquierda/derecha.
-const REAL_IDLE_SRC = {};
-const REAL_RUN_SRC = {};
-for (const rolCuerpo of ["guerrero", "arquero", "mago", "clerigo", "picaro", "druida"]) {
-  REAL_IDLE_SRC[rolCuerpo] = assetUrl("characters/heroB_idle_side");
-  REAL_RUN_SRC[rolCuerpo] = assetUrl("characters/heroB_run_side");
-}
+// silueta monocromo) como personaje estándar y único para las 4 clases
+// activas -- la diferencia visual entre clases la da el arma en mano (ver
+// WEAPON_IMG más abajo) y el color de piel/ropa vía el sistema de skins
+// existente, no un cuerpo distinto por clase. El cuerpo no varía por clase,
+// solo por DIRECCIÓN (lateral/abajo/arriba, ver direccionDesdeAim() en
+// world.js) -- de ahí que REAL_IDLE/REAL_RUN estén indexados por dirección
+// y no por rol, a diferencia de REAL_ATTACK (más abajo), que sí es por
+// clase porque cada arma anima distinto.
+const REAL_IDLE_SRC = {
+  side: assetUrl("characters/heroB_idle_side"),
+  down: assetUrl("characters/heroB_idle_down"),
+  up: assetUrl("characters/heroB_idle_up"),
+};
+const REAL_RUN_SRC = {
+  side: assetUrl("characters/heroB_run_side"),
+  down: assetUrl("characters/heroB_run_down"),
+  up: assetUrl("characters/heroB_run_up"),
+};
 
-export const REAL_IDLE = { guerrero: [], arquero: [], picaro: [], mago: [], clerigo: [], druida: [] };
-export const REAL_RUN = { guerrero: [], arquero: [], picaro: [], mago: [], clerigo: [], druida: [] };
+export const REAL_IDLE = { side: [], down: [], up: [] };
+export const REAL_RUN = { side: [], down: [], up: [] };
 
-for (const rolIdle in REAL_IDLE_SRC) {
-  cargarHojaFrames(REAL_IDLE_SRC[rolIdle], TAM_HEROE, (frames) => { REAL_IDLE[rolIdle] = frames; }, true);
+for (const dirIdle in REAL_IDLE_SRC) {
+  cargarHojaFrames(REAL_IDLE_SRC[dirIdle], TAM_HEROE, (frames) => { REAL_IDLE[dirIdle] = frames; }, true);
 }
-for (const rolRun in REAL_RUN_SRC) {
-  cargarHojaFrames(REAL_RUN_SRC[rolRun], TAM_HEROE, (frames) => { REAL_RUN[rolRun] = frames; }, true);
+for (const dirRun in REAL_RUN_SRC) {
+  cargarHojaFrames(REAL_RUN_SRC[dirRun], TAM_HEROE, (frames) => { REAL_RUN[dirRun] = frames; }, true);
 }
 
 // Ataque básico: cada clase usa el fotograma "ataque básico" real del pack
-// heroB (torre-vespero-assets/Hero-sprites) que mejor encaja con su arma --
-// guerrero (espadazo, Hero-Sword-atack-right-left), pícaro (puñalada/
-// Pierce), arquero (tiro con arco, Arquero-ataque lateral basico 01), mago
-// (Mago ataque basico 1). El pack trae también variantes "especial"/"dash"/
-// "aereo" por clase (Guerrero ataque especial 2, Mago ataque especial 2/3
-// invoca circulo...) sin usar todavía -- no hay mecánica de ataque especial
-// en el juego, solo un REAL_ATTACK por clase. Clérigo/druida se quedan sin
-// REAL_ATTACK a propósito (el pack no trae animación para su arma), así que
-// durante el ataque siguen mostrando el frame de idle en vez de forzar una
-// animación que no encaja.
+// heroB (torre-vespero-assets/Hero-sprites) que mejor encaja con su arma,
+// por cada dirección de la que haya arte -- guerrero y arquero tienen las
+// 3 (lateral/abajo/arriba); mago y pícaro por ahora solo lateral (world.js
+// cae al frame de idle de esa dirección si no existe REAL_ATTACK[rol][dir],
+// igual que clérigo/druida caían al idle cuando no tenían REAL_ATTACK en
+// absoluto). El pack trae también variantes "especial"/"dash"/"aereo" por
+// clase (Guerrero ataque especial 2, Mago ataque especial 2/3 invoca
+// circulo...) sin usar todavía -- no hay mecánica de ataque especial en el
+// juego, solo un REAL_ATTACK por clase/dirección.
 const REAL_ATTACK_SRC = {
-  guerrero: assetUrl("characters/heroB_attack_guerrero_side"),
-  picaro: assetUrl("characters/heroB_attack_picaro_side"),
-  mago: assetUrl("characters/heroB_attack_mago_side"),
-  arquero: assetUrl("characters/heroB_attack_arquero_side"),
+  guerrero: {
+    side: assetUrl("characters/heroB_attack_guerrero_side"),
+    down: assetUrl("characters/heroB_attack_guerrero_down"),
+    up: assetUrl("characters/heroB_attack_guerrero_up"),
+  },
+  picaro: {
+    side: assetUrl("characters/heroB_attack_picaro_side"),
+  },
+  mago: {
+    side: assetUrl("characters/heroB_attack_mago_side"),
+  },
+  arquero: {
+    side: assetUrl("characters/heroB_attack_arquero_side"),
+    down: assetUrl("characters/heroB_attack_arquero_down"),
+    up: assetUrl("characters/heroB_attack_arquero_up"),
+  },
 };
 
-export const REAL_ATTACK = { guerrero: [], arquero: [], picaro: [], mago: [] };
+export const REAL_ATTACK = { guerrero: {}, arquero: {}, picaro: {}, mago: {} };
 
 for (const rolAtk in REAL_ATTACK_SRC) {
-  cargarHojaFrames(REAL_ATTACK_SRC[rolAtk], TAM_HEROE, (frames) => { REAL_ATTACK[rolAtk] = frames; }, true);
+  for (const dirAtk in REAL_ATTACK_SRC[rolAtk]) {
+    cargarHojaFrames(REAL_ATTACK_SRC[rolAtk][dirAtk], TAM_HEROE, (frames) => { REAL_ATTACK[rolAtk][dirAtk] = frames; }, true);
+  }
 }
 
 export const ATTACK_DUR = { guerrero: 0.22, arquero: 0.3, picaro: 0.1, mago: 0.25 };
+
+// true = el arte de origen de esta clase mira a la IZQUIERDA por defecto,
+// hay que invertir la fórmula de espejo normal (world.js) para ella.
+// Confirmado a ojo exportando cada hoja lateral: guerrero/pícaro miran a
+// la derecha (Hero-Sword-atack-right-left, puñalada), arquero/mago a la
+// izquierda (Arquero-ataque lateral basico 01 -- se llamaba literalmente
+// "HeroBowLeftAttack01" antes de que el usuario renombrara la carpeta de
+// origen -- y Mago ataque basico 1, el fogonazo sale por la izquierda del
+// cuerpo). El cuerpo compartido (idle/correr) no necesita esta tabla: su
+// convención coincide con guerrero/pícaro.
+export const MIRA_IZQUIERDA_POR_DEFECTO = { arquero: true, mago: true };
 
 // Enemigos: mismo criterio de tamaño (radio de colisión x FACTOR_SPRITE_HITBOX)
 // en vez del tamaño de icono KENNEY anterior. Radios tomados de la tabla TIPOS

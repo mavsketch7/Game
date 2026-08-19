@@ -119,13 +119,15 @@ export const ROLES = {
         },
       };
 
+// Clérigo y druida en reserva (fuera del carrusel de selección) hasta
+// que tengan su propio arte heroB -- ROLES/abilities.js/sprites.js las
+// dejan intactas, solo dejan de ser elegibles desde aquí. Reactivar
+// devolviéndolas a este array.
 export const ORDEN_ROLES = [
         "guerrero",
         "arquero",
         "mago",
-        "clerigo",
         "picaro",
-        "druida",
       ];
 
 export const FORMAS_DRUIDA = ["aguila", "lobo", "oso"];
