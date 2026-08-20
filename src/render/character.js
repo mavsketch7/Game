@@ -24,7 +24,7 @@ function direccionDesdeAim(aim) {
   return Math.abs(ay) > Math.abs(ax) ? (ay > 0 ? "down" : "up") : "side";
 }
 
-function dibujarHeroe(p, x, yPies, mov) {
+function calcularPoseHeroe(p, x, yPies, mov) {
         const dirAim = direccionDesdeAim(p.aim);
         // Base: frame de idle del cuerpo real (ver REAL_IDLE en sprites.js) si ya
         // cargó; si no (arranque de la página, un instante), cae al icono
@@ -79,6 +79,27 @@ function dibujarHeroe(p, x, yPies, mov) {
         // MIRA_IZQUIERDA_POR_DEFECTO en sprites.js) -- se invierte la regla
         // normal para esas clases en vez de aplicarla igual a las 4.
         const flip = dir === "side" && (Math.cos(anguloFacing) < 0) !== !!MIRA_IZQUIERDA_POR_DEFECTO[p.rol];
+        // Convierte el ancla (espacio local del canvas TAM_HEROE x TAM_HEROE,
+        // ver cargarHojaFramesConAncla) a coordenadas de mundo, mismo cálculo
+        // que usa drawSpriteBottom() para colocar el propio sprite -- para
+        // que el bloque "arma apuntando" (más abajo, mismo archivo) pueda
+        // usarlo directamente como pivote sin repetir esta cuenta.
+        const centroLocal = TAM_HEROE / 2;
+        const ancla = anclaLocal
+          ? {
+              x: x + (flip ? -(anclaLocal.x - centroLocal) : (anclaLocal.x - centroLocal)),
+              y: yPies - TAM_HEROE + anclaLocal.y,
+            }
+          : null;
+        // `dir` sale junto al ancla (no solo ella) porque renderJugador()
+        // lo necesita para decidir si el cuerpo se pinta antes o después
+        // del arma -- de espaldas ("up") el arma debe quedar tapada por el
+        // cuerpo, así que el cuerpo se dibuja el último; de frente/lateral
+        // el orden de siempre (cuerpo, luego arma encima) sigue valiendo.
+        return { img, flip, dir, ancla };
+      }
+
+      function dibujarCuerpoHeroe(p, img, x, yPies, flip) {
         if (img) {
           drawSpriteBottom(img, x, yPies, flip, REAL_SPRITE_SCALE[p.rol] || 1);
         } else {
@@ -87,17 +108,6 @@ function dibujarHeroe(p, x, yPies, mov) {
           // pies como los frames de arriba, así que se ancla como antes.
           drawSprite(spriteJugador(p), x, yPies - 6, flip, REAL_SPRITE_SCALE[p.rol] || 1);
         }
-        // Convierte el ancla (espacio local del canvas TAM_HEROE x TAM_HEROE,
-        // ver cargarHojaFramesConAncla) a coordenadas de mundo, mismo cálculo
-        // que hace drawSpriteBottom() para colocar el propio sprite -- para
-        // que el bloque "arma apuntando" (más abajo, mismo archivo) pueda
-        // usarlo directamente como pivote sin repetir esta cuenta.
-        if (!anclaLocal) return null;
-        const centroLocal = TAM_HEROE / 2;
-        return {
-          x: x + (flip ? -(anclaLocal.x - centroLocal) : (anclaLocal.x - centroLocal)),
-          y: yPies - TAM_HEROE + anclaLocal.y,
-        };
       }
 
 export function renderMira() {
@@ -263,7 +273,10 @@ export function renderJugador(p) {
               Math.cos(p.aim) < 0,
               ESC_FORMA[p.forma],
             );
-          else dibujarHeroe(p, tr.x, tr.y, false);
+          else {
+            const poseTr = calcularPoseHeroe(p, tr.x, tr.y, false);
+            dibujarCuerpoHeroe(p, poseTr.img, tr.x, tr.y, poseTr.flip);
+          }
         }
         cx.globalAlpha = 1;
         // celebración de subida de nivel: aura dorada expansiva + chispas ascendentes
@@ -383,7 +396,7 @@ export function renderJugador(p) {
         const formaAnimal =
           p.rol === "druida" && p.forma && p.forma !== "humano";
         // Sombra de contacto en el suelo, justo bajo los pies (p.y -- el sprite
-        // real ya se ancla exactamente ahí, ver drawSpriteBottom()/dibujarHeroe()
+        // real ya se ancla exactamente ahí, ver drawSpriteBottom()/dibujarCuerpoHeroe()
         // y cargarHojaFrames() en sprites.js). Sin esto el personaje no tenía
         // ningún ancla visual al suelo y se notaba "flotando". FIJA en el
         // suelo, sin `bob` -- el rebote de idle/correr es del cuerpo, no del
@@ -409,10 +422,14 @@ export function renderJugador(p) {
         cx.ellipse(p.x, p.y + 2, p.r * 0.8 + 2, p.r * 0.3 + 1, 0, 0, TAU);
         cx.stroke();
         cx.globalAlpha = 1;
-        // Ancla de mano del frame que se acaba de dibujar (null si esa hoja
-        // no tiene el slice todavía, o si es una forma animal de druida sin
-        // arma) -- la usa el bloque "arma apuntando" más abajo.
+        // Ancla de mano y pose del frame (null si esa hoja no tiene el
+        // slice todavía, o si es una forma animal de druida sin arma) -- las
+        // usa el bloque "arma apuntando" más abajo, tanto para el pivote
+        // como para decidir si el cuerpo se pinta antes o después del arma
+        // (de espaldas el arma debe quedar tapada por el cuerpo -- ver
+        // calcularPoseHeroe).
         let anclaMano = null;
+        let poseHeroe = null;
         if (formaAnimal) {
           const esc2 = ESC_FORMA[p.forma];
           drawSprite(
@@ -435,7 +452,15 @@ export function renderJugador(p) {
           cx.stroke();
           cx.globalAlpha = 1;
         } else {
-          anclaMano = dibujarHeroe(p, p.x, p.y + bob, mov);
+          poseHeroe = calcularPoseHeroe(p, p.x, p.y + bob, mov);
+          anclaMano = poseHeroe.ancla;
+          // De espaldas ("up") el cuerpo se dibuja MÁS ABAJO, después del
+          // arma (ver el `if (poseHeroe.dir === "up")` tras el bloque "arma
+          // apuntando") -- así la silueta del cuerpo tapa la parte del arma
+          // que quedaría oculta, en vez de dibujarla siempre encima.
+          if (poseHeroe.dir !== "up") {
+            dibujarCuerpoHeroe(p, poseHeroe.img, p.x, p.y + bob, poseHeroe.flip);
+          }
         }
         cx.globalAlpha = 1;
 
@@ -756,6 +781,13 @@ export function renderJugador(p) {
           }
           cx.restore();
         }
+        // De espaldas el cuerpo se dibuja aquí, DESPUÉS del arma (en vez de
+        // arriba junto al resto del cuerpo) para que la silueta lo tape --
+        // ver el comentario en calcularPoseHeroe()/la asignación de
+        // anclaMano más arriba.
+        if (poseHeroe && poseHeroe.dir === "up") {
+          dibujarCuerpoHeroe(p, poseHeroe.img, p.x, p.y + bob, poseHeroe.flip);
+        }
 
         // Orbe de carga del mago: efecto de gameplay (no una hoja física),
         // independiente de si la capa esquemática de arriba está activa --
@@ -1048,7 +1080,7 @@ export function renderEnemigo(e) {
         }
         // Animación de correr real (ver MOB_RUN en sprites.js): sustituye el
         // icono estático por un frame de la hoja Run del pack mientras haya
-        // uno cargado para este tipo -- mismo mecanismo que dibujarHeroe()
+        // uno cargado para este tipo -- mismo mecanismo que calcularPoseHeroe()
         // con REAL_RUN, indexado por el reloj de animación en vez de p.anim
         // (los enemigos no llevan ese campo propio).
         if (mobKey && MOB_RUN[mobKey] && MOB_RUN[mobKey].length) {
