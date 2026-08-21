@@ -1121,6 +1121,14 @@ export const CONFIG_ARMA = {
   // ARQUERO_BOW; mago apunta el cetro quieto, como el arco).
   bamboleo: {
     multiplicador: 1.6,
+    // Con ancla real (mano de verdad, ver REAL_ATTACK_ANCLA en
+    // character.js) la hoja se quedaba clavada en el ángulo de puntería
+    // durante todo el golpe -- sin ningún giro propio se notaba rígida,
+    // "sin peso". Este multiplicador (menor que el de arriba: la propia
+    // mano ya aporta parte del movimiento del frame) añade un arco de
+    // seguimiento suave encima de la puntería en vez de dejar la hoja
+    // fija todo el golpe.
+    multiplicadorAncla: 0.7,
     duracionPorDefecto: 0.18,
     sinBamboleo: new Set(["arquero", "mago"]),
   },

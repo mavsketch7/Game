@@ -64,11 +64,6 @@ export function sfx(tipo) {
         const vol = AJ.volMaster * AJ.volSfx;
         const presets = {
           golpe: { f: 180, f2: 90, tipo: "square", dur: 0.08, v: 0.5 },
-          // espadazo del guerrero (golpe básico, Golpe Colosal y Estocada,
-          // ver systems/abilities.js) -- silbido agudo descendente en vez
-          // del impacto grave y romo de "golpe", para que suene a filo
-          // cortando el aire y no a mazazo.
-          espadazo: { f: 1800, f2: 300, tipo: "sawtooth", dur: 0.12, v: 0.35 },
           flecha: { f: 640, f2: 320, tipo: "triangle", dur: 0.09, v: 0.28 },
           magia: { f: 420, f2: 760, tipo: "sine", dur: 0.16, v: 0.34 },
           hielo: { f: 900, f2: 1400, tipo: "sine", dur: 0.14, v: 0.3 },
@@ -98,6 +93,47 @@ export function sfx(tipo) {
         osc.connect(g);
         osc.start(now);
         osc.stop(now + pr.dur + 0.02);
+      }
+
+// Espadazo del guerrero (golpe básico, Golpe Colosal y Estocada, ver
+// systems/abilities.js) -- reemplaza el antiguo preset de un solo
+// oscilador (sonaba fino, "sin peso") por dos capas, mismo patrón que
+// sfxAterrizaje(): un silbido agudo (el filo cortando el aire) seguido,
+// unos milisegundos después, de un golpe grave con ataque brusco (el
+// "peso" del acero conectando) en vez de solo el barrido agudo de antes.
+export function sfxEspadazo() {
+        if (AJ.silencio || !audioCtx) return;
+        reanudarAudio();
+        const now = audioCtx.currentTime;
+        const vol = AJ.volMaster * AJ.volSfx;
+        // silbido: filo cortando el aire, agudo y breve
+        const oscSilbido = audioCtx.createOscillator();
+        const gSilbido = audioCtx.createGain();
+        oscSilbido.type = "sawtooth";
+        oscSilbido.frequency.setValueAtTime(1900, now);
+        oscSilbido.frequency.exponentialRampToValueAtTime(500, now + 0.09);
+        gSilbido.gain.setValueAtTime(0.26 * vol, now);
+        gSilbido.gain.exponentialRampToValueAtTime(0.0001, now + 0.1);
+        oscSilbido.connect(gSilbido);
+        gSilbido.connect(audioCtx.destination);
+        oscSilbido.start(now);
+        oscSilbido.stop(now + 0.12);
+        // impacto grave: el peso del golpe conectando -- ataque brusco
+        // (linearRamp de casi nada a pleno volumen en 12ms, no un fade
+        // suave) para que se sienta un golpe seco, no un zumbido.
+        const t0 = now + 0.045;
+        const oscGrave = audioCtx.createOscillator();
+        const gGrave = audioCtx.createGain();
+        oscGrave.type = "square";
+        oscGrave.frequency.setValueAtTime(150, t0);
+        oscGrave.frequency.exponentialRampToValueAtTime(48, t0 + 0.11);
+        gGrave.gain.setValueAtTime(0.001, t0);
+        gGrave.gain.linearRampToValueAtTime(0.55 * vol, t0 + 0.012);
+        gGrave.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.13);
+        oscGrave.connect(gGrave);
+        gGrave.connect(audioCtx.destination);
+        oscGrave.start(t0);
+        oscGrave.stop(t0 + 0.15);
       }
 
 // Sonido en capas para la caída de un objeto de rareza alta (Legendario+):

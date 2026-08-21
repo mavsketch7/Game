@@ -527,12 +527,26 @@ export function renderJugador(p) {
           cx.save();
           if (anclaMano) {
             // Ancla real de este frame (slice "ancla_mano" en Aseprite, ver
-            // REAL_ATTACK_ANCLA/cargarHojaFramesConAncla en sprites.js): el
-            // propio dibujo del golpe ya mueve la mano por su swing real,
-            // así que no hace falta el bamboleo artificial de más abajo --
-            // sumarlo aquí duplicaría el giro.
+            // REAL_ATTACK_ANCLA/cargarHojaFramesConAncla en sprites.js): la
+            // mano ya se mueve por el frame del golpe, pero dejar la hoja
+            // clavada en el ángulo de puntería TODO el golpe (sin ningún
+            // giro propio) se notaba rígida y "sin peso" -- se le suma un
+            // arco de seguimiento más suave que el bamboleo de fallback de
+            // abajo (multiplicadorAncla en vez de multiplicador: la propia
+            // mano ya aporta parte del movimiento, no hace falta el giro
+            // completo). Mismo criterio de duración que el fallback: usa
+            // SPECIAL_ATTACK_DUR si el golpe en curso es el Golpe Colosal
+            // (p.atkEspecial), si no ATTACK_DUR de la clase -- sin esto el
+            // arco iba desacompasado del frame real en los Golpes Colosales
+            // (duran 0.26s, no los 0.22s de ATTACK_DUR.guerrero).
             cx.translate(anclaMano.x, anclaMano.y);
-            cx.rotate(p.aim);
+            const { multiplicadorAncla, duracionPorDefecto, sinBamboleo } = CONFIG_ARMA.bamboleo;
+            const especialActivo = p.rol === "guerrero" && p.atkEspecial && SPECIAL_ATTACK_DUR[p.rol];
+            const durAncla = (especialActivo && SPECIAL_ATTACK_DUR[p.rol]) || ATTACK_DUR[p.rol] || duracionPorDefecto;
+            const swingAncla = (p.swingT > 0 && !sinBamboleo.has(p.rol))
+              ? (p.swingT / durAncla - 0.5) * multiplicadorAncla
+              : 0;
+            cx.rotate(p.aim + swingAncla);
           } else {
             cx.translate(p.x, p.y + 3);
             // El bamboleo de swing (giro extra tipo "espadazo") no pega con un

@@ -6,7 +6,7 @@ import { ELEMENTOS, ELEM_MAGO, FORMAS_DRUIDA, FORMAS_INFO, RAREZAS, ROLES, SALA_
 import { update } from "../core/loop.js";
 import { G } from "../core/state.js";
 import { fxOnda, fxParticulas, fxTajo, fxTexto } from "../render/effects.js";
-import { sfx } from "./audio.js";
+import { sfx, sfxEspadazo } from "./audio.js";
 import { curarP, danoAEnemigo, danoAlJugador, masCercano, statsTot, vivos } from "./combat.js";
 import { posDropValida } from "./floorgen.js";
 import { dropItem, genItem } from "./loot.js";
@@ -132,7 +132,8 @@ function golpeArco(p, dir, rango, arco, dmgBase, esPicaro) {
         // el guerrero tiene sonido de espadazo propio (golpe básico Y Golpe
         // Colosal, ambos pasan por aquí) -- el resto sigue con el "golpe"
         // genérico de siempre.
-        sfx(p.rol === "guerrero" ? "espadazo" : "golpe");
+        if (p.rol === "guerrero") sfxEspadazo();
+        else sfx("golpe");
         let hits = 0;
         for (const e of G.enemigos) {
           if (e.hp <= 0 && !e.dummy) continue;
@@ -774,7 +775,7 @@ export function dashAtaque(p) {
         p.dashAtkT = 0.28; // ver DASH_ATTACK_DUR.guerrero en render/sprites.js -- mismo valor
         p.dashAtkCd = 2.2;
         p._dashAtkVictims = new Set();
-        sfx("espadazo");
+        sfxEspadazo();
         fxOnda(p.x, p.y, 18, "#e9b45c");
       }
 
