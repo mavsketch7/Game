@@ -64,6 +64,11 @@ export function sfx(tipo) {
         const vol = AJ.volMaster * AJ.volSfx;
         const presets = {
           golpe: { f: 180, f2: 90, tipo: "square", dur: 0.08, v: 0.5 },
+          // espadazo del guerrero (golpe básico, Golpe Colosal y Estocada,
+          // ver systems/abilities.js) -- silbido agudo descendente en vez
+          // del impacto grave y romo de "golpe", para que suene a filo
+          // cortando el aire y no a mazazo.
+          espadazo: { f: 1800, f2: 300, tipo: "sawtooth", dur: 0.12, v: 0.35 },
           flecha: { f: 640, f2: 320, tipo: "triangle", dur: 0.09, v: 0.28 },
           magia: { f: 420, f2: 760, tipo: "sine", dur: 0.16, v: 0.34 },
           hielo: { f: 900, f2: 1400, tipo: "sine", dur: 0.14, v: 0.3 },

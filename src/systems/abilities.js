@@ -44,7 +44,8 @@ export function atacar(p) {
           const colosal = (p.combo || 0) >= 4;
           p.atkCd =
             ((colosal ? 0.5 : 0.38) * cdHaste(p)) / (1 + (p._hasteBonus || 0));
-          p.swingT = colosal ? 0.26 : 0.18;
+          p.swingT = colosal ? 0.26 : 0.18; // 0.26 ver SPECIAL_ATTACK_DUR.guerrero en render/sprites.js -- mismo valor
+          p.atkEspecial = colosal; // qué hoja usa character.js: básica o especial
           if (colosal) {
             p.combo = 0;
             golpeArco(p, p.aim, 88, 2.1, t.atk * 2);
@@ -128,7 +129,10 @@ export function atacar(p) {
 
 function golpeArco(p, dir, rango, arco, dmgBase, esPicaro) {
         fxTajo(p.x, p.y, dir, rango);
-        sfx("golpe");
+        // el guerrero tiene sonido de espadazo propio (golpe básico Y Golpe
+        // Colosal, ambos pasan por aquí) -- el resto sigue con el "golpe"
+        // genérico de siempre.
+        sfx(p.rol === "guerrero" ? "espadazo" : "golpe");
         let hits = 0;
         for (const e of G.enemigos) {
           if (e.hp <= 0 && !e.dummy) continue;
@@ -739,6 +743,39 @@ export function esquivar(p) {
         p.dashCd = 0.7;
         p.invulT = durDash + 0.04 + (tieneEfecto(p, "sombras") ? 0.5 : 0);
         p._dashVictims = p._dashDmg ? new Set() : null;
+      }
+
+// Estocada: habilidad secundaria NUEVA del guerrero (tecla propia, Mayús/R3
+// -- ver systems/input.js), aparte de Esquivar. A diferencia de Esquivar
+// (reposicionamiento defensivo, invulnerable, sin daño) esto es una
+// embestida ofensiva: recorre terreno en línea recta y daña una vez a cada
+// enemigo que atraviesa (mismo patrón que el efecto "Sombra Letal" del
+// esquive normal, ver p._dashVictims en core/loop.js), pero SIN
+// invulnerabilidad -- son dos herramientas distintas, no un reskin. Propio
+// cooldown/coste, no comparte el del esquive.
+export function dashAtaque(p) {
+        if (p.rol !== "guerrero") return;
+        if (p.ko || p.atrapado || p.rootT > 0) return;
+        if (p.dashAtkCd > 0 || p.dashT > 0 || p.dashAtkT > 0) return;
+        if (p.res < 22) {
+          fxTexto(p.x, p.y - 24, "sin aguante", "#9a93ab");
+          return;
+        }
+        p.res -= 22;
+        let dx = p.inp ? p.inp.mx : 0,
+          dy = p.inp ? p.inp.my : 0;
+        if (dx === 0 && dy === 0) {
+          dx = Math.cos(p.aim);
+          dy = Math.sin(p.aim);
+        }
+        const n = Math.hypot(dx, dy) || 1;
+        p.dashAtkX = dx / n;
+        p.dashAtkY = dy / n;
+        p.dashAtkT = 0.28; // ver DASH_ATTACK_DUR.guerrero en render/sprites.js -- mismo valor
+        p.dashAtkCd = 2.2;
+        p._dashAtkVictims = new Set();
+        sfx("espadazo");
+        fxOnda(p.x, p.y, 18, "#e9b45c");
       }
 
 export function activarParry(p) {

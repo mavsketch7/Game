@@ -9,7 +9,7 @@ import { ELEMENTOS, RAREZAS, SUPS } from "../core/constants.js";
 import { G } from "../core/state.js";
 import { fxParticulas } from "./effects.js";
 import { drawSprite, drawSpriteBottom } from "./spriteDraw.js";
-import { ARQUERO_BOW, ARQUERO_BOW_DUR, ATTACK_DUR, CONFIG_ARMA, ESC_FORMA, MIRA_IZQUIERDA_POR_DEFECTO, MOB_RUN, OFFHAND_IMG, OFFHAND_IMG_RAREZA, REAL_ATTACK, REAL_ATTACK_ANCLA, REAL_IDLE, REAL_IDLE_ANCLA, REAL_RUN, REAL_RUN_ANCLA, REAL_SPRITE_SCALE, SHEETS, SPR, SPR_FORMAS, TAM_HEROE, WEAPON_IMG, WEAPON_IMG_RAREZA, assetOK, spriteJugador } from "./sprites.js";
+import { ARQUERO_BOW, ARQUERO_BOW_DUR, ATTACK_DUR, CONFIG_ARMA, DASH_ATTACK_DUR, ESC_FORMA, MIRA_IZQUIERDA_POR_DEFECTO, MOB_RUN, OFFHAND_IMG, OFFHAND_IMG_RAREZA, REAL_ATTACK, REAL_ATTACK_ANCLA, REAL_DASH, REAL_DASH_ANCLA, REAL_IDLE, REAL_IDLE_ANCLA, REAL_RUN, REAL_RUN_ANCLA, REAL_SPECIAL, REAL_SPECIAL_ANCLA, REAL_SPRITE_SCALE, SHEETS, SPECIAL_ATTACK_DUR, SPR, SPR_FORMAS, TAM_HEROE, WEAPON_IMG, WEAPON_IMG_RAREZA, assetOK, spriteJugador } from "./sprites.js";
 import { groundTarget } from "../systems/abilities.js";
 import { masCercano } from "../systems/combat.js";
 import { mouse } from "../systems/input.js";
@@ -54,13 +54,39 @@ function calcularPoseHeroe(p, x, yPies, mov) {
         // fijo de siempre en ese caso. Por defecto la del frame de idle
         // base -- ataque/correr la reemplazan si aplican.
         let anclaLocal = idleFrameIdx >= 0 ? (REAL_IDLE_ANCLA[dirAim]?.[idleFrameIdx] || null) : null;
-        if (p.swingT > 0 && atkFrames && atkFrames.length) {
-          const dur = ATTACK_DUR[p.rol] || 0.2;
+        if (p.dashAtkT > 0) {
+          // Estocada (dash-ataque nuevo, ver abilities.js: dashAtaque()):
+          // hoja propia, encarada a la dirección de la embestida (no a la
+          // puntería) -- mismo criterio que ya usa correr más abajo. Máxima
+          // prioridad: si está en curso, tapa tanto el golpe normal como
+          // correr/idle.
+          anguloFacing = Math.atan2(p.dashAtkY, p.dashAtkX);
+          dir = direccionDesdeAim(anguloFacing);
+          const dashFrames = REAL_DASH[p.rol]?.[dir];
+          if (dashFrames && dashFrames.length) {
+            const dur = DASH_ATTACK_DUR[p.rol] || 0.28;
+            const prog = clamp(1 - p.dashAtkT / dur, 0, 0.999);
+            const frameIdx = Math.floor(prog * dashFrames.length);
+            const fr = dashFrames[frameIdx];
+            if (fr) img = fr;
+            const anclasDir = REAL_DASH_ANCLA[p.rol]?.[dir];
+            anclaLocal = anclasDir ? anclasDir[frameIdx] : null;
+          }
+        } else if (p.swingT > 0 && atkFrames && atkFrames.length) {
+          // Golpe Colosal (combo a 4 pips, ver abilities.js: atacar()) usa la
+          // hoja de "especial" del guerrero en vez de la básica cuando ya
+          // cargó (p.atkEspecial, fijado en abilities.js) -- si todavía no
+          // cargó, cae al golpe básico de siempre sin dejar un hueco visual.
+          const especial = p.rol === "guerrero" && p.atkEspecial && REAL_SPECIAL.guerrero[dirAim]?.length;
+          const framesGolpe = especial ? REAL_SPECIAL.guerrero[dirAim] : atkFrames;
+          const dur = (especial && SPECIAL_ATTACK_DUR[p.rol]) || ATTACK_DUR[p.rol] || 0.2;
           const prog = clamp(1 - p.swingT / dur, 0, 0.999);
-          const frameIdx = Math.floor(prog * atkFrames.length);
-          const fr = atkFrames[frameIdx];
+          const frameIdx = Math.floor(prog * framesGolpe.length);
+          const fr = framesGolpe[frameIdx];
           if (fr) img = fr;
-          const anclasDir = REAL_ATTACK_ANCLA[p.rol]?.[dirAim] || REAL_ATTACK_ANCLA[p.rol]?.side;
+          const anclasDir = especial
+            ? REAL_SPECIAL_ANCLA.guerrero[dirAim]
+            : (REAL_ATTACK_ANCLA[p.rol]?.[dirAim] || REAL_ATTACK_ANCLA[p.rol]?.side);
           anclaLocal = anclasDir ? anclasDir[frameIdx] : null;
         } else if (mov && p.inp) {
           anguloFacing = Math.atan2(p.inp.my, p.inp.mx);

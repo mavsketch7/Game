@@ -195,6 +195,10 @@ export function renderHUD() {
                 s.color,
               ),
             );
+          } else if (p.rol === "guerrero") {
+            // Estocada (dash-ataque, Mayús · R3 -- ver systems/abilities.js:
+            // dashAtaque()): cooldown 2.2 s, mismo valor fijado ahí.
+            iconoCd(x + 52, iy, 16, "⇧", p.dashAtkCd, 2.2, "#c9a35a");
           } else if (p.rol === "druida") {
             FORMAS_DRUIDA.forEach((fo, k) => {
               const fi = FORMAS_INFO[fo];

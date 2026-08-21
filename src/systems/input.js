@@ -3,7 +3,7 @@ import { H, W, cv, toggleFullscreen } from "../core/canvas.js";
 import { LOBBIES, ORDEN_ROLES } from "../core/constants.js";
 import { G } from "../core/state.js";
 import { NET } from "../net/peer.js";
-import { activarParry, atacar, castSup, cicloElem, disparoSecundario, esquivar, habilidad, interactuar, transformar } from "./abilities.js";
+import { activarParry, atacar, castSup, cicloElem, dashAtaque, disparoSecundario, esquivar, habilidad, interactuar, transformar } from "./abilities.js";
 import { aplicarMusica, initAudio, reanudarAudio } from "./audio.js";
 import { abrirInfo, cerrarInfo } from "../ui/info.js";
 import { cambiarPestanaInv, cerrarInv } from "../ui/inventory.js";
@@ -136,6 +136,9 @@ export function pollPads() {
                 if (edge(0)) esquivar(p);
                 if (edge(3)) habilidad(p);
                 if (edge(10)) interactuar(p);
+                // Estocada (mando): clic del stick derecho -- dashAtaque()
+                // se autofiltra por rol, seguro dejarla sin condición aquí.
+                if (edge(11)) dashAtaque(p);
                 if (p.rol === "mago") {
                   if (edge(2) || edge(15)) cicloElem(p, 1);
                   if (edge(14)) cicloElem(p, -1);
@@ -388,6 +391,11 @@ window.addEventListener("keydown", (e) => {
           e.preventDefault();
           esquivar(p);
         }
+        // Estocada (dash-ataque nuevo del guerrero, ver systems/abilities.js:
+        // dashAtaque()) -- tecla propia, no sustituye a Espacio/Esquivar.
+        // dashAtaque() se autofiltra por rol, así que es seguro dejarla sin
+        // condición aquí (igual que el resto de teclas de esta función).
+        if (k === "shift") dashAtaque(p);
         if (k === "q") habilidad(p);
         if (k === "e") interactuar(p);
         if (k === "r") disparoSecundario(p);

@@ -39,6 +39,12 @@ const INFO_CLASE = {
               desc: "Dash rápido en la dirección de movimiento. Concede 0.24 s de invulnerabilidad. Cuesta 18 Aguante.",
             },
             {
+              ico: "⚡",
+              nombre: "Estocada",
+              tec: "Mayús · R3",
+              desc: "Embestida ofensiva en la dirección de movimiento (o de la puntería si estás quieto): daña una vez a cada enemigo que atraviesas. Sin invulnerabilidad, a diferencia de Esquivar -- son dos herramientas distintas. Cuesta 22 Aguante, cooldown de 2.2 s.",
+            },
+            {
               ico: "🌀",
               nombre: "Torbellino (ulti)",
               tec: "E · Y",

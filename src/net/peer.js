@@ -674,6 +674,7 @@ function recibirSnapshot(s) {
           parryCombo: 0,
           parryComboT: 0,
           dashCd: 0,
+          dashAtkCd: 0,
           atkCd: 0,
           castCd: 0,
           formCd: 0,

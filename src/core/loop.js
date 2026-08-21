@@ -29,6 +29,7 @@ const CDS_LINEALES = [
   "castCd",
   "skillCd",
   "dashCd",
+  "dashAtkCd",
   "disparoCd",
   "invulT",
   "parryT",
@@ -93,11 +94,21 @@ export function update(dt) {
           if (p.atrapado || p.rootT > 0) {
             // inmovilizado: arenas movedizas o telaraña
             p.dashT = 0;
+            p.dashAtkT = 0;
           } else if (p.dashT > 0) {
             p.dashT -= dt;
             vx = p.dashX * 560;
             vy = p.dashY * 560;
             p.trail.push({ x: p.x, y: p.y, t: 0.25 });
+          } else if (p.dashAtkT > 0) {
+            // Estocada (guerrero, ver systems/abilities.js: dashAtaque()):
+            // misma mecánica de movimiento que el esquive, pero sin
+            // invulnerabilidad -- el daño se aplica más abajo, junto al
+            // resto de la vuelta del jugador.
+            p.dashAtkT -= dt;
+            vx = p.dashAtkX * 480;
+            vy = p.dashAtkY * 480;
+            p.trail.push({ x: p.x, y: p.y, t: 0.2 });
           } else {
             const n = Math.hypot(p.inp.mx, p.inp.my);
             if (n > 0) {
@@ -287,6 +298,25 @@ export function update(dt) {
                   true,
                   p.dashX * 160,
                   p.dashY * 160,
+                );
+              }
+            }
+          }
+          // Estocada: daña una vez a cada enemigo que atraviesa la embestida
+          // (mismo patrón que Sombra Letal arriba, set propio para no
+          // interferir con p._dashVictims del esquive normal).
+          if (p.dashAtkT > 0 && p._dashAtkVictims) {
+            for (const e of G.enemigos) {
+              if ((e.hp <= 0 && !e.dummy) || p._dashAtkVictims.has(e)) continue;
+              if (Math.hypot(e.x - p.x, e.y - p.y) < 28 + e.r) {
+                p._dashAtkVictims.add(e);
+                danoAEnemigo(
+                  e,
+                  statsTot(p).atk * 1.3,
+                  p,
+                  true,
+                  p.dashAtkX * 180,
+                  p.dashAtkY * 180,
                 );
               }
             }

@@ -44,6 +44,14 @@ export function nuevaPartida() {
             dashCd: 0,
             dashX: 0,
             dashY: 1,
+            // Estocada (dash-ataque del guerrero, ver systems/abilities.js:
+            // dashAtaque()) -- estado propio, separado del esquive de arriba.
+            dashAtkT: 0,
+            dashAtkCd: 0,
+            dashAtkX: 0,
+            dashAtkY: 1,
+            atkEspecial: false,
+            _dashAtkVictims: null,
             disparoCd: 0,
             invulT: 0,
             parryT: 0,

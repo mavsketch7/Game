@@ -948,7 +948,13 @@ function cargarHojaFrames(url, destSize, onListo, sinAmpliar) {
 // 12 frames repartidos en idle/charge/throw/rest que cuadran con los 12
 // frames reales de heroB_attack_arquero_side). Si algún personaje nuevo
 // necesita otro nombre, basta con añadirlo a esta lista.
-const NOMBRES_HITBOX_ARMA = ["m-d", "b-pl"];
+// "sword-position": marcador del golpe de dash del guerrero mirando hacia
+// arriba (su "m-d" solo trae 1 de 5 frames marcados; "sword-position" trae
+// los 5, ver hands-sword-position-dash.json) -- va primero para ganarle a
+// "m-d" cuando ambos existen en el mismo archivo. "bow-ps"/"bw-pl": arquero
+// abajo/arriba (nombres distintos a "b-pl" en esos dos archivos de origen,
+// ver bow-shotdown-position.json/bow-up-atack.json).
+const NOMBRES_HITBOX_ARMA = ["sword-position", "m-d", "b-pl", "bow-ps", "bw-pl"];
 
 // El JSON de este plugin no es plano por frame: es un array de hitboxes
 // con nombre, cada uno con sus datos agrupados por TAG de animación
@@ -1208,6 +1214,52 @@ for (const rolAtk in REAL_ATTACK_SRC) {
 }
 
 export const ATTACK_DUR = { guerrero: 0.22, arquero: 0.3, picaro: 0.1, mago: 0.25 };
+
+// Golpe Colosal (combo de 4 pips, ver abilities.js: atacar()) y Estocada
+// (dash-ataque nuevo, ver abilities.js: dashAtaque()): mismas 3 direcciones
+// que el ataque básico del guerrero, hojas propias (no reutilizan
+// REAL_ATTACK). p.swingT/p.dashAtkT se fijan a estos mismos valores en
+// abilities.js -- si se recalibra la duración aquí, hay que tocar también
+// esos números (comentario cruzado en abilities.js).
+const REAL_SPECIAL_SRC = {
+  guerrero: {
+    side: assetUrl("characters/heroB_special_guerrero_side"),
+    down: assetUrl("characters/heroB_special_guerrero_down"),
+    up: assetUrl("characters/heroB_special_guerrero_up"),
+  },
+};
+const REAL_DASH_SRC = {
+  guerrero: {
+    side: assetUrl("characters/heroB_dash_guerrero_side"),
+    down: assetUrl("characters/heroB_dash_guerrero_down"),
+    up: assetUrl("characters/heroB_dash_guerrero_up"),
+  },
+};
+
+export const REAL_SPECIAL = { guerrero: {} };
+export const REAL_SPECIAL_ANCLA = { guerrero: {} };
+export const REAL_DASH = { guerrero: {} };
+export const REAL_DASH_ANCLA = { guerrero: {} };
+
+for (const rolEsp in REAL_SPECIAL_SRC) {
+  for (const dirEsp in REAL_SPECIAL_SRC[rolEsp]) {
+    cargarHojaFramesConAncla(REAL_SPECIAL_SRC[rolEsp][dirEsp], TAM_HEROE, (frames, anclas) => {
+      REAL_SPECIAL[rolEsp][dirEsp] = frames;
+      REAL_SPECIAL_ANCLA[rolEsp][dirEsp] = anclas;
+    }, true);
+  }
+}
+for (const rolDash in REAL_DASH_SRC) {
+  for (const dirDash in REAL_DASH_SRC[rolDash]) {
+    cargarHojaFramesConAncla(REAL_DASH_SRC[rolDash][dirDash], TAM_HEROE, (frames, anclas) => {
+      REAL_DASH[rolDash][dirDash] = frames;
+      REAL_DASH_ANCLA[rolDash][dirDash] = anclas;
+    }, true);
+  }
+}
+
+export const SPECIAL_ATTACK_DUR = { guerrero: 0.26 };
+export const DASH_ATTACK_DUR = { guerrero: 0.28 };
 
 // true = el arte de origen de esta clase mira a la IZQUIERDA por defecto,
 // hay que invertir la fórmula de espejo normal (world.js) para ella.
