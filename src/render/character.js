@@ -9,7 +9,7 @@ import { ELEMENTOS, RAREZAS, SUPS } from "../core/constants.js";
 import { G } from "../core/state.js";
 import { fxParticulas } from "./effects.js";
 import { drawSprite, drawSpriteBottom } from "./spriteDraw.js";
-import { ARQUERO_BOW, ARQUERO_BOW_DUR, ATTACK_DUR, CONFIG_ARMA, DASH_ATTACK_DUR, ESC_FORMA, MIRA_IZQUIERDA_POR_DEFECTO, MOB_RUN, OFFHAND_IMG, OFFHAND_IMG_RAREZA, REAL_ATTACK, REAL_ATTACK_ANCLA, REAL_DASH, REAL_DASH_ANCLA, REAL_IDLE, REAL_IDLE_ANCLA, REAL_RUN, REAL_RUN_ANCLA, REAL_SPECIAL, REAL_SPECIAL_ANCLA, REAL_SPRITE_SCALE, SHEETS, SPECIAL_ATTACK_DUR, SPR, SPR_FORMAS, TAM_HEROE, WEAPON_IMG, WEAPON_IMG_RAREZA, assetOK, spriteJugador } from "./sprites.js";
+import { ARQUERO_BOW, ARQUERO_BOW_DUR, ATTACK_DUR, CONFIG_ARMA, DASH_ATTACK_DUR, ESC_FORMA, ESCALA_HEROE, MIRA_IZQUIERDA_POR_DEFECTO, MOB_RUN, OFFHAND_IMG, OFFHAND_IMG_RAREZA, REAL_ATTACK, REAL_ATTACK_ANCLA, REAL_DASH, REAL_DASH_ANCLA, REAL_IDLE, REAL_IDLE_ANCLA, REAL_RUN, REAL_RUN_ANCLA, REAL_SPECIAL, REAL_SPECIAL_ANCLA, REAL_SPRITE_SCALE, SHEETS, SPECIAL_ATTACK_DUR, SPR, SPR_FORMAS, TAM_HEROE, WEAPON_IMG, WEAPON_IMG_RAREZA, assetOK, spriteJugador } from "./sprites.js";
 import { groundTarget } from "../systems/abilities.js";
 import { masCercano } from "../systems/combat.js";
 import { mouse } from "../systems/input.js";
@@ -110,11 +110,16 @@ function calcularPoseHeroe(p, x, yPies, mov) {
         // que usa drawSpriteBottom() para colocar el propio sprite -- para
         // que el bloque "arma apuntando" (más abajo, mismo archivo) pueda
         // usarlo directamente como pivote sin repetir esta cuenta.
+        // escalaCuerpo: mismo factor que dibujarCuerpoHeroe() usa para
+        // DIBUJAR el cuerpo (ESCALA_HEROE en sprites.js) -- hay que
+        // aplicarlo también aquí o el ancla quedaría en la posición sin
+        // escalar mientras el cuerpo se dibuja más grande alrededor.
+        const escalaCuerpo = ESCALA_HEROE * (REAL_SPRITE_SCALE[p.rol] || 1);
         const centroLocal = TAM_HEROE / 2;
         const ancla = anclaLocal
           ? {
-              x: x + (flip ? -(anclaLocal.x - centroLocal) : (anclaLocal.x - centroLocal)),
-              y: yPies - TAM_HEROE + anclaLocal.y,
+              x: x + (flip ? -(anclaLocal.x - centroLocal) : (anclaLocal.x - centroLocal)) * escalaCuerpo,
+              y: yPies - TAM_HEROE * escalaCuerpo + anclaLocal.y * escalaCuerpo,
             }
           : null;
         // `dir` sale junto al ancla (no solo ella) porque renderJugador()
@@ -126,13 +131,14 @@ function calcularPoseHeroe(p, x, yPies, mov) {
       }
 
       function dibujarCuerpoHeroe(p, img, x, yPies, flip) {
+        const escala = ESCALA_HEROE * (REAL_SPRITE_SCALE[p.rol] || 1);
         if (img) {
-          drawSpriteBottom(img, x, yPies, flip, REAL_SPRITE_SCALE[p.rol] || 1);
+          drawSpriteBottom(img, x, yPies, flip, escala);
         } else {
           // Los assets reales todavía no cargaron (un instante, al arrancar):
           // icono estático de siempre, centrado -- no viene recolocado por
           // pies como los frames de arriba, así que se ancla como antes.
-          drawSprite(spriteJugador(p), x, yPies - 6, flip, REAL_SPRITE_SCALE[p.rol] || 1);
+          drawSprite(spriteJugador(p), x, yPies - 6, flip, escala);
         }
       }
 
