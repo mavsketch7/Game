@@ -1141,7 +1141,10 @@ export const CONFIG_ARMA = {
   // a mitad, vuelta a 0 al terminar (empuja y recoge, no se queda fuera).
   estocada: {
     clases: new Set(["picaro"]),
-    distancia: 8,
+    // 8 -> 16: apenas se notaba (6px reales tras escala x0.75) -- casi el
+    // doble para que la puñalada se lea claramente como un empuje hacia
+    // delante, no un simple temblor del arma en la mano.
+    distancia: 16,
   },
 };
 

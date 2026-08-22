@@ -5,7 +5,7 @@ import { TAU } from "../core/canvas.js";
 import { ELEMENTOS, ELEM_MAGO, FORMAS_DRUIDA, FORMAS_INFO, RAREZAS, ROLES, SALA_H as H, SALA_W as W, SUPS } from "../core/constants.js";
 import { update } from "../core/loop.js";
 import { G } from "../core/state.js";
-import { fxOnda, fxParticulas, fxTajo, fxTexto } from "../render/effects.js";
+import { fxEstocada, fxOnda, fxParticulas, fxTajo, fxTexto } from "../render/effects.js";
 import { sfx, sfxEspadazo, sfxGolpeAire, sfxGolpeCritico, sfxImpactoGuerrero, sfxImpactoPicaro } from "./audio.js";
 import { curarP, danoAEnemigo, danoAlJugador, masCercano, statsTot, vivos } from "./combat.js";
 import { posDropValida } from "./floorgen.js";
@@ -99,7 +99,10 @@ export function atacar(p) {
           if (p.atkCd > 0) return;
           p.atkCd = (0.2 * cdHaste(p)) / (1 + (p._hasteBonus || 0));
           p.swingT = 0.1;
-          golpeArco(p, p.aim, 46, 1.1, t.atk * 0.75, true);
+          // rango 46->56 y arco 1.1->0.65 rad: más alcance pero más
+          // estrecho, a juego con la puñalada recta (ya no es un barrido
+          // ancho como el guerrero, ver CONFIG_ARMA.estocada en sprites.js).
+          golpeArco(p, p.aim, 56, 0.65, t.atk * 0.75, true);
         } else if (p.rol === "druida") {
           if (p.atkCd > 0) return;
           const fd = p._formDmg || 1;
@@ -129,7 +132,12 @@ export function atacar(p) {
       }
 
 function golpeArco(p, dir, rango, arco, dmgBase, esPicaro) {
-        fxTajo(p.x, p.y, dir, rango);
+        // Pícaro: línea recta de puñalada (fxEstocada), no el barrido en
+        // media luna de fxTajo -- una daga apuñala, no siega (ver
+        // CONFIG_ARMA.estocada en render/sprites.js, mismo criterio para
+        // el arma en mano).
+        if (esPicaro) fxEstocada(p.x, p.y, dir, rango);
+        else fxTajo(p.x, p.y, dir, rango);
         // guerrero/pícaro ya NO llevan el "espadazo" sintetizado en el
         // swing -- chocaba con el sonido de impacto/fallo REAL que se
         // decide más abajo (uno sintético + uno real a la vez sonaba raro,

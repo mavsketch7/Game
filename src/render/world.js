@@ -1278,6 +1278,36 @@ export function render() {
             }
             cx.stroke();
             cx.restore();
+          } else if (f.tipo === "estocada") {
+            // Puñalada (pícaro, ver fxEstocada en render/effects.js): una
+            // línea recta que dispara hacia delante y se afina en ambas
+            // puntas -- sin el barrido angular de "tajo" (arriba), una
+            // estocada no gira alrededor del personaje, avanza en línea
+            // recta desde la mano hasta la punta de la hoja.
+            const grosorE = 3 + f.r * 0.02;
+            cx.save();
+            cx.translate(f.x, f.y);
+            cx.rotate(f.dir);
+            cx.globalAlpha = k * k; // corte seco, se apaga rápido
+            cx.beginPath();
+            cx.moveTo(f.r * 0.15, 0);
+            cx.quadraticCurveTo(f.r * 0.55, -grosorE, f.r, 0);
+            cx.quadraticCurveTo(f.r * 0.55, grosorE, f.r * 0.15, 0);
+            cx.closePath();
+            const gradE = cx.createLinearGradient(f.r * 0.15, 0, f.r, 0);
+            gradE.addColorStop(0, "rgba(255,255,255,0)");
+            gradE.addColorStop(0.6, "rgba(255,255,255,.95)");
+            gradE.addColorStop(1, "rgba(200,80,95,.25)");
+            cx.fillStyle = gradE;
+            cx.fill();
+            // destello nítido justo en la punta (donde clava la hoja)
+            cx.strokeStyle = "#fff7e0";
+            cx.lineWidth = 1.2;
+            cx.beginPath();
+            cx.moveTo(f.r * 0.5, 0);
+            cx.lineTo(f.r, 0);
+            cx.stroke();
+            cx.restore();
           } else if (f.tipo === "part") {
             f.x += f.vx * 0.016;
             f.y += f.vy * 0.016;

@@ -33,6 +33,14 @@ export function fxTajo(x, y, dir, r) {
         G.fx.push({ id: _fxId++, tipo: "tajo", x, y, dir, r, t: 0.16, t0: 0.16 });
       }
 
+// Puñalada (pícaro, ver CONFIG_ARMA.estocada en render/sprites.js): una
+// línea fina que dispara hacia delante y se apaga, no el barrido ancho en
+// media luna de fxTajo -- una estocada es recta, no un arco. t un poco más
+// corto que fxTajo (golpe más seco/instantáneo).
+export function fxEstocada(x, y, dir, r) {
+        G.fx.push({ id: _fxId++, tipo: "estocada", x, y, dir, r, t: 0.14, t0: 0.14 });
+      }
+
 // size/spread opcionales (por defecto 4px y sin dispersión de origen, el
 // comportamiento de siempre -- todos los usos existentes, nivel/moneda/
 // portal/muerte, siguen igual sin tocarlos). Pensados para el estallido de
