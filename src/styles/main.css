@@ -88,26 +88,7 @@
   font-size: clamp(1.05rem, 2.4vw, 1.5rem);
   letter-spacing: 0.22em;
   text-transform: uppercase;
-  background-image:
-    linear-gradient(
-      110deg,
-      transparent 40%,
-      rgba(255, 250, 235, 0.95) 50%,
-      transparent 60%
-    ),
-    linear-gradient(180deg, #fbe7ad 0%, var(--vespero) 55%, #a9701f 100%);
-  background-size:
-    200% 100%,
-    100% 100%;
-  background-repeat: no-repeat;
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
   opacity: 0;
-  animation:
-    inicio-aparece-texto 1s ease-out 0.5s forwards,
-    inicio-brillo 2.8s linear 1.5s infinite,
-    inicio-respira 2s ease-in-out 1.5s infinite;
 }
 @keyframes inicio-zoom {
   from {
@@ -115,27 +96,6 @@
   }
   to {
     transform: scale(1.06);
-  }
-}
-@keyframes inicio-brillo {
-  0% {
-    background-position:
-      -120% 0,
-      0 0;
-  }
-  100% {
-    background-position:
-      220% 0,
-      0 0;
-  }
-}
-@keyframes inicio-respira {
-  0%,
-  100% {
-    text-shadow: 0 2px 20px rgba(233, 180, 92, 0.35);
-  }
-  50% {
-    text-shadow: 0 2px 32px rgba(233, 180, 92, 0.7);
   }
 }
 @keyframes inicio-aparece {
@@ -2203,6 +2163,64 @@ body.pantalla-completa #hint {
   font-size: 1rem;
   letter-spacing: 0.04em;
   image-rendering: pixelated;
+}
+
+/* Botones: borde dorado + relleno de rojo tinto, al estilo de los
+   botones del kit de pausa (public/assets/ui/pausa/btn-*.png -- de ahí
+   salieron --vespero/--sangre, ver el comentario junto a :root). Esos
+   PNG llevan el texto grabado en la imagen (en inglés, "Inventory" /
+   "Quit"), así que no sirven tal cual para el resto de botones del
+   juego -- se reproduce el mismo look en CSS (borde + relleno + texto)
+   para que valga con cualquier etiqueta. */
+.btn,
+.btn-mini,
+.btn-listo,
+.btn-fus,
+.btn-info,
+.seg button,
+.inicio-start {
+  background: linear-gradient(180deg, #9c3e3e 0%, #7a2226 55%, #501519 100%);
+  border-color: #b0925f;
+  border-radius: 999px;
+  color: var(--vespero);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.7);
+}
+.btn.dorado {
+  background: linear-gradient(180deg, #b34a4a 0%, #8a2a2e 55%, #5c1a1e 100%);
+  border-color: var(--vespero);
+  box-shadow: 0 0 10px rgba(226, 196, 137, 0.4);
+}
+.btn.peligro {
+  background: linear-gradient(180deg, #7a1f1f 0%, #501215 55%, #300a0c 100%);
+  border-color: #b0925f;
+}
+.btn.peligro:hover:not(:disabled) {
+  border-color: var(--sangre);
+}
+
+/* "Pulsa Start" es, en la práctica, un botón (dispara el inicio de
+   partida igual que #btn-empezar), así que lleva el mismo tratamiento
+   en vez del texto brillante de antes -- se cancela el
+   background-clip:text/color:transparent que usaba para eso. */
+.inicio-start {
+  background-clip: padding-box;
+  -webkit-background-clip: padding-box;
+  color: var(--vespero);
+  padding: 13px 40px;
+  border-width: 2px;
+  border-style: solid;
+  animation:
+    inicio-aparece-texto 1s ease-out 0.5s forwards,
+    inicio-pulso 2s ease-in-out 1.5s infinite;
+}
+@keyframes inicio-pulso {
+  0%,
+  100% {
+    box-shadow: 0 0 14px rgba(226, 196, 137, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 26px rgba(226, 196, 137, 0.65);
+  }
 }
 
 /* El guantelete (#cursor-img) sustituye al cursor nativo en toda la
