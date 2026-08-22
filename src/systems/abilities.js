@@ -130,12 +130,11 @@ export function atacar(p) {
 
 function golpeArco(p, dir, rango, arco, dmgBase, esPicaro) {
         fxTajo(p.x, p.y, dir, rango);
-        // guerrero/pícaro: sonido sintetizado de swing de siempre, además
-        // del sonido de impacto/fallo REAL que se decide más abajo (una vez
-        // que se sabe si el golpe conectó) -- el resto sigue con el "golpe"
-        // genérico de siempre.
-        if (p.rol === "guerrero") sfxEspadazo();
-        else if (!esPicaro) sfx("golpe");
+        // guerrero/pícaro ya NO llevan el "espadazo" sintetizado en el
+        // swing -- chocaba con el sonido de impacto/fallo REAL que se
+        // decide más abajo (uno sintético + uno real a la vez sonaba raro,
+        // "no encaja"). El resto sigue con el "golpe" genérico de siempre.
+        if (p.rol !== "guerrero" && !esPicaro) sfx("golpe");
         let hits = 0,
           huboCrit = false;
         for (const e of G.enemigos) {

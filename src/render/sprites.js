@@ -1130,7 +1130,18 @@ export const CONFIG_ARMA = {
     // fija todo el golpe.
     multiplicadorAncla: 0.7,
     duracionPorDefecto: 0.18,
-    sinBamboleo: new Set(["arquero", "mago"]),
+    // pícaro se suma aquí (además de arquero/mago): una daga apuñala en
+    // línea recta, no "espadea" en arco -- ver `estocada` justo abajo, el
+    // desplazamiento que sustituye a este giro para esa clase.
+    sinBamboleo: new Set(["arquero", "mago", "picaro"]),
+  },
+  // Estocada: en vez del giro de "espadazo" (bamboleo, arriba) algunas
+  // clases desplazan el arma hacia delante y la retraen -- una puñalada de
+  // verdad, no un swing. Curva sin(prog·π): 0 al empezar el golpe, máximo
+  // a mitad, vuelta a 0 al terminar (empuja y recoge, no se queda fuera).
+  estocada: {
+    clases: new Set(["picaro"]),
+    distancia: 8,
   },
 };
 

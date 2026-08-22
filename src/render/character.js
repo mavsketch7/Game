@@ -75,6 +75,16 @@ function calcularPoseHeroe(p, x, yPies, mov) {
         // fijo de siempre en ese caso. Por defecto la del frame de idle
         // base -- ataque/correr la reemplazan si aplican.
         let anclaLocal = idleFrameIdx >= 0 ? (REAL_IDLE_ANCLA[dirAim]?.[idleFrameIdx] || null) : null;
+        // true solo cuando el frame de este tick sale de una hoja
+        // ESPECÍFICA de clase (ataque/especial/dash, ver REAL_ATTACK/
+        // REAL_SPECIAL/REAL_DASH) -- el cuerpo compartido de idle/correr
+        // SIEMPRE mira a la derecha por defecto (convención guerrero/
+        // pícaro) sea cual sea la clase, así que MIRA_IZQUIERDA_POR_DEFECTO
+        // (pensada solo para el arte de ataque de arquero/mago, que sí mira
+        // a la izquierda) no debe aplicarse fuera de estas ramas -- si no,
+        // arquero/mago quedan espejados al revés en idle/correr (bug
+        // reportado: "al caminar miran al lado opuesto").
+        let usaArteClase = false;
         if (p.dashAtkT > 0) {
           // Estocada (dash-ataque nuevo, ver abilities.js: dashAtaque()):
           // hoja propia, encarada a la dirección de la embestida (no a la
@@ -83,6 +93,7 @@ function calcularPoseHeroe(p, x, yPies, mov) {
           // correr/idle.
           anguloFacing = Math.atan2(p.dashAtkY, p.dashAtkX);
           dir = direccionDesdeAim(anguloFacing);
+          usaArteClase = true;
           const dashFrames = REAL_DASH[p.rol]?.[dir];
           if (dashFrames && dashFrames.length) {
             const dur = DASH_ATTACK_DUR[p.rol] || 0.28;
@@ -94,6 +105,7 @@ function calcularPoseHeroe(p, x, yPies, mov) {
             anclaLocal = anclasDir ? anclasDir[frameIdx] : null;
           }
         } else if (p.swingT > 0 && atkFrames && atkFrames.length) {
+          usaArteClase = true;
           // Golpe Colosal (combo a 4 pips, ver abilities.js: atacar()) usa la
           // hoja de "especial" del guerrero en vez de la básica cuando ya
           // cargó (p.atkEspecial, fijado en abilities.js) -- si todavía no
@@ -122,10 +134,12 @@ function calcularPoseHeroe(p, x, yPies, mov) {
         }
         // Espejo izq/derecha: solo tiene sentido en el bucket lateral (arriba/
         // abajo se dibujan de frente, sin voltear). Dentro de "side", el arte
-        // de arquero/mago mira a la izquierda por defecto (ver
+        // de ATAQUE de arquero/mago mira a la izquierda por defecto (ver
         // MIRA_IZQUIERDA_POR_DEFECTO en sprites.js) -- se invierte la regla
-        // normal para esas clases en vez de aplicarla igual a las 4.
-        const flip = dir === "side" && (Math.cos(anguloFacing) < 0) !== !!MIRA_IZQUIERDA_POR_DEFECTO[p.rol];
+        // normal para esas clases, pero SOLO cuando el frame viene de esa
+        // hoja de clase (usaArteClase); el cuerpo compartido de idle/correr
+        // no la necesita (ver comentario de usaArteClase más arriba).
+        const flip = dir === "side" && (Math.cos(anguloFacing) < 0) !== (usaArteClase && !!MIRA_IZQUIERDA_POR_DEFECTO[p.rol]);
         // Convierte el ancla (espacio local del canvas TAM_HEROE x TAM_HEROE,
         // ver cargarHojaFramesConAncla) a coordenadas de mundo, mismo cálculo
         // que usa drawSpriteBottom() para colocar el propio sprite -- para
@@ -585,6 +599,17 @@ export function renderJugador(p) {
             const { multiplicador, duracionPorDefecto, sinBamboleo } = CONFIG_ARMA.bamboleo;
             const dur = ATTACK_DUR[p.rol] || duracionPorDefecto;
             cx.rotate(p.aim + (p.swingT > 0 && !sinBamboleo.has(p.rol) ? (p.swingT / dur - 0.5) * multiplicador : 0));
+          }
+          // Estocada (ver CONFIG_ARMA.estocada en sprites.js): pícaro
+          // apuñala desplazando el arma hacia delante y recogiéndola, en
+          // vez del giro de espadazo (ya desactivado para esta clase vía
+          // sinBamboleo, arriba) -- traslada en el eje X LOCAL, que tras el
+          // rotate() de arriba ya apunta en la dirección de la puntería,
+          // así que funciona igual con ancla real o con el pivote fijo.
+          if (p.swingT > 0 && CONFIG_ARMA.estocada.clases.has(p.rol)) {
+            const durEst = ATTACK_DUR[p.rol] || CONFIG_ARMA.bamboleo.duracionPorDefecto;
+            const progEst = clamp(1 - p.swingT / durEst, 0, 1);
+            cx.translate(Math.sin(progEst * Math.PI) * CONFIG_ARMA.estocada.distancia, 0);
           }
           cx.scale(CONFIG_ARMA.escala, CONFIG_ARMA.escala);
           const rarezaArma = eq.arma ? eq.arma.rareza : 0;

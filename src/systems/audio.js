@@ -64,19 +64,26 @@ function reproducirMythicDrop() {
 // azar para no sonar siempre igual). Disparados por golpeArco() en
 // systems/abilities.js (ya sabe si el golpe conectó o falló antes de
 // decidir el sonido) y por el paso del jugador en core/loop.js.
+// offset (s): recorte de silencio/aire de arranque al PRINCIPIO de cada
+// archivo -- medido de verdad decodificando cada muestra y buscando dónde
+// empieza a sonar fuerte (no a ojo): varias traían casi medio segundo de
+// aire/silencio antes del golpe real (golpe_aire.m4a llegaba a 0.65s), así
+// que sonaban con retraso aunque el código las disparase al instante. Sin
+// esto, aunque el buffer ya estuviera cargado, se oía la parte muda antes
+// que el golpe -- el retraso estaba en el AUDIO, no en el código.
 const GRUPOS_SONIDO = {
   impactoGuerrero: [
-    { nombre: "impacto_guerrero_1", ext: "m4a" },
-    { nombre: "impacto_guerrero_2", ext: "m4a" },
-    { nombre: "impacto_guerrero_3", ext: "m4a" },
+    { nombre: "impacto_guerrero_1", ext: "m4a", offset: 0.27 },
+    { nombre: "impacto_guerrero_2", ext: "m4a", offset: 0.19 },
+    { nombre: "impacto_guerrero_3", ext: "m4a", offset: 0.0 },
   ],
   impactoPicaro: [
-    { nombre: "impacto_picaro_1", ext: "m4a" },
-    { nombre: "impacto_picaro_2", ext: "m4a" },
+    { nombre: "impacto_picaro_1", ext: "m4a", offset: 0.06 },
+    { nombre: "impacto_picaro_2", ext: "m4a", offset: 0.15 },
   ],
-  golpeAire: [{ nombre: "golpe_aire", ext: "m4a" }],
-  golpeCritico: [{ nombre: "golpe_critico", ext: "m4a" }],
-  paso: [{ nombre: "paso_1", ext: "wav" }],
+  golpeAire: [{ nombre: "golpe_aire", ext: "m4a", offset: 0.61 }],
+  golpeCritico: [{ nombre: "golpe_critico", ext: "m4a", offset: 0.43 }],
+  paso: [{ nombre: "paso_1", ext: "wav", offset: 0 }],
 };
 const bufferesReales = {};
 const cargaReales = {};
@@ -119,7 +126,10 @@ function reproducirSonidoReal(grupo, volMul, pitchJitter) {
     g.gain.value = vol;
     src.connect(g);
     g.connect(audioCtx.destination);
-    src.start();
+    // start(when, offset): when=0 (=ya, no encolado a futuro), offset
+    // salta el silencio de arranque de la muestra -- ver comentario de
+    // GRUPOS_SONIDO más arriba.
+    src.start(0, f.offset || 0);
   };
   if (bufferesReales[f.nombre]) play();
   else cargarBufferReal(f.nombre, f.ext)?.then(play);
