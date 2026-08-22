@@ -1324,6 +1324,31 @@ for (const keyMob in MOB_RUN_SRC) {
   cargarHojaFrames(MOB_RUN_SRC[keyMob], destSize, (frames) => { MOB_RUN[keyMob] = frames; });
 }
 
+// Imagen/escala BASE de un enemigo por tipo (sin la animación de correr de
+// MOB_RUN, que sustituye el frame según el reloj de animación -- eso es
+// dinámico por fotograma y se queda en renderEnemigo, ver render/character.js).
+// Centralizado aquí para que renderEnemigo() y fxDesintegrarEnemigo() (ver
+// render/effects.js, la nube de píxeles al morir) usen SIEMPRE el mismo
+// sprite -- antes esta cadena de if/else solo vivía en renderEnemigo, y
+// duplicarla a mano en otro sitio se habría desincronizado tarde o temprano.
+// Devuelve null para los enemigos con su propio pipeline de dibujo aparte
+// (dummy, clonRol, cerdo/jefe secreto, portal) -- no aplica el criterio de
+// "sprite + escala" de un mob normal.
+export function seleccionarImgEnemigo(e) {
+  if (e.dummy) return { img: SPR.dummy, esc: 1, mobKey: null };
+  if (e.clonRol) return { img: SPR[e.clonRol], esc: 1, mobKey: null };
+  if (e.cerdo || e.portalT > 0) return null;
+  if (e.jefe) return { img: SPR.brutoB, esc: G.planta >= 90 ? 2.4 : 2, mobKey: null };
+  if (e.mini) return { img: SPR.slime, esc: 1.7, mobKey: null };
+  if (e.tipo === "tank") return { img: SPR.golem, esc: e.elite ? 1.5 : 1.25, mobKey: "golem" };
+  if (e.tipo === "runner") return { img: SPR.acechador, esc: e.elite ? 1.1 : 0.85, mobKey: "acechador" };
+  if (e.tipo === "bomber") return { img: SPR.bomber, esc: e.elite ? 1.3 : 1, mobKey: null };
+  if (e.tipo === "caster") return { img: SPR.hechicero, esc: e.elite ? 1.2 : 0.95, mobKey: "hechicero" };
+  if (e.elite) return { img: SPR.bruto, esc: 1.35, mobKey: "bruto" };
+  if (e.ranged) return { img: SPR.ojo, esc: 1, mobKey: "ojo" };
+  return { img: SPR.esqueleto, esc: 1, mobKey: "esqueleto" };
+}
+
 // Arma en mano: sprite real (recorte individual y limpio, no una hoja
 // compartida) en vez del dibujo esquemático de siempre (ver world.js,
 // bloque "arma apuntando"). Solo existe la pieza de madera -- en vez de

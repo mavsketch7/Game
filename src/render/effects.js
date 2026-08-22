@@ -1,7 +1,7 @@
 // Auto-generated during the modularization refactor (2026-07-23).
 import { TAU } from "../core/canvas.js";
 import { G } from "../core/state.js";
-import { SANGRE_ANIM, SANGRE_DUR } from "./sprites.js";
+import { SANGRE_ANIM, SANGRE_DUR, seleccionarImgEnemigo } from "./sprites.js";
 import { rnd } from "../utils/helpers.js";
 
 // id incremental y estable: net/peer.js lo usa para mandar los fx nuevos al
@@ -94,6 +94,85 @@ export function fxParticulas(x, y, n, col, size, spread) {
             tam,
             t: rnd(0.3, 0.6),
             t0: 0.6,
+          });
+        }
+      }
+
+// Muestrea los píxeles opacos de `img` (ya sea un <img> o un <canvas> --
+// los frames de sprites en este proyecto son casi todos canvases, ver
+// cargarHojaFrames/buildSprite en render/sprites.js) y devuelve su offset
+// respecto al CENTRO del sprite (en espacio de mundo, ya multiplicado por
+// `escala` y con el flip aplicado) más el color real de ese píxel -- para
+// que la desintegración use los colores propios del enemigo en vez de un
+// color plano inventado. `stride` limita el número de muestras: como mucho
+// ~15 por lado, de sobra para leerse como "se hace pedazos" sin empujar
+// cientos de fx nuevos de golpe (un enemigo grande no debe costar más que
+// uno pequeño solo por tener más píxeles de origen).
+function muestrearPixelesSprite(img, escala, flip) {
+        const w = img.naturalWidth || img.width, h = img.naturalHeight || img.height;
+        if (!w || !h) return [];
+        const tmp = document.createElement("canvas");
+        tmp.width = w;
+        tmp.height = h;
+        const g = tmp.getContext("2d");
+        g.imageSmoothingEnabled = false;
+        g.drawImage(img, 0, 0, w, h);
+        let data;
+        try {
+          data = g.getImageData(0, 0, w, h).data;
+        } catch {
+          return []; // por si algún día hay una imagen cross-origin sin CORS
+        }
+        const stride = Math.max(1, Math.round(Math.max(w, h) / 15));
+        const puntos = [];
+        for (let py = 0; py < h; py += stride) {
+          for (let px = 0; px < w; px += stride) {
+            const idx = (py * w + px) * 4;
+            if (data[idx + 3] < 80) continue; // solo píxeles bien opacos, no el borde antialiaseado
+            puntos.push({
+              ox: (px - w / 2) * (flip ? -1 : 1) * escala,
+              oy: (py - h / 2) * escala,
+              col: `rgb(${data[idx]},${data[idx + 1]},${data[idx + 2]})`,
+            });
+          }
+        }
+        return puntos;
+      }
+
+// Desintegración en píxeles al morir (ver seleccionarImgEnemigo en
+// render/sprites.js -- MISMO sprite que se estaba dibujando, para que la
+// nube se parezca de verdad al enemigo que acaba de caer). Reutiliza el
+// tipo de fx "part" (ya se dibuja como un cuadradito de color, exactamente
+// lo que hace falta aquí) pero con un origen/color por MUESTRA real de la
+// imagen -- no un burst uniforme de color plano desde un único punto, como
+// hace fxParticulas. `flip` es opcional (por defecto sin voltear): el
+// llamador puede pasar la orientación real del enemigo si la tiene a mano
+// (ver matarEnemigo en systems/combat.js), pero no es crítico -- una nube
+// que se dispersa hacia fuera se lee bien igual mirando a cualquier lado.
+export function fxDesintegrarEnemigo(e, flip) {
+        const sel = seleccionarImgEnemigo(e);
+        if (!sel || !sel.img) return;
+        const puntos = muestrearPixelesSprite(sel.img, sel.esc || 1, !!flip);
+        if (!puntos.length) return;
+        const ox0 = e.x, oy0 = e.y - (e.r || 14) * 0.3;
+        for (const pt of puntos) {
+          const dist = Math.hypot(pt.ox, pt.oy) || 1;
+          const ang = Math.atan2(pt.oy, pt.ox) + rnd(-0.35, 0.35);
+          // los píxeles más externos del sprite (dist mayor) salen
+          // despedidos más lejos -- se lee más como una explosión desde
+          // dentro que como un temblor uniforme.
+          const v = rnd(25, 70) + dist * 0.7;
+          G.fx.push({
+            id: _fxId++,
+            tipo: "part",
+            x: ox0 + pt.ox,
+            y: oy0 + pt.oy,
+            vx: Math.cos(ang) * v,
+            vy: Math.sin(ang) * v - 25, // leve impulso hacia arriba antes de dispersarse
+            col: pt.col,
+            tam: rnd(2, 3.5),
+            t: rnd(0.5, 0.9),
+            t0: 0.9,
           });
         }
       }

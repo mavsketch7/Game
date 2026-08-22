@@ -9,7 +9,7 @@ import { ELEMENTOS, RAREZAS, SUPS } from "../core/constants.js";
 import { G } from "../core/state.js";
 import { fxParticulas } from "./effects.js";
 import { drawSprite, drawSpriteBottom } from "./spriteDraw.js";
-import { ARQUERO_BOW, ARQUERO_BOW_DUR, ATTACK_DUR, CONFIG_ARMA, DASH_ATTACK_DUR, ESC_FORMA, MIRA_IZQUIERDA_POR_DEFECTO, MOB_RUN, OFFHAND_IMG, OFFHAND_IMG_RAREZA, REAL_ATTACK, REAL_ATTACK_ANCLA, REAL_DASH, REAL_DASH_ANCLA, REAL_IDLE, REAL_IDLE_ANCLA, REAL_RUN, REAL_RUN_ANCLA, REAL_SPECIAL, REAL_SPECIAL_ANCLA, REAL_SPRITE_SCALE, SHEETS, SPECIAL_ATTACK_DUR, SPR, SPR_FORMAS, TAM_HEROE, WEAPON_IMG, WEAPON_IMG_RAREZA, assetOK, spriteJugador } from "./sprites.js";
+import { ARQUERO_BOW, ARQUERO_BOW_DUR, ATTACK_DUR, CONFIG_ARMA, DASH_ATTACK_DUR, ESC_FORMA, MIRA_IZQUIERDA_POR_DEFECTO, MOB_RUN, OFFHAND_IMG, OFFHAND_IMG_RAREZA, REAL_ATTACK, REAL_ATTACK_ANCLA, REAL_DASH, REAL_DASH_ANCLA, REAL_IDLE, REAL_IDLE_ANCLA, REAL_RUN, REAL_RUN_ANCLA, REAL_SPECIAL, REAL_SPECIAL_ANCLA, REAL_SPRITE_SCALE, SHEETS, SPECIAL_ATTACK_DUR, SPR, SPR_FORMAS, TAM_HEROE, WEAPON_IMG, WEAPON_IMG_RAREZA, assetOK, seleccionarImgEnemigo, spriteJugador } from "./sprites.js";
 import { groundTarget } from "../systems/abilities.js";
 import { masCercano } from "../systems/combat.js";
 import { mouse } from "../systems/input.js";
@@ -26,22 +26,42 @@ function direccionDesdeAim(aim) {
 }
 
 // Destello de impacto (ver systems/juice.js: aplicarFlash()) -- tiñe SOLO
-// los píxeles ya opacos del sprite recién dibujado (composición
-// "source-atop": el color nuevo se pinta nada más donde ya había algo, así
-// que respeta la silueta exacta sin tocar los píxeles originales). Mismo
-// translate/flip/escala que drawSprite() para que el rectángulo de relleno
-// caiga justo encima del sprite que se acaba de dibujar -- si no coincidiera
-// exactamente, el tinte quedaría desplazado del personaje.
+// los píxeles opacos del SPRITE, respetando su silueta exacta. "source-atop"
+// solo funciona así en un lienzo que contenga ÚNICAMENTE el sprite (resto
+// transparente): aplicado directamente sobre el canvas del juego (`cx`) se
+// pinta encima de TODO lo que ya hubiera ahí debajo -- suelo, muros...,
+// que a esas alturas del frame ya está dibujado y es opaco en cualquier
+// punto -- así que el relleno salía como un cuadro sólido cubriendo toda
+// la caja del sprite en vez de recortarse a su forma (bug reportado: "cuadro
+// blanco feo"). Se resuelve pintando el sprite + el tinte en un lienzo
+// AUXILIAR aparte (transparente salvo el propio sprite) y componiendo SOLO
+// ese resultado ya recortado sobre el juego con drawImage normal. Un único
+// buffer reutilizado (se redimensiona si hace falta) -- los golpes no se
+// solapan entre sí en el mismo frame lo bastante como para necesitar más
+// de uno.
+let _bufferTinte = null;
 function tinteImpacto(img, x, y, flip, esc, col, alpha) {
   if (!img || alpha <= 0) return;
+  const iw = img.naturalWidth || img.width, ih = img.naturalHeight || img.height;
+  if (!iw || !ih) return;
+  if (!_bufferTinte) _bufferTinte = document.createElement("canvas");
+  if (_bufferTinte.width !== iw || _bufferTinte.height !== ih) {
+    _bufferTinte.width = iw;
+    _bufferTinte.height = ih;
+  }
+  const bufCx = _bufferTinte.getContext("2d");
+  bufCx.clearRect(0, 0, iw, ih);
+  bufCx.drawImage(img, 0, 0, iw, ih);
+  bufCx.globalCompositeOperation = "source-atop";
+  bufCx.fillStyle = col;
+  bufCx.fillRect(0, 0, iw, ih);
   cx.save();
   cx.translate(Math.round(x), Math.round(y));
   if (flip) cx.scale(-1, 1);
   cx.scale(esc || 1, esc || 1);
-  cx.globalCompositeOperation = "source-atop";
   cx.globalAlpha = alpha;
-  cx.fillStyle = col;
-  cx.fillRect(-img.width / 2, -img.height / 2, img.width, img.height);
+  cx.drawImage(_bufferTinte, -iw / 2, -ih / 2);
+  cx.globalAlpha = 1;
   cx.restore();
 }
 
@@ -1069,10 +1089,14 @@ export function renderEnemigo(e) {
           if (e.hurtT > 0) cx.globalAlpha = 0.55;
           else cx.globalAlpha = 0.85;
           const flipClon = obj2 ? e.x > obj2.x : false;
-          drawSprite(img, e.x, e.y - 4 + bob2, flipClon, 1);
+          // vibración breve al recibir un golpe (mismo criterio que el
+          // jitter de abajo para mobs normales, ver comentario ahí) -- le
+          // da peso al impacto en vez de solo el tinte de color.
+          const jitClon = e.hitFlashT > 0 ? rnd(-1.4, 1.4) : 0;
+          drawSprite(img, e.x + jitClon, e.y - 4 + bob2, flipClon, 1);
           cx.globalAlpha = 1;
           if (e.hitFlashT > 0)
-            tinteImpacto(img, e.x, e.y - 4 + bob2, flipClon, 1, e.hitFlashCol, clamp(e.hitFlashT / JUICE.flash.dur, 0, 1));
+            tinteImpacto(img, e.x + jitClon, e.y - 4 + bob2, flipClon, 1, e.hitFlashCol, clamp(e.hitFlashT / JUICE.flash.dur, 0, 1));
           // velo oscuro
           cx.globalAlpha = 0.45;
           cx.fillStyle = "#1a0f2a";
@@ -1135,39 +1159,14 @@ export function renderEnemigo(e) {
           cx.fillText("⭐ " + e.nombre + " ⭐", e.x, e.y - e.r * 2.5);
           return;
         }
-        let mobKey = null;
-        if (e.jefe) {
-          img = SPR.brutoB;
-          esc = G.planta >= 90 ? 2.4 : 2;
-        } else if (e.mini) {
-          img = SPR.slime;
-          esc = 1.7;
-        } else if (e.tipo === "tank") {
-          img = SPR.golem;
-          mobKey = "golem";
-          esc = e.elite ? 1.5 : 1.25;
-        } else if (e.tipo === "runner") {
-          img = SPR.acechador;
-          mobKey = "acechador";
-          esc = e.elite ? 1.1 : 0.85;
-        } else if (e.tipo === "bomber") {
-          img = SPR.bomber;
-          esc = e.elite ? 1.3 : 1;
-        } else if (e.tipo === "caster") {
-          img = SPR.hechicero;
-          mobKey = "hechicero";
-          esc = e.elite ? 1.2 : 0.95;
-        } else if (e.elite) {
-          img = SPR.bruto;
-          mobKey = "bruto";
-          esc = 1.35;
-        } else if (e.ranged) {
-          img = SPR.ojo;
-          mobKey = "ojo";
-        } else {
-          img = SPR.esqueleto;
-          mobKey = "esqueleto";
-        }
+        // Sprite/escala base (ver seleccionarImgEnemigo en render/sprites.js
+        // -- compartido con fxDesintegrarEnemigo en render/effects.js para
+        // que la nube de píxeles al morir use el mismo sprite que se
+        // estaba dibujando).
+        const sel = seleccionarImgEnemigo(e);
+        img = sel.img;
+        esc = sel.esc;
+        const mobKey = sel.mobKey;
         // Animación de correr real (ver MOB_RUN en sprites.js): sustituye el
         // icono estático por un frame de la hoja Run del pack mientras haya
         // uno cargado para este tipo -- mismo mecanismo que calcularPoseHeroe()
@@ -1218,10 +1217,16 @@ export function renderEnemigo(e) {
               ? Math.sin(animGlobal * 3 + e.y) * 3
               : 0);
           const flipMob = obj ? e.x > obj.x : false;
-          drawSprite(img, e.x, yMob, flipMob, esc);
+          // vibración breve al recibir un golpe (dura lo mismo que el
+          // tinte, JUICE.flash.dur ~60ms) -- el destello de color solo no
+          // se notaba como IMPACTO, con un poco de temblor se lee mucho
+          // más "con peso" sin tocar la física real (knockback/hit-stop,
+          // que ya existen aparte, ver systems/juice.js).
+          const jitMob = e.hitFlashT > 0 ? rnd(-1.6, 1.6) : 0;
+          drawSprite(img, e.x + jitMob, yMob, flipMob, esc);
           cx.globalAlpha = 1;
           if (e.hitFlashT > 0)
-            tinteImpacto(img, e.x, yMob, flipMob, esc, e.hitFlashCol, clamp(e.hitFlashT / JUICE.flash.dur, 0, 1));
+            tinteImpacto(img, e.x + jitMob, yMob, flipMob, esc, e.hitFlashCol, clamp(e.hitFlashT / JUICE.flash.dur, 0, 1));
         }
         if (e.jefe)
           drawSprite(

@@ -6,7 +6,7 @@ import { TAU } from "../core/canvas.js";
 import { MAX_NIV_PJ, ROLES, SALA_H as H, SALA_W as W, SLOTS, XP_POR_PLANTA, XP_TABLA } from "../core/constants.js";
 import { META, guardarMeta } from "../core/save.js";
 import { G } from "../core/state.js";
-import { fxOnda, fxParticulas, fxSangre, fxTexto } from "../render/effects.js";
+import { fxDesintegrarEnemigo, fxOnda, fxParticulas, fxSangre, fxTexto } from "../render/effects.js";
 import { NIVEL_ULTI, danoPilar, golpeObjeto } from "./abilities.js";
 import { sfx } from "./audio.js";
 import { NOMBRES_MINI, arquetipoJefe, escalaEnemigo, nombreJefe } from "./bosses.js";
@@ -377,7 +377,12 @@ export function matarEnemigo(e, duenio) {
         if (duenio && tieneEfecto(duenio, "robatiempo"))
           duenio.castCd = Math.max(0, duenio.castCd - 1);
         sfx(e.jefe ? "jefe" : "muerte");
-        fxParticulas(e.x, e.y, e.jefe ? 26 : 10, "#6a5a94");
+        // Desintegración en píxeles reales del propio sprite (ver
+        // fxDesintegrarEnemigo en render/effects.js) -- el estallido morado
+        // (#6a5a94) de abajo se deja igual, más pequeño, como "esencia"
+        // residual sobre la nube de píxeles en vez de ser el único efecto.
+        fxDesintegrarEnemigo(e, duenio ? e.x > duenio.x : false);
+        fxParticulas(e.x, e.y, e.jefe ? 10 : 4, "#6a5a94");
         if (e.jefe) G.shake = Math.max(G.shake, 8);
         // gemelos: el superviviente entra en cólera
         if (e.gemelo) {
