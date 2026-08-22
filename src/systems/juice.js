@@ -28,8 +28,13 @@ export const JUICE = {
   },
   knockback: {
     enabled: true,
-    meleeForce: 165, // empuje del tajo normal (golpeArco en abilities.js)
-    friction: 0.85, // decel. por frame en core/loop.js (e.kx *= friction)
+    // 140 -> 165 -> 230: feedback repetido de "sigue sin haber peso" -- el
+    // primer ajuste (165) no se notaba lo bastante. friction sube un poco
+    // (0.85 -> 0.87) para que el enemigo deslice un poco más lejos antes
+    // de frenar, en vez de solo empujar más fuerte y parar igual de rápido
+    // (eso se lee como un golpe más fuerte, no más "pesado").
+    meleeForce: 230, // empuje del tajo normal (golpeArco en abilities.js)
+    friction: 0.87, // decel. por frame en core/loop.js (e.kx *= friction)
   },
   flash: {
     enabled: true,

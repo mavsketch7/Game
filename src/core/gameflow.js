@@ -52,6 +52,7 @@ export function nuevaPartida() {
             dashAtkY: 1,
             atkEspecial: false,
             _dashAtkVictims: null,
+            pasoT: 0, // cadencia del sonido de paso, ver core/loop.js
             disparoCd: 0,
             invulT: 0,
             parryT: 0,

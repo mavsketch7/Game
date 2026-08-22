@@ -7,7 +7,7 @@ import { G } from "./state.js";
 import { NET, netAplicarInputs } from "../net/peer.js";
 import { fxOnda, fxParticulas, fxTexto } from "../render/effects.js";
 import { aplicarImbuido, atacar, danoPilar, dispararArcano, golpeObjeto } from "../systems/abilities.js";
-import { sfx, sfxAterrizaje } from "../systems/audio.js";
+import { sfx, sfxAterrizaje, sfxPaso } from "../systems/audio.js";
 import { esJefe, escalaEnemigo } from "../systems/bosses.js";
 import { curarP, danoAEnemigo, danoAlJugador, explotarBomber, ganarXP, masCercano, matarEnemigo, spawnClon, spawnEnemigo, statsTot, tipoAleatorio, vivos } from "../systems/combat.js";
 import { JUICE } from "../systems/juice.js";
@@ -120,6 +120,21 @@ export function update(dt) {
           }
           p.x = clamp(p.x + vx * dt, 28, SALA_W - 28);
           p.y = clamp(p.y + vy * dt, 28, SALA_H - 28);
+          // Paso (ver systems/audio.js: sfxPaso(), "levemente" -- volumen
+          // bajo a propósito) -- cadencia simple por temporizador mientras
+          // se mueve de verdad (vx/vy ya resueltos: no suena atrapado/
+          // enraizado ni empujando contra un muro sin avanzar). Se resetea
+          // a 0 en cuanto se para, así el primer paso al reanudar suena en
+          // el acto, no con retardo.
+          if (Math.hypot(vx, vy) > 20) {
+            p.pasoT -= dt;
+            if (p.pasoT <= 0) {
+              p.pasoT = 0.33;
+              sfxPaso();
+            }
+          } else {
+            p.pasoT = 0;
+          }
           for (const pl of G.pilares) {
             const d = Math.hypot(p.x - pl.x, p.y - pl.y);
             if (d < pl.r + p.r) {

@@ -1283,7 +1283,8 @@ export function render() {
             f.y += f.vy * 0.016;
             cx.globalAlpha = k;
             cx.fillStyle = f.col;
-            cx.fillRect(f.x - 2, f.y - 2, 4, 4);
+            const tamP = f.tam || 4;
+            cx.fillRect(f.x - tamP / 2, f.y - tamP / 2, tamP, tamP);
             cx.globalAlpha = 1;
           }
         }

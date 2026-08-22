@@ -16,7 +16,7 @@ export function initAudio() {
         musGain.connect(audioCtx.destination);
         musGain.gain.value = 0;
         cargarMythicDropBuffer();
-        precargarImpactos();
+        precargarSonidosReales();
       }
 
 export function reanudarAudio() {
@@ -56,63 +56,96 @@ function reproducirMythicDrop() {
   else cargarMythicDropBuffer()?.then(play);
 }
 
-// Impacto de espada REAL (torre-vespero-assets/sounds-fx) -- capa extra de
-// peso sobre el "espadazo" sintetizado de siempre (sfxEspadazo, más abajo:
-// ese suena en cada SWING, este solo cuando el golpe CONECTA de verdad, ver
-// danoAEnemigo() en systems/combat.js). Mismo mecanismo que
+// Sonidos de combate/movimiento REALES (torre-vespero-assets/sounds-fx),
+// uno por acción concreta en vez del "golpe"/"espadazo" sintetizado de
+// siempre para las clases con muestra propia. Mismo mecanismo que
 // cargarMythicDropBuffer()/reproducirMythicDrop() de arriba, generalizado a
-// varios archivos: 3 variantes en golpe normal (rotan al azar, para que no
-// suene siempre igual) y una muestra propia, más grave, en crítico.
-const IMPACT_FILES = {
-  normal: [
-    { nombre: "sword_hit_1", ext: "wav" },
-    { nombre: "sword_hit_2", ext: "wav" },
-    { nombre: "sword_hit_3", ext: "wav" },
+// varios "grupos" (cada uno con 1+ variantes -- las de más de una rotan al
+// azar para no sonar siempre igual). Disparados por golpeArco() en
+// systems/abilities.js (ya sabe si el golpe conectó o falló antes de
+// decidir el sonido) y por el paso del jugador en core/loop.js.
+const GRUPOS_SONIDO = {
+  impactoGuerrero: [
+    { nombre: "impacto_guerrero_1", ext: "m4a" },
+    { nombre: "impacto_guerrero_2", ext: "m4a" },
+    { nombre: "impacto_guerrero_3", ext: "m4a" },
   ],
-  critico: [{ nombre: "golpe_critico", ext: "m4a" }],
+  impactoPicaro: [
+    { nombre: "impacto_picaro_1", ext: "m4a" },
+    { nombre: "impacto_picaro_2", ext: "m4a" },
+  ],
+  golpeAire: [{ nombre: "golpe_aire", ext: "m4a" }],
+  golpeCritico: [{ nombre: "golpe_critico", ext: "m4a" }],
+  paso: [{ nombre: "paso_1", ext: "wav" }],
 };
-const impactoBuffers = {};
-const impactoLoading = {};
+const bufferesReales = {};
+const cargaReales = {};
 
-function cargarBufferImpacto(nombre, ext) {
-  if (impactoBuffers[nombre] || impactoLoading[nombre] || !audioCtx) return impactoLoading[nombre];
+function cargarBufferReal(nombre, ext) {
+  if (bufferesReales[nombre] || cargaReales[nombre] || !audioCtx) return cargaReales[nombre];
   const url = `${import.meta.env.BASE_URL}assets/audio/${nombre}.${ext}`;
-  impactoLoading[nombre] = fetch(url)
+  cargaReales[nombre] = fetch(url)
     .then((r) => r.arrayBuffer())
     .then((buf) => audioCtx.decodeAudioData(buf))
     .then((decoded) => {
-      impactoBuffers[nombre] = decoded;
+      bufferesReales[nombre] = decoded;
     })
     .catch(() => {});
-  return impactoLoading[nombre];
+  return cargaReales[nombre];
 }
 
-function precargarImpactos() {
-  for (const f of IMPACT_FILES.normal) cargarBufferImpacto(f.nombre, f.ext);
-  for (const f of IMPACT_FILES.critico) cargarBufferImpacto(f.nombre, f.ext);
+function precargarSonidosReales() {
+  for (const grupo in GRUPOS_SONIDO)
+    for (const f of GRUPOS_SONIDO[grupo]) cargarBufferReal(f.nombre, f.ext);
 }
 
-// crit=true usa la muestra de crítico (una sola variante); si no, elige al
-// azar entre las 3 normales.
-export function sfxImpacto(crit) {
+// volMul: multiplicador de volumen del grupo (aparte de volMaster/volSfx).
+// pitchJitter: variación aleatoria de playbackRate (0-1, ver sfxPaso) para
+// que la misma muestra repetida muchas veces no suene robótica.
+function reproducirSonidoReal(grupo, volMul, pitchJitter) {
   if (AJ.silencio || !audioCtx) return;
   reanudarAudio();
-  const lista = crit ? IMPACT_FILES.critico : IMPACT_FILES.normal;
+  const lista = GRUPOS_SONIDO[grupo];
+  if (!lista || !lista.length) return;
   const f = lista[Math.floor(Math.random() * lista.length)];
-  const vol = AJ.volMaster * AJ.volSfx;
+  const vol = AJ.volMaster * AJ.volSfx * (volMul ?? 1);
   const play = () => {
-    const buffer = impactoBuffers[f.nombre];
+    const buffer = bufferesReales[f.nombre];
     if (!buffer) return;
     const src = audioCtx.createBufferSource();
     src.buffer = buffer;
+    if (pitchJitter) src.playbackRate.value = 1 - pitchJitter / 2 + Math.random() * pitchJitter;
     const g = audioCtx.createGain();
-    g.gain.value = vol * (crit ? 0.85 : 0.65);
+    g.gain.value = vol;
     src.connect(g);
     g.connect(audioCtx.destination);
     src.start();
   };
-  if (impactoBuffers[f.nombre]) play();
-  else cargarBufferImpacto(f.nombre, f.ext)?.then(play);
+  if (bufferesReales[f.nombre]) play();
+  else cargarBufferReal(f.nombre, f.ext)?.then(play);
+}
+
+// Guerrero: golpe que conecta -- rota entre las 3 variantes impactodirecto.
+export function sfxImpactoGuerrero() {
+  reproducirSonidoReal("impactoGuerrero", 0.75);
+}
+// Pícaro: golpe de daga que conecta -- alterna entre las 2 variantes.
+export function sfxImpactoPicaro() {
+  reproducirSonidoReal("impactoPicaro", 0.75);
+}
+// Golpe que NO conecta con ningún enemigo (guerrero) -- golpeaire1.
+export function sfxGolpeAire() {
+  reproducirSonidoReal("golpeAire", 0.55);
+}
+// Crítico (cualquier clase que pase por golpeArco) -- sustituye al golpe
+// normal cuando alguno de los enemigos alcanzados fue crítico.
+export function sfxGolpeCritico() {
+  reproducirSonidoReal("golpeCritico", 0.9);
+}
+// Paso al caminar/correr -- "levemente": volumen bajo a propósito, más un
+// pequeño jitter de tono para que no se note la repetición de la muestra.
+export function sfxPaso() {
+  reproducirSonidoReal("paso", 0.22, 0.18);
 }
 
 export function sfx(tipo) {

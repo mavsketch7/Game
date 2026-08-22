@@ -33,18 +33,27 @@ export function fxTajo(x, y, dir, r) {
         G.fx.push({ id: _fxId++, tipo: "tajo", x, y, dir, r, t: 0.16, t0: 0.16 });
       }
 
-export function fxParticulas(x, y, n, col) {
+// size/spread opcionales (por defecto 4px y sin dispersión de origen, el
+// comportamiento de siempre -- todos los usos existentes, nivel/moneda/
+// portal/muerte, siguen igual sin tocarlos). Pensados para el estallido de
+// sangre por golpe (ver danoAEnemigo en systems/combat.js): un enemigo
+// grande (jefe/élite) necesita partículas más grandes y repartidas por más
+// superficie, no solo más cantidad, o el efecto se pierde contra su sprite.
+export function fxParticulas(x, y, n, col, size, spread) {
+        const tam = size || 4;
+        const disp = spread || 0;
         for (let i = 0; i < n; i++) {
           const a = Math.random() * TAU,
             v = rnd(40, 160);
           G.fx.push({
             id: _fxId++,
             tipo: "part",
-            x,
-            y,
+            x: x + (disp ? rnd(-disp, disp) : 0),
+            y: y + (disp ? rnd(-disp, disp) : 0),
             vx: Math.cos(a) * v,
             vy: Math.sin(a) * v,
             col,
+            tam,
             t: rnd(0.3, 0.6),
             t0: 0.6,
           });

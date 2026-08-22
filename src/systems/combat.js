@@ -8,7 +8,7 @@ import { META, guardarMeta } from "../core/save.js";
 import { G } from "../core/state.js";
 import { fxOnda, fxParticulas, fxTexto } from "../render/effects.js";
 import { NIVEL_ULTI, danoPilar, golpeObjeto } from "./abilities.js";
-import { sfx, sfxImpacto } from "./audio.js";
+import { sfx } from "./audio.js";
 import { NOMBRES_MINI, arquetipoJefe, escalaEnemigo, nombreJefe } from "./bosses.js";
 import { JUICE, aplicarFlash, aplicarHitStop, aplicarShakeGolpe } from "./juice.js";
 import { posDropValida, puntoValido } from "./floorgen.js";
@@ -305,18 +305,19 @@ export function danoAEnemigo(e, raw, duenio, puedeCrit, kbx, kby) {
         e.hurtT = 0.12;
         // "Juice" de combate (hit-stop + destello) -- ver systems/juice.js.
         // Se aplican aquí porque este es el único punto por el que pasa
-        // cualquier golpe DIRECTO a un enemigo, dummy incluido.
+        // cualquier golpe DIRECTO a un enemigo, dummy incluido. El sonido
+        // de impacto ya NO se dispara aquí (antes sfxImpacto por golpe
+        // conectado, sonaba una vez por CADA enemigo alcanzado en un mismo
+        // tajo) -- ahora lo decide golpeArco() en abilities.js, una sola
+        // vez por golpe según si conectó o no (ver sfxImpactoGuerrero/
+        // sfxImpactoPicaro/sfxGolpeAire/sfxGolpeCritico).
         aplicarHitStop(dmg);
         aplicarFlash(e, crit);
-        // Impacto de espada real (torre-vespero-assets/sounds-fx), capa
-        // extra sobre el "espadazo" sintetizado del swing (que ya suena en
-        // abilities.js) -- solo guerrero, mismo alcance que sfxEspadazo.
-        if (duenio.rol === "guerrero") sfxImpacto(crit);
         if (e.dummy) {
           e.hp = Math.max(1, e.hp - dmg);
           e.dmgLog.push({ t: G.stats.tiempo, d: dmg });
           fxTexto(e.x, e.y - e.r - 6, dmg, crit ? "#e9b45c" : "#e9e3d5", crit);
-          return;
+          return crit;
         }
         e.hp -= dmg;
         const kr = e.knockRes !== undefined ? e.knockRes : 1;
@@ -327,6 +328,20 @@ export function danoAEnemigo(e, raw, duenio, puedeCrit, kbx, kby) {
         // Shake por golpe (no en el dummy -- sería un temblor constante
         // durante una prueba de DPS, molesto y sin valor real).
         aplicarShakeGolpe(dmg);
+        // Sangre: partículas de impacto que escalan con el tamaño real del
+        // enemigo (e.r) y con el daño -- antes fijas en 10 solo al morir,
+        // se perdían contra un jefe/élite grande y no había NINGUNA en un
+        // golpe normal (solo en la muerte). tam/spread propios (ver
+        // fxParticulas en render/effects.js) para que la salpicadura se
+        // note contra el sprite en vez de ser 4 puntos diminutos.
+        fxParticulas(
+          e.x,
+          e.y - e.r * 0.3,
+          clamp(Math.round(e.r * 0.45 + dmg * 0.035), 4, 20),
+          crit ? "#c81c2e" : "#8a1620",
+          clamp(e.r * 0.22, 2, 6),
+          e.r * 0.35,
+        );
         G.stats.dano += dmg;
         duenio.statDano = (duenio.statDano || 0) + dmg;
         fxTexto(e.x, e.y - e.r - 6, dmg, crit ? "#e9b45c" : "#e9e3d5", crit);
@@ -339,6 +354,7 @@ export function danoAEnemigo(e, raw, duenio, puedeCrit, kbx, kby) {
           if (robo > 0) curarP(duenio, robo, true);
         }
         if (e.hp <= 0) matarEnemigo(e, duenio);
+        return crit;
       }
 
 export function matarEnemigo(e, duenio) {

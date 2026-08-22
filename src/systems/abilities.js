@@ -6,7 +6,7 @@ import { ELEMENTOS, ELEM_MAGO, FORMAS_DRUIDA, FORMAS_INFO, RAREZAS, ROLES, SALA_
 import { update } from "../core/loop.js";
 import { G } from "../core/state.js";
 import { fxOnda, fxParticulas, fxTajo, fxTexto } from "../render/effects.js";
-import { sfx, sfxEspadazo } from "./audio.js";
+import { sfx, sfxEspadazo, sfxGolpeAire, sfxGolpeCritico, sfxImpactoGuerrero, sfxImpactoPicaro } from "./audio.js";
 import { curarP, danoAEnemigo, danoAlJugador, masCercano, statsTot, vivos } from "./combat.js";
 import { posDropValida } from "./floorgen.js";
 import { JUICE } from "./juice.js";
@@ -130,12 +130,14 @@ export function atacar(p) {
 
 function golpeArco(p, dir, rango, arco, dmgBase, esPicaro) {
         fxTajo(p.x, p.y, dir, rango);
-        // el guerrero tiene sonido de espadazo propio (golpe básico Y Golpe
-        // Colosal, ambos pasan por aquí) -- el resto sigue con el "golpe"
+        // guerrero/pícaro: sonido sintetizado de swing de siempre, además
+        // del sonido de impacto/fallo REAL que se decide más abajo (una vez
+        // que se sabe si el golpe conectó) -- el resto sigue con el "golpe"
         // genérico de siempre.
         if (p.rol === "guerrero") sfxEspadazo();
-        else sfx("golpe");
-        let hits = 0;
+        else if (!esPicaro) sfx("golpe");
+        let hits = 0,
+          huboCrit = false;
         for (const e of G.enemigos) {
           if (e.hp <= 0 && !e.dummy) continue;
           const d = Math.hypot(e.x - p.x, e.y - p.y);
@@ -155,14 +157,17 @@ function golpeArco(p, dir, rango, arco, dmgBase, esPicaro) {
                   dmg *= 1.6;
                 }
               }
-              danoAEnemigo(
-                e,
-                dmg,
-                p,
-                true,
-                Math.cos(dir) * JUICE.knockback.meleeForce,
-                Math.sin(dir) * JUICE.knockback.meleeForce,
-              );
+              if (
+                danoAEnemigo(
+                  e,
+                  dmg,
+                  p,
+                  true,
+                  Math.cos(dir) * JUICE.knockback.meleeForce,
+                  Math.sin(dir) * JUICE.knockback.meleeForce,
+                )
+              )
+                huboCrit = true;
               hits++;
               if (backstab)
                 fxTexto(e.x, e.y - e.r - 16, "¡por la espalda!", "#c084f0");
@@ -217,6 +222,20 @@ function golpeArco(p, dir, rango, arco, dmgBase, esPicaro) {
             while (da < -Math.PI) da += TAU;
             if (Math.abs(da) < arco / 2) golpeObjeto(o, dmgBase);
           }
+        }
+        // Sonido de impacto/fallo REAL (torre-vespero-assets/sounds-fx), UNA
+        // vez por golpe (no una por enemigo alcanzado) -- se decide aquí, ya
+        // con `hits`/`huboCrit` calculados, en vez de al principio de la
+        // función. El crítico manda: si algún enemigo alcanzado fue
+        // crítico, suena la muestra de crítico en vez de una normal.
+        if (p.rol === "guerrero") {
+          if (hits === 0) sfxGolpeAire();
+          else if (huboCrit) sfxGolpeCritico();
+          else sfxImpactoGuerrero();
+        } else if (esPicaro) {
+          if (hits === 0) sfx("golpe");
+          else if (huboCrit) sfxGolpeCritico();
+          else sfxImpactoPicaro();
         }
         return hits;
       }
