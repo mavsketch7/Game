@@ -2182,10 +2182,15 @@ body.pantalla-completa #hint {
    solo los bordes izquierdo/derecho; el relleno de en medio sigue siendo
    el degradado rojo de CSS, que a esa escala ya no se distingue de la
    textura real. */
+/* Solo los botones "de verdad" (con etiqueta, tamaño libre) llevan las
+   tapas con remache -- .btn-mini es un cuadrado fijo de 26px (flechas
+   </·/> del selector de clase) y .btn-fus es un chip minúsculo metido en
+   la ficha de objeto (mesa de fusión); una tapa de 13px a cada lado no
+   cabe ahí sin desbordar el layout, así que se quedan con su estilo de
+   siempre. .btn-info solo se usa para "Info habilidades" (menu.js), a
+   ancho completo dentro de la tarjeta de jugador -- entra sin problema. */
 .btn,
-.btn-mini,
 .btn-listo,
-.btn-fus,
 .btn-info,
 .seg button,
 .inicio-start {
@@ -2197,23 +2202,59 @@ body.pantalla-completa #hint {
   border-image-width: 0 13px;
   border-image-repeat: stretch;
   border-radius: 999px;
+  padding: 12px 20px;
+  /* Antes solo había un brillo superior/inferior sin ningún contorno que
+     lo sujetase (el border-image no pinta nada arriba/abajo, border-width
+     ahí es 0), así que se veía como una franja roja suelta "flotando"
+     sobre el remate metálico de las tapas -- el anillo oscuro de 2px de
+     aquí cierra el contorno alrededor de toda la píldora (curva incluida,
+     al seguir el border-radius) y el brillo/sombra quedan más adentro,
+     pegados a él en vez de sueltos. */
   box-shadow:
-    inset 0 1.5px 0 rgba(255, 255, 255, 0.25),
-    inset 0 -1.5px 0 rgba(0, 0, 0, 0.5);
+    inset 0 0 0 2px #160f09,
+    inset 0 3.5px 0 rgba(255, 255, 255, 0.16),
+    inset 0 -3.5px 0 rgba(0, 0, 0, 0.35);
+  font-family: "Dungeon Font", "Cinzel", serif;
   color: var(--vespero);
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.7);
   image-rendering: pixelated;
+}
+.btn-mini {
+  background: linear-gradient(180deg, #9c3e3e 0%, #7a2226 55%, #501519 100%);
+  border: 2px solid #160f09;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.18),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.35);
+  font-family: "Dungeon Font", "Cinzel", serif;
+  color: var(--vespero);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.7);
 }
 .btn.dorado {
   background: linear-gradient(180deg, #b34a4a 0%, #8a2a2e 55%, #5c1a1e 100%);
   color: var(--vespero);
   box-shadow:
-    inset 0 1.5px 0 rgba(255, 255, 255, 0.25),
-    inset 0 -1.5px 0 rgba(0, 0, 0, 0.5),
+    inset 0 0 0 2px #160f09,
+    inset 0 3.5px 0 rgba(255, 255, 255, 0.16),
+    inset 0 -3.5px 0 rgba(0, 0, 0, 0.35),
     0 0 10px rgba(226, 196, 137, 0.4);
 }
 .btn.peligro {
   background: linear-gradient(180deg, #7a1f1f 0%, #501215 55%, #300a0c 100%);
+}
+/* :hover/:active más específicos que el bloque de arriba (llevan
+   pseudo-clases) pisan su box-shadow entero, no solo lo que cambian --
+   sin este par, el anillo oscuro desaparecía otra vez al pasar el ratón. */
+.btn:hover:not(:disabled) {
+  box-shadow:
+    inset 0 0 0 2px #160f09,
+    inset 0 3.5px 0 rgba(255, 255, 255, 0.2),
+    inset 0 -3.5px 0 rgba(0, 0, 0, 0.35);
+}
+.btn:active:not(:disabled) {
+  box-shadow:
+    inset 0 0 0 2px #160f09,
+    inset 0 3.5px 0 rgba(255, 255, 255, 0.12),
+    inset 0 -3.5px 0 rgba(0, 0, 0, 0.3);
 }
 
 /* "Pulsa Start" es, en la práctica, un botón (dispara el inicio de
