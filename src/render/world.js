@@ -3,7 +3,7 @@ import { H, TAU, W, animGlobal, avanzarAnimGlobal, cx } from "../core/canvas.js"
 import { ELEMENTOS, MAX_PLANTA, RAREZAS, SALA_H, SALA_W, SUPS } from "../core/constants.js";
 import { G } from "../core/state.js";
 import { renderHUD } from "./hud.js";
-import { KENNEY_TILE, SHEETS, SPR, assetOK, iconoDrop, remateMuroPatron, wallPatron } from "./sprites.js";
+import { KENNEY_TILE, SANGRE_ANIM, SANGRE_DUR, SHEETS, SPR, assetOK, iconoDrop, remateMuroPatron, wallPatron } from "./sprites.js";
 import { drawSprite } from "./spriteDraw.js";
 import { renderEnemigo, renderJugador, renderMira } from "./character.js";
 import { clamp, hexRgba, ri, rnd } from "../utils/helpers.js";
@@ -1308,6 +1308,37 @@ export function render() {
             cx.lineTo(f.r, 0);
             cx.stroke();
             cx.restore();
+          } else if (f.tipo === "sangre") {
+            // Salpicadura de sangre real (ver fxSangre en render/effects.js
+            // y SANGRE_ANIM en render/sprites.js) -- fotograma calculado por
+            // tiempo transcurrido (f.t0-f.t), no por f.t directamente (que
+            // cuenta hacia atrás y es lo que usa el resto de fx para su
+            // propio fundido de opacidad, ver `k` arriba).
+            const framesSangre = SANGRE_ANIM[f.variante];
+            if (framesSangre && framesSangre.length) {
+              const transcurrido = f.t0 - f.t;
+              const fIdx = Math.min(
+                framesSangre.length - 1,
+                Math.max(0, Math.floor((transcurrido / f.t0) * framesSangre.length)),
+              );
+              const imgSangre = framesSangre[fIdx];
+              cx.save();
+              cx.translate(f.x, f.y);
+              // el arte de origen salpica hacia ARRIBA por defecto (eje -Y
+              // local) -- +90° alinea ese "arriba" con f.dir (0 = derecha,
+              // mismo convenio que direccionDesdeAim en render/character.js).
+              cx.rotate(f.dir + Math.PI / 2);
+              if (f.flip) cx.scale(-1, 1);
+              // se apaga solo en el último 20% de su vida -- el propio
+              // splat de origen ya se dispersa en gotas hacia el final,
+              // esto solo evita un corte brusco si el último fotograma no
+              // queda del todo transparente
+              cx.globalAlpha = k < 0.2 ? k / 0.2 : 1;
+              const wSangre = imgSangre.width * f.escala, hSangre = imgSangre.height * f.escala;
+              cx.drawImage(imgSangre, -wSangre / 2, -hSangre / 2, wSangre, hSangre);
+              cx.globalAlpha = 1;
+              cx.restore();
+            }
           } else if (f.tipo === "part") {
             f.x += f.vx * 0.016;
             f.y += f.vy * 0.016;

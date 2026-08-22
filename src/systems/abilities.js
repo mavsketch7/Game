@@ -131,12 +131,24 @@ export function atacar(p) {
         }
       }
 
+// Longitud visual de fxEstocada, deliberadamente MÁS CORTA que `rango`
+// (46-56px, el alcance real de golpe contra enemigos): con la línea recta
+// completa se veía "lanzada" lejos del cuerpo, sobre todo porque nace a la
+// altura de los PIES (p.y, mismo punto que usa fxTajo) en vez de a la
+// altura de la mano -- con el barrido ancho de fxTajo eso no se notaba,
+// con una línea fina y recta sí. ALTO_MANO sube el origen a la altura del
+// puño; ALCANCE_ESTOCADA_FX mantiene la punta pegada al cuerpo en vez de
+// proyectarse hasta donde de verdad llega el golpe (que es más largo que
+// el brazo, a propósito, para que el hitbox se sienta generoso).
+const ALTO_MANO_ESTOCADA = 16;
+const ALCANCE_ESTOCADA_FX = 24;
+
 function golpeArco(p, dir, rango, arco, dmgBase, esPicaro) {
         // Pícaro: línea recta de puñalada (fxEstocada), no el barrido en
         // media luna de fxTajo -- una daga apuñala, no siega (ver
         // CONFIG_ARMA.estocada en render/sprites.js, mismo criterio para
         // el arma en mano).
-        if (esPicaro) fxEstocada(p.x, p.y, dir, rango);
+        if (esPicaro) fxEstocada(p.x, p.y - ALTO_MANO_ESTOCADA, dir, ALCANCE_ESTOCADA_FX);
         else fxTajo(p.x, p.y, dir, rango);
         // guerrero/pícaro ya NO llevan el "espadazo" sintetizado en el
         // swing -- chocaba con el sonido de impacto/fallo REAL que se

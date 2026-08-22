@@ -1141,10 +1141,11 @@ export const CONFIG_ARMA = {
   // a mitad, vuelta a 0 al terminar (empuja y recoge, no se queda fuera).
   estocada: {
     clases: new Set(["picaro"]),
-    // 8 -> 16: apenas se notaba (6px reales tras escala x0.75) -- casi el
-    // doble para que la puñalada se lea claramente como un empuje hacia
-    // delante, no un simple temblor del arma en la mano.
-    distancia: 16,
+    // 8 -> 16 se notaba, pero combinado con el FX de la puñalada (ver
+    // fxEstocada en abilities.js) se leía como si la daga saliera
+    // disparada del cuerpo en vez de una puñalada corta -- 11 es un punto
+    // medio: sigue notándose el empuje sin perder el anclaje a la mano.
+    distancia: 11,
   },
 };
 
@@ -1414,6 +1415,57 @@ cargarHojaFrames(assetUrl("weapons/wood-weapons/bow-tension"), 32, (frames) => {
 });
 
 export const ARQUERO_BOW_DUR = 0.35; // duración del gesto de tensar el arco al atacar
+
+// Sangre de impacto (torre-vespero-assets/BloodFX Batch 1): sustituye el
+// simple estallido de píxeles cuadrados de fxParticulas por una salpicadura
+// real dibujada a mano, con su propia animación de crecimiento -> goteo.
+// La hoja de origen ("VFX Blood Batch 1_SpriteSheetRows.png", ya exportada
+// así desde Aseprite) es una REJILLA de 14 columnas x 9 filas a 110x93 por
+// celda -- cada fila es una animación de salpicadura distinta, pero con
+// menos fotogramas reales que las 14 columnas (el resto de la fila queda
+// transparente de relleno, por eso hace falta el recuento manual de abajo
+// en vez de asumir 14 en todas). Solo se cargan 3 de las 9 filas (variedad
+// de sobra sin tener 9 animaciones en memoria) -- fila 0 (salpicadura
+// simétrica hacia arriba), fila 6 (la más grande y dramática, con un
+// barrido lateral) y fila 8 (un estallido denso y compacto). El resto
+// (filas 1,2,3,4,5,7) se puede sumar más adelante sin volver a exportar
+// nada, ya están en la misma hoja.
+const SANGRE_CELDA = { w: 110, h: 93 };
+const SANGRE_FILAS = [
+  { fila: 0, frames: 11 },
+  { fila: 6, frames: 14 },
+  { fila: 8, frames: 12 },
+];
+const SANGRE_FPS = 15; // ~66ms/fotograma, el mismo ritmo que trae la hoja de origen
+
+export const SANGRE_ANIM = []; // SANGRE_ANIM[variante] = array de canvases
+export const SANGRE_DUR = []; // SANGRE_DUR[variante] = duración total en segundos
+
+(function cargarSangre() {
+  const im = new Image();
+  im.onload = () => {
+    for (const { fila, frames } of SANGRE_FILAS) {
+      const variante = [];
+      for (let i = 0; i < frames; i++) {
+        const c = document.createElement("canvas");
+        c.width = SANGRE_CELDA.w;
+        c.height = SANGRE_CELDA.h;
+        const g = c.getContext("2d");
+        g.imageSmoothingEnabled = false;
+        g.drawImage(
+          im,
+          i * SANGRE_CELDA.w, fila * SANGRE_CELDA.h, SANGRE_CELDA.w, SANGRE_CELDA.h,
+          0, 0, SANGRE_CELDA.w, SANGRE_CELDA.h,
+        );
+        variante.push(c);
+      }
+      SANGRE_ANIM.push(variante);
+      SANGRE_DUR.push(frames / SANGRE_FPS);
+    }
+  };
+  im.onerror = () => console.warn("No se pudo cargar hoja de sangre: " + im.src);
+  im.src = assetUrl("fx/blood_batch1");
+})();
 
 SPR.sastre = buildSprite(HERO_ROWS, {
         K,

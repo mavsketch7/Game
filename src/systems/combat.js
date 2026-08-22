@@ -6,7 +6,7 @@ import { TAU } from "../core/canvas.js";
 import { MAX_NIV_PJ, ROLES, SALA_H as H, SALA_W as W, SLOTS, XP_POR_PLANTA, XP_TABLA } from "../core/constants.js";
 import { META, guardarMeta } from "../core/save.js";
 import { G } from "../core/state.js";
-import { fxOnda, fxParticulas, fxTexto } from "../render/effects.js";
+import { fxOnda, fxParticulas, fxSangre, fxTexto } from "../render/effects.js";
 import { NIVEL_ULTI, danoPilar, golpeObjeto } from "./abilities.js";
 import { sfx } from "./audio.js";
 import { NOMBRES_MINI, arquetipoJefe, escalaEnemigo, nombreJefe } from "./bosses.js";
@@ -328,19 +328,27 @@ export function danoAEnemigo(e, raw, duenio, puedeCrit, kbx, kby) {
         // Shake por golpe (no en el dummy -- sería un temblor constante
         // durante una prueba de DPS, molesto y sin valor real).
         aplicarShakeGolpe(dmg);
-        // Sangre: partículas de impacto que escalan con el tamaño real del
-        // enemigo (e.r) y con el daño -- antes fijas en 10 solo al morir,
-        // se perdían contra un jefe/élite grande y no había NINGUNA en un
-        // golpe normal (solo en la muerte). tam/spread propios (ver
-        // fxParticulas en render/effects.js) para que la salpicadura se
-        // note contra el sprite en vez de ser 4 puntos diminutos.
+        // Sangre: salpicadura real (ver fxSangre en render/effects.js, arte
+        // de torre-vespero-assets/BloodFX Batch 1) como efecto principal,
+        // orientada hacia donde sale despedido el enemigo (mismo ángulo que
+        // el knockback de más arriba) y escalada con su tamaño real (e.r) --
+        // clamp(e.r/32,...) para que un jefe/élite grande saque una
+        // salpicadura notablemente más grande que un slime sin desbordar la
+        // pantalla. fxParticulas se mantiene como gotas sueltas alrededor
+        // (antes era el único efecto, ahora es el acompañamiento).
+        fxSangre(
+          e.x,
+          e.y - e.r * 0.3,
+          kbx || kby ? Math.atan2(kby, kbx) : undefined,
+          clamp(e.r / 32, 0.32, 1.1),
+        );
         fxParticulas(
           e.x,
           e.y - e.r * 0.3,
-          clamp(Math.round(e.r * 0.45 + dmg * 0.035), 4, 20),
+          clamp(Math.round(e.r * 0.3 + dmg * 0.02), 3, 12),
           crit ? "#c81c2e" : "#8a1620",
-          clamp(e.r * 0.22, 2, 6),
-          e.r * 0.35,
+          clamp(e.r * 0.2, 2, 5),
+          e.r * 0.4,
         );
         G.stats.dano += dmg;
         duenio.statDano = (duenio.statDano || 0) + dmg;
