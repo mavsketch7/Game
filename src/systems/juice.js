@@ -80,3 +80,79 @@ export function aplicarFlash(e, crit) {
   e.hitFlashT = JUICE.flash.dur;
   e.hitFlashCol = crit ? JUICE.flash.colorCrit : JUICE.flash.colorNormal;
 }
+
+// Rango de estilo tipo "hack and slash" (D/C/B/A/S/SS/SS+/SSS++/EXTREMO,
+// a lo Devil May Cry/Bayonetta): un medidor GLOBAL de grupo, no por
+// jugador -- con la pantalla compartida de este coop, cuatro medidores
+// separados serían ruido, uno solo lee mejor de un vistazo y premia jugar
+// EN EQUIPO sin pausas, no acumular golpes en solitario. No sustituye el
+// combo de 4 golpes del guerrero (Golpe Colosal, ver abilities.js) -- ese
+// sigue exactamente igual por debajo, esto es una capa visual aparte que
+// no toca daño/cooldowns/mecánicas, solo feedback.
+export const ESTILO = {
+  enabled: true,
+  porGolpe: 6,
+  porCritico: 14,
+  porMuerte: 10, // bonus al rematar, para premiar cerrar el combo con una muerte
+  ventana: 2.4, // segundos sin golpear antes de que el rango empiece a caer
+  caida: 55, // puntos/seg perdidos una vez pasada la ventana
+  max: 400,
+  rangos: [
+    { letra: "D", min: 0, col: "#9a93ab" },
+    { letra: "C", min: 20, col: "#e9e3d5" },
+    { letra: "B", min: 45, col: "#7fd4c1" },
+    { letra: "A", min: 75, col: "#6fb3e8" },
+    { letra: "S", min: 110, col: "#e9b45c" },
+    { letra: "SS", min: 150, col: "#ff9d3d" },
+    { letra: "SS+", min: 200, col: "#ff5c5c" },
+    { letra: "SSS++", min: 260, col: "#c084f0" },
+    { letra: "EXTREMO", min: 330, col: "#ff2b6b" },
+  ],
+};
+
+function estadoEstilo() {
+  if (!G) return null;
+  if (!G.estilo) G.estilo = { puntos: 0, rango: 0, rangoT: 0 };
+  return G.estilo;
+}
+
+// Llamado desde danoAEnemigo() (combat.js) en cada golpe REAL conectado
+// (no en el dummy, mismo criterio que aplicarShakeGolpe) y desde
+// matarEnemigo() con esMuerte=true para el bonus extra de rematar.
+export function aplicarEstilo(crit, esMuerte) {
+  if (!ESTILO.enabled) return;
+  const est = estadoEstilo();
+  if (!est) return;
+  est.puntos = Math.min(
+    ESTILO.max,
+    est.puntos + (crit ? ESTILO.porCritico : ESTILO.porGolpe) + (esMuerte ? ESTILO.porMuerte : 0),
+  );
+  est.decayT = ESTILO.ventana;
+}
+
+// Llamado una vez por frame desde core/loop.js (update()) -- decae el
+// medidor si ha pasado la ventana sin golpear y recalcula el rango vigente
+// (el más alto cuyo mínimo ya se alcanzó). rangoT solo se reinicia al
+// SUBIR de rango (el pop de entrada en el HUD, ver render/world.js) -- al
+// bajar no hace falta ningún efecto especial, solo que el texto cambie.
+export function actualizarEstilo(dt) {
+  if (!ESTILO.enabled) return;
+  const est = estadoEstilo();
+  if (!est) return;
+  if (est.decayT > 0) est.decayT -= dt;
+  else if (est.puntos > 0) est.puntos = Math.max(0, est.puntos - ESTILO.caida * dt);
+  let nuevoRango = 0;
+  for (let i = ESTILO.rangos.length - 1; i >= 0; i--) {
+    if (est.puntos >= ESTILO.rangos[i].min) {
+      nuevoRango = i;
+      break;
+    }
+  }
+  if (nuevoRango > est.rango) {
+    est.rango = nuevoRango;
+    est.rangoT = 0.5;
+  } else {
+    est.rango = nuevoRango;
+    if (est.rangoT > 0) est.rangoT = Math.max(0, est.rangoT - dt);
+  }
+}

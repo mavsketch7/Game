@@ -171,6 +171,7 @@ export function nuevaPartida() {
           oroRun: 0,
           shake: 0,
           hitStopT: 0, // "juice" de combate -- ver systems/juice.js + main.js
+          estilo: { puntos: 0, rango: 0, rangoT: 0, decayT: 0 }, // rango de estilo D..EXTREMO, ver systems/juice.js
           banner: { txt: "", t: 0 },
           toasts: [],
           invSel: 0,
@@ -185,6 +186,7 @@ export function nuevaPartida() {
 export function iniciarLobby() {
         G.escena = "lobby";
         G.planta = 0;
+        G.estilo = { puntos: 0, rango: 0, rangoT: 0, decayT: 0 };
         G.enemigos = [];
         G.projs = [];
         G.areas = [];

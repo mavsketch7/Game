@@ -10,7 +10,7 @@ import { fxDesintegrarEnemigo, fxOnda, fxParticulas, fxSangre, fxTexto } from ".
 import { NIVEL_ULTI, danoPilar, golpeObjeto } from "./abilities.js";
 import { sfx } from "./audio.js";
 import { NOMBRES_MINI, arquetipoJefe, escalaEnemigo, nombreJefe } from "./bosses.js";
-import { JUICE, aplicarFlash, aplicarHitStop, aplicarShakeGolpe } from "./juice.js";
+import { JUICE, aplicarEstilo, aplicarFlash, aplicarHitStop, aplicarShakeGolpe } from "./juice.js";
 import { posDropValida, puntoValido } from "./floorgen.js";
 import { dropItem, finPartida, genItem } from "./loot.js";
 import { tieneEfecto } from "./objetosMiticos.js";
@@ -328,6 +328,9 @@ export function danoAEnemigo(e, raw, duenio, puedeCrit, kbx, kby) {
         // Shake por golpe (no en el dummy -- sería un temblor constante
         // durante una prueba de DPS, molesto y sin valor real).
         aplicarShakeGolpe(dmg);
+        // Rango de estilo (D/C/.../EXTREMO, ver systems/juice.js) -- mismo
+        // criterio que el shake, no en el dummy.
+        aplicarEstilo(crit, false);
         // Sangre: salpicadura real (ver fxSangre en render/effects.js, arte
         // de torre-vespero-assets/BloodFX Batch 1) como efecto principal,
         // orientada hacia donde sale despedido el enemigo (mismo ángulo que
@@ -384,6 +387,9 @@ export function matarEnemigo(e, duenio) {
         fxDesintegrarEnemigo(e, duenio ? e.x > duenio.x : false);
         fxParticulas(e.x, e.y, e.jefe ? 10 : 4, "#6a5a94");
         if (e.jefe) G.shake = Math.max(G.shake, 8);
+        // Bonus de estilo al rematar (ver systems/juice.js) -- premia
+        // cerrar el combo con una muerte, no solo encadenar golpes.
+        aplicarEstilo(false, true);
         // gemelos: el superviviente entra en cólera
         if (e.gemelo) {
           const otro = G.enemigos.find((o) => o !== e && o.gemelo && o.hp > 0);

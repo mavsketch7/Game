@@ -616,6 +616,20 @@ function colocarContenidoFijo(sala, f) {
 // que se visita (ver cargarSala) -- no se regenera si se vuelve a entrar.
 function poblarSala(sala, f) {
         const N = G.players.length;
+        // QA (?qa=1, mismo interruptor que el arsenal/cofre de pruebas de
+        // arriba y en core/gameflow.js): la sala de entrada de la planta 1
+        // se llena con 100 enemigos extra -- para probar de golpe el
+        // combate a gran escala (sangre real, desintegración en píxeles,
+        // rango de estilo, rendimiento...) sin tener que arrastrarlos sala
+        // tras sala. Se suma ANTES de colocarContenidoFijo a propósito, así
+        // se apila sobre el contenido fijo del arsenal en vez de sustituirlo.
+        if (
+          f === 1 &&
+          sala.forma === "arsenal" &&
+          new URLSearchParams(location.search).get("qa") === "1"
+        ) {
+          for (let i = 0; i < 100; i++) spawnEnemigo(f, tipoAleatorio(f));
+        }
         if (colocarContenidoFijo(sala, f)) return;
         const perfil = az(PERFILES_SALA);
         ponPilares(f, ri(perfil.pilares[0], perfil.pilares[1]));
@@ -630,16 +644,22 @@ function poblarSala(sala, f) {
           return;
         }
         ponHazardsYObjetos(f, perfil.hazardMult, perfil.objMult);
+        // Rangos ~60-80% más altos que antes (2-3/3-4/4-5/5-6/6-8): las
+        // salas se quedaban muy vacías, sobre todo en plantas bajas en
+        // solitario (2-3 enemigos repartidos por toda la sala se notaba
+        // desierto). Feedback directo del usuario, no un cálculo de
+        // dificultad -- si hace falta volver a bajarlo por exceso de
+        // dificultad, este es el único sitio que tocar.
         const base =
           f <= 5
-            ? ri(2, 3)
+            ? ri(4, 6)
             : f <= 20
-              ? ri(3, 4)
+              ? ri(6, 8)
               : f <= 50
-                ? ri(4, 5)
+                ? ri(7, 9)
                 : f <= 80
-                  ? ri(5, 6)
-                  : ri(6, 8);
+                  ? ri(9, 11)
+                  : ri(11, 14);
         const n = base + (N - 1);
         for (let i = 0; i < n; i++) {
           const esElite = Math.random() < clamp(f * 0.005, 0, 0.35);

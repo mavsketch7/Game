@@ -6,6 +6,7 @@ import { G } from "../core/state.js";
 import { K, spriteJugador } from "./sprites.js";
 import { NIVEL_ULTI } from "../systems/abilities.js";
 import { statsTot, vivos } from "../systems/combat.js";
+import { ESTILO } from "../systems/juice.js";
 import { banner } from "../ui/notifications.js";
 import { clamp, lighten } from "../utils/helpers.js";
 
@@ -294,6 +295,45 @@ export function renderHUD() {
             critico ? "#c8434b" : "#c07be0",
             jefe.nombre,
           );
+        }
+
+        // Rango de estilo (D/C/B/A/S/SS/SS+/SSS++/EXTREMO -- ver
+        // systems/juice.js: ESTILO/aplicarEstilo/actualizarEstilo). Medidor
+        // de GRUPO, no por jugador -- un único indicador central en vez de
+        // 4 separados. Solo se dibuja en combate real (no lobby/PvP) y solo
+        // si hay algo que mostrar (puntos>0) para no ensuciar la pantalla
+        // fuera de un combo activo. Centro-abajo, por encima de donde
+        // ocuparía la barra de jefe (H-30..H-1) -- el único hueco que
+        // queda libre de los paneles de jugador pase lo que pase el número
+        // de jugadores.
+        if (G.escena !== "lobby" && G.escena !== "pvp" && G.estilo && G.estilo.puntos > 0) {
+          const est = G.estilo;
+          const rangoInfo = ESTILO.rangos[est.rango];
+          // "pop" al subir de rango: se agranda y brilla más un instante
+          // (rangoT, ver actualizarEstilo) en vez de cambiar de golpe.
+          const popK = est.rangoT > 0 ? clamp(est.rangoT / 0.5, 0, 1) : 0;
+          const yRango = H - 54;
+          cx.save();
+          cx.translate(W / 2, yRango);
+          cx.scale(1 + popK * 0.5, 1 + popK * 0.5);
+          cx.textAlign = "center";
+          cx.font = "800 22px Cinzel";
+          cx.shadowColor = rangoInfo.col;
+          cx.shadowBlur = 10 + popK * 14;
+          cx.lineWidth = 3;
+          cx.strokeStyle = "rgba(13,11,21,.85)";
+          cx.strokeText(rangoInfo.letra, 0, 0);
+          cx.shadowBlur = 0;
+          cx.fillStyle = rangoInfo.col;
+          cx.fillText(rangoInfo.letra, 0, 0);
+          cx.restore();
+          // barra fina de progreso hacia el siguiente rango debajo de la
+          // letra (o llena del todo en EXTREMO, que no tiene "siguiente")
+          const siguiente = ESTILO.rangos[est.rango + 1];
+          const pct = siguiente
+            ? clamp((est.puntos - rangoInfo.min) / (siguiente.min - rangoInfo.min), 0, 1)
+            : 1;
+          barra(W / 2 - 55, yRango + 12, 110, 4, pct, rangoInfo.col, "");
         }
 
         // toasts

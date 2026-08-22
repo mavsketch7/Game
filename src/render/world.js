@@ -1210,11 +1210,33 @@ export function render() {
         for (const f of G.fx) {
           const k = f.t / f.t0;
           if (f.tipo === "txt") {
+            // Borde oscuro (mismo tono que los paneles de UI, #0d0b15) para
+            // que el número se lea de un vistazo contra cualquier fondo --
+            // antes era solo relleno de color, se perdía contra el suelo
+            // claro o un sprite parecido. "grande" (crítico y anuncios tipo
+            // "¡GOLPE COLOSAL!") además hace un pop de entrada: arranca más
+            // grande de lo normal y se asienta en los primeros ~150ms, con
+            // un resplandor del propio color -- se lee como un golpe fuerte
+            // de un vistazo, no solo por el color/tamaño fijo de antes.
+            const elapsed = 1 - k;
+            const escalaTxt = f.grande ? 1.6 - Math.min(elapsed / 0.15, 1) * 0.6 : 1;
+            cx.save();
+            cx.translate(f.x, f.y - (1 - k) * (f.grande ? 30 : 22));
+            cx.scale(escalaTxt, escalaTxt);
             cx.globalAlpha = k;
-            cx.fillStyle = f.col;
-            cx.font = (f.grande ? "800 16px" : "700 12px") + " Alegreya Sans";
+            cx.font = (f.grande ? "800 18px" : "700 12px") + " Alegreya Sans";
             cx.textAlign = "center";
-            cx.fillText(f.txt, f.x, f.y - (1 - k) * 22);
+            if (f.grande) {
+              cx.shadowColor = f.col;
+              cx.shadowBlur = 10;
+            }
+            cx.lineWidth = f.grande ? 3.5 : 2.5;
+            cx.strokeStyle = "rgba(13,11,21,.85)";
+            cx.strokeText(f.txt, 0, 0);
+            cx.shadowBlur = 0;
+            cx.fillStyle = f.col;
+            cx.fillText(f.txt, 0, 0);
+            cx.restore();
             cx.globalAlpha = 1;
           } else if (f.tipo === "onda") {
             cx.globalAlpha = k;

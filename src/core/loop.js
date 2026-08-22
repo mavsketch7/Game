@@ -7,10 +7,10 @@ import { G } from "./state.js";
 import { NET, netAplicarInputs } from "../net/peer.js";
 import { fxOnda, fxParticulas, fxTexto } from "../render/effects.js";
 import { aplicarImbuido, atacar, danoPilar, dispararArcano, golpeObjeto } from "../systems/abilities.js";
-import { sfx, sfxAterrizaje, sfxPaso } from "../systems/audio.js";
+import { sfx, sfxAterrizaje, sfxGolpeAire, sfxGolpeCritico, sfxImpactoGuerrero, sfxPaso } from "../systems/audio.js";
 import { esJefe, escalaEnemigo } from "../systems/bosses.js";
 import { curarP, danoAEnemigo, danoAlJugador, explotarBomber, ganarXP, masCercano, matarEnemigo, spawnClon, spawnEnemigo, statsTot, tipoAleatorio, vivos } from "../systems/combat.js";
-import { JUICE } from "../systems/juice.js";
+import { JUICE, actualizarEstilo } from "../systems/juice.js";
 import { aplicarLimites, colisionaMuro, cruzarPuerta, dentroForma, iniciarPlanta, salaActual } from "../systems/floorgen.js";
 import { leerInput } from "../systems/input.js";
 import { finPartida, plantaDespejada } from "../systems/loot.js";
@@ -110,6 +110,20 @@ export function update(dt) {
             vx = p.dashAtkX * 480;
             vy = p.dashAtkY * 480;
             p.trail.push({ x: p.x, y: p.y, t: 0.2 });
+            // La estocada golpea a lo largo de todo el trayecto (más abajo,
+            // "Estocada: daña una vez a cada enemigo..."), no en un único
+            // instante como golpeArco -- así que el sonido de impacto/fallo
+            // real (mismo criterio que golpeArco en abilities.js) se decide
+            // AQUÍ, en el frame en que el trayecto termina, según si
+            // conectó con algo (p._dashAtkVictims) y si hubo crítico
+            // (p._dashAtkCrit, marcado más abajo). Antes llevaba un
+            // "espadazo" sintetizado al arrancar -- chocaba con este sonido
+            // real igual que le pasaba al golpe básico (ver golpeArco).
+            if (p.dashAtkT <= 0 && p._dashAtkVictims) {
+              if (p._dashAtkVictims.size === 0) sfxGolpeAire();
+              else if (p._dashAtkCrit) sfxGolpeCritico();
+              else sfxImpactoGuerrero();
+            }
           } else {
             const n = Math.hypot(p.inp.mx, p.inp.my);
             if (n > 0) {
@@ -326,14 +340,17 @@ export function update(dt) {
               if ((e.hp <= 0 && !e.dummy) || p._dashAtkVictims.has(e)) continue;
               if (Math.hypot(e.x - p.x, e.y - p.y) < 28 + e.r) {
                 p._dashAtkVictims.add(e);
-                danoAEnemigo(
-                  e,
-                  statsTot(p).atk * 1.3,
-                  p,
-                  true,
-                  p.dashAtkX * 180,
-                  p.dashAtkY * 180,
-                );
+                if (
+                  danoAEnemigo(
+                    e,
+                    statsTot(p).atk * 1.3,
+                    p,
+                    true,
+                    p.dashAtkX * 180,
+                    p.dashAtkY * 180,
+                  )
+                )
+                  p._dashAtkCrit = true;
               }
             }
           }
@@ -1551,4 +1568,5 @@ export function update(dt) {
         }
         if (G.banner.t > 0) G.banner.t -= dt;
         if (G.shake > 0) G.shake = Math.max(0, G.shake - dt * 22);
+        actualizarEstilo(dt);
       }

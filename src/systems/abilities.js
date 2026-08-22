@@ -6,7 +6,7 @@ import { ELEMENTOS, ELEM_MAGO, FORMAS_DRUIDA, FORMAS_INFO, RAREZAS, ROLES, SALA_
 import { update } from "../core/loop.js";
 import { G } from "../core/state.js";
 import { fxEstocada, fxOnda, fxParticulas, fxTajo, fxTexto } from "../render/effects.js";
-import { sfx, sfxEspadazo, sfxGolpeAire, sfxGolpeCritico, sfxImpactoGuerrero, sfxImpactoPicaro } from "./audio.js";
+import { sfx, sfxGolpeAire, sfxGolpeCritico, sfxImpactoGuerrero, sfxImpactoPicaro } from "./audio.js";
 import { curarP, danoAEnemigo, danoAlJugador, masCercano, statsTot, vivos } from "./combat.js";
 import { posDropValida } from "./floorgen.js";
 import { JUICE } from "./juice.js";
@@ -814,7 +814,11 @@ export function dashAtaque(p) {
         p.dashAtkT = 0.28; // ver DASH_ATTACK_DUR.guerrero en render/sprites.js -- mismo valor
         p.dashAtkCd = 2.2;
         p._dashAtkVictims = new Set();
-        sfxEspadazo();
+        // Sin "espadazo" sintetizado al arrancar (mismo criterio que
+        // golpeArco, ver comentario ahí) -- el sonido real de impacto/fallo
+        // se decide en core/loop.js cuando la embestida termina, según si
+        // conectó con algo y si hubo crítico (ver p._dashAtkCrit).
+        p._dashAtkCrit = false;
         fxOnda(p.x, p.y, 18, "#e9b45c");
       }
 
