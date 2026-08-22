@@ -9,7 +9,7 @@ import { ELEMENTOS, RAREZAS, SUPS } from "../core/constants.js";
 import { G } from "../core/state.js";
 import { fxParticulas } from "./effects.js";
 import { drawSprite, drawSpriteBottom } from "./spriteDraw.js";
-import { ARQUERO_BOW, ARQUERO_BOW_DUR, ATTACK_DUR, CONFIG_ARMA, DASH_ATTACK_DUR, ESC_FORMA, MIRA_IZQUIERDA_POR_DEFECTO, MOB_RUN, OFFHAND_IMG, OFFHAND_IMG_RAREZA, REAL_ATTACK, REAL_ATTACK_ANCLA, REAL_DASH, REAL_DASH_ANCLA, REAL_IDLE, REAL_IDLE_ANCLA, REAL_RUN, REAL_RUN_ANCLA, REAL_SPECIAL, REAL_SPECIAL_ANCLA, REAL_SPRITE_SCALE, SHEETS, SPECIAL_ATTACK_DUR, SPR, SPR_FORMAS, TAM_HEROE, WEAPON_IMG, WEAPON_IMG_RAREZA, assetOK, seleccionarImgEnemigo, spriteJugador } from "./sprites.js";
+import { ARQUERO_BOW, ARQUERO_BOW_DUR, ATTACK_DUR, CONFIG_ARMA, DASH_ATTACK_DUR, ESC_FORMA, MIRA_IZQUIERDA_POR_DEFECTO, MOB_RUN, MUERTE_DUR, OFFHAND_IMG, OFFHAND_IMG_RAREZA, REAL_ATTACK, REAL_ATTACK_ANCLA, REAL_DASH, REAL_DASH_ANCLA, REAL_HURT, REAL_IDLE, REAL_IDLE_ANCLA, REAL_MUERTE, REAL_RUN, REAL_RUN_ANCLA, REAL_SPECIAL, REAL_SPECIAL_ANCLA, REAL_SPRITE_SCALE, SHEETS, SPECIAL_ATTACK_DUR, SPR, SPR_FORMAS, TAM_HEROE, WEAPON_IMG, WEAPON_IMG_RAREZA, assetOK, seleccionarImgEnemigo, spriteJugador } from "./sprites.js";
 import { groundTarget } from "../systems/abilities.js";
 import { masCercano } from "../systems/combat.js";
 import { mouse } from "../systems/input.js";
@@ -141,6 +141,19 @@ function calcularPoseHeroe(p, x, yPies, mov) {
             ? REAL_SPECIAL_ANCLA.guerrero[dirAim]
             : (REAL_ATTACK_ANCLA[p.rol]?.[dirAim] || REAL_ATTACK_ANCLA[p.rol]?.side);
           anclaLocal = anclasDir ? anclasDir[frameIdx] : null;
+        } else if (p.golpeT > 0 && REAL_HURT.length) {
+          // Herido (flinch al recibir daño, ver p.golpeT en
+          // systems/combat.js -- 0.25s, mismo valor aquí) -- solo si no hay
+          // un golpe propio en curso (rama de swingT arriba tiene prioridad:
+          // que te golpeen a mitad de tu propio ataque no debe cortar la
+          // animación de ese ataque). Sin arte lateral/arriba todavía (ver
+          // REAL_HURT en sprites.js) -- se fuerza "down" en vez de mirar
+          // hacia donde apunta, es la única dirección que existe.
+          dir = "down";
+          const prog = clamp(1 - p.golpeT / 0.25, 0, 0.999);
+          const frameIdx = Math.floor(prog * REAL_HURT.length);
+          const fr = REAL_HURT[frameIdx];
+          if (fr) img = fr;
         } else if (mov && p.inp) {
           anguloFacing = Math.atan2(p.inp.my, p.inp.mx);
           dir = direccionDesdeAim(anguloFacing);
@@ -319,13 +332,28 @@ export function renderJugador(p) {
         const eq = p.equipo;
 
         if (p.ko) {
-          cx.save();
-          cx.translate(p.x, p.y);
-          cx.rotate(Math.PI / 2);
-          cx.globalAlpha = 0.55;
-          cx.drawImage(spriteJugador(p), -21, -18);
-          cx.restore();
-          cx.globalAlpha = 1;
+          // Colapso real (ver REAL_MUERTE/MUERTE_DUR en render/sprites.js):
+          // juega los 5 fotogramas UNA vez según cuánto lleva tumbado
+          // (p.koAnimT, ver core/loop.js) y se queda fijo en el último
+          // (tumbado del todo) el resto del K.O. -- no vuelve a jugarse en
+          // bucle. Antes era el icono estático de siempre rotado 90°, un
+          // hack sin animación real; se mantiene como fallback por si el
+          // arte no cargó todavía (un instante, al arrancar).
+          if (REAL_MUERTE.length) {
+            const prog = clamp((p.koAnimT || 0) / MUERTE_DUR, 0, 0.999);
+            const fr = REAL_MUERTE[Math.floor(prog * REAL_MUERTE.length)];
+            cx.globalAlpha = 0.8;
+            if (fr) drawSpriteBottom(fr, p.x, p.y, false, REAL_SPRITE_SCALE[p.rol] || 1);
+            cx.globalAlpha = 1;
+          } else {
+            cx.save();
+            cx.translate(p.x, p.y);
+            cx.rotate(Math.PI / 2);
+            cx.globalAlpha = 0.55;
+            cx.drawImage(spriteJugador(p), -21, -18);
+            cx.restore();
+            cx.globalAlpha = 1;
+          }
           cx.strokeStyle = "#7fd4c1";
           cx.lineWidth = 3;
           cx.beginPath();
@@ -468,8 +496,10 @@ export function renderJugador(p) {
           cx.textAlign = "center";
           cx.fillText("»»", p.x + 14, p.y - 22);
         }
-        if (p.golpeT > 0 && Math.floor(p.golpeT * 20) % 2 === 0)
-          cx.globalAlpha = 0.4;
+        // (antes había un parpadeo de globalAlpha aquí al recibir daño --
+        // quedaba sin efecto real, el globalAlpha se resetea más abajo
+        // antes de dibujar el cuerpo. Sustituido por la animación real de
+        // "herido", REAL_HURT en sprites.js, ver calcularPoseHeroe.)
         const mov =
           Math.hypot(p.inp ? p.inp.mx : 0, p.inp ? p.inp.my : 0) > 0.1;
         const bob = Math.sin(p.anim * 8) * (mov ? 1.5 : 0.5);

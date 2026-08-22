@@ -67,6 +67,7 @@ export function nuevaPartida() {
             elemento: "fuego",
             ko: false,
             reviveT: 0,
+            koAnimT: 0, // tiempo tumbándose desde que empezó el K.O., ver render/character.js
             // niveles
             nivel: 1,
             xp: 0,

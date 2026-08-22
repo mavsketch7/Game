@@ -51,6 +51,10 @@ export function update(dt) {
           // no sabe de mandos remotos y lo pisaría con un input vacío cada frame.
           if (p.ctrl.tipo !== "net") p.inp = leerInput(p);
           if (p.ko) {
+            // tiempo tumbándose (ver REAL_MUERTE/MUERTE_DUR en
+            // render/sprites.js) -- sin tope aquí, el render ya recorta al
+            // último fotograma una vez pasado MUERTE_DUR.
+            p.koAnimT = (p.koAnimT || 0) + dt;
             // reanimación (en la Arena PvP una caída es una eliminación
             // definitiva para ese combate: no hay revivir al rival)
             const cerca =
@@ -61,6 +65,7 @@ export function update(dt) {
             if (p.reviveT >= 2) {
               p.ko = false;
               p.reviveT = 0;
+              p.koAnimT = 0;
               p.hp = Math.round(statsTot(p).hpMax * 0.4);
               p.res = ROLES[p.rol].res * 0.5;
               p.invulT = 1;

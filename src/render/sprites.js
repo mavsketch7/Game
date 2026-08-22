@@ -1191,6 +1191,30 @@ for (const dirRun in REAL_RUN_SRC) {
   }, true);
 }
 
+// Herido (flinch al recibir daño, ver p.golpeT en systems/combat.js) y
+// muerte (colapso al llegar a 0 HP, ver p.ko) -- cuerpo compartido, igual
+// que idle/correr. El pack de origen SOLO trae la dirección "abajo" para
+// estos dos estados todavía (sin lateral/arriba) -- se usa esa misma
+// animación sin importar hacia dónde mira el personaje en ese instante,
+// mejor que no mostrar nada (mismo criterio de "usar lo que hay" que el
+// resto del pack). Un único "hero" layer sin marcar en el .aseprite de
+// origen -- sin datos de ancla de mano, así que el arma (si se dibuja
+// durante estos estados) cae al pivote fijo de siempre.
+const REAL_HURT_SRC = assetUrl("characters/heroB_hurt_down");
+const REAL_MUERTE_SRC = assetUrl("characters/heroB_dead_down");
+
+export const REAL_HURT = [];
+export const REAL_MUERTE = [];
+
+cargarHojaFrames(REAL_HURT_SRC, TAM_HEROE, (frames) => { REAL_HURT.push(...frames); }, true);
+cargarHojaFrames(REAL_MUERTE_SRC, TAM_HEROE, (frames) => { REAL_MUERTE.push(...frames); }, true);
+
+// Duración del colapso hasta quedarse tumbado del todo -- después se
+// mantiene fijo en el último fotograma (ver p.koAnimT en core/loop.js y
+// el bloque `if (p.ko)` en render/character.js) mientras dura el K.O., no
+// vuelve a jugarse en bucle.
+export const MUERTE_DUR = 0.6;
+
 // Ataque básico: cada clase usa el fotograma "ataque básico" real del pack
 // heroB (torre-vespero-assets/Hero-sprites) que mejor encaja con su arma,
 // por cada dirección de la que haya arte -- guerrero y arquero tienen las
