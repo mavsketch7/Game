@@ -689,7 +689,6 @@ const KENNEY_ICON_SRC = {
         bruto: assetUrl("bruto"),
         brutoB: assetUrl("brutoB"),
         slime: assetUrl("slime"),
-        mercader: assetUrl("mercader"),
         sastre: assetUrl("sastre"),
         barril: assetUrl("barril"),
         guerrero: assetUrl("guerrero"),
@@ -710,7 +709,6 @@ const KENNEY_ICON_SCALE = {
         bruto: 3,
         brutoB: 3.5,
         slime: 3.5,
-        mercader: 3,
         sastre: 3,
         barril: 3,
         guerrero: 3,
@@ -747,11 +745,17 @@ for (const kIcon in KENNEY_ICON_SRC) {
 // pasar por ese fotograma). En vez de perseguir más recortes de esa hoja,
 // la transición de cerrado→abierto se resuelve en render/world.js con un
 // efecto de "pop" (escala) puramente de código, sin fotogramas intermedios.
+// ×3 (igual que el resto de KENNEY_ICON) daba un cofre de 96px -- más alto
+// que el propio héroe (~58-60px de cuerpo real, ver TAM_HEROE). ×1.5 (48px)
+// lo deja del tamaño de un objeto a la altura de la cintura/pecho, no un
+// mueble más grande que el personaje (reportado: "el cofre está
+// sobredimensionado").
+const COFRE_ESCALA = 1.5;
 const COFRE_FRAME_SRC = { cofre: "cofre_f0", cofreAb: "cofre_f4" };
 for (const key in COFRE_FRAME_SRC) {
   const im = new Image();
   im.onload = () => {
-    SPR[key] = upscaleNN(im, 3);
+    SPR[key] = upscaleNN(im, COFRE_ESCALA);
   };
   im.src = assetUrl(COFRE_FRAME_SRC[key]);
 }
@@ -781,6 +785,17 @@ im3.onload = () => {
   SPR.escalerasAbajo = c;
 };
 im3.src = assetUrl("escaleras");
+
+// Mercader del lobby: sprite real (torre-vespero-assets/lobby-sprites/
+// merchant.aseprite), sustituye el icono Kenney genérico de antes. Un solo
+// fotograma estático, ya a 48x48 (mismo tamaño en pantalla que el icono
+// anterior -- 16x16 Kenney ×3 -- así que factor 1, sin necesidad de
+// recalibrar la posición del NPC en world.js).
+const imMercader = new Image();
+imMercader.onload = () => {
+  SPR.mercader = upscaleNN(imMercader, 1);
+};
+imMercader.src = assetUrl("merchant");
 
 const KENNEY_TILE_SRC = {
         wall: assetUrl("wall"),

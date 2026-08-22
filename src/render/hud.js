@@ -7,6 +7,7 @@ import { K, spriteJugador } from "./sprites.js";
 import { NIVEL_ULTI } from "../systems/abilities.js";
 import { statsTot, vivos } from "../systems/combat.js";
 import { ESTILO } from "../systems/juice.js";
+import { dibujarPanelOrnado, dibujarPlacaHorizontal } from "./uiTiles.js";
 import { banner } from "../ui/notifications.js";
 import { clamp, lighten } from "../utils/helpers.js";
 
@@ -118,17 +119,27 @@ export function renderHUD() {
           const [x, y] = pos[i] || pos[0];
           const t = statsTot(p),
             b = ROLES[p.rol];
-          const panelG = cx.createLinearGradient(x - 4, y - 4, x - 4, y + 64);
-          panelG.addColorStop(0, "rgba(23,20,36,.86)");
-          panelG.addColorStop(1, "rgba(11,9,18,.86)");
-          cx.fillStyle = panelG;
-          cx.beginPath();
-          cx.roundRect(x - 4, y - 4, 198, 68, 7);
-          cx.fill();
-          cx.strokeStyle = p.ko ? "#4a4560" : p.color;
-          cx.lineWidth = 1.5;
-          cx.globalAlpha = p.ko ? 0.6 : 0.9;
-          cx.stroke();
+          // Panel ornamentado (Dark Ages UI, ver render/uiTiles.js) en vez
+          // del degradado plano de siempre -- con fallback a ese mismo
+          // degradado si la hoja de UI todavía no cargó (un instante, al
+          // arrancar), para no dejar un hueco visual.
+          if (!dibujarPanelOrnado(x - 4, y - 4, 198, 68)) {
+            const panelG = cx.createLinearGradient(x - 4, y - 4, x - 4, y + 64);
+            panelG.addColorStop(0, "rgba(23,20,36,.86)");
+            panelG.addColorStop(1, "rgba(11,9,18,.86)");
+            cx.fillStyle = panelG;
+            cx.beginPath();
+            cx.roundRect(x - 4, y - 4, 198, 68, 7);
+            cx.fill();
+          }
+          // Acento de color de jugador (identifica de un vistazo quién es
+          // quién en cooperativo) -- antes era el borde entero del panel;
+          // el marco ornamentado ya trae su propio borde dorado, así que
+          // ahora es una franja bajo el panel en vez de competir con el
+          // grabado en las esquinas.
+          cx.fillStyle = p.ko ? "#4a4560" : p.color;
+          cx.globalAlpha = p.ko ? 0.6 : 0.95;
+          cx.fillRect(x - 4, y + 65, 198, 3);
           cx.globalAlpha = 1;
           // marco del retrato con color de rareza de armadura
           const armR = p.equipo.armadura ? p.equipo.armadura.rareza : -1;
@@ -271,15 +282,25 @@ export function renderHUD() {
         // jefe
         const jefe = G.enemigos.find((e) => e.jefe);
         if (jefe) {
-          cx.fillStyle = "rgba(10,8,16,.55)";
-          cx.beginPath();
-          cx.roundRect(W / 2 - 178, H - 30, 356, 29, 6);
-          cx.fill();
-          cx.strokeStyle = "#6a3f8a";
-          cx.lineWidth = 1;
-          cx.stroke();
+          // Placa ornamentada (Dark Ages UI, ver render/uiTiles.js) en vez
+          // del panel plano de siempre, con el mismo fallback que los
+          // paneles de jugador si la hoja de UI no cargó todavía.
+          if (!dibujarPlacaHorizontal(W / 2 - 178, H - 30, 356, 29)) {
+            cx.fillStyle = "rgba(10,8,16,.55)";
+            cx.beginPath();
+            cx.roundRect(W / 2 - 178, H - 30, 356, 29, 6);
+            cx.fill();
+            cx.strokeStyle = "#6a3f8a";
+            cx.lineWidth = 1;
+            cx.stroke();
+          }
           const critico = jefe.hp / jefe.hpMax < 0.2;
           if (critico) {
+            // Trazo propio (beginPath+roundRect) en vez de reusar el path
+            // del fallback de arriba -- con la placa ornamentada dibujada
+            // por drawImage no queda ningún path activo que re-trazar.
+            cx.beginPath();
+            cx.roundRect(W / 2 - 178, H - 30, 356, 29, 6);
             cx.strokeStyle = "#ff5c5c";
             cx.globalAlpha = 0.4 + Math.sin(animGlobal * 10) * 0.3;
             cx.lineWidth = 1.5;
