@@ -36,6 +36,9 @@
   --ux-banner: url("/assets/sprites/ui/nameplate_royal.png");
   --ux-panel: url("/assets/sprites/ui/panel_dark.png");
   --ux-medallon: url("/assets/sprites/ui/slot_gold.png");
+  /* Tapas redondeadas con remache recortadas de btn-inventory.png (kit de
+     pausa) -- ver el comentario junto al bloque de botones más abajo. */
+  --ux-btn-cap: url("/assets/sprites/ui/btn_frame.png");
 }
 
 /* ===== Pantalla de inicio ===== */
@@ -1071,7 +1074,7 @@ body.pantalla-completa #hint {
   width: 171px;
   height: 171px;
 }
-#mp-retrato-canvas {
+#mp-retrato-icono {
   position: absolute;
   left: 50%;
   top: 50%;
@@ -1080,8 +1083,12 @@ body.pantalla-completa #hint {
   height: 60%;
   border-radius: 50%;
   overflow: hidden;
-  image-rendering: pixelated;
   background: var(--noche);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2.3rem;
+  line-height: 1;
 }
 #mp-retrato-marco {
   position: absolute;
@@ -2165,13 +2172,16 @@ body.pantalla-completa #hint {
   image-rendering: pixelated;
 }
 
-/* Botones: borde dorado + relleno de rojo tinto, al estilo de los
-   botones del kit de pausa (public/assets/ui/pausa/btn-*.png -- de ahí
-   salieron --vespero/--sangre, ver el comentario junto a :root). Esos
-   PNG llevan el texto grabado en la imagen (en inglés, "Inventory" /
-   "Quit"), así que no sirven tal cual para el resto de botones del
-   juego -- se reproduce el mismo look en CSS (borde + relleno + texto)
-   para que valga con cualquier etiqueta. */
+/* Botones: mismas tapas redondeadas con remache que el botón "Inventory"
+   del kit de pausa (public/assets/ui/pausa/btn-inventory.png -- de ahí
+   salieron --vespero/--sangre, ver el comentario junto a :root), no solo
+   el color aproximado por CSS. btn-inventory.png lleva el texto grabado
+   en la imagen (en inglés), así que no sirve tal cual para el resto de
+   botones -- btn_frame.png es un recorte de solo sus dos tapas (13px a
+   cada lado, sin nada del texto de en medio) usado como border-image de
+   solo los bordes izquierdo/derecho; el relleno de en medio sigue siendo
+   el degradado rojo de CSS, que a esa escala ya no se distingue de la
+   textura real. */
 .btn,
 .btn-mini,
 .btn-listo,
@@ -2180,22 +2190,30 @@ body.pantalla-completa #hint {
 .seg button,
 .inicio-start {
   background: linear-gradient(180deg, #9c3e3e 0%, #7a2226 55%, #501519 100%);
-  border-color: #b0925f;
+  border-style: solid;
+  border-width: 0 13px;
+  border-image-source: var(--ux-btn-cap);
+  border-image-slice: 0 13;
+  border-image-width: 0 13px;
+  border-image-repeat: stretch;
   border-radius: 999px;
+  box-shadow:
+    inset 0 1.5px 0 rgba(255, 255, 255, 0.25),
+    inset 0 -1.5px 0 rgba(0, 0, 0, 0.5);
   color: var(--vespero);
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.7);
+  image-rendering: pixelated;
 }
 .btn.dorado {
   background: linear-gradient(180deg, #b34a4a 0%, #8a2a2e 55%, #5c1a1e 100%);
-  border-color: var(--vespero);
-  box-shadow: 0 0 10px rgba(226, 196, 137, 0.4);
+  color: var(--vespero);
+  box-shadow:
+    inset 0 1.5px 0 rgba(255, 255, 255, 0.25),
+    inset 0 -1.5px 0 rgba(0, 0, 0, 0.5),
+    0 0 10px rgba(226, 196, 137, 0.4);
 }
 .btn.peligro {
   background: linear-gradient(180deg, #7a1f1f 0%, #501215 55%, #300a0c 100%);
-  border-color: #b0925f;
-}
-.btn.peligro:hover:not(:disabled) {
-  border-color: var(--sangre);
 }
 
 /* "Pulsa Start" es, en la práctica, un botón (dispara el inicio de

@@ -7,7 +7,6 @@
 // mostrar()/ocultar() + handlers en window para los onclick="..." inline.
 import { ROLES } from "../core/constants.js";
 import { G } from "../core/state.js";
-import { spriteJugador } from "../render/sprites.js";
 import { cerrarInv } from "./inventory.js";
 import { mostrar, ocultar } from "./overlays.js";
 
@@ -38,7 +37,7 @@ export function abrirMenuPausa() {
     // transparente) -- por eso va DEBAJO en el DOM y el canvas del
     // personaje se pinta encima, no al revés.
     '<div id="mp-retrato-marco" style="background-image:url(\'' + uiSrc("portrait-frame.png") + "')\"></div>" +
-    '<canvas id="mp-retrato-canvas" width="84" height="84"></canvas>' +
+    '<div id="mp-retrato-icono">' + escHtml(ROLES[p.rol].ico || "❔") + "</div>" +
     "</div>" +
     '<div id="mp-nameplate" style="background-image:url(\'' + uiSrc("nameplate.png") + "')\">" +
     '<span id="mp-nameplate-texto">' + escHtml(p.nombre) + " · " + escHtml(ROLES[p.rol].nombre) + "</span>" +
@@ -59,22 +58,6 @@ export function abrirMenuPausa() {
     "</div>";
 
   mostrar("menu-pausa");
-
-  const rc = document.getElementById("mp-retrato-canvas");
-  if (rc) {
-    const g = rc.getContext("2d");
-    g.imageSmoothingEnabled = false;
-    g.clearRect(0, 0, 84, 84);
-    const img = spriteJugador(p);
-    const esc = Math.min((84 * 0.85) / img.width, (84 * 0.85) / img.height);
-    g.drawImage(
-      img,
-      (84 - img.width * esc) / 2,
-      (84 - img.height * esc) / 2,
-      img.width * esc,
-      img.height * esc,
-    );
-  }
 }
 
 export function cerrarMenuPausa() {
