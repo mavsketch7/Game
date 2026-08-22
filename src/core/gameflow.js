@@ -169,6 +169,7 @@ export function nuevaPartida() {
           yunqueLock: false,
           oroRun: 0,
           shake: 0,
+          hitStopT: 0, // "juice" de combate -- ver systems/juice.js + main.js
           banner: { txt: "", t: 0 },
           toasts: [],
           invSel: 0,

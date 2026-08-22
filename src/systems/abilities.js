@@ -9,6 +9,7 @@ import { fxOnda, fxParticulas, fxTajo, fxTexto } from "../render/effects.js";
 import { sfx, sfxEspadazo } from "./audio.js";
 import { curarP, danoAEnemigo, danoAlJugador, masCercano, statsTot, vivos } from "./combat.js";
 import { posDropValida } from "./floorgen.js";
+import { JUICE } from "./juice.js";
 import { dropItem, genItem } from "./loot.js";
 import { OBJETOS_MITICOS, genObjetoMitico, tieneEfecto } from "./objetosMiticos.js";
 import { FRAGMENTOS_CATALOGO } from "./soul.js";
@@ -159,8 +160,8 @@ function golpeArco(p, dir, rango, arco, dmgBase, esPicaro) {
                 dmg,
                 p,
                 true,
-                Math.cos(dir) * 140,
-                Math.sin(dir) * 140,
+                Math.cos(dir) * JUICE.knockback.meleeForce,
+                Math.sin(dir) * JUICE.knockback.meleeForce,
               );
               hits++;
               if (backstab)

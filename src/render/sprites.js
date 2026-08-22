@@ -1095,19 +1095,6 @@ const FACTOR_SPRITE_HITBOX = 4;
 // drawSpriteBottom().
 export const TAM_HEROE = 17 * FACTOR_SPRITE_HITBOX;
 
-// Escala visual del cuerpo heroB sobre el mundo -- se veía pequeño
-// comparado con el resto de la sala (feedback del usuario). Ojo: NO toca
-// TAM_HEROE (el lienzo interno donde se recorta cada frame y se calculan
-// los anclajes de mano, ver cargarHojaFramesConAncla) ni p.r (radio de
-// colisión real, sigue en 17 -- ver core/gameflow.js) -- solo el tamaño
-// con el que se DIBUJA el cuerpo ya recortado (drawSpriteBottom en
-// character.js), así que no cambia el gameplay (colisiones/hitboxes),
-// solo el tamaño en pantalla. character.js debe escalar el ancla de mano
-// por este mismo factor al convertirla a coordenadas de mundo -- si no,
-// el arma se queda en la posición vieja (más pequeña) mientras el cuerpo
-// crece alrededor, y se ve "despegada" de la mano.
-export const ESCALA_HEROE = 1.15;
-
 // Calibración del arma dibujada por código (ver render/character.js, bloque
 // "arma apuntando") -- centralizado aquí en vez de números sueltos
 // repartidos por ese archivo, para que la próxima recalibración (nuevo

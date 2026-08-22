@@ -16,6 +16,7 @@ export function initAudio() {
         musGain.connect(audioCtx.destination);
         musGain.gain.value = 0;
         cargarMythicDropBuffer();
+        precargarImpactos();
       }
 
 export function reanudarAudio() {
@@ -53,6 +54,65 @@ function reproducirMythicDrop() {
   };
   if (mythicDropBuffer) play();
   else cargarMythicDropBuffer()?.then(play);
+}
+
+// Impacto de espada REAL (torre-vespero-assets/sounds-fx) -- capa extra de
+// peso sobre el "espadazo" sintetizado de siempre (sfxEspadazo, más abajo:
+// ese suena en cada SWING, este solo cuando el golpe CONECTA de verdad, ver
+// danoAEnemigo() en systems/combat.js). Mismo mecanismo que
+// cargarMythicDropBuffer()/reproducirMythicDrop() de arriba, generalizado a
+// varios archivos: 3 variantes en golpe normal (rotan al azar, para que no
+// suene siempre igual) y una muestra propia, más grave, en crítico.
+const IMPACT_FILES = {
+  normal: [
+    { nombre: "sword_hit_1", ext: "wav" },
+    { nombre: "sword_hit_2", ext: "wav" },
+    { nombre: "sword_hit_3", ext: "wav" },
+  ],
+  critico: [{ nombre: "golpe_critico", ext: "m4a" }],
+};
+const impactoBuffers = {};
+const impactoLoading = {};
+
+function cargarBufferImpacto(nombre, ext) {
+  if (impactoBuffers[nombre] || impactoLoading[nombre] || !audioCtx) return impactoLoading[nombre];
+  const url = `${import.meta.env.BASE_URL}assets/audio/${nombre}.${ext}`;
+  impactoLoading[nombre] = fetch(url)
+    .then((r) => r.arrayBuffer())
+    .then((buf) => audioCtx.decodeAudioData(buf))
+    .then((decoded) => {
+      impactoBuffers[nombre] = decoded;
+    })
+    .catch(() => {});
+  return impactoLoading[nombre];
+}
+
+function precargarImpactos() {
+  for (const f of IMPACT_FILES.normal) cargarBufferImpacto(f.nombre, f.ext);
+  for (const f of IMPACT_FILES.critico) cargarBufferImpacto(f.nombre, f.ext);
+}
+
+// crit=true usa la muestra de crítico (una sola variante); si no, elige al
+// azar entre las 3 normales.
+export function sfxImpacto(crit) {
+  if (AJ.silencio || !audioCtx) return;
+  reanudarAudio();
+  const lista = crit ? IMPACT_FILES.critico : IMPACT_FILES.normal;
+  const f = lista[Math.floor(Math.random() * lista.length)];
+  const vol = AJ.volMaster * AJ.volSfx;
+  const play = () => {
+    const buffer = impactoBuffers[f.nombre];
+    if (!buffer) return;
+    const src = audioCtx.createBufferSource();
+    src.buffer = buffer;
+    const g = audioCtx.createGain();
+    g.gain.value = vol * (crit ? 0.85 : 0.65);
+    src.connect(g);
+    g.connect(audioCtx.destination);
+    src.start();
+  };
+  if (impactoBuffers[f.nombre]) play();
+  else cargarBufferImpacto(f.nombre, f.ext)?.then(play);
 }
 
 export function sfx(tipo) {

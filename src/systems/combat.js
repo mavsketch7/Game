@@ -8,8 +8,9 @@ import { META, guardarMeta } from "../core/save.js";
 import { G } from "../core/state.js";
 import { fxOnda, fxParticulas, fxTexto } from "../render/effects.js";
 import { NIVEL_ULTI, danoPilar, golpeObjeto } from "./abilities.js";
-import { sfx } from "./audio.js";
+import { sfx, sfxImpacto } from "./audio.js";
 import { NOMBRES_MINI, arquetipoJefe, escalaEnemigo, nombreJefe } from "./bosses.js";
+import { JUICE, aplicarFlash, aplicarHitStop, aplicarShakeGolpe } from "./juice.js";
 import { posDropValida, puntoValido } from "./floorgen.js";
 import { dropItem, finPartida, genItem } from "./loot.js";
 import { tieneEfecto } from "./objetosMiticos.js";
@@ -302,6 +303,15 @@ export function danoAEnemigo(e, raw, duenio, puedeCrit, kbx, kby) {
           dmg *= 1.5;
         dmg = Math.max(1, Math.round(dmg));
         e.hurtT = 0.12;
+        // "Juice" de combate (hit-stop + destello) -- ver systems/juice.js.
+        // Se aplican aquí porque este es el único punto por el que pasa
+        // cualquier golpe DIRECTO a un enemigo, dummy incluido.
+        aplicarHitStop(dmg);
+        aplicarFlash(e, crit);
+        // Impacto de espada real (torre-vespero-assets/sounds-fx), capa
+        // extra sobre el "espadazo" sintetizado del swing (que ya suena en
+        // abilities.js) -- solo guerrero, mismo alcance que sfxEspadazo.
+        if (duenio.rol === "guerrero") sfxImpacto(crit);
         if (e.dummy) {
           e.hp = Math.max(1, e.hp - dmg);
           e.dmgLog.push({ t: G.stats.tiempo, d: dmg });
@@ -310,8 +320,13 @@ export function danoAEnemigo(e, raw, duenio, puedeCrit, kbx, kby) {
         }
         e.hp -= dmg;
         const kr = e.knockRes !== undefined ? e.knockRes : 1;
-        e.kx += (kbx || 0) * kr;
-        e.ky += (kby || 0) * kr;
+        if (JUICE.knockback.enabled) {
+          e.kx += (kbx || 0) * kr;
+          e.ky += (kby || 0) * kr;
+        }
+        // Shake por golpe (no en el dummy -- sería un temblor constante
+        // durante una prueba de DPS, molesto y sin valor real).
+        aplicarShakeGolpe(dmg);
         G.stats.dano += dmg;
         duenio.statDano = (duenio.statDano || 0) + dmg;
         fxTexto(e.x, e.y - e.r - 6, dmg, crit ? "#e9b45c" : "#e9e3d5", crit);

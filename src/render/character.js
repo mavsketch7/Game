@@ -9,10 +9,11 @@ import { ELEMENTOS, RAREZAS, SUPS } from "../core/constants.js";
 import { G } from "../core/state.js";
 import { fxParticulas } from "./effects.js";
 import { drawSprite, drawSpriteBottom } from "./spriteDraw.js";
-import { ARQUERO_BOW, ARQUERO_BOW_DUR, ATTACK_DUR, CONFIG_ARMA, DASH_ATTACK_DUR, ESC_FORMA, ESCALA_HEROE, MIRA_IZQUIERDA_POR_DEFECTO, MOB_RUN, OFFHAND_IMG, OFFHAND_IMG_RAREZA, REAL_ATTACK, REAL_ATTACK_ANCLA, REAL_DASH, REAL_DASH_ANCLA, REAL_IDLE, REAL_IDLE_ANCLA, REAL_RUN, REAL_RUN_ANCLA, REAL_SPECIAL, REAL_SPECIAL_ANCLA, REAL_SPRITE_SCALE, SHEETS, SPECIAL_ATTACK_DUR, SPR, SPR_FORMAS, TAM_HEROE, WEAPON_IMG, WEAPON_IMG_RAREZA, assetOK, spriteJugador } from "./sprites.js";
+import { ARQUERO_BOW, ARQUERO_BOW_DUR, ATTACK_DUR, CONFIG_ARMA, DASH_ATTACK_DUR, ESC_FORMA, MIRA_IZQUIERDA_POR_DEFECTO, MOB_RUN, OFFHAND_IMG, OFFHAND_IMG_RAREZA, REAL_ATTACK, REAL_ATTACK_ANCLA, REAL_DASH, REAL_DASH_ANCLA, REAL_IDLE, REAL_IDLE_ANCLA, REAL_RUN, REAL_RUN_ANCLA, REAL_SPECIAL, REAL_SPECIAL_ANCLA, REAL_SPRITE_SCALE, SHEETS, SPECIAL_ATTACK_DUR, SPR, SPR_FORMAS, TAM_HEROE, WEAPON_IMG, WEAPON_IMG_RAREZA, assetOK, spriteJugador } from "./sprites.js";
 import { groundTarget } from "../systems/abilities.js";
 import { masCercano } from "../systems/combat.js";
 import { mouse } from "../systems/input.js";
+import { JUICE } from "../systems/juice.js";
 import { clamp, rnd } from "../utils/helpers.js";
 
 // Reparte los 360° de puntería en 4 cuadrantes: abajo/arriba (cuando el
@@ -22,6 +23,26 @@ import { clamp, rnd } from "../utils/helpers.js";
 function direccionDesdeAim(aim) {
   const ax = Math.cos(aim), ay = Math.sin(aim);
   return Math.abs(ay) > Math.abs(ax) ? (ay > 0 ? "down" : "up") : "side";
+}
+
+// Destello de impacto (ver systems/juice.js: aplicarFlash()) -- tiñe SOLO
+// los píxeles ya opacos del sprite recién dibujado (composición
+// "source-atop": el color nuevo se pinta nada más donde ya había algo, así
+// que respeta la silueta exacta sin tocar los píxeles originales). Mismo
+// translate/flip/escala que drawSprite() para que el rectángulo de relleno
+// caiga justo encima del sprite que se acaba de dibujar -- si no coincidiera
+// exactamente, el tinte quedaría desplazado del personaje.
+function tinteImpacto(img, x, y, flip, esc, col, alpha) {
+  if (!img || alpha <= 0) return;
+  cx.save();
+  cx.translate(Math.round(x), Math.round(y));
+  if (flip) cx.scale(-1, 1);
+  cx.scale(esc || 1, esc || 1);
+  cx.globalCompositeOperation = "source-atop";
+  cx.globalAlpha = alpha;
+  cx.fillStyle = col;
+  cx.fillRect(-img.width / 2, -img.height / 2, img.width, img.height);
+  cx.restore();
 }
 
 function calcularPoseHeroe(p, x, yPies, mov) {
@@ -110,16 +131,11 @@ function calcularPoseHeroe(p, x, yPies, mov) {
         // que usa drawSpriteBottom() para colocar el propio sprite -- para
         // que el bloque "arma apuntando" (más abajo, mismo archivo) pueda
         // usarlo directamente como pivote sin repetir esta cuenta.
-        // escalaCuerpo: mismo factor que dibujarCuerpoHeroe() usa para
-        // DIBUJAR el cuerpo (ESCALA_HEROE en sprites.js) -- hay que
-        // aplicarlo también aquí o el ancla quedaría en la posición sin
-        // escalar mientras el cuerpo se dibuja más grande alrededor.
-        const escalaCuerpo = ESCALA_HEROE * (REAL_SPRITE_SCALE[p.rol] || 1);
         const centroLocal = TAM_HEROE / 2;
         const ancla = anclaLocal
           ? {
-              x: x + (flip ? -(anclaLocal.x - centroLocal) : (anclaLocal.x - centroLocal)) * escalaCuerpo,
-              y: yPies - TAM_HEROE * escalaCuerpo + anclaLocal.y * escalaCuerpo,
+              x: x + (flip ? -(anclaLocal.x - centroLocal) : (anclaLocal.x - centroLocal)),
+              y: yPies - TAM_HEROE + anclaLocal.y,
             }
           : null;
         // `dir` sale junto al ancla (no solo ella) porque renderJugador()
@@ -131,14 +147,13 @@ function calcularPoseHeroe(p, x, yPies, mov) {
       }
 
       function dibujarCuerpoHeroe(p, img, x, yPies, flip) {
-        const escala = ESCALA_HEROE * (REAL_SPRITE_SCALE[p.rol] || 1);
         if (img) {
-          drawSpriteBottom(img, x, yPies, flip, escala);
+          drawSpriteBottom(img, x, yPies, flip, REAL_SPRITE_SCALE[p.rol] || 1);
         } else {
           // Los assets reales todavía no cargaron (un instante, al arrancar):
           // icono estático de siempre, centrado -- no viene recolocado por
           // pies como los frames de arriba, así que se ancla como antes.
-          drawSprite(spriteJugador(p), x, yPies - 6, flip, escala);
+          drawSprite(spriteJugador(p), x, yPies - 6, flip, REAL_SPRITE_SCALE[p.rol] || 1);
         }
       }
 
@@ -1028,7 +1043,11 @@ export function renderEnemigo(e) {
           const bob2 = Math.sin(animGlobal * 6 + e.x) * 1.5;
           if (e.hurtT > 0) cx.globalAlpha = 0.55;
           else cx.globalAlpha = 0.85;
-          drawSprite(img, e.x, e.y - 4 + bob2, obj2 ? e.x > obj2.x : false, 1);
+          const flipClon = obj2 ? e.x > obj2.x : false;
+          drawSprite(img, e.x, e.y - 4 + bob2, flipClon, 1);
+          cx.globalAlpha = 1;
+          if (e.hitFlashT > 0)
+            tinteImpacto(img, e.x, e.y - 4 + bob2, flipClon, 1, e.hitFlashCol, clamp(e.hitFlashT / JUICE.flash.dur, 0, 1));
           // velo oscuro
           cx.globalAlpha = 0.45;
           cx.fillStyle = "#1a0f2a";
@@ -1166,19 +1185,18 @@ export function renderEnemigo(e) {
         }
         {
           if (e.hurtT > 0) cx.globalAlpha = 0.55;
-          drawSprite(
-            img,
-            e.x,
+          const yMob =
             e.y -
-              4 +
-              bob +
-              (e.ranged && e.tipo !== "caster"
-                ? Math.sin(animGlobal * 3 + e.y) * 3
-                : 0),
-            obj ? e.x > obj.x : false,
-            esc,
-          );
+            4 +
+            bob +
+            (e.ranged && e.tipo !== "caster"
+              ? Math.sin(animGlobal * 3 + e.y) * 3
+              : 0);
+          const flipMob = obj ? e.x > obj.x : false;
+          drawSprite(img, e.x, yMob, flipMob, esc);
           cx.globalAlpha = 1;
+          if (e.hitFlashT > 0)
+            tinteImpacto(img, e.x, yMob, flipMob, esc, e.hitFlashCol, clamp(e.hitFlashT / JUICE.flash.dur, 0, 1));
         }
         if (e.jefe)
           drawSprite(

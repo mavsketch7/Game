@@ -40,7 +40,16 @@ function bucle(ts) {
           return;
         }
         pollPads();
-        if (G && G.activo && !G.pausa) update(dt);
+        if (G && G.activo && !G.pausa) {
+          // Hit-stop (ver systems/juice.js: aplicarHitStop()): congela la
+          // LÓGICA (no llama a update(), así que hp/posiciones/IA/timers no
+          // avanzan ni un tick) sin tocar el dibujado -- render() de abajo
+          // sigue corriendo cada frame igual, así que la pantalla no se
+          // queda literalmente congelada (el shake y los fx siguen vivos).
+          // Se consume con el dt REAL de pantalla, no con el del juego.
+          if (G.hitStopT > 0) G.hitStopT = Math.max(0, G.hitStopT - dt);
+          else update(dt);
+        }
         render();
         if (NET.modo === "host") {
           netEnviarEventosFx();

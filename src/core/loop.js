@@ -10,6 +10,7 @@ import { aplicarImbuido, atacar, danoPilar, dispararArcano, golpeObjeto } from "
 import { sfx, sfxAterrizaje } from "../systems/audio.js";
 import { esJefe, escalaEnemigo } from "../systems/bosses.js";
 import { curarP, danoAEnemigo, danoAlJugador, explotarBomber, ganarXP, masCercano, matarEnemigo, spawnClon, spawnEnemigo, statsTot, tipoAleatorio, vivos } from "../systems/combat.js";
+import { JUICE } from "../systems/juice.js";
 import { aplicarLimites, colisionaMuro, cruzarPuerta, dentroForma, iniciarPlanta, salaActual } from "../systems/floorgen.js";
 import { leerInput } from "../systems/input.js";
 import { finPartida, plantaDespejada } from "../systems/loot.js";
@@ -585,6 +586,9 @@ export function update(dt) {
         // enemigos
         for (const e of G.enemigos) {
           if (e.hurtT > 0) e.hurtT -= dt;
+          // destello de impacto (blanco/rojo, ver systems/juice.js) --
+          // decae solo, independiente de hurtT (dim de siempre, más largo).
+          if (e.hitFlashT > 0) e.hitFlashT -= dt;
           // muñeco de pruebas: solo regenera y limpia su log de DPS
           if (e.dummy) {
             e.hp = Math.min(e.hpMax, e.hp + e.hpMax * 0.2 * dt);
@@ -653,8 +657,8 @@ export function update(dt) {
           }
           if (e.stunT > 0) {
             e.stunT -= dt;
-            e.kx *= 0.85;
-            e.ky *= 0.85;
+            e.kx *= JUICE.knockback.friction;
+            e.ky *= JUICE.knockback.friction;
             e.x += e.kx * dt;
             e.y += e.ky * dt;
             continue;
@@ -1082,8 +1086,8 @@ export function update(dt) {
             }
           }
 
-          e.kx *= 0.85;
-          e.ky *= 0.85;
+          e.kx *= JUICE.knockback.friction;
+          e.ky *= JUICE.knockback.friction;
           e.x += e.kx * dt;
           e.y += e.ky * dt;
           // colisión con pilares: empuje + los enemigos golpean columnas destructibles al empujar
