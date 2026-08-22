@@ -28,6 +28,12 @@
   --sangre: #a2332d;
   --alba: #7fd4c1;
   --esc-texto: 1;
+  /* Recortes de "Dark Ages UI Pixel Art Asset Pack" (Hypnobius,
+     DarkAgesUi_v1.0/32x32-Tilesheet.png) usados para el reskin de los
+     paneles/listas y títulos de los overlays -- ver el bloque al final
+     de la hoja. */
+  --ux-frame: url("/assets/sprites/ui/slot_dark_a.png");
+  --ux-banner: url("/assets/sprites/ui/nameplate_royal.png");
 }
 
 /* ===== Pantalla de inicio ===== */
@@ -2080,6 +2086,56 @@ body.pantalla-completa #hint {
   font-size: 0.78rem;
   color: var(--ceniza);
   margin-top: 5px;
+}
+
+/* Reskin de paneles/listas y títulos de los overlays (tienda, inventario,
+   ajustes, workbench, pvp, info de clase, rankings...) con el tileset
+   "Dark Ages UI" -- ver --ux-frame/--ux-banner arriba. Se pisa el
+   border:1-2px solid var(--borde) de cada clase con border-image en vez
+   de tocar sus reglas originales una a una, así se gana la cascada por
+   orden sin !important (mismo truco que el bloque del cursor, abajo).
+   Fuera a propósito: #menu/#menu-pausa (ya tienen su propio kit pixel
+   art), .item-cell (el borde marca la rareza del objeto, no debe
+   perderse) y .fusion-slot/.alma-celda (el borde discontinuo/de color
+   marca hueco vacío o bloqueado). */
+.mejora-linea,
+.ajuste-fila,
+.skin-fila,
+.item-linea,
+.habil-fila,
+.frag-item,
+.ficha-cab,
+.ranking-sesion {
+  border-style: solid;
+  border-width: 9px;
+  border-image-source: var(--ux-frame);
+  border-image-slice: 9;
+  border-image-width: 9px;
+  border-image-repeat: round;
+  border-radius: 0;
+  image-rendering: pixelated;
+}
+.skin-fila.equipada {
+  border-color: transparent;
+  outline: 2px solid var(--vespero);
+  outline-offset: 2px;
+}
+
+.tienda-cab h2,
+.info-clase h2,
+.cartas-titulo h2,
+.display {
+  display: inline-block;
+  flex-shrink: 0;
+  white-space: nowrap;
+  border-style: solid;
+  border-width: 0 26px;
+  border-image-source: var(--ux-banner);
+  border-image-slice: 0 26 fill;
+  border-image-width: 0 26px;
+  border-image-repeat: stretch;
+  padding: 12px 8px;
+  image-rendering: pixelated;
 }
 
 /* El guantelete (#cursor-img) sustituye al cursor nativo en toda la
