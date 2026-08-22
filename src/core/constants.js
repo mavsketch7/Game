@@ -17,6 +17,7 @@ export const COLORES_J = ["#e9b45c", "#7fd4c1", "#c084f0", "#e06070"];
 export const ROLES = {
         guerrero: {
           nombre: "Guerrero",
+          ico: "⚔️",
           desc: "Espada en arco, parry y aguante.",
           hp: 150,
           res: 100,
@@ -34,6 +35,7 @@ export const ROLES = {
         },
         arquero: {
           nombre: "Arquero",
+          ico: "🏹",
           desc: "Flechas rápidas a distancia.",
           hp: 90,
           res: 100,
@@ -51,6 +53,7 @@ export const ROLES = {
         },
         mago: {
           nombre: "Mago",
+          ico: "🪄",
           desc: "Proyectiles elementales: quema, congela o carga el orbe arcano.",
           hp: 75,
           res: 130,
@@ -68,6 +71,7 @@ export const ROLES = {
         },
         clerigo: {
           nombre: "Clérigo",
+          ico: "✨",
           desc: "Soporte: cura, acelera y escuda al grupo.",
           hp: 115,
           res: 120,
@@ -85,6 +89,7 @@ export const ROLES = {
         },
         picaro: {
           nombre: "Pícaro",
+          ico: "🗡️",
           desc: "Dagas veloces, crítico brutal y movilidad extrema.",
           hp: 95,
           res: 100,
@@ -102,6 +107,7 @@ export const ROLES = {
         },
         druida: {
           nombre: "Druida",
+          ico: "🌿",
           desc: "Lanza ramas y se transforma en águila, lobo u oso.",
           hp: 110,
           res: 110,

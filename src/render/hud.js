@@ -29,9 +29,18 @@ export function barra(x, y, w2, h2, pct, col, txt) {
           cx.fillStyle = "rgba(255,255,255,.22)";
           cx.fillRect(x, y, w2 * pct, Math.max(1, h2 * 0.4));
         }
-        cx.strokeStyle = "#3a3453";
+        // marco "engastado en metal" a juego con el tileset Dark Ages UI
+        // del resto del HUD/overlays (ver render/uiTiles.js) -- un borde
+        // oscuro grueso + un filo dorado fino por dentro, en vez del
+        // trazo plano de un solo color de antes.
+        cx.strokeStyle = "#120d08";
+        cx.lineWidth = 2;
+        cx.strokeRect(x + 1, y + 1, w2 - 2, h2 - 2);
+        cx.strokeStyle = "#c9a35a";
         cx.lineWidth = 1;
-        cx.strokeRect(x + 0.5, y + 0.5, w2 - 1, h2 - 1);
+        cx.globalAlpha = 0.8;
+        cx.strokeRect(x + 1.5, y + 1.5, w2 - 3, h2 - 3);
+        cx.globalAlpha = 1;
         if (txt) {
           cx.font = "700 9px Alegreya Sans";
           cx.textAlign = "center";

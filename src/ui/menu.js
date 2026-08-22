@@ -3,7 +3,6 @@ import { COLORES_J, LOBBIES, ORDEN_ROLES, ROLES } from "../core/constants.js";
 import { nuevaPartida } from "../core/gameflow.js";
 import { MEJORAS_TIENDA, META } from "../core/save.js";
 import { NET, crearSalaOnline, enviarRolPropio, netEnviarLobby, unirseSalaOnline } from "../net/peer.js";
-import { SPR } from "../render/sprites.js";
 import { crearGremio, miGremio, salirGremio, unirseGremio } from "../systems/guilds.js";
 import { idJugador } from "../systems/identity.js";
 import { M } from "../systems/input.js";
@@ -95,8 +94,7 @@ export function construirMenu() {
           const rol = ORDEN_ROLES[s.rolIdx],
             r = ROLES[rol];
           const editable = puedeEditarSlot(s, i);
-          div.className = "slot marco-px" + (s.listo ? " listo" : "");
-          div.style.setProperty("--gema", COLORES_J[i]);
+          div.className = "slot" + (s.listo ? " listo" : "");
           div.innerHTML =
             '<div class="dispositivo"><span>J' +
             (i + 1) +
@@ -122,14 +120,10 @@ export function construirMenu() {
             '<br><b style="color:var(--vespero)">Ulti:</b> ' +
             r.skill.nombre +
             "</div>";
-          const mini = document.createElement("canvas");
-          const img = SPR[rol];
-          mini.width = img.width;
-          mini.height = img.height;
-          mini.getContext("2d").drawImage(img, 0, 0);
-          mini.style.width = "44px";
-          mini.style.imageRendering = "pixelated";
-          div.appendChild(mini);
+          const icono = document.createElement("div");
+          icono.className = "slot-icono";
+          icono.textContent = r.ico || "❔";
+          div.appendChild(icono);
           const nombreInput = document.createElement("input");
           nombreInput.className = "input-nombre-slot";
           nombreInput.maxLength = 20;
