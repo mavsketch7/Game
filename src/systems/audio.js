@@ -84,20 +84,33 @@ const GRUPOS_SONIDO = {
   golpeAire: [{ nombre: "golpe_aire", ext: "m4a", offset: 0.61 }],
   golpeCritico: [{ nombre: "golpe_critico", ext: "m4a", offset: 0.43 }],
   paso: [{ nombre: "paso_1", ext: "wav", offset: 0 }],
-  // Tensar el arco (arquero, ver dispararFlechaCargada en abilities.js):
-  // 3 variantes que rotan al azar cada vez que EMPIEZA una carga nueva,
-  // para que cargar muchas veces seguidas no suene siempre igual.
-  cargaArco: [
-    { nombre: "carga_arco_1", ext: "m4a", offset: 0.144 },
-    { nombre: "carga_arco_2", ext: "m4a", offset: 0.12 },
-    { nombre: "carga_arco_3", ext: "m4a", offset: 0.224 },
-  ],
-  // Silbido real al soltar una flecha CARGADA (no la básica, que se queda
-  // con el "flecha" sintetizado de sfx() de siempre).
-  flechaVuelo: [{ nombre: "flecha_vuelo", ext: "m4a", offset: 0.056 }],
+  // Tensar el arco (arquero, ver p._cargaSrc en core/loop.js y
+  // dispararFlechaCargada en abilities.js) -- un único archivo (antes
+  // rotaba entre 3 variantes; se simplificó a una sola). Se reproduce
+  // CONTROLABLE (ver reproducirSonidoControlable) porque el archivo dura
+  // más que la carga máxima del juego -- si no se corta a mano al
+  // soltar, se oiría de más incluso en un toque instantáneo.
+  cargaArco: [{ nombre: "carga_arco", ext: "m4a", offset: 0.144 }],
+  // Disparo real al soltar -- SIEMPRE, cargado o no (antes solo el
+  // cargado tenía sonido real; el básico se quedaba con el sintetizado
+  // de sfx(), que ya no se usa para el arquero).
+  disparoArco: [{ nombre: "flecha_disparo", ext: "m4a", offset: 0.288 }],
+  // Vuelo de la flecha: bucle controlable (0.27s de sonido real para un
+  // vuelo que puede durar bastante más) que arranca justo tras el
+  // disparo y se corta en el momento del impacto/al chocar con un muro o
+  // caducar -- ver pr._vueloSrc en core/loop.js.
+  vueloFlecha: [{ nombre: "flecha_volando", ext: "m4a", offset: 0.2 }],
   // Aviso corto al entrar en la ventana de crítico óptimo mientras se
   // carga -- refuerza en sonido la marca visual de la barra.
   cargaLista: [{ nombre: "carga_lista", ext: "m4a", offset: 0.104 }],
+  // Impacto real de un PROYECTIL contra un enemigo (flecha del arquero,
+  // cuchillo lanzado del pícaro -- mismo golpe seco para los dos, ver
+  // core/loop.js: dispara al final del bucle de colisión proyectil-vs-
+  // enemigo). golpeArco() ya decide su propio sonido para los golpes
+  // MELÉ (impactoGuerrero/impactoPicaro/golpeAire/golpeCritico); esto
+  // cubre el hueco de los proyectiles, que antes no sonaban nada al
+  // conectar.
+  impactoProyectil: [{ nombre: "impacto_flecha", ext: "m4a", offset: 0.016 }],
 };
 const bufferesReales = {};
 const cargaReales = {};
@@ -149,6 +162,48 @@ function reproducirSonidoReal(grupo, volMul, pitchJitter) {
   else cargarBufferReal(f.nombre, f.ext)?.then(play);
 }
 
+// Como reproducirSonidoReal, pero devuelve un control { stop() } para
+// poder cortar el sonido antes de que acabe solo -- lo necesitan el
+// tensado del arco (se corta al soltar) y el vuelo de la flecha (se
+// corta al impactar/chocar con un muro/caducar), que si no se quedarían
+// sonando de más. Toma el PRIMER archivo del grupo (estos dos grupos ya
+// no rotan variantes) en vez de elegir al azar como reproducirSonidoReal.
+// loop=true los repite hasta que se llama a stop() -- el vuelo lo
+// necesita porque su muestra real dura menos que un vuelo típico.
+function reproducirSonidoControlable(grupo, volMul, loop) {
+  const noop = { stop() {} };
+  if (AJ.silencio || !audioCtx) return noop;
+  reanudarAudio();
+  const f = (GRUPOS_SONIDO[grupo] || [])[0];
+  if (!f) return noop;
+  const vol = AJ.volMaster * AJ.volSfx * (volMul ?? 1);
+  let src = null,
+    detenido = false;
+  const play = () => {
+    if (detenido) return;
+    const buffer = bufferesReales[f.nombre];
+    if (!buffer) return;
+    src = audioCtx.createBufferSource();
+    src.buffer = buffer;
+    src.loop = !!loop;
+    const g = audioCtx.createGain();
+    g.gain.value = vol;
+    src.connect(g);
+    g.connect(audioCtx.destination);
+    src.start(0, f.offset || 0);
+  };
+  if (bufferesReales[f.nombre]) play();
+  else cargarBufferReal(f.nombre, f.ext)?.then(play);
+  return {
+    stop() {
+      detenido = true;
+      try {
+        src && src.stop();
+      } catch (e) {}
+    },
+  };
+}
+
 // Guerrero: golpe que conecta -- rota entre las 3 variantes impactodirecto.
 export function sfxImpactoGuerrero() {
   reproducirSonidoReal("impactoGuerrero", 0.75);
@@ -171,19 +226,32 @@ export function sfxGolpeCritico() {
 export function sfxPaso() {
   reproducirSonidoReal("paso", 0.22, 0.18);
 }
-// Arquero: empieza a tensar el arco (una vez por carga, no por frame).
-export function sfxCargaArco() {
-  reproducirSonidoReal("cargaArco", 0.6);
+// Arquero: empieza a tensar el arco (una vez por carga, no por frame) --
+// controlable, hay que cortarlo al soltar (ver p._cargaSrc en
+// core/loop.js): la muestra real dura más que la carga máxima del juego.
+export function sfxTensarArco() {
+  return reproducirSonidoControlable("cargaArco", 0.7);
 }
-// Arquero: silbido real de la flecha al soltar un disparo CARGADO (el
-// básico se queda con el "flecha" sintetizado de sfx(), ver dispararProy).
-export function sfxFlechaVuelo() {
-  reproducirSonidoReal("flechaVuelo", 0.7);
+// Disparo real al soltar -- SIEMPRE (cargado o toque instantáneo, ver
+// dispararFlechaCargada en abilities.js). También lo usa el cuchillo
+// cargado del pícaro (lanzarCuchillo) para el mismo golpe de soltar.
+export function sfxDisparoArco() {
+  reproducirSonidoReal("disparoArco", 0.75);
+}
+// Vuelo de la flecha: bucle controlable, arranca tras el disparo y se
+// corta al primer impacto/choque con muro/caducar (ver pr._vueloSrc en
+// core/loop.js).
+export function sfxVueloFlecha() {
+  return reproducirSonidoControlable("vueloFlecha", 0.5, true);
 }
 // Arquero: aviso al entrar en la ventana de crítico óptimo mientras se
 // carga (una vez por carga, ver dispararFlechaCargada en abilities.js).
 export function sfxCargaLista() {
   reproducirSonidoReal("cargaLista", 0.55);
+}
+// Proyectil (flecha o cuchillo lanzado) que conecta con un enemigo.
+export function sfxImpactoProyectil() {
+  reproducirSonidoReal("impactoProyectil", 0.8);
 }
 
 export function sfx(tipo) {
@@ -196,6 +264,7 @@ export function sfx(tipo) {
         const presets = {
           golpe: { f: 180, f2: 90, tipo: "square", dur: 0.08, v: 0.5 },
           flecha: { f: 640, f2: 320, tipo: "triangle", dur: 0.09, v: 0.28 },
+          cuchillo: { f: 900, f2: 380, tipo: "triangle", dur: 0.06, v: 0.26 },
           magia: { f: 420, f2: 760, tipo: "sine", dur: 0.16, v: 0.34 },
           hielo: { f: 900, f2: 1400, tipo: "sine", dur: 0.14, v: 0.3 },
           fuego: { f: 220, f2: 110, tipo: "sawtooth", dur: 0.18, v: 0.34 },

@@ -6,8 +6,8 @@ import { META } from "./save.js";
 import { G } from "./state.js";
 import { NET, netAplicarInputs } from "../net/peer.js";
 import { fxOnda, fxParticulas, fxTexto } from "../render/effects.js";
-import { CARGA_ARQ_MAX, CARGA_ARQ_ZONA, aplicarImbuido, atacar, danoPilar, dispararArcano, dispararFlechaCargada, golpeObjeto } from "../systems/abilities.js";
-import { sfx, sfxAterrizaje, sfxCargaArco, sfxCargaLista, sfxGolpeAire, sfxGolpeCritico, sfxImpactoGuerrero, sfxPaso } from "../systems/audio.js";
+import { CARGA_ARQ_MAX, CARGA_ARQ_ZONA, CARGA_CUCH_MAX, CARGA_CUCH_ZONA, aplicarImbuido, atacar, danoPilar, dispararArcano, dispararFlechaCargada, golpeObjeto, lanzarCuchillo } from "../systems/abilities.js";
+import { sfx, sfxAterrizaje, sfxCargaLista, sfxGolpeAire, sfxGolpeCritico, sfxImpactoGuerrero, sfxImpactoProyectil, sfxPaso, sfxTensarArco } from "../systems/audio.js";
 import { esJefe, escalaEnemigo } from "../systems/bosses.js";
 import { curarP, danoAEnemigo, danoAlJugador, explotarBomber, ganarXP, masCercano, matarEnemigo, spawnClon, spawnEnemigo, statsTot, tipoAleatorio, vivos } from "../systems/combat.js";
 import { JUICE, actualizarEstilo } from "../systems/juice.js";
@@ -31,6 +31,7 @@ const CDS_LINEALES = [
   "skillCd",
   "dashCd",
   "dashAtkCd",
+  "cuchilloCd",
   "disparoCd",
   "invulT",
   "parryT",
@@ -39,6 +40,23 @@ const CDS_LINEALES = [
   "swingT",
   "hasteT",
 ];
+
+// Flechas clavadas (detalle de impacto: la flecha se queda incrustada en
+// el muro o en el enemigo un rato en vez de desaparecer sin más al
+// golpear, ver los dos sitios de spawn en el bucle de proyectiles más
+// abajo). G.flechasClavadas es SOLO decorativo -- no colisiona, no hace
+// daño, no se sincroniza por red (mismo criterio que el resto de FX
+// puramente visuales que no necesitan estar exactos entre anfitrión e
+// invitado). MAX_FLECHAS_CLAVADAS acota cuántas hay a la vez (el "límite
+// de flechas" pedido, en vez de un tiempo de vida corto): al pasarse del
+// límite se quita la más antigua, así no hace falta vaciar el array ni
+// tocar nada al cargar el juego.
+const MAX_FLECHAS_CLAVADAS = 24;
+const FLECHA_CLAVADA_VIDA = 5;
+function agregarFlechaClavada(entry) {
+  G.flechasClavadas.push(entry);
+  if (G.flechasClavadas.length > MAX_FLECHAS_CLAVADAS) G.flechasClavadas.shift();
+}
 
 export function update(dt) {
         if (NET.modo === "host") netAplicarInputs();
@@ -129,10 +147,10 @@ export function update(dt) {
               else if (p._dashAtkCrit) sfxGolpeCritico();
               else sfxImpactoGuerrero();
             }
-          } else if (p.cargaArqT > 0) {
-            // Arquero tensando el arco (ver dispararFlechaCargada más
-            // abajo): se queda quieto apuntando, igual que un tirador de
-            // verdad no camina a mitad de tiro -- vx/vy ya están a 0.
+          } else if (p.cargaArqT > 0 || p.cargaCuchT > 0) {
+            // Arquero tensando el arco / pícaro echando el brazo atrás
+            // (ver dispararFlechaCargada/lanzarCuchillo más abajo): se
+            // quedan quietos apuntando -- vx/vy ya están a 0.
           } else {
             const n = Math.hypot(p.inp.mx, p.inp.my);
             if (n > 0) {
@@ -420,12 +438,12 @@ export function update(dt) {
               if (p.inp.atkHeld) atacar(p);
             } else if (p.inp.atkHeld && p.atkCd <= 0) {
               const antes = p.cargaArqT || 0;
+              // El tensado arranca en el mismo frame en que se empieza a
+              // mantener pulsado -- instantáneo incluso en un toque corto
+              // (dispararFlechaCargada lo corta al soltar, pase lo que
+              // pase con CARGA_ARQ_UMBRAL más abajo).
+              if (antes <= 0) p._cargaSrc = sfxTensarArco();
               p.cargaArqT = Math.min(antes + dt, CARGA_ARQ_MAX);
-              // El sonido de tensar arranca un poco después de empezar a
-              // mantener pulsado (no en el frame 0): un simple clic rápido
-              // dispara igual que siempre (ver CARGA_ARQ_UMBRAL más abajo)
-              // y no debe sonar como si hubiera cargado algo.
-              if (antes < 0.08 && p.cargaArqT >= 0.08) sfxCargaArco();
               if (antes < CARGA_ARQ_ZONA[0] && p.cargaArqT >= CARGA_ARQ_ZONA[0])
                 sfxCargaLista();
             } else if (!p.inp.atkHeld && p.cargaArqT > 0) {
@@ -439,6 +457,24 @@ export function update(dt) {
               dispararFlechaCargada(p); // quedó atrapado a media carga: suelta lo cargado
             else p.cargaArqT = 0;
             if (p.inp.atkHeld) atacar(p);
+          }
+          // Cuchillo del pícaro: entrada INDEPENDIENTE del botón de ataque
+          // de arriba (Mayús/lanzarHeld, no clic izq/atkHeld) -- conserva
+          // su golpe de daga de siempre Y puede cargar el cuchillo aparte,
+          // a diferencia del arquero/mago, que sustituyen por completo su
+          // botón de ataque mientras cargan.
+          if (p.rol === "picaro" && !p.atrapado) {
+            if (p.inp.lanzarHeld && p.cuchilloCd <= 0) {
+              const antes = p.cargaCuchT || 0;
+              if (antes <= 0) p._cargaSrc = sfxTensarArco();
+              p.cargaCuchT = Math.min(antes + dt, CARGA_CUCH_MAX);
+              if (antes < CARGA_CUCH_ZONA[0] && p.cargaCuchT >= CARGA_CUCH_ZONA[0])
+                sfxCargaLista();
+            } else if (!p.inp.lanzarHeld && p.cargaCuchT > 0) {
+              lanzarCuchillo(p);
+            }
+          } else if (p.cargaCuchT > 0) {
+            lanzarCuchillo(p); // quedó atrapado a media carga: suelta lo cargado
           }
         }
 
@@ -457,6 +493,15 @@ export function update(dt) {
           if (colisionaMuro(pr.x, pr.y, pr.r)) {
             fuera = true;
             fxParticulas(pr.x, pr.y, 3, "#6a5a94");
+            if (pr.tipo === "flecha" && pr.owner === "p")
+              agregarFlechaClavada({
+                x: pr.x,
+                y: pr.y,
+                dir: Math.atan2(pr.vy, pr.vx),
+                color: pr.color,
+                enemigo: null,
+                t: FLECHA_CLAVADA_VIDA,
+              });
           }
           if (!dentroForma(pr.x, pr.y, 0)) fuera = true;
           for (const pl of G.pilares)
@@ -476,6 +521,10 @@ export function update(dt) {
               }
             }
           if (fuera) {
+            // Chocó con un muro/pilar/barril o caducó -- el vuelo (si lo
+            // llevaba, ver pr._vueloSrc en dispararFlechaCargada) ya no
+            // pinta nada sonando, aunque no haya llegado a tocar a nadie.
+            if (pr._vueloSrc) pr._vueloSrc.stop();
             G.projs.splice(i, 1);
             continue;
           }
@@ -495,6 +544,20 @@ export function update(dt) {
                   pr.vy * 0.12,
                   pr.critBonus,
                 );
+                // Golpe seco real al conectar -- antes solo los golpes
+                // MELÉ sonaban al impactar (golpeArco decide su propio
+                // sonido); flecha/cuchillo se quedaban mudos.
+                if (pr.tipo === "flecha" || pr.tipo === "cuchillo")
+                  sfxImpactoProyectil();
+                // El vuelo se corta en el PRIMER impacto, no cuando el
+                // proyectil se destruye del todo (con perforación puede
+                // seguir viajando y golpear a más enemigos) -- una vez
+                // suena el golpe seco no pinta nada seguir oyendo el
+                // silbido por encima, aunque la flecha atraviese y siga.
+                if (pr._vueloSrc) {
+                  pr._vueloSrc.stop();
+                  pr._vueloSrc = null;
+                }
                 if (
                   pr.duenio &&
                   pr.duenio._poison &&
@@ -548,7 +611,26 @@ export function update(dt) {
                   pr.pierce = restantes - 1;
                   if (!pr.golpeados) pr.golpeados = new Set();
                   pr.golpeados.add(e);
-                } else dado = true;
+                } else {
+                  dado = true;
+                  // Se clava en ESTE enemigo (el que agota la
+                  // perforación) -- uno que solo atravesó de camino no
+                  // se queda dentro, sigue volando. Sigue al enemigo por
+                  // un offset local fijo (no su centro exacto) para que
+                  // no se amontonen todas en el mismo punto; desaparece
+                  // sola si el enemigo muere antes de que le toque su
+                  // turno por el límite (ver el barrido de update() más
+                  // abajo).
+                  if (pr.tipo === "flecha" && !e.dummy)
+                    agregarFlechaClavada({
+                      ox: Math.cos(Math.atan2(pr.vy, pr.vx)) * e.r * 0.5,
+                      oy: Math.sin(Math.atan2(pr.vy, pr.vx)) * e.r * 0.5,
+                      dir: Math.atan2(pr.vy, pr.vx),
+                      color: pr.color,
+                      enemigo: e,
+                      t: FLECHA_CLAVADA_VIDA,
+                    });
+                }
                 break;
               }
             }
@@ -557,6 +639,10 @@ export function update(dt) {
               for (const q of vivos()) {
                 if (q === pr.duenio) continue;
                 if (Math.hypot(pr.x - q.x, pr.y - q.y) < pr.r + q.r) {
+                  if (pr._vueloSrc) {
+                    pr._vueloSrc.stop();
+                    pr._vueloSrc = null;
+                  }
                   danoAlJugador(q, pr.dmg * (G.escena === "pvp" ? 1 : 0.5), {
                     ff: pr.duenio,
                   });
@@ -1596,6 +1682,14 @@ export function update(dt) {
         for (let i = G.fx.length - 1; i >= 0; i--) {
           G.fx[i].t -= dt;
           if (G.fx[i].t <= 0) G.fx.splice(i, 1);
+        }
+        for (let i = G.flechasClavadas.length - 1; i >= 0; i--) {
+          const fc = G.flechasClavadas[i];
+          fc.t -= dt;
+          // clavada en un enemigo que ya murió: desaparece con él en vez
+          // de quedarse flotando sola sobre las cenizas.
+          if (fc.t <= 0 || (fc.enemigo && fc.enemigo.hp <= 0))
+            G.flechasClavadas.splice(i, 1);
         }
         for (let i = G.toasts.length - 1; i >= 0; i--) {
           G.toasts[i].t -= dt;

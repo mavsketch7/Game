@@ -52,6 +52,7 @@ export function nuevaPartida() {
             dashAtkY: 1,
             atkEspecial: false,
             _dashAtkVictims: null,
+            _cargaSrc: null, // control del sonido de tensar en curso (arquero/pícaro), ver core/loop.js
             pasoT: 0, // cadencia del sonido de paso, ver core/loop.js
             disparoCd: 0,
             invulT: 0,
@@ -98,6 +99,8 @@ export function nuevaPartida() {
             _formDmg: 1,
             cargaT: 0,
             cargaArqT: 0, // disparo cargado del arquero, ver dispararFlechaCargada en systems/abilities.js
+            cargaCuchT: 0, // cuchillo cargado del pícaro, ver lanzarCuchillo en systems/abilities.js
+            cuchilloCd: 0,
             combo: 0,
             comboT: 0,
             certera: false,
@@ -145,6 +148,7 @@ export function nuevaPartida() {
           pilares: [],
           objetos: [],
           decals: [],
+          flechasClavadas: [],
           hazards: [],
           clima: "despejado",
           wx: [],
@@ -196,6 +200,7 @@ export function iniciarLobby() {
         G.fx = [];
         G.objetos = [];
         G.decals = [];
+        G.flechasClavadas = [];
         G.hazards = [];
         G.clima = "despejado";
         G.wx = [];

@@ -10,7 +10,7 @@ import { G } from "../core/state.js";
 import { fxParticulas } from "./effects.js";
 import { drawSprite, drawSpriteBottom } from "./spriteDraw.js";
 import { ARQUERO_BOW, ARQUERO_BOW_DUR, ATTACK_DUR, CONFIG_ARMA, DASH_ATTACK_DUR, ESC_FORMA, MIRA_IZQUIERDA_POR_DEFECTO, MOB_RUN, MUERTE_DUR, OFFHAND_IMG, OFFHAND_IMG_RAREZA, REAL_ATTACK, REAL_ATTACK_ANCLA, REAL_DASH, REAL_DASH_ANCLA, REAL_HURT, REAL_IDLE, REAL_IDLE_ANCLA, REAL_MUERTE, REAL_RUN, REAL_RUN_ANCLA, REAL_SPECIAL, REAL_SPECIAL_ANCLA, REAL_SPRITE_SCALE, SHEETS, SPECIAL_ATTACK_DUR, SPR, SPR_FORMAS, TAM_HEROE, WEAPON_IMG, WEAPON_IMG_RAREZA, assetOK, seleccionarImgEnemigo, spriteJugador } from "./sprites.js";
-import { CARGA_ARQ_MAX, CARGA_ARQ_ZONA, groundTarget } from "../systems/abilities.js";
+import { CARGA_ARQ_MAX, CARGA_ARQ_ZONA, CARGA_CUCH_MAX, CARGA_CUCH_ZONA, groundTarget } from "../systems/abilities.js";
 import { masCercano } from "../systems/combat.js";
 import { mouse } from "../systems/input.js";
 import { JUICE } from "../systems/juice.js";
@@ -343,24 +343,26 @@ function dibujarCargaMago(p, tx, ty) {
         }
       }
 
-// Barra de carga del disparo del arquero (p.cargaArqT, ver core/loop.js y
-// CARGA_ARQ_MAX/CARGA_ARQ_ZONA en systems/abilities.js) -- vertical, junto
-// al personaje, con una banda que marca la ventana de crítico óptimo
-// (ZONA) y un contorno que se ilumina al entrar en ella, a juego con el
-// aviso sonoro (sfxCargaLista, disparado desde core/loop.js). No usa
-// barra() de render/hud.js porque esa función es horizontal (w2,h2 con el
-// relleno creciendo en X) -- aquí el relleno crece en Y, de abajo arriba.
-function dibujarCargaArquero(p) {
+// Barra de carga vertical genérica, junto al personaje -- la usan tanto
+// el disparo del arquero (p.cargaArqT/CARGA_ARQ_MAX/CARGA_ARQ_ZONA) como
+// el cuchillo del pícaro (p.cargaCuchT/CARGA_CUCH_MAX/CARGA_CUCH_ZONA, ver
+// systems/abilities.js), mismo aspecto para las dos: una banda marca la
+// ventana de crítico óptimo (zona) y el contorno se ilumina al entrar en
+// ella, a juego con el aviso sonoro (sfxCargaLista, disparado desde
+// core/loop.js). No usa barra() de render/hud.js porque esa función es
+// horizontal (w2,h2 con el relleno creciendo en X) -- aquí el relleno
+// crece en Y, de abajo arriba.
+function dibujarBarraCarga(p, cargaActual, cargaMax, zona) {
         const bw = 5, bh = 30;
         const bx = p.x + 16, by = p.y - bh / 2 - 4;
-        const c = clamp(p.cargaArqT / CARGA_ARQ_MAX, 0, 1);
-        const enZona = p.cargaArqT >= CARGA_ARQ_ZONA[0] && p.cargaArqT <= CARGA_ARQ_ZONA[1];
+        const c = clamp(cargaActual / cargaMax, 0, 1);
+        const enZona = cargaActual >= zona[0] && cargaActual <= zona[1];
         cx.fillStyle = "rgba(10,8,17,.78)";
         cx.fillRect(bx, by, bw, bh);
         // banda de la zona óptima: misma referencia (abajo=0, arriba=máximo)
         // que el relleno de más abajo, para que ambas cosas midan lo mismo.
-        const zonaY0 = by + bh - (CARGA_ARQ_ZONA[1] / CARGA_ARQ_MAX) * bh;
-        const zonaY1 = by + bh - (CARGA_ARQ_ZONA[0] / CARGA_ARQ_MAX) * bh;
+        const zonaY0 = by + bh - (zona[1] / cargaMax) * bh;
+        const zonaY1 = by + bh - (zona[0] / cargaMax) * bh;
         cx.fillStyle = "rgba(226,196,137,.4)";
         cx.fillRect(bx, zonaY0, bw, zonaY1 - zonaY0);
         const fillH = c * bh;
@@ -989,12 +991,15 @@ export function renderJugador(p) {
           dibujarCargaMago(p, 26, 0);
           cx.restore();
         }
-        // Barra de carga del arquero: a diferencia del orbe del mago de
-        // arriba, NO va dentro del cx.rotate(p.aim) -- una barra vertical
-        // girando con la puntería no se leería como "cuánto llevo
-        // cargado". Se queda en espacio de mundo, siempre en vertical.
+        // Barra de carga (arquero/pícaro): a diferencia del orbe del mago
+        // de arriba, NO va dentro del cx.rotate(p.aim) -- una barra
+        // vertical girando con la puntería no se leería como "cuánto
+        // llevo cargado". Se queda en espacio de mundo, siempre en vertical.
         if (!formaAnimal && p.rol === "arquero" && p.cargaArqT > 0) {
-          dibujarCargaArquero(p);
+          dibujarBarraCarga(p, p.cargaArqT, CARGA_ARQ_MAX, CARGA_ARQ_ZONA);
+        }
+        if (!formaAnimal && p.rol === "picaro" && p.cargaCuchT > 0) {
+          dibujarBarraCarga(p, p.cargaCuchT, CARGA_CUCH_MAX, CARGA_CUCH_ZONA);
         }
 
         // Mano secundaria (ver OFFHAND_IMG/OFFHAND_IMG_RAREZA en sprites.js):

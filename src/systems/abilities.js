@@ -6,7 +6,7 @@ import { ELEMENTOS, ELEM_MAGO, FORMAS_DRUIDA, FORMAS_INFO, RAREZAS, ROLES, SALA_
 import { update } from "../core/loop.js";
 import { G } from "../core/state.js";
 import { fxEstocada, fxOnda, fxParticulas, fxTajo, fxTexto } from "../render/effects.js";
-import { sfx, sfxFlechaVuelo, sfxGolpeAire, sfxGolpeCritico, sfxImpactoGuerrero, sfxImpactoPicaro } from "./audio.js";
+import { sfx, sfxDisparoArco, sfxGolpeAire, sfxGolpeCritico, sfxImpactoGuerrero, sfxImpactoPicaro, sfxVueloFlecha } from "./audio.js";
 import { curarP, danoAEnemigo, danoAlJugador, masCercano, statsTot, vivos } from "./combat.js";
 import { posDropValida } from "./floorgen.js";
 import { JUICE } from "./juice.js";
@@ -484,9 +484,10 @@ export function disparoSecundario(p) {
         });
       }
 
-// silencioso: se salta el "flecha" sintetizado de sfx() -- lo usa el
-// disparo cargado del arquero, que pone su propio silbido real encima
-// (sfxFlechaVuelo, ver dispararFlechaCargada) en vez del beep de siempre.
+// silencioso: se salta el sintetizado de sfx() -- lo usa TODO disparo del
+// arquero (dispararFlechaCargada pone sus propios sfxDisparoArco/
+// sfxVueloFlecha reales encima, cargado o no) y el lanzamiento cargado
+// del pícaro (lanzarCuchillo, reutiliza sfxDisparoArco).
 function dispararProy(p, dir, dmg, tipo, color, v, silencioso) {
         if (silencioso) {
           // nada -- el llamador decide su propio sonido
@@ -495,6 +496,7 @@ function dispararProy(p, dir, dmg, tipo, color, v, silencioso) {
         else if (tipo === "carambano") sfx("hielo");
         else if (tipo === "orbeArc") sfx("magia");
         else if (tipo === "rama") sfx("flecha");
+        else if (tipo === "cuchillo") sfx("cuchillo");
         const pr = {
           owner: "p",
           duenio: p,
@@ -520,6 +522,14 @@ function dispararProy(p, dir, dmg, tipo, color, v, silencioso) {
 // existente) tiene prioridad sobre la carga: si está lista, se dispara
 // igual que siempre pase lo que pase con la carga acumulada.
 export function dispararFlechaCargada(p) {
+        // Se corta el tensado en cuanto se suelta, pase lo que pase más
+        // abajo (toque corto, certera o carga de verdad) -- si no, sonaría
+        // por encima del disparo/vuelo reales (ver p._cargaSrc, que
+        // arranca al empezar a mantener pulsado en core/loop.js).
+        if (p._cargaSrc) {
+          p._cargaSrc.stop();
+          p._cargaSrc = null;
+        }
         const carga = p.cargaArqT || 0;
         p.cargaArqT = 0;
         if (p.atkCd > 0) return;
@@ -529,26 +539,77 @@ export function dispararFlechaCargada(p) {
         const dmgFle = t.atk * (p.imbuido === "arcano" ? 1.15 : 1);
         if (p.certera) {
           p.certera = false;
-          dispararProy(p, p.aim, dmgFle * 2, "flecha", "#ffd27f", 560);
+          dispararProy(p, p.aim, dmgFle * 2, "flecha", "#ffd27f", 560, true);
           const pr = G.projs[G.projs.length - 1];
           pr.pierce = (pr.pierce || 0) + 2;
           pr.certera = true;
           fxOnda(p.x, p.y, 20, "#ffd27f");
+          sfxDisparoArco();
+          pr._vueloSrc = sfxVueloFlecha();
           return;
         }
-        if (carga < CARGA_ARQ_UMBRAL) {
-          // toque corto: disparo de siempre, sin perforar ni bono de crítico
-          dispararProy(p, p.aim, dmgFle, "flecha", "#e9e3d5", 480);
-          return;
-        }
-        const enZona = carga >= CARGA_ARQ_ZONA[0] && carga <= CARGA_ARQ_ZONA[1];
-        dispararProy(p, p.aim, dmgFle, "flecha", "#ffd27f", 560, true);
+        // "silencioso" en las dos ramas de abajo: dispararProy() ya no
+        // pone el "flecha" sintetizado de sfx() en NINGÚN disparo del
+        // arquero, cargado o toque corto -- el real (sfxDisparoArco) de
+        // aquí abajo lo sustituye siempre.
+        const cargado = carga >= CARGA_ARQ_UMBRAL;
+        const enZona = cargado && carga >= CARGA_ARQ_ZONA[0] && carga <= CARGA_ARQ_ZONA[1];
+        dispararProy(
+          p,
+          p.aim,
+          dmgFle,
+          "flecha",
+          cargado ? "#ffd27f" : "#e9e3d5",
+          cargado ? 560 : 480,
+          true,
+        );
         const pr = G.projs[G.projs.length - 1];
-        pr.pierce = 2 + (p._pierceProy || 0); // "de forma estándar" -- escalable por p._pierceProy (tarjetas/equipo)
+        if (cargado) {
+          pr.pierce = 2 + (p._pierceProy || 0); // "de forma estándar" -- escalable por p._pierceProy (tarjetas/equipo)
+          pr.critBonus = enZona ? 40 : 15;
+          pr.cargada = true;
+          fxOnda(p.x, p.y, enZona ? 20 : 14, "#ffd27f");
+        }
+        sfxDisparoArco();
+        pr._vueloSrc = sfxVueloFlecha();
+      }
+
+// Cuchillo arrojado del pícaro: mismo patrón de carga que el disparo del
+// arquero de arriba (p.cargaCuchT, ver el bloque "picaro" en
+// core/loop.js:update() y p.inp.lanzarHeld en systems/input.js -- Mayús
+// mantenida). Tecla y cooldown PROPIOS (p.cuchilloCd): no sustituye al
+// golpe de daga normal (p.atkCd, golpeArco) ni a Esquivar/Estocada, es
+// una herramienta nueva y aparte.
+export const CARGA_CUCH_MAX = 0.9;
+export const CARGA_CUCH_UMBRAL = 0.2;
+export const CARGA_CUCH_ZONA = [0.5, 0.8];
+
+export function lanzarCuchillo(p) {
+        if (p.rol !== "picaro") return;
+        // mismo criterio que dispararFlechaCargada: cortar el tensado al
+        // soltar, pase lo que pase más abajo.
+        if (p._cargaSrc) {
+          p._cargaSrc.stop();
+          p._cargaSrc = null;
+        }
+        const carga = p.cargaCuchT || 0;
+        p.cargaCuchT = 0;
+        if (p.cuchilloCd > 0) return;
+        const t = statsTot(p);
+        p.cuchilloCd = 0.8;
+        p.swingT = Math.max(p.swingT, 0.15);
+        if (carga < CARGA_CUCH_UMBRAL) {
+          dispararProy(p, p.aim, t.atk * 0.8, "cuchillo", "#d8d8e0", 520);
+          return;
+        }
+        const enZona = carga >= CARGA_CUCH_ZONA[0] && carga <= CARGA_CUCH_ZONA[1];
+        dispararProy(p, p.aim, t.atk * 0.8, "cuchillo", "#ffd27f", 620, true);
+        const pr = G.projs[G.projs.length - 1];
+        pr.pierce = 2 + (p._pierceProy || 0);
         pr.critBonus = enZona ? 40 : 15;
         pr.cargada = true;
         fxOnda(p.x, p.y, enZona ? 20 : 14, "#ffd27f");
-        sfxFlechaVuelo();
+        sfxDisparoArco(); // mismo golpe de soltar que el arquero, ver dispararFlechaCargada
       }
 
 function crearArea(x, y, r, elemento, mult, duenio) {

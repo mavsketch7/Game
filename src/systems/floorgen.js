@@ -769,6 +769,7 @@ export function iniciarPlanta() {
         G.areas = [];
         G.drops = [];
         G.fx = [];
+        G.flechasClavadas = [];
         G.wx = [];
         G.rayos = [];
         G.rayoCd = rnd(3, 6);

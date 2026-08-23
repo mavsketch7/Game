@@ -50,6 +50,14 @@ export function leerInput(p) {
             my,
             aimA: Math.atan2(mundoY - p.y, mundoX - p.x),
             atkHeld: mouse.izq,
+            // Cuchillo cargado del pícaro (ver p.cargaCuchT en
+            // core/loop.js y lanzarCuchillo en abilities.js) -- Mayús
+            // mantenida, LEÍDA de continuo (keys[] se pone a true/false
+            // en el keydown/keyup genérico más abajo), no confundir con
+            // el "if (k==='shift') dashAtaque(p)" del propio keydown, que
+            // es un disparo único por pulsación (la Estocada del
+            // guerrero, instantánea) y sigue viviendo aparte.
+            lanzarHeld: !!keys["shift"],
             gtX: mundoX,
             gtY: mundoY,
           };
@@ -62,6 +70,7 @@ export function leerInput(p) {
             my: 0,
             aimA: p.aim,
             atkHeld: false,
+            lanzarHeld: false,
             gtX: p.x + Math.cos(p.aim) * 160,
             gtY: p.y + Math.sin(p.aim) * 160,
           };
@@ -79,12 +88,18 @@ export function leerInput(p) {
         }
         const b7 = gp.buttons[7];
         const atkHeld = !!(b7 && (b7.pressed || b7.value > 0.4));
+        // Cuchillo cargado del pícaro (mando): clic del stick derecho
+        // MANTENIDO -- el mismo botón 11 que dashAtaque() dispara al
+        // vuelo (edge(11), Estocada del guerrero) más abajo en
+        // pollPads(); los dos se autofiltran por rol así que no chocan.
+        const lanzarHeld = !!(gp.buttons[11] && gp.buttons[11].pressed);
         const d = 80 + mag * 210;
         return {
           mx,
           my,
           aimA,
           atkHeld,
+          lanzarHeld,
           gtX: p.x + Math.cos(aimA) * d,
           gtY: p.y + Math.sin(aimA) * d,
         };

@@ -1121,6 +1121,43 @@ export function render() {
               cx.fill();
             }
             cx.restore();
+          } else if (pr.tipo === "cuchillo") {
+            // Cuchillo arrojado del pícaro (ver lanzarCuchillo en
+            // systems/abilities.js): sin sprite propio todavía, gira sobre
+            // sí mismo al volar (mismo giro rápido que "rama" más abajo)
+            // en vez de orientarse a la trayectoria como la flecha -- así
+            // se lee como un cuchillo dando vueltas, no como una flecha
+            // más. pr.color ya trae el dorado de la carga (ver
+            // lanzarCuchillo), así que el tinte "cargado" sale gratis.
+            // El desplazamiento vertical de abajo es SOLO de dibujado --
+            // pr.y (el de la colisión real contra enemigos) se queda tal
+            // cual, para no desalinear el alcance del lanzamiento; nacía
+            // (y volaba) claramente por debajo de la mano que lo lanza,
+            // porque pr.y sale del ancla de PIES del personaje (mismo
+            // "problema" de siempre en este renderizado 2.5D, ver
+            // ALTO_MANO_ESTOCADA en systems/abilities.js -- ahí sí se
+            // podía subir el dato real porque esa FX no colisiona).
+            cx.save();
+            cx.translate(pr.x, pr.y - 16);
+            cx.rotate(animGlobal * 22 + pr.x * 0.3);
+            cx.fillStyle = "#2c241a";
+            cx.fillRect(-7, -1, 4, 2);
+            cx.fillStyle = pr.color;
+            cx.beginPath();
+            cx.moveTo(-3, 0);
+            cx.lineTo(4, -2.5);
+            cx.lineTo(8, 0);
+            cx.lineTo(4, 2.5);
+            cx.closePath();
+            cx.fill();
+            cx.fillStyle = "rgba(255,255,255,.5)";
+            cx.beginPath();
+            cx.moveTo(-1, -0.6);
+            cx.lineTo(4, -1.6);
+            cx.lineTo(4, 0);
+            cx.closePath();
+            cx.fill();
+            cx.restore();
           } else if (pr.tipo === "rama") {
             cx.save();
             cx.translate(pr.x, pr.y);
@@ -1218,6 +1255,24 @@ export function render() {
           }
         }
 
+        // flechas clavadas (detalle de impacto, ver agregarFlechaClavada en
+        // core/loop.js) -- mismo sprite que la flecha en vuelo, quieta y
+        // ya sin rotar sobre sí misma, con un desvanecido en el último
+        // tramo de vida en vez de desaparecer de golpe.
+        for (const fc of G.flechasClavadas) {
+          const fx2 = fc.enemigo ? fc.enemigo.x + fc.ox : fc.x;
+          const fy2 = fc.enemigo ? fc.enemigo.y + fc.oy : fc.y;
+          const imgFlecha = fc.color === "#ffd27f" ? SPR.flechaCargada : SPR.flecha;
+          if (!imgFlecha) continue;
+          cx.save();
+          cx.globalAlpha = Math.min(1, fc.t / 0.6);
+          cx.translate(fx2, fy2);
+          cx.rotate(fc.dir);
+          const s = 20;
+          cx.drawImage(imgFlecha, -s * 0.15, -s / 2, s, s);
+          cx.restore();
+        }
+
         // fx
         for (const f of G.fx) {
           const k = f.t / f.t0;
@@ -1261,12 +1316,18 @@ export function render() {
           } else if (f.tipo === "tajo") {
             // filo afilado: una medialuna que se afina en punta en ambos
             // extremos (no un simple trazo de arco), con un destello claro
-            // en el borde de ataque para que brille como un corte de hoja
+            // en el borde de ataque para que brille como un corte de hoja.
+            // Estela de movimiento (referencia: guadaña de Stardew Valley)
+            // -- desenfoque suave + degradado invertido respecto a antes
+            // (opaco en el filo de ATAQUE, se apaga hacia el arranque del
+            // giro) para que se lea como "la hoja está aquí, esto es su
+            // rastro" en vez de un destello centrado sin dirección.
             const sweep = 1.35;
             const nP = 12;
-            const grosor = 7 + f.r * 0.03;
+            const grosor = 6 + f.r * 0.026;
             cx.save();
-            cx.globalAlpha = k * k; // se apaga más rápido: sensación de corte instantáneo
+            cx.filter = "blur(1.4px)";
+            cx.globalAlpha = k; // antes k*k -- se apaga más despacio, más presencia de estela
             cx.beginPath();
             for (let i = 0; i <= nP; i++) {
               const t2 = i / nP;
@@ -1286,20 +1347,31 @@ export function render() {
               cx.lineTo(rx, ry);
             }
             cx.closePath();
+            // Invertido respecto a la versión anterior: opaco en el filo de
+            // ATAQUE (f.dir + sweep/2, donde termina el giro) y se disuelve
+            // hacia el arranque (f.dir - sweep/2) -- antes era al revés
+            // (opaco en medio, transparente en las dos puntas), que no
+            // comunicaba ninguna dirección de movimiento.
             const grad = cx.createLinearGradient(
               f.x + Math.cos(f.dir - sweep / 2) * f.r,
               f.y + Math.sin(f.dir - sweep / 2) * f.r,
               f.x + Math.cos(f.dir + sweep / 2) * f.r,
               f.y + Math.sin(f.dir + sweep / 2) * f.r,
             );
-            grad.addColorStop(0, "rgba(233,227,213,0)");
-            grad.addColorStop(0.5, "rgba(255,255,255,.9)");
-            grad.addColorStop(1, "rgba(233,180,92,.15)");
+            grad.addColorStop(0, "rgba(233,180,92,0)");
+            grad.addColorStop(0.45, "rgba(255,247,224,.55)");
+            grad.addColorStop(1, "rgba(255,255,255,.95)");
             cx.fillStyle = grad;
             cx.fill();
+            // segunda pasada, más translúcida y algo más ancha: dos capas
+            // superpuestas leen como una estela con cuerpo en vez de una
+            // única forma plana, sin tener que guardar fotogramas pasados.
+            cx.globalAlpha = k * 0.4;
+            cx.fill();
             // destello nítido justo en el filo exterior (borde de ataque)
+            cx.globalAlpha = k;
             cx.strokeStyle = "#fff7e0";
-            cx.lineWidth = 1.4;
+            cx.lineWidth = 1.6;
             cx.beginPath();
             for (let i = 0; i <= nP; i++) {
               const t2 = i / nP;
@@ -1322,7 +1394,8 @@ export function render() {
             cx.save();
             cx.translate(f.x, f.y);
             cx.rotate(f.dir);
-            cx.globalAlpha = k * k; // corte seco, se apaga rápido
+            cx.filter = "blur(1px)"; // mismo desenfoque suave que "tajo", más estela que destello
+            cx.globalAlpha = k; // antes k*k -- se queda un poco más visible
             cx.beginPath();
             cx.moveTo(f.r * 0.15, 0);
             cx.quadraticCurveTo(f.r * 0.55, -grosorE, f.r, 0);

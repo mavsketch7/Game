@@ -31,7 +31,7 @@ export function fxOnda(x, y, r, col) {
       }
 
 export function fxTajo(x, y, dir, r) {
-        G.fx.push({ id: _fxId++, tipo: "tajo", x, y, dir, r, t: 0.16, t0: 0.16 });
+        G.fx.push({ id: _fxId++, tipo: "tajo", x, y, dir, r, t: 0.22, t0: 0.22 });
       }
 
 // Puñalada (pícaro, ver CONFIG_ARMA.estocada en render/sprites.js): una
@@ -39,7 +39,7 @@ export function fxTajo(x, y, dir, r) {
 // media luna de fxTajo -- una estocada es recta, no un arco. t un poco más
 // corto que fxTajo (golpe más seco/instantáneo).
 export function fxEstocada(x, y, dir, r) {
-        G.fx.push({ id: _fxId++, tipo: "estocada", x, y, dir, r, t: 0.14, t0: 0.14 });
+        G.fx.push({ id: _fxId++, tipo: "estocada", x, y, dir, r, t: 0.18, t0: 0.18 });
       }
 
 // Salpicadura de sangre real (torre-vespero-assets/BloodFX Batch 1, ver
