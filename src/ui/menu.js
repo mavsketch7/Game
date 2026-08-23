@@ -33,6 +33,13 @@ let overlayInnerOriginal = null;
 // cada repintado de construirMenu(), que ocurre varias veces por segundo.
 const gremioFetchHecho = new Set();
 
+// Índices de slot con el panel de "crear/unirse a gremio" desplegado --
+// colapsado por defecto (ver gremioDiv más abajo) para no obligar a
+// mostrar un input + 2 botones en cada tarjeta cuando la mayoría de
+// partidas no usan gremio; se guarda aquí (no en s.*) porque es un
+// estado puramente de interfaz que no debe viajar por red.
+const gremioUiAbierta = new Set();
+
 function sincronizarGremio(s) {
   if (NET.modo === "cliente") enviarRolPropio(s.rolIdx, s.listo, s.nombre, s.gremio);
   else netEnviarLobby();
@@ -167,7 +174,7 @@ export function construirMenu() {
             gremioDiv.appendChild(tag);
             if (editable) {
               const salirBtn = document.createElement("button");
-              salirBtn.className = "btn-mini";
+              salirBtn.className = "btn-mini-texto";
               salirBtn.textContent = "Salir";
               salirBtn.onclick = () => {
                 salirBtn.disabled = true;
@@ -185,6 +192,15 @@ export function construirMenu() {
               };
               gremioDiv.appendChild(salirBtn);
             }
+          } else if (editable && !gremioUiAbierta.has(i)) {
+            const abrirBtn = document.createElement("button");
+            abrirBtn.className = "btn-mini-texto gremio-toggle";
+            abrirBtn.textContent = "🛡 Unirse a un gremio";
+            abrirBtn.onclick = () => {
+              gremioUiAbierta.add(i);
+              construirMenu();
+            };
+            gremioDiv.appendChild(abrirBtn);
           } else if (editable) {
             const gInput = document.createElement("input");
             gInput.className = "input-gremio-slot";
@@ -192,10 +208,10 @@ export function construirMenu() {
             gInput.placeholder = "Nombre de gremio";
             gInput.dataset.idx = String(i);
             const crearBtn = document.createElement("button");
-            crearBtn.className = "btn-mini";
+            crearBtn.className = "btn-mini-texto";
             crearBtn.textContent = "Crear";
             const unirseBtn = document.createElement("button");
-            unirseBtn.className = "btn-mini";
+            unirseBtn.className = "btn-mini-texto";
             unirseBtn.textContent = "Unirse";
             const msg = document.createElement("span");
             msg.className = "gremio-msg";
@@ -208,6 +224,7 @@ export function construirMenu() {
               fn(nombreG, idJugador(s.ctrl), s.nombre)
                 .then((g) => {
                   s.gremio = { id: g.id, name: g.name, tag: g.tag };
+                  gremioUiAbierta.delete(i);
                   sincronizarGremio(s);
                   construirMenu();
                 })
@@ -228,6 +245,12 @@ export function construirMenu() {
           }
           div.appendChild(gremioDiv);
 
+          // Antes eran 2 botones a ancho completo apilados (~90px de alto
+          // entre los dos); en una fila cabe lo mismo en ~45px, y era el
+          // mayor consumidor de alto vertical de la tarjeta -- ver
+          // análisis de UX que motivó este cambio.
+          const filaAcciones = document.createElement("div");
+          filaAcciones.className = "fila-acciones";
           const bl = document.createElement("button");
           bl.className = "btn-listo";
           bl.textContent = s.listo ? "✔ Listo" : "Marcar listo";
@@ -237,15 +260,17 @@ export function construirMenu() {
             if (NET.modo === "cliente") enviarRolPropio(s.rolIdx, s.listo, s.nombre, s.gremio);
             construirMenu();
           };
-          div.appendChild(bl);
+          filaAcciones.appendChild(bl);
           const biInfo = document.createElement("button");
           biInfo.className = "btn-info";
-          biInfo.textContent = "ℹ Info habilidades";
+          biInfo.textContent = "ℹ Info";
+          biInfo.title = "Info de habilidades";
           biInfo.onclick = (ev) => {
             ev.stopPropagation();
             abrirInfo(rol);
           };
-          div.appendChild(biInfo);
+          filaAcciones.appendChild(biInfo);
+          div.appendChild(filaAcciones);
           if (s.ctrl.tipo === "pad") {
             const ay = document.createElement("div");
             ay.className = "pad-ayuda";

@@ -1103,7 +1103,7 @@ export function abrirInv() {
         else if (invTab === "mapa") contenido = tabMapa();
         else contenido = tabPersonaje(p, t, b);
         document.getElementById("inv-inner").innerHTML =
-          '<div class="fila-cerrar"><h2 class="display">Ficha de personaje — pausa</h2>' +
+          '<div class="fila-cerrar"><h2 class="display">Ficha de personaje</h2>' +
           '<div style="display:flex;gap:8px">' +
           (G.escena === "torre"
             ? '<button class="btn peligro" onclick="abandonarPartida()">' +
