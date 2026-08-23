@@ -797,6 +797,24 @@ imMercader.onload = () => {
 };
 imMercader.src = assetUrl("merchant");
 
+// Flecha real del arquero (ver render/world.js, proyectil tipo "flecha"):
+// recortada de "basic-arrow- flying and impacting.PNG" y volteada en
+// horizontal para que la punta quede a la DERECHA en reposo -- world.js
+// rota el sprite con Math.atan2(vy,vx), mismo criterio que usaba el
+// triángulo dibujado a mano de antes (apex en +x). "cargada" es la
+// variante roja para el disparo con carga (ver dispararFlechaCargada en
+// systems/abilities.js); la básica se queda con la gris de siempre.
+const imFlecha = new Image();
+imFlecha.onload = () => {
+  SPR.flecha = imFlecha;
+};
+imFlecha.src = assetUrl("fx/arrow_fly");
+const imFlechaCargada = new Image();
+imFlechaCargada.onload = () => {
+  SPR.flechaCargada = imFlechaCargada;
+};
+imFlechaCargada.src = assetUrl("fx/arrow_fly_crit");
+
 const KENNEY_TILE_SRC = {
         wall: assetUrl("wall"),
         wallRemate: assetUrl("wallRemate"),

@@ -10,7 +10,7 @@ import { G } from "../core/state.js";
 import { fxParticulas } from "./effects.js";
 import { drawSprite, drawSpriteBottom } from "./spriteDraw.js";
 import { ARQUERO_BOW, ARQUERO_BOW_DUR, ATTACK_DUR, CONFIG_ARMA, DASH_ATTACK_DUR, ESC_FORMA, MIRA_IZQUIERDA_POR_DEFECTO, MOB_RUN, MUERTE_DUR, OFFHAND_IMG, OFFHAND_IMG_RAREZA, REAL_ATTACK, REAL_ATTACK_ANCLA, REAL_DASH, REAL_DASH_ANCLA, REAL_HURT, REAL_IDLE, REAL_IDLE_ANCLA, REAL_MUERTE, REAL_RUN, REAL_RUN_ANCLA, REAL_SPECIAL, REAL_SPECIAL_ANCLA, REAL_SPRITE_SCALE, SHEETS, SPECIAL_ATTACK_DUR, SPR, SPR_FORMAS, TAM_HEROE, WEAPON_IMG, WEAPON_IMG_RAREZA, assetOK, seleccionarImgEnemigo, spriteJugador } from "./sprites.js";
-import { groundTarget } from "../systems/abilities.js";
+import { CARGA_ARQ_MAX, CARGA_ARQ_ZONA, groundTarget } from "../systems/abilities.js";
 import { masCercano } from "../systems/combat.js";
 import { mouse } from "../systems/input.js";
 import { JUICE } from "../systems/juice.js";
@@ -140,6 +140,21 @@ function calcularPoseHeroe(p, x, yPies, mov) {
           const anclasDir = especial
             ? REAL_SPECIAL_ANCLA.guerrero[dirAim]
             : (REAL_ATTACK_ANCLA[p.rol]?.[dirAim] || REAL_ATTACK_ANCLA[p.rol]?.side);
+          anclaLocal = anclasDir ? anclasDir[frameIdx] : null;
+        } else if (p.cargaArqT > 0 && atkFrames && atkFrames.length) {
+          // Arquero tensando el arco (p.cargaArqT, ver core/loop.js y
+          // dispararFlechaCargada en systems/abilities.js) -- misma hoja de
+          // ataque real (tensado progresivo, ver
+          // Arquero-ataque lateral basico 01.aseprite) que el disparo
+          // normal, pero el frame sale del progreso de CARGA en vez de
+          // p.swingT: el personaje se ve tensar más cuanto más se
+          // mantiene, no solo animarse en el instante de soltar.
+          usaArteClase = true;
+          const prog = clamp(p.cargaArqT / CARGA_ARQ_MAX, 0, 0.999);
+          const frameIdx = Math.floor(prog * atkFrames.length);
+          const fr = atkFrames[frameIdx];
+          if (fr) img = fr;
+          const anclasDir = REAL_ATTACK_ANCLA[p.rol]?.[dirAim] || REAL_ATTACK_ANCLA[p.rol]?.side;
           anclaLocal = anclasDir ? anclasDir[frameIdx] : null;
         } else if (p.golpeT > 0 && REAL_HURT.length) {
           // Herido (flinch al recibir daño, ver p.golpeT en
@@ -325,6 +340,41 @@ function dibujarCargaMago(p, tx, ty) {
             cx.stroke();
             cx.globalAlpha = 1;
           }
+        }
+      }
+
+// Barra de carga del disparo del arquero (p.cargaArqT, ver core/loop.js y
+// CARGA_ARQ_MAX/CARGA_ARQ_ZONA en systems/abilities.js) -- vertical, junto
+// al personaje, con una banda que marca la ventana de crítico óptimo
+// (ZONA) y un contorno que se ilumina al entrar en ella, a juego con el
+// aviso sonoro (sfxCargaLista, disparado desde core/loop.js). No usa
+// barra() de render/hud.js porque esa función es horizontal (w2,h2 con el
+// relleno creciendo en X) -- aquí el relleno crece en Y, de abajo arriba.
+function dibujarCargaArquero(p) {
+        const bw = 5, bh = 30;
+        const bx = p.x + 16, by = p.y - bh / 2 - 4;
+        const c = clamp(p.cargaArqT / CARGA_ARQ_MAX, 0, 1);
+        const enZona = p.cargaArqT >= CARGA_ARQ_ZONA[0] && p.cargaArqT <= CARGA_ARQ_ZONA[1];
+        cx.fillStyle = "rgba(10,8,17,.78)";
+        cx.fillRect(bx, by, bw, bh);
+        // banda de la zona óptima: misma referencia (abajo=0, arriba=máximo)
+        // que el relleno de más abajo, para que ambas cosas midan lo mismo.
+        const zonaY0 = by + bh - (CARGA_ARQ_ZONA[1] / CARGA_ARQ_MAX) * bh;
+        const zonaY1 = by + bh - (CARGA_ARQ_ZONA[0] / CARGA_ARQ_MAX) * bh;
+        cx.fillStyle = "rgba(226,196,137,.4)";
+        cx.fillRect(bx, zonaY0, bw, zonaY1 - zonaY0);
+        const fillH = c * bh;
+        cx.fillStyle = enZona ? "#ffd27f" : "#e9e3d5";
+        cx.fillRect(bx, by + bh - fillH, bw, fillH);
+        cx.strokeStyle = enZona ? "#ffd27f" : "#3a3453";
+        cx.lineWidth = 1;
+        cx.strokeRect(bx + 0.5, by + 0.5, bw - 1, bh - 1);
+        if (enZona) {
+          cx.globalAlpha = 0.5 + Math.sin(animGlobal * 20) * 0.4;
+          cx.strokeStyle = "#fff7e0";
+          cx.lineWidth = 1.5;
+          cx.strokeRect(bx - 1, by - 1, bw + 2, bh + 2);
+          cx.globalAlpha = 1;
         }
       }
 
@@ -938,6 +988,13 @@ export function renderJugador(p) {
           cx.scale(CONFIG_ARMA.escala, CONFIG_ARMA.escala);
           dibujarCargaMago(p, 26, 0);
           cx.restore();
+        }
+        // Barra de carga del arquero: a diferencia del orbe del mago de
+        // arriba, NO va dentro del cx.rotate(p.aim) -- una barra vertical
+        // girando con la puntería no se leería como "cuánto llevo
+        // cargado". Se queda en espacio de mundo, siempre en vertical.
+        if (!formaAnimal && p.rol === "arquero" && p.cargaArqT > 0) {
+          dibujarCargaArquero(p);
         }
 
         // Mano secundaria (ver OFFHAND_IMG/OFFHAND_IMG_RAREZA en sprites.js):

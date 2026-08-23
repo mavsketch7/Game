@@ -84,6 +84,20 @@ const GRUPOS_SONIDO = {
   golpeAire: [{ nombre: "golpe_aire", ext: "m4a", offset: 0.61 }],
   golpeCritico: [{ nombre: "golpe_critico", ext: "m4a", offset: 0.43 }],
   paso: [{ nombre: "paso_1", ext: "wav", offset: 0 }],
+  // Tensar el arco (arquero, ver dispararFlechaCargada en abilities.js):
+  // 3 variantes que rotan al azar cada vez que EMPIEZA una carga nueva,
+  // para que cargar muchas veces seguidas no suene siempre igual.
+  cargaArco: [
+    { nombre: "carga_arco_1", ext: "m4a", offset: 0.144 },
+    { nombre: "carga_arco_2", ext: "m4a", offset: 0.12 },
+    { nombre: "carga_arco_3", ext: "m4a", offset: 0.224 },
+  ],
+  // Silbido real al soltar una flecha CARGADA (no la básica, que se queda
+  // con el "flecha" sintetizado de sfx() de siempre).
+  flechaVuelo: [{ nombre: "flecha_vuelo", ext: "m4a", offset: 0.056 }],
+  // Aviso corto al entrar en la ventana de crítico óptimo mientras se
+  // carga -- refuerza en sonido la marca visual de la barra.
+  cargaLista: [{ nombre: "carga_lista", ext: "m4a", offset: 0.104 }],
 };
 const bufferesReales = {};
 const cargaReales = {};
@@ -156,6 +170,20 @@ export function sfxGolpeCritico() {
 // pequeño jitter de tono para que no se note la repetición de la muestra.
 export function sfxPaso() {
   reproducirSonidoReal("paso", 0.22, 0.18);
+}
+// Arquero: empieza a tensar el arco (una vez por carga, no por frame).
+export function sfxCargaArco() {
+  reproducirSonidoReal("cargaArco", 0.6);
+}
+// Arquero: silbido real de la flecha al soltar un disparo CARGADO (el
+// básico se queda con el "flecha" sintetizado de sfx(), ver dispararProy).
+export function sfxFlechaVuelo() {
+  reproducirSonidoReal("flechaVuelo", 0.7);
+}
+// Arquero: aviso al entrar en la ventana de crítico óptimo mientras se
+// carga (una vez por carga, ver dispararFlechaCargada en abilities.js).
+export function sfxCargaLista() {
+  reproducirSonidoReal("cargaLista", 0.55);
 }
 
 export function sfx(tipo) {

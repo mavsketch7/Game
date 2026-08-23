@@ -6,7 +6,7 @@ import { ELEMENTOS, ELEM_MAGO, FORMAS_DRUIDA, FORMAS_INFO, RAREZAS, ROLES, SALA_
 import { update } from "../core/loop.js";
 import { G } from "../core/state.js";
 import { fxEstocada, fxOnda, fxParticulas, fxTajo, fxTexto } from "../render/effects.js";
-import { sfx, sfxGolpeAire, sfxGolpeCritico, sfxImpactoGuerrero, sfxImpactoPicaro } from "./audio.js";
+import { sfx, sfxFlechaVuelo, sfxGolpeAire, sfxGolpeCritico, sfxImpactoGuerrero, sfxImpactoPicaro } from "./audio.js";
 import { curarP, danoAEnemigo, danoAlJugador, masCercano, statsTot, vivos } from "./combat.js";
 import { posDropValida } from "./floorgen.js";
 import { JUICE } from "./juice.js";
@@ -142,6 +142,20 @@ export function atacar(p) {
 // el brazo, a propósito, para que el hitbox se sienta generoso).
 const ALTO_MANO_ESTOCADA = 16;
 const ALCANCE_ESTOCADA_FX = 24;
+
+// Disparo cargado del arquero (mantener el botón de ataque, ver el bloque
+// "arquero" en core/loop.js:update() y dispararFlechaCargada más abajo,
+// mismo patrón que el arcano del mago con p.cargaT/dispararArcano). Un
+// toque corto (menos de CARGA_ARQ_UMBRAL) dispara igual que siempre, sin
+// perforar ni bono de crítico -- así un simple clic no cambia de
+// sensación. CARGA_ARQ_ZONA marca la ventana de "óptimo" (fracción de
+// CARGA_ARQ_MAX en SEGUNDOS, no un porcentaje): soltar dentro de esa
+// ventana da el bono de crítico más alto; cargar más allá sigue
+// disparando con perforación pero sin el bono extra -- premia soltar en
+// el momento justo, no simplemente "cuanto más, mejor".
+export const CARGA_ARQ_MAX = 0.9;
+export const CARGA_ARQ_UMBRAL = 0.2;
+export const CARGA_ARQ_ZONA = [0.5, 0.8];
 
 function golpeArco(p, dir, rango, arco, dmgBase, esPicaro) {
         // Pícaro: línea recta de puñalada (fxEstocada), no el barrido en
@@ -470,8 +484,13 @@ export function disparoSecundario(p) {
         });
       }
 
-function dispararProy(p, dir, dmg, tipo, color, v) {
-        if (tipo === "flecha") sfx("flecha");
+// silencioso: se salta el "flecha" sintetizado de sfx() -- lo usa el
+// disparo cargado del arquero, que pone su propio silbido real encima
+// (sfxFlechaVuelo, ver dispararFlechaCargada) en vez del beep de siempre.
+function dispararProy(p, dir, dmg, tipo, color, v, silencioso) {
+        if (silencioso) {
+          // nada -- el llamador decide su propio sonido
+        } else if (tipo === "flecha") sfx("flecha");
         else if (tipo === "bola") sfx("fuego");
         else if (tipo === "carambano") sfx("hielo");
         else if (tipo === "orbeArc") sfx("magia");
@@ -491,6 +510,45 @@ function dispararProy(p, dir, dmg, tipo, color, v) {
         };
         if (tipo === "flecha" && p._pierceProy > 0) pr.pierce = p._pierceProy;
         G.projs.push(pr);
+      }
+
+// Soltar el disparo cargado del arquero (ver p.cargaArqT en core/loop.js:
+// update(), mismo patrón que dispararArcano() del mago con p.cargaT).
+// p.cargaArqT ya viene en SEGUNDOS mantenidos, no normalizado -- se
+// resetea aquí, antes de cualquier `return` (soltar dos veces seguidas
+// sin recargar no debe repetir el disparo). Flecha Certera (proc
+// existente) tiene prioridad sobre la carga: si está lista, se dispara
+// igual que siempre pase lo que pase con la carga acumulada.
+export function dispararFlechaCargada(p) {
+        const carga = p.cargaArqT || 0;
+        p.cargaArqT = 0;
+        if (p.atkCd > 0) return;
+        const t = statsTot(p);
+        p.atkCd = (0.3 * cdHaste(p)) / (1 + (p._hasteBonus || 0));
+        p.swingT = 0.3;
+        const dmgFle = t.atk * (p.imbuido === "arcano" ? 1.15 : 1);
+        if (p.certera) {
+          p.certera = false;
+          dispararProy(p, p.aim, dmgFle * 2, "flecha", "#ffd27f", 560);
+          const pr = G.projs[G.projs.length - 1];
+          pr.pierce = (pr.pierce || 0) + 2;
+          pr.certera = true;
+          fxOnda(p.x, p.y, 20, "#ffd27f");
+          return;
+        }
+        if (carga < CARGA_ARQ_UMBRAL) {
+          // toque corto: disparo de siempre, sin perforar ni bono de crítico
+          dispararProy(p, p.aim, dmgFle, "flecha", "#e9e3d5", 480);
+          return;
+        }
+        const enZona = carga >= CARGA_ARQ_ZONA[0] && carga <= CARGA_ARQ_ZONA[1];
+        dispararProy(p, p.aim, dmgFle, "flecha", "#ffd27f", 560, true);
+        const pr = G.projs[G.projs.length - 1];
+        pr.pierce = 2 + (p._pierceProy || 0); // "de forma estándar" -- escalable por p._pierceProy (tarjetas/equipo)
+        pr.critBonus = enZona ? 40 : 15;
+        pr.cargada = true;
+        fxOnda(p.x, p.y, enZona ? 20 : 14, "#ffd27f");
+        sfxFlechaVuelo();
       }
 
 function crearArea(x, y, r, elemento, mult, duenio) {

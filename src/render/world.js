@@ -1097,17 +1097,29 @@ export function render() {
         // proyectiles
         for (const pr of G.projs) {
           if (pr.tipo === "flecha") {
+            // Sprite real (ver render/sprites.js: SPR.flecha/flechaCargada)
+            // en vez del triángulo dibujado a mano de antes -- mismo pivote
+            // central y misma rotación por velocidad, así que el cambio no
+            // toca ningún otro sitio que calcule la posición/ángulo de la
+            // flecha. Si el sprite todavía no cargó (un instante, al
+            // arrancar) cae al triángulo de siempre para no dejar un hueco.
+            const imgFlecha = pr.cargada ? SPR.flechaCargada : SPR.flecha;
             cx.save();
             cx.translate(pr.x, pr.y);
             cx.rotate(Math.atan2(pr.vy, pr.vx));
-            cx.fillStyle = pr.color;
-            cx.fillRect(-8, -1.5, 14, 3);
-            cx.beginPath();
-            cx.moveTo(6, -4);
-            cx.lineTo(12, 0);
-            cx.lineTo(6, 4);
-            cx.closePath();
-            cx.fill();
+            if (imgFlecha) {
+              const s = 22;
+              cx.drawImage(imgFlecha, -s / 2, -s / 2, s, s);
+            } else {
+              cx.fillStyle = pr.color;
+              cx.fillRect(-8, -1.5, 14, 3);
+              cx.beginPath();
+              cx.moveTo(6, -4);
+              cx.lineTo(12, 0);
+              cx.lineTo(6, 4);
+              cx.closePath();
+              cx.fill();
+            }
             cx.restore();
           } else if (pr.tipo === "rama") {
             cx.save();

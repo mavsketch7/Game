@@ -97,6 +97,7 @@ export function nuevaPartida() {
             _formHeal: 0,
             _formDmg: 1,
             cargaT: 0,
+            cargaArqT: 0, // disparo cargado del arquero, ver dispararFlechaCargada en systems/abilities.js
             combo: 0,
             comboT: 0,
             certera: false,

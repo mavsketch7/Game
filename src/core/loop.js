@@ -6,8 +6,8 @@ import { META } from "./save.js";
 import { G } from "./state.js";
 import { NET, netAplicarInputs } from "../net/peer.js";
 import { fxOnda, fxParticulas, fxTexto } from "../render/effects.js";
-import { aplicarImbuido, atacar, danoPilar, dispararArcano, golpeObjeto } from "../systems/abilities.js";
-import { sfx, sfxAterrizaje, sfxGolpeAire, sfxGolpeCritico, sfxImpactoGuerrero, sfxPaso } from "../systems/audio.js";
+import { CARGA_ARQ_MAX, CARGA_ARQ_ZONA, aplicarImbuido, atacar, danoPilar, dispararArcano, dispararFlechaCargada, golpeObjeto } from "../systems/abilities.js";
+import { sfx, sfxAterrizaje, sfxCargaArco, sfxCargaLista, sfxGolpeAire, sfxGolpeCritico, sfxImpactoGuerrero, sfxPaso } from "../systems/audio.js";
 import { esJefe, escalaEnemigo } from "../systems/bosses.js";
 import { curarP, danoAEnemigo, danoAlJugador, explotarBomber, ganarXP, masCercano, matarEnemigo, spawnClon, spawnEnemigo, statsTot, tipoAleatorio, vivos } from "../systems/combat.js";
 import { JUICE, actualizarEstilo } from "../systems/juice.js";
@@ -129,6 +129,10 @@ export function update(dt) {
               else if (p._dashAtkCrit) sfxGolpeCritico();
               else sfxImpactoGuerrero();
             }
+          } else if (p.cargaArqT > 0) {
+            // Arquero tensando el arco (ver dispararFlechaCargada más
+            // abajo): se queda quieto apuntando, igual que un tirador de
+            // verdad no camina a mitad de tiro -- vx/vy ya están a 0.
           } else {
             const n = Math.hypot(p.inp.mx, p.inp.my);
             if (n > 0) {
@@ -405,10 +409,35 @@ export function update(dt) {
             } else if (!p.inp.atkHeld && p.cargaT > 0) {
               dispararArcano(p);
             }
+          } else if (p.rol === "arquero" && !p.atrapado) {
+            // mismo patrón que el arcano de arriba (p.cargaT), en
+            // p.cargaArqT -- ver dispararFlechaCargada en abilities.js y
+            // el bloqueo de movimiento un poco más arriba en este mismo
+            // update().
+            if (G.salaTipo === "reto_parry") {
+              if (p.cargaArqT > 0) dispararFlechaCargada(p);
+              p.cargaArqT = 0;
+              if (p.inp.atkHeld) atacar(p);
+            } else if (p.inp.atkHeld && p.atkCd <= 0) {
+              const antes = p.cargaArqT || 0;
+              p.cargaArqT = Math.min(antes + dt, CARGA_ARQ_MAX);
+              // El sonido de tensar arranca un poco después de empezar a
+              // mantener pulsado (no en el frame 0): un simple clic rápido
+              // dispara igual que siempre (ver CARGA_ARQ_UMBRAL más abajo)
+              // y no debe sonar como si hubiera cargado algo.
+              if (antes < 0.08 && p.cargaArqT >= 0.08) sfxCargaArco();
+              if (antes < CARGA_ARQ_ZONA[0] && p.cargaArqT >= CARGA_ARQ_ZONA[0])
+                sfxCargaLista();
+            } else if (!p.inp.atkHeld && p.cargaArqT > 0) {
+              dispararFlechaCargada(p);
+            }
           } else {
             if (p.cargaT > 0 && p.rol === "mago")
               dispararArcano(p); // cambió de elemento o quedó atrapado: suelta lo cargado
             else p.cargaT = 0;
+            if (p.cargaArqT > 0 && p.rol === "arquero")
+              dispararFlechaCargada(p); // quedó atrapado a media carga: suelta lo cargado
+            else p.cargaArqT = 0;
             if (p.inp.atkHeld) atacar(p);
           }
         }
@@ -464,6 +493,7 @@ export function update(dt) {
                   true,
                   pr.vx * 0.12,
                   pr.vy * 0.12,
+                  pr.critBonus,
                 );
                 if (
                   pr.duenio &&

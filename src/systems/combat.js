@@ -293,11 +293,15 @@ export function spawnEnemigo(f, tipo, esElite, posFija) {
         });
       }
 
-export function danoAEnemigo(e, raw, duenio, puedeCrit, kbx, kby) {
+export function danoAEnemigo(e, raw, duenio, puedeCrit, kbx, kby, bonusCrit) {
         if (e.hp <= 0 && !e.dummy) return;
         const t = statsTot(duenio);
         let dmg = raw * (0.9 + Math.random() * 0.2);
-        const crit = puedeCrit && Math.random() * 100 < t.crit;
+        // bonusCrit: puntos extra de probabilidad de crítico solo para ESTE
+        // golpe (p.ej. la flecha cargada del arquero, ver
+        // dispararFlechaCargada en abilities.js) -- no toca t.crit, que es
+        // la estadística normal del jugador.
+        const crit = puedeCrit && Math.random() * 100 < t.crit + (bonusCrit || 0);
         if (crit) dmg *= 1.7;
         if (e.hpMax && e.hp / e.hpMax < 0.25 && tieneEfecto(duenio, "ejecutor"))
           dmg *= 1.5;
