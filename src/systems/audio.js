@@ -204,6 +204,72 @@ function reproducirSonidoControlable(grupo, volMul, loop) {
   };
 }
 
+// Vuelo de la flecha: NO usa src.loop=true (reproducirSonidoControlable de
+// arriba) porque en un vuelo largo se oía el "salto" de cada repetición
+// (queda raro, se nota mucho el punto de corte) -- en su lugar se
+// encadenan repeticiones cortas SOLAPADAS, cada una con un fundido de
+// entrada/salida propio, así el oído no detecta dónde acaba una y
+// empieza la siguiente. VUELO_SEG_DUR/VUELO_PASO están medidos a mano
+// contra flecha_volando.m4a (offset 0.2, duración total 0.472 -- ver
+// GRUPOS_SONIDO.vueloFlecha): si el archivo cambia, hay que remedirlos.
+// stop() también hace un fundido corto (no un corte seco) del segmento
+// que estuviera sonando en ese momento, para que interrumpirlo al
+// impactar tampoco suene a clic.
+const VUELO_SEG_DUR = 0.27;
+const VUELO_PASO = 0.2;
+function reproducirVueloFlecha(volMul) {
+  const noop = { stop() {} };
+  if (AJ.silencio || !audioCtx) return noop;
+  reanudarAudio();
+  const f = (GRUPOS_SONIDO.vueloFlecha || [])[0];
+  if (!f) return noop;
+  const vol = AJ.volMaster * AJ.volSfx * (volMul ?? 1);
+  let detenido = false,
+    timer = null,
+    srcActual = null,
+    gActual = null;
+  const lanzarSegmento = () => {
+    if (detenido) return;
+    const buffer = bufferesReales[f.nombre];
+    if (!buffer) {
+      cargarBufferReal(f.nombre, f.ext)?.then(lanzarSegmento);
+      return;
+    }
+    const src = audioCtx.createBufferSource();
+    src.buffer = buffer;
+    const g = audioCtx.createGain();
+    const now = audioCtx.currentTime;
+    const fundido = 0.03;
+    g.gain.setValueAtTime(0, now);
+    g.gain.linearRampToValueAtTime(vol, now + fundido);
+    g.gain.setValueAtTime(vol, now + VUELO_SEG_DUR - fundido);
+    g.gain.linearRampToValueAtTime(0, now + VUELO_SEG_DUR);
+    src.connect(g);
+    g.connect(audioCtx.destination);
+    src.start(0, f.offset || 0);
+    src.stop(now + VUELO_SEG_DUR + 0.05);
+    srcActual = src;
+    gActual = g;
+    timer = setTimeout(lanzarSegmento, VUELO_PASO * 1000);
+  };
+  lanzarSegmento();
+  return {
+    stop() {
+      detenido = true;
+      if (timer) clearTimeout(timer);
+      if (gActual) {
+        const now = audioCtx.currentTime;
+        gActual.gain.cancelScheduledValues(now);
+        gActual.gain.setValueAtTime(gActual.gain.value, now);
+        gActual.gain.linearRampToValueAtTime(0, now + 0.03);
+      }
+      try {
+        srcActual && srcActual.stop(audioCtx.currentTime + 0.04);
+      } catch (e) {}
+    },
+  };
+}
+
 // Guerrero: golpe que conecta -- rota entre las 3 variantes impactodirecto.
 export function sfxImpactoGuerrero() {
   reproducirSonidoReal("impactoGuerrero", 0.75);
@@ -238,11 +304,12 @@ export function sfxTensarArco() {
 export function sfxDisparoArco() {
   reproducirSonidoReal("disparoArco", 0.75);
 }
-// Vuelo de la flecha: bucle controlable, arranca tras el disparo y se
-// corta al primer impacto/choque con muro/caducar (ver pr._vueloSrc en
-// core/loop.js).
+// Vuelo de la flecha: repeticiones cortas solapadas con fundido (ver
+// reproducirVueloFlecha más arriba -- NO un bucle duro, se oía el salto
+// en un vuelo largo), arranca tras el disparo y se corta al primer
+// impacto/choque con muro/caducar (ver pr._vueloSrc en core/loop.js).
 export function sfxVueloFlecha() {
-  return reproducirSonidoControlable("vueloFlecha", 0.5, true);
+  return reproducirVueloFlecha(0.5);
 }
 // Arquero: aviso al entrar en la ventana de crítico óptimo mientras se
 // carga (una vez por carga, ver dispararFlechaCargada en abilities.js).

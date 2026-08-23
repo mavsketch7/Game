@@ -1138,7 +1138,7 @@ export function render() {
             // ALTO_MANO_ESTOCADA en systems/abilities.js -- ahí sí se
             // podía subir el dato real porque esa FX no colisiona).
             cx.save();
-            cx.translate(pr.x, pr.y - 16);
+            cx.translate(pr.x, pr.y - 34);
             cx.rotate(animGlobal * 22 + pr.x * 0.3);
             cx.fillStyle = "#2c241a";
             cx.fillRect(-7, -1, 4, 2);

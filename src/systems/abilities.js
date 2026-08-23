@@ -67,16 +67,26 @@ export function atacar(p) {
           p.atkCd = (0.3 * cdHaste(p)) / (1 + (p._hasteBonus || 0));
           p.swingT = 0.3;
           const dmgFle = t.atk * (p.imbuido === "arcano" ? 1.15 : 1);
+          // Mismo sonido real que dispararFlechaCargada (disparo + vuelo)
+          // -- este camino solo se usa atrapado/en la sala "solo parry"
+          // (el juego normal pasa por dispararFlechaCargada, ver el
+          // bloque "arquero" en core/loop.js:update()), pero debe sonar
+          // exactamente igual, no volver al sintetizado de sfx().
           if (p.certera) {
             // Flecha Certera: crítico natural, atraviesa y vuela más rápido
             p.certera = false;
-            dispararProy(p, p.aim, dmgFle * 2, "flecha", "#ffd27f", 560);
+            dispararProy(p, p.aim, dmgFle * 2, "flecha", "#ffd27f", 560, true);
             const pr = G.projs[G.projs.length - 1];
             pr.pierce = (pr.pierce || 0) + 2;
             pr.certera = true;
             fxOnda(p.x, p.y, 20, "#ffd27f");
+            sfxDisparoArco();
+            pr._vueloSrc = sfxVueloFlecha();
           } else {
-            dispararProy(p, p.aim, dmgFle, "flecha", "#e9e3d5", 480);
+            dispararProy(p, p.aim, dmgFle, "flecha", "#e9e3d5", 480, true);
+            const pr = G.projs[G.projs.length - 1];
+            sfxDisparoArco();
+            pr._vueloSrc = sfxVueloFlecha();
           }
         } else if (p.rol === "mago") {
           if (p.elemento === "arcano") return; // el arcano se carga manteniendo el ataque (gestionado en el update)
@@ -596,7 +606,7 @@ export function lanzarCuchillo(p) {
         p.cargaCuchT = 0;
         if (p.cuchilloCd > 0) return;
         const t = statsTot(p);
-        p.cuchilloCd = 0.8;
+        p.cuchilloCd = 1.5; // ver el mismo valor en render/hud.js (icono de cooldown, "⇧")
         p.swingT = Math.max(p.swingT, 0.15);
         if (carga < CARGA_CUCH_UMBRAL) {
           dispararProy(p, p.aim, t.atk * 0.8, "cuchillo", "#d8d8e0", 520);
