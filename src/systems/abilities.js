@@ -6,7 +6,7 @@ import { ELEMENTOS, ELEM_MAGO, FORMAS_DRUIDA, FORMAS_INFO, RAREZAS, ROLES, SALA_
 import { update } from "../core/loop.js";
 import { G } from "../core/state.js";
 import { fxEstocada, fxOnda, fxParticulas, fxTajo, fxTexto } from "../render/effects.js";
-import { sfx, sfxDisparoArco, sfxGolpeAire, sfxGolpeCritico, sfxImpactoGuerrero, sfxImpactoPicaro, sfxVueloFlecha } from "./audio.js";
+import { sfx, sfxDisparoArco, sfxGolpeAire, sfxGolpeCritico, sfxImpactoGuerrero, sfxImpactoPicaro } from "./audio.js";
 import { curarP, danoAEnemigo, danoAlJugador, masCercano, statsTot, vivos } from "./combat.js";
 import { posDropValida } from "./floorgen.js";
 import { JUICE } from "./juice.js";
@@ -67,10 +67,10 @@ export function atacar(p) {
           p.atkCd = (0.3 * cdHaste(p)) / (1 + (p._hasteBonus || 0));
           p.swingT = 0.3;
           const dmgFle = t.atk * (p.imbuido === "arcano" ? 1.15 : 1);
-          // Mismo sonido real que dispararFlechaCargada (disparo + vuelo)
-          // -- este camino solo se usa atrapado/en la sala "solo parry"
-          // (el juego normal pasa por dispararFlechaCargada, ver el
-          // bloque "arquero" en core/loop.js:update()), pero debe sonar
+          // Mismo sonido real que dispararFlechaCargada (disparo) -- este
+          // camino solo se usa atrapado/en la sala "solo parry" (el juego
+          // normal pasa por dispararFlechaCargada, ver el bloque
+          // "arquero" en core/loop.js:update()), pero debe sonar
           // exactamente igual, no volver al sintetizado de sfx().
           if (p.certera) {
             // Flecha Certera: crítico natural, atraviesa y vuela más rápido
@@ -81,12 +81,9 @@ export function atacar(p) {
             pr.certera = true;
             fxOnda(p.x, p.y, 20, "#ffd27f");
             sfxDisparoArco();
-            pr._vueloSrc = sfxVueloFlecha();
           } else {
             dispararProy(p, p.aim, dmgFle, "flecha", "#e9e3d5", 480, true);
-            const pr = G.projs[G.projs.length - 1];
             sfxDisparoArco();
-            pr._vueloSrc = sfxVueloFlecha();
           }
         } else if (p.rol === "mago") {
           if (p.elemento === "arcano") return; // el arcano se carga manteniendo el ataque (gestionado en el update)
@@ -495,9 +492,9 @@ export function disparoSecundario(p) {
       }
 
 // silencioso: se salta el sintetizado de sfx() -- lo usa TODO disparo del
-// arquero (dispararFlechaCargada pone sus propios sfxDisparoArco/
-// sfxVueloFlecha reales encima, cargado o no) y el lanzamiento cargado
-// del pícaro (lanzarCuchillo, reutiliza sfxDisparoArco).
+// arquero (dispararFlechaCargada pone su propio sfxDisparoArco real
+// encima, cargado o no) y el lanzamiento cargado del pícaro
+// (lanzarCuchillo, reutiliza sfxDisparoArco).
 function dispararProy(p, dir, dmg, tipo, color, v, silencioso) {
         if (silencioso) {
           // nada -- el llamador decide su propio sonido
@@ -524,6 +521,21 @@ function dispararProy(p, dir, dmg, tipo, color, v, silencioso) {
         G.projs.push(pr);
       }
 
+// Duración mínima (ms) que el tensado del arco debe sonar antes de dejar
+// que un disparo lo corte -- un toque MUY corto (p.cargaArqT casi 0)
+// paraba el sonido casi al arrancar, tan rápido que en la práctica no se
+// llegaba a oír: el disparo sonaba solo, sin el tensado antes ("el
+// ataque básico no reproduce el charge"). El daño/disparo en sí sigue
+// saliendo al instante siempre -- esto SOLO retrasa cuándo se corta el
+// sonido, no ninguna lógica de juego.
+const TENSADO_MIN_AUDIBLE_MS = 150;
+function cortarTensado(p) {
+  if (!p._cargaSrc) return;
+  const llevaMs = performance.now() - (p._cargaSrcT0 || 0);
+  if (llevaMs >= TENSADO_MIN_AUDIBLE_MS) p._cargaSrc.stop();
+  p._cargaSrc = null;
+}
+
 // Soltar el disparo cargado del arquero (ver p.cargaArqT en core/loop.js:
 // update(), mismo patrón que dispararArcano() del mago con p.cargaT).
 // p.cargaArqT ya viene en SEGUNDOS mantenidos, no normalizado -- se
@@ -532,14 +544,7 @@ function dispararProy(p, dir, dmg, tipo, color, v, silencioso) {
 // existente) tiene prioridad sobre la carga: si está lista, se dispara
 // igual que siempre pase lo que pase con la carga acumulada.
 export function dispararFlechaCargada(p) {
-        // Se corta el tensado en cuanto se suelta, pase lo que pase más
-        // abajo (toque corto, certera o carga de verdad) -- si no, sonaría
-        // por encima del disparo/vuelo reales (ver p._cargaSrc, que
-        // arranca al empezar a mantener pulsado en core/loop.js).
-        if (p._cargaSrc) {
-          p._cargaSrc.stop();
-          p._cargaSrc = null;
-        }
+        cortarTensado(p);
         const carga = p.cargaArqT || 0;
         p.cargaArqT = 0;
         if (p.atkCd > 0) return;
@@ -555,7 +560,6 @@ export function dispararFlechaCargada(p) {
           pr.certera = true;
           fxOnda(p.x, p.y, 20, "#ffd27f");
           sfxDisparoArco();
-          pr._vueloSrc = sfxVueloFlecha();
           return;
         }
         // "silencioso" en las dos ramas de abajo: dispararProy() ya no
@@ -581,7 +585,6 @@ export function dispararFlechaCargada(p) {
           fxOnda(p.x, p.y, enZona ? 20 : 14, "#ffd27f");
         }
         sfxDisparoArco();
-        pr._vueloSrc = sfxVueloFlecha();
       }
 
 // Cuchillo arrojado del pícaro: mismo patrón de carga que el disparo del
@@ -596,12 +599,10 @@ export const CARGA_CUCH_ZONA = [0.5, 0.8];
 
 export function lanzarCuchillo(p) {
         if (p.rol !== "picaro") return;
-        // mismo criterio que dispararFlechaCargada: cortar el tensado al
-        // soltar, pase lo que pase más abajo.
-        if (p._cargaSrc) {
-          p._cargaSrc.stop();
-          p._cargaSrc = null;
-        }
+        // A diferencia del arquero, el cargado del cuchillo (ver
+        // sfxCargaCuchillo en core/loop.js) es un solo disparo sintetizado
+        // corto, no una muestra real que haya que cortar a mano -- se
+        // apaga solo, mucho antes de CARGA_CUCH_UMBRAL.
         const carga = p.cargaCuchT || 0;
         p.cargaCuchT = 0;
         if (p.cuchilloCd > 0) return;

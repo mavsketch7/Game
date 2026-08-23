@@ -7,7 +7,7 @@ import { G } from "./state.js";
 import { NET, netAplicarInputs } from "../net/peer.js";
 import { fxOnda, fxParticulas, fxTexto } from "../render/effects.js";
 import { CARGA_ARQ_MAX, CARGA_ARQ_ZONA, CARGA_CUCH_MAX, CARGA_CUCH_ZONA, aplicarImbuido, atacar, danoPilar, dispararArcano, dispararFlechaCargada, golpeObjeto, lanzarCuchillo } from "../systems/abilities.js";
-import { sfx, sfxAterrizaje, sfxCargaLista, sfxGolpeAire, sfxGolpeCritico, sfxImpactoGuerrero, sfxImpactoProyectil, sfxPaso, sfxTensarArco } from "../systems/audio.js";
+import { sfx, sfxAterrizaje, sfxCargaCuchillo, sfxCargaLista, sfxGolpeAire, sfxGolpeCritico, sfxImpactoGuerrero, sfxImpactoProyectil, sfxPaso, sfxTensarArco } from "../systems/audio.js";
 import { esJefe, escalaEnemigo } from "../systems/bosses.js";
 import { curarP, danoAEnemigo, danoAlJugador, explotarBomber, ganarXP, masCercano, matarEnemigo, spawnClon, spawnEnemigo, statsTot, tipoAleatorio, vivos } from "../systems/combat.js";
 import { JUICE, actualizarEstilo } from "../systems/juice.js";
@@ -440,9 +440,15 @@ export function update(dt) {
               const antes = p.cargaArqT || 0;
               // El tensado arranca en el mismo frame en que se empieza a
               // mantener pulsado -- instantáneo incluso en un toque corto
-              // (dispararFlechaCargada lo corta al soltar, pase lo que
-              // pase con CARGA_ARQ_UMBRAL más abajo).
-              if (antes <= 0) p._cargaSrc = sfxTensarArco();
+              // (dispararFlechaCargada lo corta al soltar, con un mínimo
+              // de tiempo audible antes de cortarlo, ver
+              // TENSADO_MIN_AUDIBLE_MS en abilities.js -- así el ataque
+              // básico siempre se oye tensar Y disparar, no solo lo
+              // segundo).
+              if (antes <= 0) {
+                p._cargaSrc = sfxTensarArco();
+                p._cargaSrcT0 = performance.now();
+              }
               p.cargaArqT = Math.min(antes + dt, CARGA_ARQ_MAX);
               if (antes < CARGA_ARQ_ZONA[0] && p.cargaArqT >= CARGA_ARQ_ZONA[0])
                 sfxCargaLista();
@@ -466,7 +472,9 @@ export function update(dt) {
           if (p.rol === "picaro" && !p.atrapado) {
             if (p.inp.lanzarHeld && p.cuchilloCd <= 0) {
               const antes = p.cargaCuchT || 0;
-              if (antes <= 0) p._cargaSrc = sfxTensarArco();
+              // Sonido de carga PROPIO, distinto del tensado real del
+              // arquero (pedido expreso) -- ver sfxCargaCuchillo.
+              if (antes <= 0) sfxCargaCuchillo();
               p.cargaCuchT = Math.min(antes + dt, CARGA_CUCH_MAX);
               if (antes < CARGA_CUCH_ZONA[0] && p.cargaCuchT >= CARGA_CUCH_ZONA[0])
                 sfxCargaLista();
@@ -521,10 +529,6 @@ export function update(dt) {
               }
             }
           if (fuera) {
-            // Chocó con un muro/pilar/barril o caducó -- el vuelo (si lo
-            // llevaba, ver pr._vueloSrc en dispararFlechaCargada) ya no
-            // pinta nada sonando, aunque no haya llegado a tocar a nadie.
-            if (pr._vueloSrc) pr._vueloSrc.stop();
             G.projs.splice(i, 1);
             continue;
           }
@@ -549,15 +553,6 @@ export function update(dt) {
                 // sonido); flecha/cuchillo se quedaban mudos.
                 if (pr.tipo === "flecha" || pr.tipo === "cuchillo")
                   sfxImpactoProyectil();
-                // El vuelo se corta en el PRIMER impacto, no cuando el
-                // proyectil se destruye del todo (con perforación puede
-                // seguir viajando y golpear a más enemigos) -- una vez
-                // suena el golpe seco no pinta nada seguir oyendo el
-                // silbido por encima, aunque la flecha atraviese y siga.
-                if (pr._vueloSrc) {
-                  pr._vueloSrc.stop();
-                  pr._vueloSrc = null;
-                }
                 if (
                   pr.duenio &&
                   pr.duenio._poison &&
@@ -639,10 +634,6 @@ export function update(dt) {
               for (const q of vivos()) {
                 if (q === pr.duenio) continue;
                 if (Math.hypot(pr.x - q.x, pr.y - q.y) < pr.r + q.r) {
-                  if (pr._vueloSrc) {
-                    pr._vueloSrc.stop();
-                    pr._vueloSrc = null;
-                  }
                   danoAlJugador(q, pr.dmg * (G.escena === "pvp" ? 1 : 0.5), {
                     ff: pr.duenio,
                   });
