@@ -33,7 +33,6 @@
      paneles/listas y títulos de los overlays -- ver el bloque al final
      de la hoja. */
   --ux-frame: url("/assets/sprites/ui/slot_dark_a.png");
-  --ux-banner: url("/assets/sprites/ui/nameplate_royal.png");
   --ux-panel: url("/assets/sprites/ui/panel_dark.png");
   --ux-medallon: url("/assets/sprites/ui/slot_gold.png");
   /* Tileset único de botón (public/assets/ui/buttons/) -- TODOS los
@@ -2033,9 +2032,10 @@ body.pantalla-completa #hint {
   margin-top: 5px;
 }
 
-/* Reskin de paneles/listas y títulos de los overlays (tienda, inventario,
+/* Reskin de paneles/listas de los overlays (tienda, inventario,
    ajustes, workbench, pvp, info de clase, rankings...) con el tileset
-   "Dark Ages UI" -- ver --ux-frame/--ux-banner arriba. Se pisa el
+   "Dark Ages UI" -- ver --ux-frame arriba (los títulos h2 de estos
+   overlays usan el tileset de botones, ver más abajo). Se pisa el
    border:1-2px solid var(--borde) de cada clase con border-image en vez
    de tocar sus reglas originales una a una, así se gana la cascada por
    orden sin !important (mismo truco que el bloque del cursor, abajo).
@@ -2066,31 +2066,49 @@ body.pantalla-completa #hint {
   outline-offset: 2px;
 }
 
+/* nameplate_royal.png (--ux-banner, ya no se usa aquí) resultó tener
+   un recorte roto: los primeros 32px del PNG son una caja gris/oliva
+   sin relación con el banner, y el resto mete un adorno de corona que
+   no está pensado para repetirse -- cualquier border-image-slice fijo
+   sobre esa imagen corta por sitios distintos a los que parece a
+   simple vista, y el relleno ("fill") se salía del contorno dorado
+   real (que no es lo que --ux-banner recorta). En vez de perseguir un
+   recorte válido de un asset mal exportado, estos títulos reusan el
+   mismo tileset de botones (ya verificado sin costuras) con el tinte
+   dorado -- misma técnica que .btn.dorado, ver ese bloque más abajo. */
 .tienda-cab h2,
 .info-clase h2,
 .cartas-titulo h2,
 .display {
+  position: relative;
+  isolation: isolate;
   display: inline-block;
   flex-shrink: 0;
   white-space: nowrap;
-  border-style: solid;
-  border-width: 0 26px;
-  border-image-source: var(--ux-banner);
-  border-image-slice: 0 26 fill;
-  border-image-width: 0 26px;
-  border-image-repeat: stretch;
-  /* Relleno lateral generoso a propósito: con solo 8px el remate labrado
-     del banner (nameplate_royal.png) quedaba pegado a la primera letra
-     y se leía como si el texto estuviera roto/solapado (ver "Ficha de
-     personaje" en pausa, que fue donde se detectó). */
-  padding: 12px 18px;
-  image-rendering: pixelated;
-  /* El "fill" del border-image (arriba) pinta también la textura tejida
-     del banner como fondo detrás del propio texto, no solo en los
-     remates -- sin sombra, el texto claro (--hueso) se leía borroso
-     encima de esa textura. Mismo tratamiento que ya usa el nameplate
-     del menú de pausa (#mp-nameplate-texto) para el mismo problema. */
+  padding: 12px 26px;
+  color: var(--vespero);
   text-shadow: 0 2px 3px rgba(0, 0, 0, 0.85);
+}
+.tienda-cab h2::before,
+.info-clase h2::before,
+.cartas-titulo h2::before,
+.display::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background-image: var(--ux-btn-left), var(--ux-btn-right), var(--ux-btn-center);
+  background-repeat: no-repeat, no-repeat, repeat-x;
+  background-position:
+    left center,
+    right center,
+    center center;
+  background-size:
+    auto 100%,
+    auto 100%,
+    auto 100%;
+  image-rendering: pixelated;
+  filter: var(--btn-tint-dorado);
 }
 
 /* Reskin de la pantalla de selección de personaje (#menu) con el mismo
