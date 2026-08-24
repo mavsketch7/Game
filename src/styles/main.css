@@ -36,9 +36,22 @@
   --ux-banner: url("/assets/sprites/ui/nameplate_royal.png");
   --ux-panel: url("/assets/sprites/ui/panel_dark.png");
   --ux-medallon: url("/assets/sprites/ui/slot_gold.png");
-  /* Tapas redondeadas con remache recortadas de btn-inventory.png (kit de
-     pausa) -- ver el comentario junto al bloque de botones más abajo. */
-  --ux-btn-cap: url("/assets/sprites/ui/btn_frame.png");
+  /* Tileset único de botón (public/assets/ui/buttons/) -- TODOS los
+     botones "de verdad" del juego (.btn y variantes, ver el bloque de
+     botones más abajo) usan este mismo set de 3 piezas, sin más estilo
+     propio: tapa izq/dcha de tamaño fijo + centro que repite en
+     horizontal para cubrir cualquier ancho. Quedan fuera a propósito
+     .btn-mini (flechas </> de 26x26, demasiado pequeño para que la
+     tapa se lea) y .mp-btn (placas grandes del menú de pausa con el
+     texto ya grabado en el PNG, kit aparte). */
+  --ux-btn-left: url("/assets/ui/buttons/btn-general-leftborder.png");
+  --ux-btn-center: url("/assets/ui/buttons/btn-general-center.png");
+  --ux-btn-right: url("/assets/ui/buttons/btn-general-rightborder.png");
+  /* No hay variante de color en el tileset -- los estados "dorado"
+     (acción principal/lista) y "peligro" (destructivo) se consiguen
+     tiñendo el mismo PNG con filter, no con más imágenes. */
+  --btn-tint-dorado: hue-rotate(35deg) saturate(1.5) brightness(1.12);
+  --btn-tint-peligro: hue-rotate(-14deg) saturate(1.2) brightness(0.82);
 }
 
 /* ===== Pantalla de inicio ===== */
@@ -463,11 +476,12 @@ body.pantalla-completa #hint {
    gremio, ver ui/menu.js) -- el cuadrado fijo de 26x26 de arriba está
    pensado solo para las flechas </> del selector de clase; con una
    palabra dentro el texto se salía del botón (ver commit de UX). Ancho
-   libre + relleno lateral en su lugar. */
+   libre en su lugar; el fondo lo pone el bloque unificado de .btn más
+   abajo (esta clase no lleva "btn-mini" a la vez, así que necesita
+   estar en esa lista para no quedarse sin fondo). */
 .btn-mini-texto {
   width: auto;
   height: auto;
-  padding: 5px 10px;
   white-space: nowrap;
   font-size: 0.72rem;
 }
@@ -475,20 +489,6 @@ body.pantalla-completa #hint {
   font-size: 0.72rem;
   color: var(--ceniza);
   flex: 1;
-}
-.btn-listo {
-  background: var(--piedra2);
-  border: 1px solid var(--borde);
-  border-radius: 6px;
-  color: var(--hueso);
-  padding: 5px;
-  font-weight: 800;
-  font-size: 0.78rem;
-}
-.slot.listo .btn-listo {
-  background: var(--vespero);
-  color: #1a1206;
-  border-color: var(--vespero);
 }
 .slot .pad-ayuda {
   font-size: 0.64rem;
@@ -501,13 +501,18 @@ body.pantalla-completa #hint {
 .fila-acciones .btn-listo,
 .fila-acciones .btn-info {
   flex: 1;
-  padding: 9px 6px;
   font-size: 0.78rem;
   white-space: nowrap;
 }
+.slot.listo .btn-listo {
+  --btn-tint: var(--btn-tint-dorado);
+}
+/* Botón secundario (p.ej. "Unirse a un gremio" bajo Marcar listo/Info):
+   mismo tileset que todos, pero más discreto para no competir con la
+   acción principal de la fila. */
 .gremio-toggle {
-  color: var(--ceniza);
-  background: transparent;
+  opacity: 0.8;
+  font-size: 0.68rem;
 }
 
 .grid-cartas {
@@ -603,62 +608,6 @@ body.pantalla-completa #hint {
   width: 100%;
   font-size: 0.7rem;
   color: var(--ceniza);
-}
-.btn {
-  background: var(--piedra2);
-  color: var(--hueso);
-  border: 1px solid var(--borde);
-  border-radius: 8px;
-  padding: 9px 15px;
-  font-size: 0.9rem;
-  font-weight: 700;
-  transition:
-    transform 0.1s,
-    border-color 0.2s;
-}
-.btn:hover:not(:disabled) {
-  border-color: var(--vespero);
-  transform: translateY(-1px);
-}
-.btn.dorado {
-  background: var(--vespero);
-  color: #1a1206;
-  border-color: var(--vespero);
-}
-.btn.peligro {
-  border-color: #6b3a40;
-}
-.btn.peligro:hover:not(:disabled) {
-  border-color: var(--sangre);
-}
-
-/* ===== pantalla de inicio: marcos pixel-art con esquinas cortadas ===== */
-.btn,
-.btn-mini,
-.btn-listo {
-  border-width: 2px;
-  box-shadow:
-    inset 1px 1px 0 rgba(255, 255, 255, 0.08),
-    inset -1px -1px 0 rgba(0, 0, 0, 0.4),
-    0 2px 0 rgba(0, 0, 0, 0.55);
-  transition:
-    transform 0.06s,
-    box-shadow 0.06s,
-    border-color 0.15s;
-}
-.btn:hover:not(:disabled) {
-  transform: translateY(-1px);
-  box-shadow:
-    inset 1px 1px 0 rgba(255, 255, 255, 0.1),
-    inset -1px -1px 0 rgba(0, 0, 0, 0.4),
-    0 3px 0 rgba(0, 0, 0, 0.55);
-}
-.btn:active:not(:disabled) {
-  transform: translateY(1px);
-  box-shadow:
-    inset 1px 1px 0 rgba(255, 255, 255, 0.08),
-    inset -1px -1px 0 rgba(0, 0, 0, 0.4),
-    0 1px 0 rgba(0, 0, 0, 0.55);
 }
 .marco-px {
   --muesca: 7px;
@@ -1547,21 +1496,10 @@ body.pantalla-completa #hint {
   border-style: solid;
 }
 .btn-fus {
-  background: #2e2416;
-  border: 1px solid #6b5a3a;
-  border-radius: 6px;
-  color: var(--hueso);
-  padding: 4px 9px;
   font-size: 0.72rem;
-  font-weight: 800;
-}
-.btn-fus:hover:not(:disabled) {
-  border-color: var(--vespero);
 }
 .btn-fus.dentro {
-  background: var(--vespero);
-  color: #1a1206;
-  border-color: var(--vespero);
+  --btn-tint: var(--btn-tint-dorado);
 }
 .fusion-aviso {
   font-size: 0.72rem;
@@ -1818,19 +1756,10 @@ body.pantalla-completa #hint {
   gap: 4px;
 }
 .seg button {
-  background: #2e2416;
-  border: 1px solid var(--borde);
-  color: var(--hueso);
-  padding: 6px 11px;
-  border-radius: 6px;
   font-size: 0.78rem;
-  font-weight: 700;
-  cursor: pointer;
 }
 .seg button.on {
-  background: var(--vespero);
-  color: #1a1206;
-  border-color: var(--vespero);
+  --btn-tint: var(--btn-tint-dorado);
 }
 .val-num {
   min-width: 42px;
@@ -1894,17 +1823,7 @@ body.pantalla-completa #hint {
   color: var(--ceniza);
 }
 .btn-info {
-  background: transparent;
-  border: 1px solid var(--borde);
-  border-radius: 6px;
-  color: var(--ceniza);
-  padding: 3px 8px;
   font-size: 0.72rem;
-  font-weight: 700;
-}
-.btn-info:hover {
-  border-color: var(--vespero);
-  color: var(--hueso);
 }
 
 /* ===== Ficha de personaje: pestañas (Personaje/Equipamiento/Estadísticas/
@@ -2236,104 +2155,120 @@ body.pantalla-completa #hint {
   image-rendering: pixelated;
 }
 
-#btn-empezar {
-  background: transparent;
-  color: var(--hueso);
-  border-style: solid;
-  border-width: 0 30px;
-  border-image-source: var(--ux-banner);
-  border-image-slice: 0 30 fill;
-  border-image-width: 0 30px;
-  border-image-repeat: stretch;
-  padding: 14px 10px;
-  font-size: 1rem;
-  letter-spacing: 0.04em;
-  image-rendering: pixelated;
-}
+/* ===== Botón único, para TODOS los botones "de verdad" del juego =====
+   Tileset de public/assets/ui/buttons/ (3 piezas: tapa izq + centro que
+   repite en horizontal + tapa dcha), sin ningún otro estilo de botón en
+   el proyecto -- antes había 3 capas de reskin distintas apiladas aquí
+   (gradiente CSS plano, luego esquinas "pixel-art" con box-shadow, luego
+   una tapa con remache solo a los lados) que además NO cubrían todos
+   los botones por igual. Ahora es una sola regla.
 
-/* Botones: mismas tapas redondeadas con remache que el botón "Inventory"
-   del kit de pausa (public/assets/ui/pausa/btn-inventory.png -- de ahí
-   salieron --vespero/--sangre, ver el comentario junto a :root), no solo
-   el color aproximado por CSS. btn-inventory.png lleva el texto grabado
-   en la imagen (en inglés), así que no sirve tal cual para el resto de
-   botones -- btn_frame.png es un recorte de solo sus dos tapas (13px a
-   cada lado, sin nada del texto de en medio) usado como border-image de
-   solo los bordes izquierdo/derecho; el relleno de en medio sigue siendo
-   el degradado rojo de CSS, que a esa escala ya no se distingue de la
-   textura real. */
-/* Solo los botones "de verdad" (con etiqueta, tamaño libre) llevan las
-   tapas con remache -- .btn-mini es un cuadrado fijo de 26px (flechas
-   </·/> del selector de clase) y .btn-fus es un chip minúsculo metido en
-   la ficha de objeto (mesa de fusión); una tapa de 13px a cada lado no
-   cabe ahí sin desbordar el layout, así que se quedan con su estilo de
-   siempre. .btn-info solo se usa para "Info habilidades" (menu.js), a
-   ancho completo dentro de la tarjeta de jugador -- entra sin problema. */
+   --btn-cap-w controla el ancho renderizado de cada tapa -- subirlo
+   agranda el botón entero (el centro sigue repitiendo para rellenar);
+   se sobreescribe por selector para los pocos casos que necesitan un
+   tamaño distinto (mini, fus...) en vez de tener reglas de fondo
+   separadas. Quedan FUERA a propósito: .btn-mini (flechas </> de
+   26x26, muy pequeño para que la tapa se lea) y .mp-btn (placas del
+   menú de pausa con el texto ya grabado en el PNG, kit aparte). */
 .btn,
 .btn-listo,
 .btn-info,
+.btn-mini-texto,
+.btn-fus,
 .seg button,
 .inicio-start {
-  background: linear-gradient(180deg, #9c3e3e 0%, #7a2226 55%, #501519 100%);
-  border-style: solid;
-  border-width: 0 13px;
-  border-image-source: var(--ux-btn-cap);
-  border-image-slice: 0 13;
-  border-image-width: 0 13px;
-  border-image-repeat: stretch;
-  border-radius: 999px;
-  padding: 12px 20px;
-  /* Antes solo había un brillo superior/inferior sin ningún contorno que
-     lo sujetase (el border-image no pinta nada arriba/abajo, border-width
-     ahí es 0), así que se veía como una franja roja suelta "flotando"
-     sobre el remate metálico de las tapas -- el anillo oscuro de 2px de
-     aquí cierra el contorno alrededor de toda la píldora (curva incluida,
-     al seguir el border-radius) y el brillo/sombra quedan más adentro,
-     pegados a él en vez de sueltos. */
-  box-shadow:
-    inset 0 0 0 2px #160f09,
-    inset 0 3.5px 0 rgba(255, 255, 255, 0.16),
-    inset 0 -3.5px 0 rgba(0, 0, 0, 0.35);
+  --btn-cap-w: 16px;
+  --btn-tint: brightness(1);
+  position: relative;
+  z-index: 0;
+  background: none;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+  padding: 10px calc(var(--btn-cap-w) + 8px);
   font-family: "Dungeon Font", "Cinzel", serif;
   color: var(--vespero);
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.7);
-  image-rendering: pixelated;
+  transition: transform 0.06s;
 }
-.btn-mini {
-  background: linear-gradient(180deg, #9c3e3e 0%, #7a2226 55%, #501519 100%);
-  border: 2px solid #160f09;
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.18),
-    inset 0 -1px 0 rgba(0, 0, 0, 0.35);
-  font-family: "Dungeon Font", "Cinzel", serif;
-  color: var(--vespero);
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.7);
+/* El tileset vive en un ::before detrás del texto (no como
+   background-image directo del botón) a propósito: filter en el
+   propio botón tiñe TODO lo que se pinta dentro, texto incluido -- el
+   --btn-tint dorado giraba también el color del texto (--vespero, ya
+   dorado) hacia un verde raro. Aislado aquí, el tinte solo toca el
+   pixel-art del tileset. */
+.btn::before,
+.btn-listo::before,
+.btn-info::before,
+.btn-mini-texto::before,
+.btn-fus::before,
+.seg button::before,
+.inicio-start::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background-image: var(--ux-btn-left), var(--ux-btn-right), var(--ux-btn-center);
+  background-repeat: no-repeat, no-repeat, repeat-x;
+  background-position:
+    left center,
+    right center,
+    center center;
+  background-size:
+    var(--btn-cap-w) 100%,
+    var(--btn-cap-w) 100%,
+    auto 100%;
+  image-rendering: pixelated;
+  filter: var(--btn-tint);
+  transition: filter 0.1s;
+}
+.btn:hover:not(:disabled),
+.btn-listo:hover:not(:disabled),
+.btn-info:hover:not(:disabled),
+.btn-mini-texto:hover:not(:disabled),
+.btn-fus:hover:not(:disabled),
+.seg button:hover:not(:disabled),
+.inicio-start:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+.btn:hover:not(:disabled)::before,
+.btn-listo:hover:not(:disabled)::before,
+.btn-info:hover:not(:disabled)::before,
+.btn-mini-texto:hover:not(:disabled)::before,
+.btn-fus:hover:not(:disabled)::before,
+.seg button:hover:not(:disabled)::before,
+.inicio-start:hover:not(:disabled)::before {
+  filter: var(--btn-tint) brightness(1.18);
+}
+.btn:active:not(:disabled),
+.btn-listo:active:not(:disabled),
+.btn-info:active:not(:disabled),
+.btn-mini-texto:active:not(:disabled),
+.btn-fus:active:not(:disabled),
+.seg button:active:not(:disabled),
+.inicio-start:active:not(:disabled) {
+  transform: translateY(1px);
+}
+.btn:active:not(:disabled)::before,
+.btn-listo:active:not(:disabled)::before,
+.btn-info:active:not(:disabled)::before,
+.btn-mini-texto:active:not(:disabled)::before,
+.btn-fus:active:not(:disabled)::before,
+.seg button:active:not(:disabled)::before,
+.inicio-start:active:not(:disabled)::before {
+  filter: var(--btn-tint) brightness(0.85);
 }
 .btn.dorado {
-  background: linear-gradient(180deg, #b34a4a 0%, #8a2a2e 55%, #5c1a1e 100%);
-  color: var(--vespero);
-  box-shadow:
-    inset 0 0 0 2px #160f09,
-    inset 0 3.5px 0 rgba(255, 255, 255, 0.16),
-    inset 0 -3.5px 0 rgba(0, 0, 0, 0.35),
-    0 0 10px rgba(226, 196, 137, 0.4);
+  --btn-tint: var(--btn-tint-dorado);
 }
 .btn.peligro {
-  background: linear-gradient(180deg, #7a1f1f 0%, #501215 55%, #300a0c 100%);
+  --btn-tint: var(--btn-tint-peligro);
 }
-/* :hover/:active más específicos que el bloque de arriba (llevan
-   pseudo-clases) pisan su box-shadow entero, no solo lo que cambian --
-   sin este par, el anillo oscuro desaparecía otra vez al pasar el ratón. */
-.btn:hover:not(:disabled) {
-  box-shadow:
-    inset 0 0 0 2px #160f09,
-    inset 0 3.5px 0 rgba(255, 255, 255, 0.2),
-    inset 0 -3.5px 0 rgba(0, 0, 0, 0.35);
-}
-.btn:active:not(:disabled) {
-  box-shadow:
-    inset 0 0 0 2px #160f09,
-    inset 0 3.5px 0 rgba(255, 255, 255, 0.12),
-    inset 0 -3.5px 0 rgba(0, 0, 0, 0.3);
+.btn-fus,
+.btn-info,
+.btn-mini-texto {
+  --btn-cap-w: 10px;
+  font-weight: 800;
 }
 
 /* "Pulsa Start" es, en la práctica, un botón (dispara el inicio de
@@ -2341,12 +2276,10 @@ body.pantalla-completa #hint {
    en vez del texto brillante de antes -- se cancela el
    background-clip:text/color:transparent que usaba para eso. */
 .inicio-start {
+  --btn-cap-w: 22px;
   background-clip: padding-box;
   -webkit-background-clip: padding-box;
-  color: var(--vespero);
   padding: 13px 40px;
-  border-width: 2px;
-  border-style: solid;
   animation:
     inicio-aparece-texto 1s ease-out 0.5s forwards,
     inicio-pulso 2s ease-in-out 1.5s infinite;
