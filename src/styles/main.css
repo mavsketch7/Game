@@ -44,7 +44,13 @@
      tapa se lea) y .mp-btn (placas grandes del menú de pausa con el
      texto ya grabado en el PNG, kit aparte). */
   --ux-btn-left: url("/assets/ui/buttons/btn-general-leftborder.png");
-  --ux-btn-center: url("/assets/ui/buttons/btn-general-center.png");
+  /* btn-general-center-clean.png es un recorte propio (0-24px del
+     original de 32px, ver public/assets/ui/buttons/) -- los últimos
+     ~7px del PNG original traían una mancha/defecto que no formaba
+     parte del patrón repetible; al hacer repeat-x con el ancho
+     completo, ese trozo asomaba en mitad del botón como una pieza
+     suelta o un borde extra. El resto (0-24px) tilea sin costura. */
+  --ux-btn-center: url("/assets/ui/buttons/btn-general-center-clean.png");
   --ux-btn-right: url("/assets/ui/buttons/btn-general-rightborder.png");
   /* No hay variante de color en el tileset -- los estados "dorado"
      (acción principal/lista) y "peligro" (destructivo) se consiguen
@@ -2102,7 +2108,7 @@ body.pantalla-completa #hint {
   background-position:
     left center,
     right center,
-    center center;
+    left center;
   background-size:
     auto 100%,
     auto 100%,
@@ -2238,7 +2244,7 @@ body.pantalla-completa #hint {
   background-position:
     left center,
     right center,
-    center center;
+    left center;
   background-size:
     auto 100%,
     auto 100%,
