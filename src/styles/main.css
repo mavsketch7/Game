@@ -422,7 +422,7 @@ body.pantalla-completa #hint {
   min-height: 136px;
   display: flex;
   flex-direction: column;
-  gap: 5px;
+  gap: 3px;
 }
 .slot.libre {
   align-items: center;
@@ -483,7 +483,6 @@ body.pantalla-completa #hint {
   width: auto;
   height: auto;
   white-space: nowrap;
-  font-size: 0.72rem;
 }
 .slot .desc {
   font-size: 0.72rem;
@@ -501,8 +500,9 @@ body.pantalla-completa #hint {
 .fila-acciones .btn-listo,
 .fila-acciones .btn-info {
   flex: 1;
-  font-size: 0.78rem;
   white-space: nowrap;
+  padding-top: 6px;
+  padding-bottom: 6px;
 }
 .slot.listo .btn-listo {
   --btn-tint: var(--btn-tint-dorado);
@@ -512,7 +512,9 @@ body.pantalla-completa #hint {
    acción principal de la fila. */
 .gremio-toggle {
   opacity: 0.8;
-  font-size: 0.68rem;
+  font-size: 14px;
+  padding-top: 6px;
+  padding-bottom: 6px;
 }
 
 .grid-cartas {
@@ -1495,9 +1497,6 @@ body.pantalla-completa #hint {
 .fusion-slot.lleno {
   border-style: solid;
 }
-.btn-fus {
-  font-size: 0.72rem;
-}
 .btn-fus.dentro {
   --btn-tint: var(--btn-tint-dorado);
 }
@@ -1755,9 +1754,6 @@ body.pantalla-completa #hint {
   display: flex;
   gap: 4px;
 }
-.seg button {
-  font-size: 0.78rem;
-}
 .seg button.on {
   --btn-tint: var(--btn-tint-dorado);
 }
@@ -1822,10 +1818,6 @@ body.pantalla-completa #hint {
   font-size: 0.78rem;
   color: var(--ceniza);
 }
-.btn-info {
-  font-size: 0.72rem;
-}
-
 /* ===== Ficha de personaje: pestañas (Personaje/Equipamiento/Estadísticas/
    Mapa). El objetivo es que la cabecera (título, pestaña de jugador,
    pestañas de sección) se quede siempre visible y solo el CONTENIDO de la
@@ -2177,7 +2169,7 @@ body.pantalla-completa #hint {
 .btn-fus,
 .seg button,
 .inicio-start {
-  --btn-cap-w: 16px;
+  --btn-cap-w: 18px;
   --btn-tint: brightness(1);
   position: relative;
   z-index: 0;
@@ -2187,6 +2179,7 @@ body.pantalla-completa #hint {
   box-shadow: none;
   padding: 10px calc(var(--btn-cap-w) + 8px);
   font-family: "Dungeon Font", "Cinzel", serif;
+  font-size: 17px;
   color: var(--vespero);
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.7);
   transition: transform 0.06s;
@@ -2209,15 +2202,22 @@ body.pantalla-completa #hint {
   inset: 0;
   z-index: -1;
   background-image: var(--ux-btn-left), var(--ux-btn-right), var(--ux-btn-center);
-  background-repeat: no-repeat, no-repeat, repeat-x;
+  background-repeat: no-repeat, no-repeat, no-repeat;
   background-position:
     left center,
     right center,
     center center;
+  /* El centro NO se repite (era el bug: "repeat-x" tileaba el centro y
+     cada repetición dibujaba su propio borde, dando el efecto de
+     bordes duplicados que se veía en el juego) -- se ESTIRA a todo el
+     ancho del botón, por debajo de las tapas izq/dcha (van primero en
+     background-image, así que quedan encima y lo tapan en los
+     extremos). Con eso el centro solo queda visible justo en el hueco
+     entre las dos tapas, sea cual sea el ancho del texto. */
   background-size:
     var(--btn-cap-w) 100%,
     var(--btn-cap-w) 100%,
-    auto 100%;
+    100% 100%;
   image-rendering: pixelated;
   filter: var(--btn-tint);
   transition: filter 0.1s;
@@ -2266,7 +2266,8 @@ body.pantalla-completa #hint {
 }
 .btn-fus,
 .btn-info,
-.btn-mini-texto {
+.btn-mini-texto,
+.seg button {
   --btn-cap-w: 10px;
   font-weight: 800;
 }
