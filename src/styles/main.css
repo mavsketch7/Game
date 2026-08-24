@@ -2155,13 +2155,13 @@ body.pantalla-completa #hint {
    una tapa con remache solo a los lados) que además NO cubrían todos
    los botones por igual. Ahora es una sola regla.
 
-   --btn-cap-w controla el ancho renderizado de cada tapa -- subirlo
-   agranda el botón entero (el centro sigue repitiendo para rellenar);
-   se sobreescribe por selector para los pocos casos que necesitan un
-   tamaño distinto (mini, fus...) en vez de tener reglas de fondo
-   separadas. Quedan FUERA a propósito: .btn-mini (flechas </> de
-   26x26, muy pequeño para que la tapa se lea) y .mp-btn (placas del
-   menú de pausa con el texto ya grabado en el PNG, kit aparte). */
+   El tamaño de la tapa NO se controla a mano (ver el porqué en el
+   comentario del ::before, más abajo): sale solo del alto real del
+   botón, así que para agrandar/achicar un botón entero se toca el
+   padding o el font-size, nunca un ancho de tapa suelto. Quedan FUERA
+   a propósito: .btn-mini (flechas </> de 26x26, muy pequeño para que
+   la tapa se lea) y .mp-btn (placas del menú de pausa con el texto ya
+   grabado en el PNG, kit aparte). */
 .btn,
 .btn-listo,
 .btn-info,
@@ -2169,7 +2169,6 @@ body.pantalla-completa #hint {
 .btn-fus,
 .seg button,
 .inicio-start {
-  --btn-cap-w: 18px;
   --btn-tint: brightness(1);
   position: relative;
   z-index: 0;
@@ -2177,9 +2176,10 @@ body.pantalla-completa #hint {
   border: none;
   border-radius: 0;
   box-shadow: none;
-  padding: 10px calc(var(--btn-cap-w) + 8px);
+  padding: 10px 26px;
   font-family: "Dungeon Font", "Cinzel", serif;
   font-size: 17px;
+  font-weight: normal;
   color: var(--vespero);
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.7);
   transition: transform 0.06s;
@@ -2189,7 +2189,21 @@ body.pantalla-completa #hint {
    propio botón tiñe TODO lo que se pinta dentro, texto incluido -- el
    --btn-tint dorado giraba también el color del texto (--vespero, ya
    dorado) hacia un verde raro. Aislado aquí, el tinte solo toca el
-   pixel-art del tileset. */
+   pixel-art del tileset.
+
+   Las 3 piezas son recortes de 32x32 DEL MISMO set, pensadas para
+   pegarse a escala nativa (1:1 entre ellas) -- la tapa trae ya el
+   borde recto que sigue hacia el centro, y el centro solo tiene que
+   repetirse en ese mismo tamaño para que el trazo (grosor de borde,
+   remaches...) siga encajando. Los dos bugs anteriores fueron
+   forzarlas a tamaños distintos: "var(--btn-cap-w) 100%" en las tapas
+   las achataba en horizontal sin tocar el alto (aplastaba el redondeo
+   y desalineaba el trazo del borde respecto al centro), y "100% 100%"
+   en el centro estiraba su textura a cualquier ancho, deformándola.
+   "auto 100%" en las tres = mismo factor de escala para las tres
+   piezas (alto de la caja / 32px), así que el trazo queda alineado
+   sea cual sea el tamaño del botón; el centro repite (no estira) para
+   cubrir el hueco. */
 .btn::before,
 .btn-listo::before,
 .btn-info::before,
@@ -2202,22 +2216,15 @@ body.pantalla-completa #hint {
   inset: 0;
   z-index: -1;
   background-image: var(--ux-btn-left), var(--ux-btn-right), var(--ux-btn-center);
-  background-repeat: no-repeat, no-repeat, no-repeat;
+  background-repeat: no-repeat, no-repeat, repeat-x;
   background-position:
     left center,
     right center,
     center center;
-  /* El centro NO se repite (era el bug: "repeat-x" tileaba el centro y
-     cada repetición dibujaba su propio borde, dando el efecto de
-     bordes duplicados que se veía en el juego) -- se ESTIRA a todo el
-     ancho del botón, por debajo de las tapas izq/dcha (van primero en
-     background-image, así que quedan encima y lo tapan en los
-     extremos). Con eso el centro solo queda visible justo en el hueco
-     entre las dos tapas, sea cual sea el ancho del texto. */
   background-size:
-    var(--btn-cap-w) 100%,
-    var(--btn-cap-w) 100%,
-    100% 100%;
+    auto 100%,
+    auto 100%,
+    auto 100%;
   image-rendering: pixelated;
   filter: var(--btn-tint);
   transition: filter 0.1s;
@@ -2268,8 +2275,7 @@ body.pantalla-completa #hint {
 .btn-info,
 .btn-mini-texto,
 .seg button {
-  --btn-cap-w: 10px;
-  font-weight: 800;
+  padding: 6px 20px;
 }
 
 /* "Pulsa Start" es, en la práctica, un botón (dispara el inicio de
@@ -2277,7 +2283,6 @@ body.pantalla-completa #hint {
    en vez del texto brillante de antes -- se cancela el
    background-clip:text/color:transparent que usaba para eso. */
 .inicio-start {
-  --btn-cap-w: 22px;
   background-clip: padding-box;
   -webkit-background-clip: padding-box;
   padding: 13px 40px;
