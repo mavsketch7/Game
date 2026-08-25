@@ -44,19 +44,14 @@
      tapa se lea) y .mp-btn (placas grandes del menú de pausa con el
      texto ya grabado en el PNG, kit aparte). */
   --ux-btn-left: url("/assets/ui/buttons/btn-general-leftborder.png");
-  /* btn-general-center-clean.png es un recorte propio (0-24px del
-     original de 32px, ver public/assets/ui/buttons/) -- los últimos
-     ~7px del PNG original traían una mancha/defecto que no formaba
-     parte del patrón repetible; al hacer repeat-x con el ancho
-     completo, ese trozo asomaba en mitad del botón como una pieza
-     suelta o un borde extra. El resto (0-24px) tilea sin costura. */
   --ux-btn-center: url("/assets/ui/buttons/btn-general-center-clean.png");
   --ux-btn-right: url("/assets/ui/buttons/btn-general-rightborder.png");
   /* No hay variante de color en el tileset -- los estados "dorado"
-     (acción principal/lista) y "peligro" (destructivo) se consiguen
-     tiñendo el mismo PNG con filter, no con más imágenes. */
-  --btn-tint-dorado: hue-rotate(35deg) saturate(1.5) brightness(1.12);
-  --btn-tint-peligro: hue-rotate(-14deg) saturate(1.2) brightness(0.82);
+     (acción principal/lista) y "peligro" (destructivo) recolorean el
+     mismo PNG con background-blend-mode:color (ver el bloque de
+     botones más abajo), no con más imágenes. */
+  --btn-color-dorado: #f0c674;
+  --btn-color-peligro: #6b1f22;
 }
 
 /* ===== Pantalla de inicio ===== */
@@ -510,7 +505,7 @@ body.pantalla-completa #hint {
   padding-bottom: 6px;
 }
 .slot.listo .btn-listo {
-  --btn-tint: var(--btn-tint-dorado);
+  --btn-tint: var(--btn-color-dorado);
 }
 /* Botón secundario (p.ej. "Unirse a un gremio" bajo Marcar listo/Info):
    mismo tileset que todos, pero más discreto para no competir con la
@@ -1503,7 +1498,7 @@ body.pantalla-completa #hint {
   border-style: solid;
 }
 .btn-fus.dentro {
-  --btn-tint: var(--btn-tint-dorado);
+  --btn-tint: var(--btn-color-dorado);
 }
 .fusion-aviso {
   font-size: 0.72rem;
@@ -1760,7 +1755,7 @@ body.pantalla-completa #hint {
   gap: 4px;
 }
 .seg button.on {
-  --btn-tint: var(--btn-tint-dorado);
+  --btn-tint: var(--btn-color-dorado);
 }
 .val-num {
   min-width: 42px;
@@ -2080,42 +2075,69 @@ body.pantalla-completa #hint {
    simple vista, y el relleno ("fill") se salía del contorno dorado
    real (que no es lo que --ux-banner recorta). En vez de perseguir un
    recorte válido de un asset mal exportado, estos títulos reusan el
-   mismo tileset de botones (ya verificado sin costuras) con el tinte
-   dorado -- misma técnica que .btn.dorado, ver ese bloque más abajo. */
+   mismo tileset de botones -- ver el bloque de botones más abajo para
+   la técnica completa (tapas ::before/::after de ancho fijo + centro
+   como fondo real del elemento). */
 .tienda-cab h2,
 .info-clase h2,
 .cartas-titulo h2,
 .display {
+  --btn-cap-w: 26px;
+  --btn-tint: var(--btn-color-dorado);
   position: relative;
-  isolation: isolate;
   display: inline-block;
   flex-shrink: 0;
   white-space: nowrap;
-  padding: 12px 26px;
+  padding: 12px calc(var(--btn-cap-w) + 8px);
   color: var(--vespero);
   text-shadow: 0 2px 3px rgba(0, 0, 0, 0.85);
+  image-rendering: pixelated;
+  background-image:
+    linear-gradient(var(--btn-tint), var(--btn-tint)),
+    var(--ux-btn-center);
+  background-blend-mode: color;
+  background-repeat: no-repeat, repeat-x;
+  background-position: left center;
+  background-size:
+    100% 100%,
+    auto 100%;
+}
+.tienda-cab h2::before,
+.info-clase h2::before,
+.cartas-titulo h2::before,
+.display::before,
+.tienda-cab h2::after,
+.info-clase h2::after,
+.cartas-titulo h2::after,
+.display::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: var(--btn-cap-w);
+  background-image:
+    linear-gradient(var(--btn-tint), var(--btn-tint)),
+    var(--ux-btn-left);
+  background-blend-mode: color;
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
+  image-rendering: pixelated;
+  pointer-events: none;
 }
 .tienda-cab h2::before,
 .info-clase h2::before,
 .cartas-titulo h2::before,
 .display::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  background-image: var(--ux-btn-left), var(--ux-btn-right), var(--ux-btn-center);
-  background-repeat: no-repeat, no-repeat, repeat-x;
-  background-position:
-    left center,
-    right center,
-    center center;
-  background-size:
-    auto 100%,
-    auto 100%,
-    auto 100%;
-  background-clip: border-box;
-  image-rendering: pixelated;
-  filter: var(--btn-tint-dorado);
+  left: 0;
+}
+.tienda-cab h2::after,
+.info-clase h2::after,
+.cartas-titulo h2::after,
+.display::after {
+  right: 0;
+  background-image:
+    linear-gradient(var(--btn-tint), var(--btn-tint)),
+    var(--ux-btn-right);
 }
 
 /* Reskin de la pantalla de selección de personaje (#menu) con el mismo
@@ -2175,18 +2197,25 @@ body.pantalla-completa #hint {
 /* ===== Botón único, para TODOS los botones "de verdad" del juego =====
    Tileset de public/assets/ui/buttons/ (3 piezas: tapa izq + centro que
    repite en horizontal + tapa dcha), sin ningún otro estilo de botón en
-   el proyecto -- antes había 3 capas de reskin distintas apiladas aquí
-   (gradiente CSS plano, luego esquinas "pixel-art" con box-shadow, luego
-   una tapa con remache solo a los lados) que además NO cubrían todos
-   los botones por igual. Ahora es una sola regla.
+   el proyecto. Misma técnica que un <button> con 3 <span> (tapa/centro/
+   tapa), pero sin tocar el HTML de cada botón (hay botones creados en
+   9 archivos distintos) -- las tapas son ::before/::after de ANCHO FIJO
+   (--btn-cap-w, tamaño nativo del PNG) con background-size:100% 100%,
+   y el centro es el fondo real del propio botón (repite en horizontal,
+   detrás del texto), tal cual la referencia que fijó el ancho de
+   las capas.
 
-   El tamaño de la tapa NO se controla a mano (ver el porqué en el
-   comentario del ::before, más abajo): sale solo del alto real del
-   botón, así que para agrandar/achicar un botón entero se toca el
-   padding o el font-size, nunca un ancho de tapa suelto. Quedan FUERA
-   a propósito: .btn-mini (flechas </> de 26x26, muy pequeño para que
-   la tapa se lea) y .mp-btn (placas del menú de pausa con el texto ya
-   grabado en el PNG, kit aparte). */
+   El tinte "dorado"/"peligro" ya NO usa filter (eso tiñe TODO lo que
+   hay dentro del elemento, texto incluido -- .btn-listo activo se
+   ponía dorado pero el texto se iba a un verde raro). En su lugar,
+   cada capa de fondo lleva su propio degradado de color plano debajo
+   con background-blend-mode:color, que recolorea el pixel-art sin
+   tocar nada fuera de esa capa -- con --btn-tint en transparente
+   (por defecto) el blend no cambia nada.
+
+   Quedan FUERA a propósito: .btn-mini (flechas </> de 26x26, muy
+   pequeño para que la tapa se lea) y .mp-btn (placas del menú de
+   pausa con el texto ya grabado en el PNG, kit aparte). */
 .btn,
 .btn-listo,
 .btn-info,
@@ -2194,46 +2223,65 @@ body.pantalla-completa #hint {
 .btn-fus,
 .seg button,
 .inicio-start {
-  --btn-tint: brightness(1);
+  --btn-cap-w: 26px;
+  --btn-tint: transparent;
   position: relative;
   z-index: 0;
-  background: none;
   border: none;
   border-radius: 0;
   box-shadow: none;
-  padding: 10px 26px;
+  padding: 10px calc(var(--btn-cap-w) + 8px);
   font-family: "Dungeon Font", "Cinzel", serif;
   font-size: 17px;
   font-weight: normal;
   color: var(--vespero);
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.7);
   transition: transform 0.06s;
+  image-rendering: pixelated;
+  background-color: transparent;
+  background-image:
+    linear-gradient(var(--btn-tint), var(--btn-tint)),
+    var(--ux-btn-center);
+  background-blend-mode: color;
+  background-repeat: no-repeat, repeat-x;
+  background-position: left center;
+  background-size:
+    100% 100%,
+    auto 100%;
   /* Los <button> centran su texto por defecto (estilo del navegador),
      pero .inicio-start es un <div> ("Pulsa Start" en la pantalla de
      inicio, ver index.html) -- sin esto se quedaba pegado a la
      izquierda en vez de centrado en la píldora. */
   text-align: center;
 }
-/* El tileset vive en un ::before detrás del texto (no como
-   background-image directo del botón) a propósito: filter en el
-   propio botón tiñe TODO lo que se pinta dentro, texto incluido -- el
-   --btn-tint dorado giraba también el color del texto (--vespero, ya
-   dorado) hacia un verde raro. Aislado aquí, el tinte solo toca el
-   pixel-art del tileset.
-
-   Las 3 piezas son recortes de 32x32 DEL MISMO set, pensadas para
-   pegarse a escala nativa (1:1 entre ellas) -- la tapa trae ya el
-   borde recto que sigue hacia el centro, y el centro solo tiene que
-   repetirse en ese mismo tamaño para que el trazo (grosor de borde,
-   remaches...) siga encajando. Los dos bugs anteriores fueron
-   forzarlas a tamaños distintos: "var(--btn-cap-w) 100%" en las tapas
-   las achataba en horizontal sin tocar el alto (aplastaba el redondeo
-   y desalineaba el trazo del borde respecto al centro), y "100% 100%"
-   en el centro estiraba su textura a cualquier ancho, deformándola.
-   "auto 100%" en las tres = mismo factor de escala para las tres
-   piezas (alto de la caja / 32px), así que el trazo queda alineado
-   sea cual sea el tamaño del botón; el centro repite (no estira) para
-   cubrir el hueco. */
+.btn::before,
+.btn-listo::before,
+.btn-info::before,
+.btn-mini-texto::before,
+.btn-fus::before,
+.seg button::before,
+.inicio-start::before,
+.btn::after,
+.btn-listo::after,
+.btn-info::after,
+.btn-mini-texto::after,
+.btn-fus::after,
+.seg button::after,
+.inicio-start::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: var(--btn-cap-w);
+  background-image:
+    linear-gradient(var(--btn-tint), var(--btn-tint)),
+    var(--ux-btn-left);
+  background-blend-mode: color;
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
+  image-rendering: pixelated;
+  pointer-events: none;
+}
 .btn::before,
 .btn-listo::before,
 .btn-info::before,
@@ -2241,24 +2289,19 @@ body.pantalla-completa #hint {
 .btn-fus::before,
 .seg button::before,
 .inicio-start::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  background-image: var(--ux-btn-left), var(--ux-btn-right), var(--ux-btn-center);
-  background-repeat: no-repeat, no-repeat, repeat-x;
-  background-position:
-    left center,
-    right center,
-    center center;
-  background-size:
-    auto 100%,
-    auto 100%,
-    auto 100%;
-  background-clip: border-box;
-  image-rendering: pixelated;
-  filter: var(--btn-tint);
-  transition: filter 0.1s;
+  left: 0;
+}
+.btn::after,
+.btn-listo::after,
+.btn-info::after,
+.btn-mini-texto::after,
+.btn-fus::after,
+.seg button::after,
+.inicio-start::after {
+  right: 0;
+  background-image:
+    linear-gradient(var(--btn-tint), var(--btn-tint)),
+    var(--ux-btn-right);
 }
 .btn:hover:not(:disabled),
 .btn-listo:hover:not(:disabled),
@@ -2268,15 +2311,7 @@ body.pantalla-completa #hint {
 .seg button:hover:not(:disabled),
 .inicio-start:hover:not(:disabled) {
   transform: translateY(-1px);
-}
-.btn:hover:not(:disabled)::before,
-.btn-listo:hover:not(:disabled)::before,
-.btn-info:hover:not(:disabled)::before,
-.btn-mini-texto:hover:not(:disabled)::before,
-.btn-fus:hover:not(:disabled)::before,
-.seg button:hover:not(:disabled)::before,
-.inicio-start:hover:not(:disabled)::before {
-  filter: var(--btn-tint) brightness(1.18);
+  filter: brightness(1.15);
 }
 .btn:active:not(:disabled),
 .btn-listo:active:not(:disabled),
@@ -2286,27 +2321,20 @@ body.pantalla-completa #hint {
 .seg button:active:not(:disabled),
 .inicio-start:active:not(:disabled) {
   transform: translateY(1px);
-}
-.btn:active:not(:disabled)::before,
-.btn-listo:active:not(:disabled)::before,
-.btn-info:active:not(:disabled)::before,
-.btn-mini-texto:active:not(:disabled)::before,
-.btn-fus:active:not(:disabled)::before,
-.seg button:active:not(:disabled)::before,
-.inicio-start:active:not(:disabled)::before {
-  filter: var(--btn-tint) brightness(0.85);
+  filter: brightness(0.9);
 }
 .btn.dorado {
-  --btn-tint: var(--btn-tint-dorado);
+  --btn-tint: var(--btn-color-dorado);
 }
 .btn.peligro {
-  --btn-tint: var(--btn-tint-peligro);
+  --btn-tint: var(--btn-color-peligro);
 }
 .btn-fus,
 .btn-info,
 .btn-mini-texto,
 .seg button {
-  padding: 6px 20px;
+  --btn-cap-w: 16px;
+  padding: 6px calc(var(--btn-cap-w) + 8px);
 }
 
 /* "Pulsa Start" es, en la práctica, un botón (dispara el inicio de
