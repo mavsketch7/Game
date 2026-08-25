@@ -45,7 +45,14 @@
   --ux-btn-left: url("/assets/ui/buttons/btn-general-leftborder.png");
   --ux-btn-center: url("/assets/ui/buttons/btn-general-center-clean.png");
   --ux-btn-right: url("/assets/ui/buttons/btn-general-rightborder.png");
-  --btn-color-dorado: #f0c674;
+  /* Variante "pulsada" del mismo tileset (mismos remaches, relleno gris
+     oscuro en vez de rojo) -- para marcar un botón como pulsado/activo
+     (:active, .dorado, .on, .dentro) se cambia de PNG, no se aplica un
+     tinte de color por CSS (--btn-color-dorado quedaba fatal recoloreado
+     en dorado sobre el rojo). Ver --btn-img-* más abajo. */
+  --ux-btn-left-pushed: url("/assets/ui/buttons/btn-general-leftborder-pushed.png");
+  --ux-btn-center-pushed: url("/assets/ui/buttons/btn-general-center-clean-pushed.png");
+  --ux-btn-right-pushed: url("/assets/ui/buttons/btn-general-rightborder-pushed.png");
   --btn-color-peligro: #6b1f22;
 }
 
@@ -500,9 +507,6 @@ body.pantalla-completa #hint {
   white-space: nowrap;
   padding-top: 6px;
   padding-bottom: 6px;
-}
-.slot.listo .btn-listo {
-  --btn-tint: var(--btn-color-dorado);
 }
 /* Botón secundario (p.ej. "Unirse a un gremio" bajo Marcar listo/Info):
    mismo tileset que todos, pero más discreto para no competir con la
@@ -1494,9 +1498,6 @@ body.pantalla-completa #hint {
 .fusion-slot.lleno {
   border-style: solid;
 }
-.btn-fus.dentro {
-  --btn-tint: var(--btn-color-dorado);
-}
 .fusion-aviso {
   font-size: 0.72rem;
   color: var(--sangre);
@@ -1750,9 +1751,6 @@ body.pantalla-completa #hint {
 .seg {
   display: flex;
   gap: 4px;
-}
-.seg button.on {
-  --btn-tint: var(--btn-color-dorado);
 }
 .val-num {
   min-width: 42px;
@@ -2146,6 +2144,9 @@ body.pantalla-completa #hint {
   --btn-height: 44px;
   --btn-border-width: 26px;
   --btn-tint: transparent;
+  --btn-img-left: var(--ux-btn-left);
+  --btn-img-center: var(--ux-btn-center);
+  --btn-img-right: var(--ux-btn-right);
   display: inline-flex;
   align-items: stretch;
   height: var(--btn-height);
@@ -2190,7 +2191,7 @@ body.pantalla-completa #hint {
   background-size: 100% 100%;
   background-image:
     linear-gradient(var(--btn-tint), var(--btn-tint)),
-    var(--ux-btn-left);
+    var(--btn-img-left);
   background-blend-mode: color;
   image-rendering: pixelated;
 }
@@ -2203,7 +2204,7 @@ body.pantalla-completa #hint {
 .inicio-start .btn-right {
   background-image:
     linear-gradient(var(--btn-tint), var(--btn-tint)),
-    var(--ux-btn-right);
+    var(--btn-img-right);
 }
 .btn .btn-center,
 .btn-listo .btn-center,
@@ -2222,7 +2223,7 @@ body.pantalla-completa #hint {
   background-size: auto 100%;
   background-image:
     linear-gradient(var(--btn-tint), var(--btn-tint)),
-    var(--ux-btn-center);
+    var(--btn-img-center);
   background-blend-mode: color;
   image-rendering: pixelated;
 }
@@ -2244,6 +2245,26 @@ body.pantalla-completa #hint {
   transform: translateY(-1px);
   filter: brightness(1.15);
 }
+/* "Pulsado": ni filter ni tinte de color, cambia al PNG con relleno gris
+   oscuro (--ux-btn-*-pushed) -- se aplica tanto al :active real (clic
+   con el ratón) como a los estados "marcado" (.dorado, .on, .dentro,
+   .slot.listo .btn-listo), que antes usaban --btn-tint para recolorear
+   en dorado y quedaba mal sobre el rojo del tileset. */
+.btn:active:not(:disabled),
+.btn-listo:active:not(:disabled),
+.btn-info:active:not(:disabled),
+.btn-mini-texto:active:not(:disabled),
+.btn-fus:active:not(:disabled),
+.seg button:active:not(:disabled),
+.inicio-start:active:not(:disabled),
+.btn.dorado,
+.slot.listo .btn-listo,
+.btn-fus.dentro,
+.seg button.on {
+  --btn-img-left: var(--ux-btn-left-pushed);
+  --btn-img-center: var(--ux-btn-center-pushed);
+  --btn-img-right: var(--ux-btn-right-pushed);
+}
 .btn:active:not(:disabled),
 .btn-listo:active:not(:disabled),
 .btn-info:active:not(:disabled),
@@ -2252,10 +2273,6 @@ body.pantalla-completa #hint {
 .seg button:active:not(:disabled),
 .inicio-start:active:not(:disabled) {
   transform: translateY(1px);
-  filter: brightness(0.9);
-}
-.btn.dorado {
-  --btn-tint: var(--btn-color-dorado);
 }
 .btn.peligro {
   --btn-tint: var(--btn-color-peligro);
