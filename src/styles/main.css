@@ -35,6 +35,18 @@
   --ux-frame: url("/assets/sprites/ui/slot_dark_a.png");
   --ux-panel: url("/assets/sprites/ui/panel_dark.png");
   --ux-medallon: url("/assets/sprites/ui/slot_gold.png");
+  /* Tileset único de botón (public/assets/ui/buttons/), 3 piezas: tapa
+     izq + centro que repite en horizontal + tapa dcha. Se aplica con 3
+     <span> reales dentro de cada botón (.btn-left/.btn-center/.btn-right),
+     no con pseudo-elementos -- ver el bloque de botones más abajo y
+     ui/btnMarkup.js, que inserta esos 3 <span> automáticamente en
+     cualquier .btn/.btn-listo/.btn-info/.btn-mini-texto/.btn-fus/.seg
+     button/.inicio-start del DOM sin tocar el HTML/JS que los crea. */
+  --ux-btn-left: url("/assets/ui/buttons/btn-general-leftborder.png");
+  --ux-btn-center: url("/assets/ui/buttons/btn-general-center-clean.png");
+  --ux-btn-right: url("/assets/ui/buttons/btn-general-rightborder.png");
+  --btn-color-dorado: #f0c674;
+  --btn-color-peligro: #6b1f22;
 }
 
 /* ===== Pantalla de inicio ===== */
@@ -478,14 +490,19 @@ body.pantalla-completa #hint {
 }
 .fila-acciones {
   display: flex;
+  flex-wrap: wrap;
   gap: 6px;
 }
 .fila-acciones .btn-listo,
 .fila-acciones .btn-info {
   flex: 1;
+  min-width: fit-content;
   white-space: nowrap;
   padding-top: 6px;
   padding-bottom: 6px;
+}
+.slot.listo .btn-listo {
+  --btn-tint: var(--btn-color-dorado);
 }
 /* Botón secundario (p.ej. "Unirse a un gremio" bajo Marcar listo/Info):
    mismo tileset que todos, pero más discreto para no competir con la
@@ -1477,6 +1494,9 @@ body.pantalla-completa #hint {
 .fusion-slot.lleno {
   border-style: solid;
 }
+.btn-fus.dentro {
+  --btn-tint: var(--btn-color-dorado);
+}
 .fusion-aviso {
   font-size: 0.72rem;
   color: var(--sangre);
@@ -1730,6 +1750,9 @@ body.pantalla-completa #hint {
 .seg {
   display: flex;
   gap: 4px;
+}
+.seg button.on {
+  --btn-tint: var(--btn-color-dorado);
 }
 .val-num {
   min-width: 42px;
@@ -2093,6 +2116,150 @@ body.pantalla-completa #hint {
   border-image-slice: 11 fill;
   border-image-width: 11px;
   image-rendering: pixelated;
+}
+
+/* ===== Botón único, para TODOS los botones "de verdad" del juego =====
+   Tileset de public/assets/ui/buttons/ (3 piezas: tapa izq + centro que
+   repite en horizontal + tapa dcha), montado con 3 <span> REALES dentro
+   del botón (.btn-left/.btn-center/.btn-right) -- ui/btnMarkup.js los
+   inserta solo, sin tocar el HTML/JS que crea cada botón en los 9
+   archivos distintos donde se generan. Misma técnica que la referencia:
+   tapas de ancho fijo (--btn-border-width) con background-size:100%
+   100%, centro con background-size:auto 100% + repeat-x.
+
+   El tinte "dorado"/"peligro" usa background-blend-mode:color en vez de
+   filter (filter tiñe TODO lo de dentro, texto incluido). --btn-tint se
+   fija en el <button>/<div> real y los 3 <span> hijos lo heredan solos
+   (son elementos normales, no pseudo-elementos -- la herencia de custom
+   properties funciona tal cual). Transparente por defecto = sin cambio.
+
+   Quedan FUERA a propósito: .btn-mini (flechas </> de 26x26, muy
+   pequeño para que la tapa se lea) y .mp-btn (placas del menú de pausa
+   con el texto ya grabado en el PNG, kit aparte). */
+.btn,
+.btn-listo,
+.btn-info,
+.btn-mini-texto,
+.btn-fus,
+.seg button,
+.inicio-start {
+  --btn-height: 42px;
+  --btn-border-width: 26px;
+  --btn-tint: transparent;
+  display: inline-flex;
+  align-items: stretch;
+  height: var(--btn-height);
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+  margin: 0;
+  padding: 0;
+  background: none;
+  cursor: pointer;
+  font-family: "Dungeon Font", "Cinzel", serif;
+  font-size: 17px;
+  font-weight: normal;
+  color: var(--vespero);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.7);
+  transition: transform 0.06s;
+}
+.btn-fus,
+.btn-info,
+.btn-mini-texto,
+.seg button,
+.fila-acciones .btn-listo {
+  --btn-height: 30px;
+  --btn-border-width: 16px;
+}
+.btn .btn-left,
+.btn-listo .btn-left,
+.btn-info .btn-left,
+.btn-mini-texto .btn-left,
+.btn-fus .btn-left,
+.seg button .btn-left,
+.inicio-start .btn-left,
+.btn .btn-right,
+.btn-listo .btn-right,
+.btn-info .btn-right,
+.btn-mini-texto .btn-right,
+.btn-fus .btn-right,
+.seg button .btn-right,
+.inicio-start .btn-right {
+  flex-shrink: 0;
+  width: var(--btn-border-width);
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
+  background-image:
+    linear-gradient(var(--btn-tint), var(--btn-tint)),
+    var(--ux-btn-left);
+  background-blend-mode: color;
+  image-rendering: pixelated;
+}
+.btn .btn-right,
+.btn-listo .btn-right,
+.btn-info .btn-right,
+.btn-mini-texto .btn-right,
+.btn-fus .btn-right,
+.seg button .btn-right,
+.inicio-start .btn-right {
+  background-image:
+    linear-gradient(var(--btn-tint), var(--btn-tint)),
+    var(--ux-btn-right);
+}
+.btn .btn-center,
+.btn-listo .btn-center,
+.btn-info .btn-center,
+.btn-mini-texto .btn-center,
+.btn-fus .btn-center,
+.seg button .btn-center,
+.inicio-start .btn-center {
+  flex: 1 1 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 10px;
+  white-space: nowrap;
+  background-repeat: repeat-x;
+  background-size: auto 100%;
+  background-image:
+    linear-gradient(var(--btn-tint), var(--btn-tint)),
+    var(--ux-btn-center);
+  background-blend-mode: color;
+  image-rendering: pixelated;
+}
+.btn-fus .btn-center,
+.btn-info .btn-center,
+.btn-mini-texto .btn-center,
+.seg button .btn-center,
+.fila-acciones .btn-listo .btn-center {
+  padding: 0 8px;
+  font-size: 14px;
+}
+.btn:hover:not(:disabled),
+.btn-listo:hover:not(:disabled),
+.btn-info:hover:not(:disabled),
+.btn-mini-texto:hover:not(:disabled),
+.btn-fus:hover:not(:disabled),
+.seg button:hover:not(:disabled),
+.inicio-start:hover:not(:disabled) {
+  transform: translateY(-1px);
+  filter: brightness(1.15);
+}
+.btn:active:not(:disabled),
+.btn-listo:active:not(:disabled),
+.btn-info:active:not(:disabled),
+.btn-mini-texto:active:not(:disabled),
+.btn-fus:active:not(:disabled),
+.seg button:active:not(:disabled),
+.inicio-start:active:not(:disabled) {
+  transform: translateY(1px);
+  filter: brightness(0.9);
+}
+.btn.dorado {
+  --btn-tint: var(--btn-color-dorado);
+}
+.btn.peligro {
+  --btn-tint: var(--btn-color-peligro);
 }
 
 /* "Pulsa Start" hace fade-in con la misma animación que .inicio-logo
