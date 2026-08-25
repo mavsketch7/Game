@@ -2168,7 +2168,6 @@ body.pantalla-completa #hint {
 .btn-mini-texto,
 .seg button,
 .fila-acciones .btn-listo {
-  --btn-height: 30px;
   --btn-border-width: 16px;
 }
 .btn .btn-left,
