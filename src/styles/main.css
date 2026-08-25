@@ -413,9 +413,9 @@ body.pantalla-completa #hint {
   }
 }
 .icono-gremio {
-  right: 6%;
-  top: 36%;
-  width: 8%;
+  right: 7%;
+  top: 32%;
+  width: 16%;
   aspect-ratio: 2 / 3;
   background-image: url("/assets/ui/seleccion/flag-guild.png");
 }
