@@ -417,7 +417,7 @@ body.pantalla-completa #hint {
   top: 36%;
   width: 8%;
   aspect-ratio: 2 / 3;
-  background-image: url("/assets/ui/flag-guild.png");
+  background-image: url("/assets/ui/seleccion/flag-guild.png");
 }
 .icono-ranking {
   left: 6%;
