@@ -420,9 +420,9 @@ body.pantalla-completa #hint {
   background-image: url("/assets/ui/seleccion/flag-guild.png");
 }
 .icono-ranking {
-  left: 6%;
-  top: 30%;
-  width: 8%;
+  left: 31%;
+  top: 23%;
+  width: 6%;
   aspect-ratio: 3 / 5;
   background-image: url("/assets/ui/seleccion/note-rankings.png");
 }
