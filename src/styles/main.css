@@ -421,10 +421,10 @@ body.pantalla-completa #hint {
 }
 .icono-ranking {
   left: 6%;
-  top: 36%;
-  width: 7%;
-  aspect-ratio: 4 / 5;
-  background-image: url("/assets/ui/seleccion/nota.svg");
+  top: 30%;
+  width: 8%;
+  aspect-ratio: 3 / 5;
+  background-image: url("/assets/ui/seleccion/note-rankings.png");
 }
 .portal-entrar {
   position: absolute;
