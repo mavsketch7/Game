@@ -1,25 +1,42 @@
 // Auto-generated during the modularization refactor (2026-07-23).
+// Rediseño de la escena de selección de personaje (2026-08-25): fondo fijo
+// de sala con arco (ver public/assets/ui/seleccion/), icono ⓘ/gremio/
+// ranking/fogata que abren paneles flotantes en vez de secciones siempre
+// visibles, y "Entrar en la Torre" viviendo dentro del hueco oscuro del
+// arco (oculto con :disabled hasta que todos estén listos, ver main.css).
 import { COLORES_J, LOBBIES, ORDEN_ROLES, ROLES } from "../core/constants.js";
 import { nuevaPartida } from "../core/gameflow.js";
 import { MEJORAS_TIENDA, META } from "../core/save.js";
 import { NET, crearSalaOnline, enviarRolPropio, netEnviarLobby, unirseSalaOnline } from "../net/peer.js";
-import { crearGremio, miGremio, salirGremio, unirseGremio } from "../systems/guilds.js";
+import { crearGremio, miGremio, rankingGremios, salirGremio, unirseGremio } from "../systems/guilds.js";
 import { idJugador } from "../systems/identity.js";
 import { M } from "../systems/input.js";
 import { abrirInfo } from "./info.js";
 
-// Fondo inmersivo del menú (misma ilustración que la pantalla de inicio),
-// fijado una sola vez desde JS en vez de en el CSS: así respeta el `base`
-// relativo de vite.config.js igual que assetUrl() en render/sprites.js.
+function escHtml(s) {
+  return String(s ?? "").replace(
+    /[&<>"']/g,
+    (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c],
+  );
+}
+
+// Fondo de la escena, fijado una sola vez desde JS en vez de en el CSS: así
+// respeta el `base` relativo de vite.config.js igual que assetUrl() en
+// render/sprites.js. El degradado deja el arco central (donde vive el
+// botón "Entrar") relativamente limpio y oscurece los bordes.
+// Se aplica a .escena-seleccion (NO a #menu, que cubre el viewport entero
+// a cualquier proporción) -- esa caja mantiene la proporción exacta de
+// fondo.png (ver main.css), así que los porcentajes de posición del arco,
+// la hoguera, el estandarte y la nota coinciden siempre con el dibujo.
 (() => {
-  const menuEl = document.getElementById("menu");
-  if (!menuEl) return;
-  const url = `${import.meta.env.BASE_URL}assets/ui/portada.webp`;
-  menuEl.style.backgroundImage =
-    `linear-gradient(180deg, rgba(8,6,15,.5) 0%, rgba(8,6,15,.74) 45%, rgba(8,6,15,.96) 100%), url("${url}")`;
-  menuEl.style.backgroundSize = "cover, cover";
-  menuEl.style.backgroundPosition = "center, center 30%";
-  menuEl.style.backgroundRepeat = "no-repeat, no-repeat";
+  const escenaEl = document.querySelector(".escena-seleccion");
+  if (!escenaEl) return;
+  const url = `${import.meta.env.BASE_URL}assets/ui/seleccion/fondo.png`;
+  escenaEl.style.backgroundImage =
+    `linear-gradient(180deg, rgba(8,6,15,.5) 0%, rgba(8,6,15,.1) 22%, rgba(8,6,15,.18) 55%, rgba(8,6,15,.88) 100%), url("${url}")`;
+  escenaEl.style.backgroundSize = "100% 100%, 100% 100%";
+  escenaEl.style.backgroundPosition = "center, center";
+  escenaEl.style.backgroundRepeat = "no-repeat, no-repeat";
 })();
 
 // Estructura original del menú, guardada en comprobarEnlace() antes de que
@@ -33,11 +50,9 @@ let overlayInnerOriginal = null;
 // cada repintado de construirMenu(), que ocurre varias veces por segundo.
 const gremioFetchHecho = new Set();
 
-// Índices de slot con el panel de "crear/unirse a gremio" desplegado --
-// colapsado por defecto (ver gremioDiv más abajo) para no obligar a
-// mostrar un input + 2 botones en cada tarjeta cuando la mayoría de
-// partidas no usan gremio; se guarda aquí (no en s.*) porque es un
-// estado puramente de interfaz que no debe viajar por red.
+// Índices de slot con el panel de "crear/unirse a gremio" desplegado dentro
+// del popover de gremio (ver construirPopoverGremio) -- colapsado por
+// defecto para no mostrar un input + 2 botones por cada jugador sin gremio.
 const gremioUiAbierta = new Set();
 
 function sincronizarGremio(s) {
@@ -61,6 +76,161 @@ function puedeEditarSlot(s, i) {
         return s.ctrl.tipo !== "net";
       }
 
+// ===== Paneles flotantes (ayuda / fogata-online / gremio / ranking) =====
+// Solo uno abierto a la vez -- togglePopover cierra los demás antes de
+// abrir el pedido. Ver los 4 <button class="icono-escena"> en index.html.
+const POPOVERS = ["ayuda", "fogata", "gremio", "ranking"];
+
+function cerrarPopovers() {
+  POPOVERS.forEach((id) => document.getElementById("popover-" + id)?.classList.add("oculto"));
+}
+
+function togglePopover(id) {
+  const el = document.getElementById("popover-" + id);
+  if (!el) return;
+  const yaAbierto = !el.classList.contains("oculto");
+  cerrarPopovers();
+  if (!yaAbierto) el.classList.remove("oculto");
+}
+
+window.cerrarPopovers = cerrarPopovers;
+
+// Controles de gremio de UN jugador (tag+Salir, o Crear/Unirse) -- vivían
+// dentro de cada tarjeta; ahora se agrupan todos en #popover-gremio-cont
+// para no ocupar sitio en la tarjeta compacta del nuevo diseño.
+function construirGremioControles(s, i) {
+  const fila = document.createElement("div");
+  fila.className = "popover-gremio-fila";
+  const etiqueta = document.createElement("span");
+  etiqueta.className = "popover-gremio-jugador";
+  etiqueta.textContent = "J" + (i + 1);
+  fila.appendChild(etiqueta);
+
+  if (s.gremio) {
+    const tag = document.createElement("span");
+    tag.className = "gremio-tag";
+    tag.textContent = "🛡 " + s.gremio.name;
+    fila.appendChild(tag);
+    const salirBtn = document.createElement("button");
+    salirBtn.className = "btn-mini-texto";
+    salirBtn.textContent = "Salir";
+    salirBtn.onclick = () => {
+      salirBtn.disabled = true;
+      salirGremio(idJugador(s.ctrl))
+        .then(() => {
+          s.gremio = null;
+          sincronizarGremio(s);
+          construirMenu();
+          construirPopoverGremio();
+        })
+        .catch((e) => {
+          salirBtn.disabled = false;
+          const msg = fila.querySelector(".gremio-msg");
+          if (msg) msg.textContent = e.message || "Error al salir del gremio";
+        });
+    };
+    fila.appendChild(salirBtn);
+  } else if (!gremioUiAbierta.has(i)) {
+    const abrirBtn = document.createElement("button");
+    abrirBtn.className = "btn-mini-texto";
+    abrirBtn.textContent = "Unirse a un gremio";
+    abrirBtn.onclick = () => {
+      gremioUiAbierta.add(i);
+      construirPopoverGremio();
+    };
+    fila.appendChild(abrirBtn);
+  } else {
+    const gInput = document.createElement("input");
+    gInput.className = "input-gremio-slot";
+    gInput.maxLength = 24;
+    gInput.placeholder = "Nombre de gremio";
+    const crearBtn = document.createElement("button");
+    crearBtn.className = "btn-mini-texto";
+    crearBtn.textContent = "Crear";
+    const unirseBtn = document.createElement("button");
+    unirseBtn.className = "btn-mini-texto";
+    unirseBtn.textContent = "Unirse";
+    const msg = document.createElement("span");
+    msg.className = "gremio-msg";
+    const conAccion = (fn) => () => {
+      const nombreG = gInput.value;
+      if (!nombreG || !nombreG.trim()) return;
+      crearBtn.disabled = true;
+      unirseBtn.disabled = true;
+      msg.textContent = "Un momento…";
+      fn(nombreG, idJugador(s.ctrl), s.nombre)
+        .then((g) => {
+          s.gremio = { id: g.id, name: g.name, tag: g.tag };
+          gremioUiAbierta.delete(i);
+          sincronizarGremio(s);
+          construirMenu();
+          construirPopoverGremio();
+        })
+        .catch((e) => {
+          crearBtn.disabled = false;
+          unirseBtn.disabled = false;
+          msg.textContent = e.message || "Error";
+        });
+    };
+    crearBtn.onclick = conAccion(crearGremio);
+    unirseBtn.onclick = conAccion(unirseGremio);
+    fila.append(gInput, crearBtn, unirseBtn, msg);
+  }
+  return fila;
+}
+
+function construirPopoverGremio() {
+  const cont = document.getElementById("popover-gremio-cont");
+  if (!cont) return;
+  cont.innerHTML = "";
+  const oro = document.createElement("p");
+  oro.className = "popover-oro";
+  oro.innerHTML =
+    "🪙 Oro del gremio: " +
+    META.oro +
+    (Object.values(META.mejoras).some((v) => v > 0)
+      ? " · Mejoras activas: " +
+        MEJORAS_TIENDA.filter((m) => META.mejoras[m.id] > 0)
+          .map((m) => m.ico + " Nv." + META.mejoras[m.id])
+          .join(" ")
+      : "");
+  cont.appendChild(oro);
+  const activos = M.slots.filter((s, i) => s.activo && puedeEditarSlot(s, i));
+  if (!activos.length) {
+    cont.insertAdjacentHTML("beforeend", '<p class="a-desc">Únete a la partida para gestionar tu gremio.</p>');
+    return;
+  }
+  M.slots.forEach((s, i) => {
+    if (!s.activo || !puedeEditarSlot(s, i)) return;
+    cont.appendChild(construirGremioControles(s, i));
+  });
+}
+
+async function construirPopoverRanking() {
+  const cont = document.getElementById("popover-ranking-cont");
+  if (!cont) return;
+  cont.innerHTML = '<p class="a-desc">Cargando…</p>';
+  try {
+    const top = await rankingGremios(5);
+    cont.innerHTML = top.length
+      ? top
+          .map(
+            (g, i) =>
+              '<div class="nota-fila"><span class="nota-pos">#' +
+              (i + 1) +
+              "</span><span class=\"nota-nombre\">" +
+              escHtml(g.name) +
+              '</span><span class="nota-stat" title="Daño total">⚔ ' +
+              g.total_dano +
+              "</span></div>",
+          )
+          .join("")
+      : '<p class="a-desc">Todavía no hay gremios con partidas terminadas.</p>';
+  } catch (e) {
+    cont.innerHTML = '<p class="a-desc" style="color:#d1545c">No se pudo cargar el ranking (¿sin conexión?).</p>';
+  }
+}
+
 export function construirMenu() {
         const cont = document.getElementById("slots");
         if (!cont) return;
@@ -79,8 +249,6 @@ export function construirMenu() {
           focoVal = null;
         if (focoPrevio?.classList?.contains("input-nombre-slot")) {
           focoClase = "input-nombre-slot";
-        } else if (focoPrevio?.classList?.contains("input-gremio-slot")) {
-          focoClase = "input-gremio-slot";
         }
         if (focoClase) {
           focoIdx = Number(focoPrevio.dataset.idx);
@@ -94,7 +262,9 @@ export function construirMenu() {
           if (!s.activo) {
             div.className = "slot libre";
             div.innerHTML =
-              "Pulsa <kbd>A</kbd> en un mando<br>para unirte como J" + (i + 1);
+              '<span class="libre-ico">Ⓐ</span><span class="libre-txt">Pulsa <kbd>A</kbd> en un mando<br>para unirte como J' +
+              (i + 1) +
+              "</span>";
             cont.appendChild(div);
             return;
           }
@@ -115,22 +285,18 @@ export function construirMenu() {
             '<span class="pcolor" style="background:' +
             COLORES_J[i] +
             '"></span></div>' +
-            '<div class="fila-clase"><button class="btn-mini"' +
+            '<img class="tarjeta-retrato" alt="" src="' +
+            import.meta.env.BASE_URL +
+            "assets/ui/seleccion/" +
+            rol +
+            '.png">' +
+            '<div class="fila-clase"><button class="flecha flecha-izq"' +
             (editable ? "" : " disabled") +
-            ' data-d="-1">◀</button><h3>' +
+            ' data-d="-1" aria-label="Clase anterior"></button><h3>' +
             r.nombre +
-            '</h3><button class="btn-mini"' +
+            '</h3><button class="flecha flecha-der"' +
             (editable ? "" : " disabled") +
-            ' data-d="1">▶</button></div>' +
-            '<div class="desc">' +
-            r.desc +
-            '<br><b style="color:var(--vespero)">Ulti:</b> ' +
-            r.skill.nombre +
-            "</div>";
-          const icono = document.createElement("div");
-          icono.className = "slot-icono";
-          icono.textContent = r.ico || "❔";
-          div.appendChild(icono);
+            ' data-d="1" aria-label="Clase siguiente"></button></div>';
           const nombreInput = document.createElement("input");
           nombreInput.className = "input-nombre-slot";
           nombreInput.maxLength = 20;
@@ -165,85 +331,6 @@ export function construirMenu() {
               })
               .catch(() => {});
           }
-          const gremioDiv = document.createElement("div");
-          gremioDiv.className = "gremio-slot";
-          if (s.gremio) {
-            const tag = document.createElement("span");
-            tag.className = "gremio-tag";
-            tag.textContent = "🛡 " + s.gremio.name;
-            gremioDiv.appendChild(tag);
-            if (editable) {
-              const salirBtn = document.createElement("button");
-              salirBtn.className = "btn-mini-texto";
-              salirBtn.textContent = "Salir";
-              salirBtn.onclick = () => {
-                salirBtn.disabled = true;
-                salirGremio(idJugador(s.ctrl))
-                  .then(() => {
-                    s.gremio = null;
-                    sincronizarGremio(s);
-                    construirMenu();
-                  })
-                  .catch((e) => {
-                    salirBtn.disabled = false;
-                    const msg = gremioDiv.querySelector(".gremio-msg");
-                    if (msg) msg.textContent = e.message || "Error al salir del gremio";
-                  });
-              };
-              gremioDiv.appendChild(salirBtn);
-            }
-          } else if (editable && !gremioUiAbierta.has(i)) {
-            const abrirBtn = document.createElement("button");
-            abrirBtn.className = "btn-mini-texto gremio-toggle";
-            abrirBtn.textContent = "🛡 Unirse a un gremio";
-            abrirBtn.onclick = () => {
-              gremioUiAbierta.add(i);
-              construirMenu();
-            };
-            gremioDiv.appendChild(abrirBtn);
-          } else if (editable) {
-            const gInput = document.createElement("input");
-            gInput.className = "input-gremio-slot";
-            gInput.maxLength = 24;
-            gInput.placeholder = "Nombre de gremio";
-            gInput.dataset.idx = String(i);
-            const crearBtn = document.createElement("button");
-            crearBtn.className = "btn-mini-texto";
-            crearBtn.textContent = "Crear";
-            const unirseBtn = document.createElement("button");
-            unirseBtn.className = "btn-mini-texto";
-            unirseBtn.textContent = "Unirse";
-            const msg = document.createElement("span");
-            msg.className = "gremio-msg";
-            const conAccion = (fn) => () => {
-              const nombreG = gInput.value;
-              if (!nombreG || !nombreG.trim()) return;
-              crearBtn.disabled = true;
-              unirseBtn.disabled = true;
-              msg.textContent = "Un momento…";
-              fn(nombreG, idJugador(s.ctrl), s.nombre)
-                .then((g) => {
-                  s.gremio = { id: g.id, name: g.name, tag: g.tag };
-                  gremioUiAbierta.delete(i);
-                  sincronizarGremio(s);
-                  construirMenu();
-                })
-                .catch((e) => {
-                  crearBtn.disabled = false;
-                  unirseBtn.disabled = false;
-                  msg.textContent = e.message || "Error";
-                });
-            };
-            crearBtn.onclick = conAccion(crearGremio);
-            unirseBtn.onclick = conAccion(unirseGremio);
-            gremioDiv.append(gInput, crearBtn, unirseBtn, msg);
-          } else {
-            const tag = document.createElement("span");
-            tag.className = "gremio-tag gremio-vacio";
-            tag.textContent = "Sin gremio";
-            gremioDiv.appendChild(tag);
-          }
-          div.appendChild(gremioDiv);
 
           // Antes eran 2 botones a ancho completo apilados (~90px de alto
           // entre los dos); en una fila cabe lo mismo en ~45px, y era el
@@ -263,7 +350,7 @@ export function construirMenu() {
           filaAcciones.appendChild(bl);
           const biInfo = document.createElement("button");
           biInfo.className = "btn-info";
-          biInfo.textContent = "ℹ Info";
+          biInfo.textContent = "ℹ";
           biInfo.title = "Info de habilidades";
           biInfo.onclick = (ev) => {
             ev.stopPropagation();
@@ -279,7 +366,7 @@ export function construirMenu() {
             div.appendChild(ay);
           }
           if (editable) {
-            div.querySelector(".fila-clase").querySelectorAll(".btn-mini").forEach((b) => {
+            div.querySelectorAll(".flecha").forEach((b) => {
               b.onclick = () => {
                 if (!s.listo) {
                   s.rolIdx =
@@ -303,57 +390,24 @@ export function construirMenu() {
             focoNuevo.setSelectionRange(focoSel[0], focoSel[1]);
           }
         }
-        const cl = document.getElementById("cartas-lobby");
-        cl.innerHTML = Object.entries(LOBBIES)
-          .map(
-            ([id, l]) =>
-              '<button class="card-sel' +
-              (M.lobby === id ? " activa" : "") +
-              '"' +
-              (soyAnfitrion ? "" : " disabled") +
-              ' data-lobby="' +
-              id +
-              '">' +
-              "<h3>" +
-              l.icon +
-              " " +
-              l.nombre +
-              '</h3><div class="desc">' +
-              l.desc +
-              "</div></button>",
-          )
-          .join("");
-        if (soyAnfitrion) {
-          cl.querySelectorAll("button").forEach((b) => {
-            b.onclick = () => {
-              M.lobby = b.dataset.lobby;
-              construirMenu();
-            };
-          });
+        if (!document.getElementById("popover-gremio").classList.contains("oculto")) {
+          construirPopoverGremio();
         }
 
         // Controles exclusivos del anfitrión (nombre/empezar, fuego amigo,
         // crear sala): ocultos para el invitado, que en su lugar ve un
         // aviso de que está conectado y esperando.
         const filaNombre = document.getElementById("fila-nombre");
-        const netPanel = document.getElementById("net-panel");
-        const ffLabel = document.querySelector(".check-ff");
+        const iconoFogata = document.getElementById("icono-fogata");
         if (filaNombre) filaNombre.style.display = soyAnfitrion ? "" : "none";
-        if (netPanel) netPanel.style.display = soyAnfitrion ? "" : "none";
-        if (ffLabel) ffLabel.style.display = soyAnfitrion ? "" : "none";
-        let estadoInvitado = document.getElementById("estado-invitado");
-        if (!soyAnfitrion) {
-          if (!estadoInvitado) {
-            estadoInvitado = document.createElement("p");
-            estadoInvitado.id = "estado-invitado";
-            estadoInvitado.style.cssText =
-              "text-align:center;color:var(--alba);margin-top:14px;font-size:.88rem";
-            document.getElementById("cartas-lobby").after(estadoInvitado);
+        if (iconoFogata) iconoFogata.style.display = soyAnfitrion ? "" : "none";
+        const estadoInvitado = document.getElementById("estado-invitado");
+        if (estadoInvitado) {
+          estadoInvitado.classList.toggle("oculto", soyAnfitrion);
+          if (!soyAnfitrion) {
+            estadoInvitado.textContent =
+              "Conectado. Elige tu clase y marca listo cuando quieras — el anfitrión empezará la partida en cuanto todos lo estéis.";
           }
-          estadoInvitado.textContent =
-            "Conectado. Elige tu clase y marca listo cuando quieras — el anfitrión empezará la partida en cuanto todos lo estéis.";
-        } else if (estadoInvitado) {
-          estadoInvitado.remove();
         }
 
         if (soyAnfitrion) {
@@ -363,24 +417,6 @@ export function construirMenu() {
             activos.length > 0 &&
             activos.every((s) => s.listo)
           );
-          // oro del gremio
-          let oroEl = document.getElementById("menu-oro");
-          if (!oroEl) {
-            oroEl = document.createElement("p");
-            oroEl.id = "menu-oro";
-            oroEl.style.cssText =
-              "text-align:center;color:#ffd27f;font-weight:800;font-size:.88rem;margin-top:10px";
-            document.getElementById("fila-nombre").after(oroEl);
-          }
-          oroEl.innerHTML =
-            "🪙 Oro del gremio: " +
-            META.oro +
-            (Object.values(META.mejoras).some((v) => v > 0)
-              ? " · Mejoras activas: " +
-                MEJORAS_TIENDA.filter((m) => META.mejoras[m.id] > 0)
-                  .map((m) => m.ico + " Nv." + META.mejoras[m.id])
-                  .join(" ")
-              : "");
           // el invitado necesita ver esto mismo en tiempo real (ver
           // net/peer.js:netEnviarLobby y mostrarLobbySincronizado más abajo)
           netEnviarLobby();
@@ -403,6 +439,17 @@ export function mostrarLobbySincronizado(slots, lobby) {
       }
 
 document.getElementById("btn-empezar").onclick = nuevaPartida;
+
+document.getElementById("icono-ayuda").onclick = () => togglePopover("ayuda");
+document.getElementById("icono-fogata").onclick = () => togglePopover("fogata");
+document.getElementById("icono-gremio").onclick = () => {
+  togglePopover("gremio");
+  if (!document.getElementById("popover-gremio").classList.contains("oculto")) construirPopoverGremio();
+};
+document.getElementById("icono-ranking").onclick = () => {
+  togglePopover("ranking");
+  if (!document.getElementById("popover-ranking").classList.contains("oculto")) construirPopoverRanking();
+};
 
 document.getElementById("btn-crear-sala").onclick = () => {
         document.getElementById("btn-crear-sala").disabled = true;

@@ -26,67 +26,85 @@
     <div id="marco">
       <canvas id="lienzo" width="960" height="560"></canvas>
 
-      <div id="menu" class="overlay">
-        <div class="overlay-inner">
-          <div id="hero-titulo">
-            <span class="lucero">✦</span>
-            <h1>La Torre de Véspero — Cooperativo</h1>
-            <details class="hero-ayuda">
-              <summary>¿Cómo se juega?</summary>
-              <p>
-                Hasta 4 aspirantes. <b>J1</b> juega con teclado y ratón; los
-                mandos se unen pulsando <kbd>A</kbd>. 100 plantas, jefes cada
-                5. ¿Llegaréis al Eterno?
-              </p>
-            </details>
-          </div>
-          <div class="grupo-sel">
-            <h2>1 · Aspirantes</h2>
-            <div id="slots"></div>
-          </div>
-          <div class="grupo-sel">
-            <h2>2 · Lobby del grupo</h2>
-            <div class="grid-cartas" id="cartas-lobby"></div>
-          </div>
-          <div id="fila-nombre">
+      <div id="menu" class="overlay overlay-escena">
+        <div class="overlay-inner escena-seleccion">
+          <button
+            type="button"
+            id="icono-ayuda"
+            class="icono-escena icono-ayuda"
+            aria-label="¿Cómo se juega?"
+            title="¿Cómo se juega?"
+          >
+            ?
+          </button>
+          <button
+            type="button"
+            id="icono-fogata"
+            class="icono-escena icono-fogata"
+            aria-label="Jugar online"
+            title="Jugar online"
+          ></button>
+          <button
+            type="button"
+            id="icono-gremio"
+            class="icono-escena icono-gremio"
+            aria-label="Gremio"
+            title="Gremio"
+          ></button>
+          <button
+            type="button"
+            id="icono-ranking"
+            class="icono-escena icono-ranking"
+            aria-label="Rankings de gremios"
+            title="Rankings de gremios"
+          ></button>
+
+          <div id="fila-nombre" class="portal-entrar">
             <button class="btn dorado" id="btn-empezar" disabled>
               Entrar en la Torre
             </button>
           </div>
-          <div style="text-align: center; margin-top: 6px">
-            <button class="btn" onclick="abrirRankingGremios()">
-              🏆 Rankings de gremios
-            </button>
-            <a
-              class="btn"
-              href="/tools/master-editor/"
-              target="_blank"
-              rel="noopener"
-              title="Editor de salas y de sprites (personajes/NPCs/mobs); abre en pestaña aparte"
-              >🛠️ Master Editor</a
-            >
-          </div>
-          <label class="check-ff"
-            ><input type="checkbox" id="chk-ff" checked /> 🔥 Fuego amigo
-            (ataques, flechas y áreas dañan a tus compañeros al 50%)</label
-          >
-          <details id="net-panel">
-            <summary>
-              🌐 Jugar online
-              <span style="font-size: 0.7rem; color: var(--ceniza)"
-                >(experimental)</span
+
+          <div id="slots" class="escena-slots"></div>
+
+          <p id="estado-invitado" class="oculto"></p>
+
+          <div id="popover-ayuda" class="popover oculto">
+            <div class="popover-cab">
+              <h3 class="display">¿Cómo se juega?</h3>
+              <button
+                type="button"
+                class="btn-mini popover-cerrar"
+                onclick="cerrarPopovers()"
+                aria-label="Cerrar"
               >
-            </summary>
-            <p
-              style="
-                font-size: 0.78rem;
-                color: var(--ceniza);
-                margin: 4px 0 6px;
-              "
-            >
-              Crea una sala y comparte el enlace. Tus amigos lo abren y se unen
-              a tu partida por internet. Tú (el anfitrión) debes permanecer
-              conectado. Requiere conexión a internet.
+                ✕
+              </button>
+            </div>
+            <p class="popover-txt">
+              Hasta 4 aspirantes. <b>J1</b> juega con teclado y ratón; los
+              mandos se unen pulsando <kbd>A</kbd>. 100 plantas, jefes cada 5.
+              ¿Llegaréis al Eterno?
+            </p>
+          </div>
+
+          <div id="popover-fogata" class="popover oculto">
+            <div class="popover-cab">
+              <h3 class="display">🌐 Jugar online</h3>
+              <button
+                type="button"
+                class="btn-mini popover-cerrar"
+                onclick="cerrarPopovers()"
+                aria-label="Cerrar"
+              >
+                ✕
+              </button>
+            </div>
+            <p class="popover-txt">
+              Crea una sala y comparte el enlace. Tus amigos lo abren y se
+              unen a tu partida por internet. Tú (el anfitrión) debes
+              permanecer conectado. Requiere conexión a internet.
+              <i>(experimental)</i>
             </p>
             <div style="display: flex; gap: 8px; flex-wrap: wrap">
               <button class="btn" id="btn-crear-sala">
@@ -109,7 +127,50 @@
                 </button>
               </div>
             </div>
-          </details>
+          </div>
+
+          <div id="popover-gremio" class="popover oculto">
+            <div class="popover-cab">
+              <h3 class="display">🛡 Gremio</h3>
+              <button
+                type="button"
+                class="btn-mini popover-cerrar"
+                onclick="cerrarPopovers()"
+                aria-label="Cerrar"
+              >
+                ✕
+              </button>
+            </div>
+            <div id="popover-gremio-cont"></div>
+          </div>
+
+          <div id="popover-ranking" class="popover oculto">
+            <div class="popover-cab">
+              <h3 class="display">📜 Ranking de gremios</h3>
+              <button
+                type="button"
+                class="btn-mini popover-cerrar"
+                onclick="cerrarPopovers()"
+                aria-label="Cerrar"
+              >
+                ✕
+              </button>
+            </div>
+            <div id="popover-ranking-cont">
+              <p class="a-desc">Cargando…</p>
+            </div>
+          </div>
+
+          <div class="escena-pie">
+            <a
+              id="link-master-editor"
+              href="/tools/master-editor/"
+              target="_blank"
+              rel="noopener"
+              title="Editor de salas y de sprites (personajes/NPCs/mobs); abre en pestaña aparte"
+              >🛠️ Master Editor</a
+            >
+          </div>
         </div>
       </div>
 

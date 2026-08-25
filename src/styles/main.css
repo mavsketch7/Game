@@ -323,6 +323,385 @@ body.pantalla-completa #hint {
 .overlay-inner {
   width: min(860px, 100%);
 }
+
+/* ===== Escena de selección de personaje =====
+   Fondo fijo con arco (public/assets/ui/seleccion/fondo.png, 2232x1920),
+   iconos que abren paneles flotantes (ayuda/gremio/ranking/jugar online)
+   en vez de secciones siempre visibles, y las tarjetas de jugador
+   anclada al suelo. .escena-seleccion mantiene la proporción EXACTA de
+   fondo.png sea cual sea el viewport -- letterbox a los lados o arriba/
+   abajo en vez de recortar con background-size:cover -- así los
+   porcentajes de posición de cada hueco (arco, hoguera, estandarte,
+   nota) coinciden siempre con el dibujo. Fondo aplicado desde JS (ver
+   ui/menu.js) para respetar el `base` relativo de vite.config.js. */
+.overlay-escena {
+  padding: 0;
+  overflow: hidden;
+}
+.escena-seleccion {
+  position: relative;
+  width: min(100%, calc(100vh * 2232 / 1920));
+  height: min(100%, calc(100vw * 1920 / 2232));
+  margin: auto;
+  image-rendering: pixelated;
+}
+.icono-escena {
+  position: absolute;
+  border: none;
+  background-color: transparent;
+  background-repeat: no-repeat;
+  background-size: contain;
+  background-position: center;
+  padding: 0;
+  cursor: pointer;
+  image-rendering: pixelated;
+  filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.6));
+  transition:
+    transform 0.15s,
+    filter 0.15s;
+}
+.icono-escena:hover {
+  transform: scale(1.08);
+  filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.6)) brightness(1.25);
+}
+.icono-ayuda {
+  top: 3%;
+  left: 2.4%;
+  width: 5%;
+  aspect-ratio: 1 / 1;
+  border-radius: 50%;
+  background-color: rgba(20, 16, 12, 0.65);
+  border: 2px solid var(--borde);
+  color: var(--vespero);
+  font-family: "Dungeon Font", "Cinzel", serif;
+  font-size: clamp(0.8rem, 1.6vw, 1.3rem);
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+/* La hoguera ES el disparador de "jugar online" (ver ui/menu.js) --
+   spritesheet de 30 fotogramas (32x32 c/u, 960x32) recortado del
+   campfire.aseprite del usuario, animado con steps() sin JS. */
+.icono-fogata {
+  left: 50%;
+  top: 45.5%;
+  width: 9%;
+  aspect-ratio: 1 / 1;
+  transform: translateX(-50%);
+  background-image: url("/assets/ui/seleccion/campfire-sheet.png");
+  background-size: 3000% 100%;
+  background-position: left center;
+  animation: fogata-anim 1.8s steps(29) infinite;
+}
+.icono-fogata:hover {
+  transform: translateX(-50%) scale(1.08);
+}
+@keyframes fogata-anim {
+  from {
+    background-position: 0% center;
+  }
+  to {
+    background-position: 100% center;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .icono-fogata {
+    animation: none;
+  }
+}
+.icono-gremio {
+  right: 6%;
+  top: 36%;
+  width: 8%;
+  aspect-ratio: 3 / 4;
+  background-image: url("/assets/ui/seleccion/estandarte.svg");
+}
+.icono-ranking {
+  left: 6%;
+  top: 36%;
+  width: 7%;
+  aspect-ratio: 4 / 5;
+  background-image: url("/assets/ui/seleccion/nota.svg");
+}
+.portal-entrar {
+  position: absolute;
+  left: 50%;
+  top: 26%;
+  transform: translate(-50%, 0);
+  width: 17%;
+  text-align: center;
+}
+.portal-entrar .btn {
+  width: 100%;
+  transition:
+    opacity 0.5s,
+    transform 0.5s,
+    filter 0.15s;
+}
+/* Oculto (no solo atenuado) hasta que el equipo esté listo -- "aparece"
+   con el resto de .btn:disabled ya cubierto por el filtro global de
+   opacidad, esta regla más específica (ID) lo gana. */
+#btn-empezar:disabled {
+  opacity: 0;
+  transform: translateY(6px);
+  pointer-events: none;
+}
+#btn-empezar:not(:disabled) {
+  opacity: 1;
+  transform: translateY(0);
+  animation: portal-brillo 2.2s ease-in-out infinite;
+}
+@keyframes portal-brillo {
+  0%,
+  100% {
+    filter: drop-shadow(0 0 10px rgba(226, 196, 137, 0.35));
+  }
+  50% {
+    filter: drop-shadow(0 0 20px rgba(226, 196, 137, 0.75));
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  #btn-empezar:not(:disabled) {
+    animation: none;
+  }
+}
+.escena-slots {
+  position: absolute;
+  left: 3%;
+  right: 3%;
+  bottom: 2%;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: clamp(4px, 1vw, 12px);
+  align-items: end;
+}
+#estado-invitado {
+  position: absolute;
+  left: 50%;
+  bottom: 2%;
+  transform: translateX(-50%);
+  width: min(90%, 460px);
+  text-align: center;
+  color: var(--alba);
+  font-size: 0.82rem;
+  background: rgba(10, 8, 17, 0.85);
+  border: 1px solid var(--borde);
+  border-radius: 8px;
+  padding: 8px 12px;
+}
+#estado-invitado.oculto {
+  display: none;
+}
+.escena-pie {
+  position: absolute;
+  right: 2%;
+  bottom: 1%;
+  font-size: 0.68rem;
+}
+.escena-pie a {
+  color: var(--ceniza);
+  opacity: 0.6;
+  text-decoration: none;
+}
+.escena-pie a:hover {
+  opacity: 1;
+}
+
+/* ----- Paneles flotantes (ayuda/gremio/ranking/jugar online) ----- */
+.popover {
+  position: absolute;
+  z-index: 5;
+  width: min(320px, 92%);
+  max-height: 70%;
+  overflow-y: auto;
+  background: rgba(15, 11, 8, 0.97);
+  border: 2px solid var(--borde);
+  border-radius: 10px;
+  padding: 12px 14px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+}
+.popover.oculto {
+  display: none;
+}
+#popover-ayuda {
+  left: 2.4%;
+  top: 9%;
+}
+#popover-fogata {
+  left: 50%;
+  top: 56%;
+  transform: translateX(-50%);
+}
+#popover-gremio {
+  right: 6%;
+  top: 44%;
+}
+#popover-ranking {
+  left: 6%;
+  top: 44%;
+}
+.popover-cab {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.popover-cab h3 {
+  font-size: 0.95rem;
+  color: var(--vespero);
+}
+.popover-txt {
+  font-size: 0.8rem;
+  color: var(--ceniza);
+  margin-bottom: 8px;
+}
+.popover-oro {
+  font-size: 0.82rem;
+  color: #ffd27f;
+  font-weight: 800;
+  margin-bottom: 8px;
+}
+.popover-gremio-fila {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  padding: 6px 0;
+  border-top: 1px solid var(--borde);
+}
+.popover-gremio-fila:first-of-type {
+  border-top: none;
+}
+.popover-gremio-jugador {
+  font-size: 0.7rem;
+  font-weight: 800;
+  color: var(--ceniza);
+  min-width: 20px;
+}
+.nota-fila {
+  display: grid;
+  grid-template-columns: 24px 1fr auto;
+  gap: 6px;
+  font-size: 0.78rem;
+  padding: 3px 0;
+}
+.nota-pos {
+  color: var(--ceniza);
+  font-weight: 800;
+}
+.nota-nombre {
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.nota-stat {
+  color: var(--ceniza);
+  white-space: nowrap;
+}
+
+/* ----- Tarjetas de jugador dentro de .escena-slots -----
+   El marco de piedra (border-image de --ux-frame) y el brillo de listo
+   (outline dorado) ya vienen del reskin general de .slot más abajo en
+   esta hoja -- aquí solo se ajusta tamaño/orden del contenido nuevo
+   (retrato de rol + flechas de arrow-button.png en vez del medallón +
+   btn-mini de antes). */
+.escena-slots .slot {
+  min-height: 0;
+  padding: 6px 8px 8px;
+  gap: 2px;
+}
+.escena-slots .slot .dispositivo {
+  font-size: 0.56rem;
+}
+.escena-slots .tarjeta-retrato {
+  align-self: center;
+  width: 46%;
+  min-width: 40px;
+  max-width: 72px;
+  margin: 2px 0;
+}
+.escena-slots .fila-clase {
+  justify-content: center;
+  gap: 6px;
+}
+.escena-slots .fila-clase h3 {
+  font-size: clamp(0.7rem, 1.3vw, 0.95rem);
+  white-space: nowrap;
+}
+.escena-slots .flecha {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  border: none;
+  border-radius: 0;
+  background-color: transparent;
+  background-image: url("/assets/ui/buttons/arrow-button.png");
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  padding: 0;
+  cursor: pointer;
+  image-rendering: pixelated;
+  transition:
+    filter 0.15s,
+    transform 0.15s;
+}
+.escena-slots .flecha-der {
+  transform: scaleX(-1);
+}
+.escena-slots .flecha:hover:not(:disabled) {
+  filter: brightness(1.25);
+}
+.escena-slots .flecha-der:hover:not(:disabled) {
+  transform: scaleX(-1) scale(1.1);
+}
+.escena-slots .flecha-izq:hover:not(:disabled) {
+  transform: scale(1.1);
+}
+.escena-slots .flecha:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+.escena-slots .input-nombre-slot {
+  width: 100%;
+  font-size: 0.68rem;
+  text-align: center;
+  padding: 3px 5px;
+}
+.escena-slots .fila-acciones .btn-info {
+  flex: 0 0 auto;
+  width: 38px;
+}
+/* Insignia dedicada (info-boton.png) en vez del tileset de 3 piezas --
+   un botón cuadrado de icono no necesita tapas izq/dcha. */
+.escena-slots .fila-acciones .btn-info .btn-left,
+.escena-slots .fila-acciones .btn-info .btn-right {
+  display: none;
+}
+.escena-slots .fila-acciones .btn-info .btn-center {
+  padding: 0;
+  font-size: 0;
+  background-image: url("/assets/ui/buttons/info-boton.png");
+  background-size: 100% 100%;
+  background-blend-mode: normal;
+}
+.escena-slots .slot.libre {
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+.escena-slots .libre-ico {
+  font-size: clamp(1.2rem, 2.6vw, 1.7rem);
+  color: var(--vespero);
+  opacity: 0.85;
+}
+.escena-slots .libre-txt {
+  font-size: 0.62rem;
+  color: var(--ceniza);
+  line-height: 1.3;
+}
 #hero-titulo {
   text-align: center;
   padding: 0 0 6px;
@@ -356,44 +735,6 @@ body.pantalla-completa #hint {
   margin: 6px auto 0;
   font-size: 0.88rem;
 }
-/* Ayuda ("¿Cómo se juega?") y "Jugar online" colapsados por defecto --
-   antes ambos bloques estaban siempre visibles y eran, junto a la
-   gestión de gremio, el principal motivo de que "Entrar en la Torre"
-   quedara fuera de pantalla sin scroll en una resolución de portátil
-   normal (1366x768). Mismo <details> nativo en los dos, solo cambia el
-   marcador/tipografía por defecto del navegador. */
-.hero-ayuda,
-#net-panel {
-  margin-top: 8px;
-}
-.hero-ayuda summary,
-#net-panel summary {
-  cursor: pointer;
-  font-size: 0.82rem;
-  color: var(--vespero);
-  list-style: none;
-}
-.hero-ayuda summary::-webkit-details-marker,
-#net-panel summary::-webkit-details-marker {
-  display: none;
-}
-.hero-ayuda summary::before,
-#net-panel summary::before {
-  content: "▸ ";
-}
-.hero-ayuda[open] summary::before,
-#net-panel[open] summary::before {
-  content: "▾ ";
-}
-#net-panel summary {
-  text-transform: uppercase;
-  letter-spacing: 0.14em;
-  font-family: "Dungeon Font", "Cinzel", serif;
-}
-.hero-ayuda p {
-  text-align: left;
-}
-
 .grupo-sel {
   margin-top: 4px;
 }
@@ -1671,21 +2012,6 @@ body.pantalla-completa #hint {
 }
 
 /* checkbox fuego amigo */
-.check-ff {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-top: 6px;
-  justify-content: center;
-  font-size: 0.82rem;
-  color: var(--ceniza);
-}
-.check-ff input {
-  width: 16px;
-  height: 16px;
-  accent-color: var(--vespero);
-}
-
 /* foco de navegación con mando */
 .pad-foco {
   outline: 2px solid var(--vespero) !important;

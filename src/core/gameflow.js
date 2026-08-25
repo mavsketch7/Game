@@ -2,6 +2,7 @@
 import { H, W } from "./canvas.js";
 import { COLORES_J, ORDEN_ROLES, ROLES, XP_TABLA } from "./constants.js";
 import { META } from "./save.js";
+import { AJ } from "./settings.js";
 import { G, setG } from "./state.js";
 import { NET, netBroadcast } from "../net/peer.js";
 import { aplicarMusica, initAudio, reanudarAudio } from "../systems/audio.js";
@@ -140,7 +141,7 @@ export function nuevaPartida() {
           escena: "lobby",
           lobby: M.lobby,
           players,
-          ff: document.getElementById("chk-ff").checked,
+          ff: AJ.fuegoAmigo,
           enemigos: [],
           projs: [],
           areas: [],

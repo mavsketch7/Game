@@ -1,5 +1,6 @@
 // Auto-generated during the modularization refactor (2026-07-23).
 import { ajustarLienzo, esPantallaCompleta, maximizado, toggleFullscreen } from "../core/canvas.js";
+import { LOBBIES } from "../core/constants.js";
 import { AJ, aplicarTexto } from "../core/settings.js";
 import { G } from "../core/state.js";
 import { aplicarMusica, initAudio, reanudarAudio, sfx } from "../systems/audio.js";
@@ -91,7 +92,38 @@ export function abrirAjustes() {
                 "</button>",
             )
             .join("") +
-          "</div></div></div>";
+          "</div></div></div>" +
+          // Lobby del grupo y fuego amigo son elección de ANTES de empezar la
+          // partida (G.lobby/G.ff se capturan una vez en nuevaPartida()) --
+          // cambiarlos a mitad de partida no haría nada, así que solo se
+          // muestran mientras se está en la pantalla de selección.
+          (!G || !G.activo
+            ? '<div class="ajuste-fila"><div><h4>⚔ Lobby del grupo</h4>' +
+              '<div class="a-desc">Bando de tu grupo esta partida (bonus para todos).</div></div>' +
+              '<div class="ajuste-ctrl"><div class="seg" id="seg-lobby">' +
+              Object.entries(LOBBIES)
+                .map(
+                  ([id, l]) =>
+                    '<button class="' +
+                    (M.lobby === id ? "on" : "") +
+                    '" onclick="setLobby(\'' +
+                    id +
+                    "')\">" +
+                    l.icon +
+                    " " +
+                    l.nombre +
+                    "</button>",
+                )
+                .join("") +
+              "</div></div></div>" +
+              '<div class="ajuste-fila"><div><h4>🔥 Fuego amigo</h4>' +
+              '<div class="a-desc">Ataques, flechas y áreas dañan a tus compañeros al 50%.</div></div>' +
+              '<div class="ajuste-ctrl"><button class="btn' +
+              (AJ.fuegoAmigo ? " dorado" : "") +
+              '" onclick="toggleFuegoAmigo()">' +
+              (AJ.fuegoAmigo ? "Activado" : "Desactivado") +
+              "</button></div></div>"
+            : "");
         mostrar("ajustes");
       }
 
@@ -141,6 +173,23 @@ function setEscala(v) {
         sfx("ui");
       }
 
+// import() dinámico (no en el import estático de arriba) para no crear un
+// ciclo de módulos: systems/input.js importa este archivo de forma
+// estática, y menu.js importa systems/input.js -- mismo motivo que
+// core/canvas.js usa import() para abrir ajustes.
+function setLobby(id) {
+        M.lobby = id;
+        abrirAjustes();
+        sfx("ui");
+        import("./menu.js").then(({ construirMenu }) => construirMenu());
+      }
+
+function toggleFuegoAmigo() {
+        AJ.fuegoAmigo = !AJ.fuegoAmigo;
+        abrirAjustes();
+        sfx("ui");
+      }
+
 export function toggleSilencioRapido() {
         AJ.silencio = !AJ.silencio;
         initAudio();
@@ -161,6 +210,8 @@ document.getElementById("btn-ajustes").onclick = () => {
 // Expuestas en window: referenciadas desde onclick="..." en HTML generado dinámicamente.
 window.cerrarAjustes = cerrarAjustes;
 window.setEscala = setEscala;
+window.setLobby = setLobby;
 window.setTexto = setTexto;
 window.setVol = setVol;
+window.toggleFuegoAmigo = toggleFuegoAmigo;
 window.toggleSilencio = toggleSilencio;

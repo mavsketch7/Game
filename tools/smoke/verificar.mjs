@@ -103,10 +103,16 @@ async function entrarEnPartida(page, clicksCarrusel) {
   await page.mouse.click(640, 400); // cierra "Pulsa Start"
   await page.waitForTimeout(600);
   for (let i = 0; i < clicksCarrusel; i++) {
-    await page.click('button:has-text("▶")');
+    await page.click(".flecha-der");
     await page.waitForTimeout(120);
   }
-  await page.click("text=Buenos");
+  // "Lobby del grupo" (bando Buenos/Malos) vive en Ajustes desde el
+  // rediseño de la escena de selección (2026-08-25) -- ver ui/menu.js.
+  await page.click("#btn-ajustes");
+  await page.waitForTimeout(200);
+  await page.click('#seg-lobby button:has-text("Buenos")');
+  await page.waitForTimeout(200);
+  await page.click("text=Cerrar");
   await page.waitForTimeout(200);
   await page.click("text=Marcar listo");
   await page.waitForTimeout(300);

@@ -7,6 +7,7 @@ export const AJ = {
         texto: 1,
         silencio: false,
         escala: "auto",
+        fuegoAmigo: true,
       };
 
 export function aplicarTexto() {
