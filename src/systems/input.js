@@ -182,7 +182,12 @@ export const M = {
           { activo: false, ctrl: null, rolIdx: 2, listo: false, nombre: "", gremio: null },
           { activo: false, ctrl: null, rolIdx: 3, listo: false, nombre: "", gremio: null },
         ],
-        lobby: null,
+        // "buenos" por defecto (no null) -- el selector de bando se movió a
+        // Ajustes (poco visible), y con null un jugador en solitario que
+        // nunca abre Ajustes se quedaba sin ver aparecer "Empezar
+        // expedición" aunque ya estuviera listo. Sigue siendo cambiable en
+        // Ajustes antes de empezar.
+        lobby: "buenos",
       };
 
 const OVERLAYS_PAD = [

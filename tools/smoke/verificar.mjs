@@ -116,7 +116,7 @@ async function entrarEnPartida(page, clicksCarrusel) {
   await page.waitForTimeout(200);
   await page.click("text=Marcar listo");
   await page.waitForTimeout(300);
-  await page.click("text=Entrar en la Torre");
+  await page.click("text=Empezar expedición");
   await page.waitForTimeout(1800);
   // alejarse del NPC de la Arena (spawn queda pegado a él) para que las
   // capturas no salgan con su aro/texto encima del personaje

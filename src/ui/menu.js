@@ -23,19 +23,15 @@ function escHtml(s) {
 // Fondo de la escena, fijado una sola vez desde JS en vez de en el CSS: así
 // respeta el `base` relativo de vite.config.js igual que assetUrl() en
 // render/sprites.js. El degradado deja el arco central (donde vive el
-// botón "Entrar") relativamente limpio y oscurece los bordes.
-// Se aplica a .escena-seleccion (NO a #menu, que cubre el viewport entero
-// a cualquier proporción) -- esa caja mantiene la proporción exacta de
-// fondo.png (ver main.css), así que los porcentajes de posición del arco,
-// la hoguera, el estandarte y la nota coinciden siempre con el dibujo.
+// botón "Empezar expedición") relativamente limpio y oscurece los bordes.
+// background-size/position (cover, centrado) se fijan en main.css --
+// aquí solo la imagen, que depende del BASE_URL.
 (() => {
   const escenaEl = document.querySelector(".escena-seleccion");
   if (!escenaEl) return;
   const url = `${import.meta.env.BASE_URL}assets/ui/seleccion/fondo.png`;
   escenaEl.style.backgroundImage =
     `linear-gradient(180deg, rgba(8,6,15,.5) 0%, rgba(8,6,15,.1) 22%, rgba(8,6,15,.18) 55%, rgba(8,6,15,.88) 100%), url("${url}")`;
-  escenaEl.style.backgroundSize = "100% 100%, 100% 100%";
-  escenaEl.style.backgroundPosition = "center, center";
   escenaEl.style.backgroundRepeat = "no-repeat, no-repeat";
 })();
 
