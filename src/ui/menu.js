@@ -35,6 +35,28 @@ function escHtml(s) {
   escenaEl.style.backgroundRepeat = "no-repeat, no-repeat";
 })();
 
+// Luciérnagas ambientales, sueltas por toda la escena -- puramente
+// decorativas (aria-hidden), posición/tiempos aleatorios por luciérnaga
+// generados una vez aquí, el resto (deriva + parpadeo) es CSS puro (ver
+// .luciernaga en main.css). No se regeneran en cada construirMenu(),
+// solo una vez al cargar la página.
+(() => {
+  const cont = document.getElementById("luciernagas");
+  if (!cont) return;
+  const N = 14;
+  for (let i = 0; i < N; i++) {
+    const f = document.createElement("span");
+    f.className = "luciernaga";
+    f.style.left = (4 + Math.random() * 92).toFixed(1) + "%";
+    f.style.top = (35 + Math.random() * 60).toFixed(1) + "%";
+    f.style.setProperty("--dx", (Math.random() * 60 - 30).toFixed(0) + "px");
+    f.style.setProperty("--dy", (Math.random() * 40 - 20).toFixed(0) + "px");
+    f.style.animationDuration = (5 + Math.random() * 5).toFixed(1) + "s, " + (2 + Math.random() * 2.5).toFixed(1) + "s";
+    f.style.animationDelay = (-Math.random() * 8).toFixed(1) + "s, " + (-Math.random() * 4).toFixed(1) + "s";
+    cont.appendChild(f);
+  }
+})();
+
 // Estructura original del menú, guardada en comprobarEnlace() antes de que
 // la sustituya por el panel "elige tu clase y conéctate" — se restaura en
 // mostrarLobbySincronizado() en cuanto el invitado empieza a recibir el
@@ -354,13 +376,6 @@ export function construirMenu() {
           };
           filaAcciones.appendChild(biInfo);
           div.appendChild(filaAcciones);
-          if (s.ctrl.tipo === "pad") {
-            const ay = document.createElement("div");
-            ay.className = "pad-ayuda";
-            ay.innerHTML =
-              "<kbd>◀▶</kbd> clase · <kbd>A</kbd> listo · <kbd>B</kbd> salir · <kbd>X</kbd> info · <kbd>▲▼</kbd> lobby · <kbd>Start</kbd> empezar";
-            div.appendChild(ay);
-          }
           if (editable) {
             div.querySelectorAll(".flecha").forEach((b) => {
               b.onclick = () => {
@@ -388,6 +403,16 @@ export function construirMenu() {
         }
         if (!document.getElementById("popover-gremio").classList.contains("oculto")) {
           construirPopoverGremio();
+        }
+
+        // Leyenda de botones de mando: UNA sola, fija abajo al centro,
+        // en vez de repetida dentro de cada tarjeta con mando -- así el
+        // alto de las tarjetas no cambia según cuántos jugadores con
+        // mando se unan, y todos los retratos quedan alineados.
+        const padAyudaGlobal = document.getElementById("pad-ayuda-global");
+        if (padAyudaGlobal) {
+          const hayPad = M.slots.some((s) => s.activo && s.ctrl.tipo === "pad");
+          padAyudaGlobal.classList.toggle("oculto", !hayPad);
         }
 
         // Controles exclusivos del anfitrión (nombre/empezar, fuego amigo,

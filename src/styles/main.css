@@ -416,8 +416,8 @@ body.pantalla-completa #hint {
   right: 6%;
   top: 36%;
   width: 8%;
-  aspect-ratio: 3 / 4;
-  background-image: url("/assets/ui/seleccion/estandarte.svg");
+  aspect-ratio: 2 / 3;
+  background-image: url("/assets/ui/flag-guild.png");
 }
 .icono-ranking {
   left: 6%;
@@ -511,9 +511,9 @@ body.pantalla-completa #hint {
 }
 .escena-slots {
   position: absolute;
-  left: 12%;
-  right: 12%;
-  bottom: 10%;
+  left: 18%;
+  right: 15%;
+  bottom: 22%;
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: clamp(4px, 1vw, 12px);
@@ -536,6 +536,24 @@ body.pantalla-completa #hint {
 #estado-invitado.oculto {
   display: none;
 }
+/* Leyenda de botones de mando, UNA sola vez para toda la escena (ver
+   ui/menu.js) en vez de repetida dentro de cada tarjeta con mando --
+   así el alto de las tarjetas no cambia según cuántos jugadores con
+   mando se unan. */
+#pad-ayuda-global {
+  position: absolute;
+  left: 50%;
+  bottom: 1.5%;
+  transform: translateX(-50%);
+  text-align: center;
+  color: var(--ceniza);
+  font-size: 0.68rem;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.9);
+  white-space: nowrap;
+}
+#pad-ayuda-global.oculto {
+  display: none;
+}
 .escena-pie {
   position: absolute;
   right: 2%;
@@ -549,6 +567,62 @@ body.pantalla-completa #hint {
 }
 .escena-pie a:hover {
   opacity: 1;
+}
+
+/* ----- Luciérnagas ambientales -----
+   Puramente decorativas (aria-hidden, generadas una vez en ui/menu.js
+   con posición/tiempos aleatorios por elemento vía --dx/--dy y
+   animation-duration/delay inline). Dos animaciones por luciérnaga:
+   una deriva suave de ida y vuelta y un parpadeo de opacidad, con
+   delays negativos para que no arranquen todas sincronizadas. */
+.luciernagas {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 0;
+}
+.luciernaga {
+  position: absolute;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    rgba(230, 255, 180, 0.95) 0%,
+    rgba(200, 255, 140, 0.5) 45%,
+    transparent 75%
+  );
+  box-shadow: 0 0 6px 2px rgba(210, 255, 150, 0.5);
+  animation:
+    luciernaga-deriva linear infinite,
+    luciernaga-parpadeo ease-in-out infinite;
+}
+@keyframes luciernaga-deriva {
+  0% {
+    transform: translate(0, 0);
+  }
+  50% {
+    transform: translate(var(--dx), var(--dy));
+  }
+  100% {
+    transform: translate(0, 0);
+  }
+}
+@keyframes luciernaga-parpadeo {
+  0%,
+  100% {
+    opacity: 0.12;
+  }
+  50% {
+    opacity: 0.8;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .luciernaga {
+    animation: none;
+    opacity: 0.35;
+  }
 }
 
 /* ----- Paneles flotantes (ayuda/gremio/ranking/jugar online) ----- */
@@ -697,7 +771,7 @@ body.pantalla-completa #hint {
    clamp() solo evita que desborde una columna muy estrecha. */
 .escena-slots .tarjeta-retrato {
   align-self: center;
-  width: clamp(96px, 22vw, 240px);
+  width: clamp(96px, 26vw, 330px);
   margin: 2px 0;
   filter: drop-shadow(0 6px 10px rgba(0, 0, 0, 0.75));
 }
