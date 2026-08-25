@@ -2143,7 +2143,7 @@ body.pantalla-completa #hint {
 .btn-fus,
 .seg button,
 .inicio-start {
-  --btn-height: 42px;
+  --btn-height: 44px;
   --btn-border-width: 26px;
   --btn-tint: transparent;
   display: inline-flex;
@@ -2157,7 +2157,7 @@ body.pantalla-completa #hint {
   background: none;
   cursor: pointer;
   font-family: "Dungeon Font", "Cinzel", serif;
-  font-size: 17px;
+  font-size: 18px;
   font-weight: normal;
   color: var(--vespero);
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.7);
