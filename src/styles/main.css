@@ -511,9 +511,9 @@ body.pantalla-completa #hint {
 }
 .escena-slots {
   position: absolute;
-  left: 3%;
-  right: 3%;
-  bottom: 2%;
+  left: 12%;
+  right: 12%;
+  bottom: 10%;
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: clamp(4px, 1vw, 12px);
