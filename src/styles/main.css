@@ -35,23 +35,6 @@
   --ux-frame: url("/assets/sprites/ui/slot_dark_a.png");
   --ux-panel: url("/assets/sprites/ui/panel_dark.png");
   --ux-medallon: url("/assets/sprites/ui/slot_gold.png");
-  /* Tileset único de botón (public/assets/ui/buttons/) -- TODOS los
-     botones "de verdad" del juego (.btn y variantes, ver el bloque de
-     botones más abajo) usan este mismo set de 3 piezas, sin más estilo
-     propio: tapa izq/dcha de tamaño fijo + centro que repite en
-     horizontal para cubrir cualquier ancho. Quedan fuera a propósito
-     .btn-mini (flechas </> de 26x26, demasiado pequeño para que la
-     tapa se lea) y .mp-btn (placas grandes del menú de pausa con el
-     texto ya grabado en el PNG, kit aparte). */
-  --ux-btn-left: url("/assets/ui/buttons/btn-general-leftborder.png");
-  --ux-btn-center: url("/assets/ui/buttons/btn-general-center-clean.png");
-  --ux-btn-right: url("/assets/ui/buttons/btn-general-rightborder.png");
-  /* No hay variante de color en el tileset -- los estados "dorado"
-     (acción principal/lista) y "peligro" (destructivo) recolorean el
-     mismo PNG con background-blend-mode:color (ver el bloque de
-     botones más abajo), no con más imágenes. */
-  --btn-color-dorado: #f0c674;
-  --btn-color-peligro: #6b1f22;
 }
 
 /* ===== Pantalla de inicio ===== */
@@ -503,9 +486,6 @@ body.pantalla-completa #hint {
   white-space: nowrap;
   padding-top: 6px;
   padding-bottom: 6px;
-}
-.slot.listo .btn-listo {
-  --btn-tint: var(--btn-color-dorado);
 }
 /* Botón secundario (p.ej. "Unirse a un gremio" bajo Marcar listo/Info):
    mismo tileset que todos, pero más discreto para no competir con la
@@ -1497,9 +1477,6 @@ body.pantalla-completa #hint {
 .fusion-slot.lleno {
   border-style: solid;
 }
-.btn-fus.dentro {
-  --btn-tint: var(--btn-color-dorado);
-}
 .fusion-aviso {
   font-size: 0.72rem;
   color: var(--sangre);
@@ -1753,9 +1730,6 @@ body.pantalla-completa #hint {
 .seg {
   display: flex;
   gap: 4px;
-}
-.seg button.on {
-  --btn-tint: var(--btn-color-dorado);
 }
 .val-num {
   min-width: 42px;
@@ -2067,79 +2041,6 @@ body.pantalla-completa #hint {
   outline-offset: 2px;
 }
 
-/* nameplate_royal.png (--ux-banner, ya no se usa aquí) resultó tener
-   un recorte roto: los primeros 32px del PNG son una caja gris/oliva
-   sin relación con el banner, y el resto mete un adorno de corona que
-   no está pensado para repetirse -- cualquier border-image-slice fijo
-   sobre esa imagen corta por sitios distintos a los que parece a
-   simple vista, y el relleno ("fill") se salía del contorno dorado
-   real (que no es lo que --ux-banner recorta). En vez de perseguir un
-   recorte válido de un asset mal exportado, estos títulos reusan el
-   mismo tileset de botones -- ver el bloque de botones más abajo para
-   la técnica completa (tapas ::before/::after de ancho fijo + centro
-   como fondo real del elemento). */
-.tienda-cab h2,
-.info-clase h2,
-.cartas-titulo h2,
-.display {
-  --btn-cap-w: 26px;
-  --btn-tint: var(--btn-color-dorado);
-  position: relative;
-  display: inline-block;
-  flex-shrink: 0;
-  white-space: nowrap;
-  padding: 12px calc(var(--btn-cap-w) + 8px);
-  color: var(--vespero);
-  text-shadow: 0 2px 3px rgba(0, 0, 0, 0.85);
-  image-rendering: pixelated;
-  background-image:
-    linear-gradient(var(--btn-tint), var(--btn-tint)),
-    var(--ux-btn-center);
-  background-blend-mode: color;
-  background-repeat: no-repeat, repeat-x;
-  background-position: left center;
-  background-size:
-    100% 100%,
-    auto 100%;
-}
-.tienda-cab h2::before,
-.info-clase h2::before,
-.cartas-titulo h2::before,
-.display::before,
-.tienda-cab h2::after,
-.info-clase h2::after,
-.cartas-titulo h2::after,
-.display::after {
-  content: "";
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  width: var(--btn-cap-w);
-  background-image:
-    linear-gradient(var(--btn-tint), var(--btn-tint)),
-    var(--ux-btn-left);
-  background-blend-mode: color;
-  background-repeat: no-repeat;
-  background-size: 100% 100%;
-  image-rendering: pixelated;
-  pointer-events: none;
-}
-.tienda-cab h2::before,
-.info-clase h2::before,
-.cartas-titulo h2::before,
-.display::before {
-  left: 0;
-}
-.tienda-cab h2::after,
-.info-clase h2::after,
-.cartas-titulo h2::after,
-.display::after {
-  right: 0;
-  background-image:
-    linear-gradient(var(--btn-tint), var(--btn-tint)),
-    var(--ux-btn-right);
-}
-
 /* Reskin de la pantalla de selección de personaje (#menu) con el mismo
    tileset -- sustituye el marco recortado con clip-path (.marco-px, sigue
    vivo en el panel de invitado de comprobarEnlace()) por border-image en
@@ -2194,169 +2095,12 @@ body.pantalla-completa #hint {
   image-rendering: pixelated;
 }
 
-/* ===== Botón único, para TODOS los botones "de verdad" del juego =====
-   Tileset de public/assets/ui/buttons/ (3 piezas: tapa izq + centro que
-   repite en horizontal + tapa dcha), sin ningún otro estilo de botón en
-   el proyecto. Misma técnica que un <button> con 3 <span> (tapa/centro/
-   tapa), pero sin tocar el HTML de cada botón (hay botones creados en
-   9 archivos distintos) -- las tapas son ::before/::after de ANCHO FIJO
-   (--btn-cap-w, tamaño nativo del PNG) con background-size:100% 100%,
-   y el centro es el fondo real del propio botón (repite en horizontal,
-   detrás del texto), tal cual la referencia que fijó el ancho de
-   las capas.
-
-   El tinte "dorado"/"peligro" ya NO usa filter (eso tiñe TODO lo que
-   hay dentro del elemento, texto incluido -- .btn-listo activo se
-   ponía dorado pero el texto se iba a un verde raro). En su lugar,
-   cada capa de fondo lleva su propio degradado de color plano debajo
-   con background-blend-mode:color, que recolorea el pixel-art sin
-   tocar nada fuera de esa capa -- con --btn-tint en transparente
-   (por defecto) el blend no cambia nada.
-
-   Quedan FUERA a propósito: .btn-mini (flechas </> de 26x26, muy
-   pequeño para que la tapa se lea) y .mp-btn (placas del menú de
-   pausa con el texto ya grabado en el PNG, kit aparte). */
-.btn,
-.btn-listo,
-.btn-info,
-.btn-mini-texto,
-.btn-fus,
-.seg button,
+/* "Pulsa Start" hace fade-in con la misma animación que .inicio-logo
+   (ver @keyframes inicio-aparece-texto, arriba) -- sin esto el texto
+   se queda con opacity:0 para siempre (ver la regla base .inicio-start
+   en la sección de la pantalla de inicio). */
 .inicio-start {
-  --btn-cap-w: 26px;
-  --btn-tint: transparent;
-  position: relative;
-  z-index: 0;
-  border: none;
-  border-radius: 0;
-  box-shadow: none;
-  padding: 10px calc(var(--btn-cap-w) + 8px);
-  font-family: "Dungeon Font", "Cinzel", serif;
-  font-size: 17px;
-  font-weight: normal;
-  color: var(--vespero);
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.7);
-  transition: transform 0.06s;
-  image-rendering: pixelated;
-  background-color: transparent;
-  background-image:
-    linear-gradient(var(--btn-tint), var(--btn-tint)),
-    var(--ux-btn-center);
-  background-blend-mode: color;
-  background-repeat: no-repeat, repeat-x;
-  background-position: left center;
-  background-size:
-    100% 100%,
-    auto 100%;
-  /* Los <button> centran su texto por defecto (estilo del navegador),
-     pero .inicio-start es un <div> ("Pulsa Start" en la pantalla de
-     inicio, ver index.html) -- sin esto se quedaba pegado a la
-     izquierda en vez de centrado en la píldora. */
-  text-align: center;
-}
-.btn::before,
-.btn-listo::before,
-.btn-info::before,
-.btn-mini-texto::before,
-.btn-fus::before,
-.seg button::before,
-.inicio-start::before,
-.btn::after,
-.btn-listo::after,
-.btn-info::after,
-.btn-mini-texto::after,
-.btn-fus::after,
-.seg button::after,
-.inicio-start::after {
-  content: "";
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  width: var(--btn-cap-w);
-  background-image:
-    linear-gradient(var(--btn-tint), var(--btn-tint)),
-    var(--ux-btn-left);
-  background-blend-mode: color;
-  background-repeat: no-repeat;
-  background-size: 100% 100%;
-  image-rendering: pixelated;
-  pointer-events: none;
-}
-.btn::before,
-.btn-listo::before,
-.btn-info::before,
-.btn-mini-texto::before,
-.btn-fus::before,
-.seg button::before,
-.inicio-start::before {
-  left: 0;
-}
-.btn::after,
-.btn-listo::after,
-.btn-info::after,
-.btn-mini-texto::after,
-.btn-fus::after,
-.seg button::after,
-.inicio-start::after {
-  right: 0;
-  background-image:
-    linear-gradient(var(--btn-tint), var(--btn-tint)),
-    var(--ux-btn-right);
-}
-.btn:hover:not(:disabled),
-.btn-listo:hover:not(:disabled),
-.btn-info:hover:not(:disabled),
-.btn-mini-texto:hover:not(:disabled),
-.btn-fus:hover:not(:disabled),
-.seg button:hover:not(:disabled),
-.inicio-start:hover:not(:disabled) {
-  transform: translateY(-1px);
-  filter: brightness(1.15);
-}
-.btn:active:not(:disabled),
-.btn-listo:active:not(:disabled),
-.btn-info:active:not(:disabled),
-.btn-mini-texto:active:not(:disabled),
-.btn-fus:active:not(:disabled),
-.seg button:active:not(:disabled),
-.inicio-start:active:not(:disabled) {
-  transform: translateY(1px);
-  filter: brightness(0.9);
-}
-.btn.dorado {
-  --btn-tint: var(--btn-color-dorado);
-}
-.btn.peligro {
-  --btn-tint: var(--btn-color-peligro);
-}
-.btn-fus,
-.btn-info,
-.btn-mini-texto,
-.seg button {
-  --btn-cap-w: 16px;
-  padding: 6px calc(var(--btn-cap-w) + 8px);
-}
-
-/* "Pulsa Start" es, en la práctica, un botón (dispara el inicio de
-   partida igual que #btn-empezar), así que lleva el mismo tratamiento
-   en vez del texto brillante de antes -- se cancela el
-   background-clip:text/color:transparent que usaba para eso. */
-.inicio-start {
-  background-clip: padding-box;
-  -webkit-background-clip: padding-box;
-  padding: 13px 40px;
-  animation:
-    inicio-aparece-texto 1s ease-out 0.5s forwards,
-    inicio-pulso 2s ease-in-out 1.5s infinite;
-}
-@keyframes inicio-pulso {
-  0%,
-  100% {
-    box-shadow: 0 0 14px rgba(226, 196, 137, 0.3);
-  }
-  50% {
-    box-shadow: 0 0 26px rgba(226, 196, 137, 0.65);
-  }
+  animation: inicio-aparece-texto 1s ease-out 0.5s forwards;
 }
 
 /* El guantelete (#cursor-img) sustituye al cursor nativo en toda la
