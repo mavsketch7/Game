@@ -11,7 +11,7 @@ import { construirMenu } from "../ui/menu.js";
 import { banner, toast } from "../ui/notifications.js";
 import { mostrar, ocultar } from "../ui/overlays.js";
 import { az, clamp, ri, rnd } from "../utils/helpers.js";
-import { sfxDropEpico } from "./audio.js";
+import { iniciarMusicaAmbiente, sfxDropEpico } from "./audio.js";
 
 export function genItem(f, forceRar, forceSlot) {
         // mayor probabilidad de rarezas altas en plantas avanzadas
@@ -214,6 +214,7 @@ function reiniciar() {
         M.slots.forEach((s) => (s.listo = false));
         construirMenu();
         mostrar("menu");
+        iniciarMusicaAmbiente();
       }
 
 // Expuestas en window: referenciadas desde onclick="..." en HTML generado dinámicamente.

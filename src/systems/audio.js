@@ -419,4 +419,57 @@ export function aplicarMusica() {
         const objetivo = AJ.silencio ? 0 : AJ.volMaster * AJ.volMus;
         musGain.gain.setTargetAtTime(objetivo, audioCtx.currentTime, 0.4);
         if (!musTimer && !AJ.silencio) musTimer = setInterval(tickMusica, 430);
+        if (audioAmbiente && ambienteActivo) {
+          audioAmbiente.volume = AJ.silencio ? 0 : AJ.volMaster * AJ.volMus * VOL_AMBIENTE;
+          if (AJ.silencio) audioAmbiente.pause();
+          else if (audioAmbiente.paused) audioAmbiente.play().catch(() => {});
+        }
       }
+
+// Música ambiental real (archivo, no sintetizada) para la pantalla de
+// carga ("Pulsa Start") y la selección de personaje -- suena "flojito"
+// a propósito (VOL_AMBIENTE la reduce aparte del volMaster/volMus, para
+// que quede de fondo y no compita con la música sintetizada de la Torre
+// ni con los SFX de la UI). Motor aparte de musGain/tickMusica de arriba
+// (HTMLAudioElement en vez de un buffer de Web Audio) porque es un loop
+// largo de un archivo real, no notas sintetizadas nota a nota.
+const VOL_AMBIENTE = 0.7;
+let audioAmbiente = null;
+let ambienteActivo = false;
+
+function crearAudioAmbiente() {
+  if (audioAmbiente) return audioAmbiente;
+  audioAmbiente = new Audio(
+    `${import.meta.env.BASE_URL}assets/audio/ambiente_seleccion.mp3`,
+  );
+  audioAmbiente.loop = true;
+  audioAmbiente.volume = 0;
+  document.body.appendChild(audioAmbiente);
+  return audioAmbiente;
+}
+
+// Llamar tras initAudio()/reanudarAudio() (primer gesto real del usuario --
+// ver cerrarInicio() en ui/intro.js), así arranca en cuanto el navegador
+// deja sonar audio. Sigue sonando durante toda la selección de personaje
+// hasta que detenerMusicaAmbiente() la corta al empezar la partida.
+export function iniciarMusicaAmbiente() {
+  ambienteActivo = true;
+  const a = crearAudioAmbiente();
+  if (!AJ.silencio) a.play().catch(() => {});
+  aplicarMusica();
+}
+
+// Fundido de salida suave (en vez de corte seco) al entrar a la mazmorra,
+// donde toma el relevo la música sintetizada de la Torre. Ver nuevaPartida()
+// en core/gameflow.js.
+export function detenerMusicaAmbiente() {
+  ambienteActivo = false;
+  if (!audioAmbiente || audioAmbiente.paused) return;
+  const a = audioAmbiente;
+  const paso = () => {
+    a.volume = Math.max(0, a.volume - 0.04);
+    if (a.volume > 0) requestAnimationFrame(paso);
+    else a.pause();
+  };
+  requestAnimationFrame(paso);
+}

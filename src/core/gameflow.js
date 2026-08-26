@@ -5,7 +5,12 @@ import { META } from "./save.js";
 import { AJ } from "./settings.js";
 import { G, setG } from "./state.js";
 import { NET, netBroadcast } from "../net/peer.js";
-import { aplicarMusica, initAudio, reanudarAudio } from "../systems/audio.js";
+import {
+  aplicarMusica,
+  detenerMusicaAmbiente,
+  initAudio,
+  reanudarAudio,
+} from "../systems/audio.js";
 import { statsTot } from "../systems/combat.js";
 import { M } from "../systems/input.js";
 import { abrirInv, cerrarInv, invSel } from "../ui/inventory.js";
@@ -16,6 +21,7 @@ export function nuevaPartida() {
         initAudio();
         reanudarAudio();
         aplicarMusica();
+        detenerMusicaAmbiente();
         const players = [];
         M.slots.forEach((s, i) => {
           if (!s.activo) return;

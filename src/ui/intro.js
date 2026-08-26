@@ -2,7 +2,7 @@
 // juego y se cierra con la primera tecla, clic o botón de mando. Puramente
 // de presentación — no toca el estado de la partida ni el menú de debajo.
 import { pedirPantallaCompleta } from "../core/canvas.js";
-import { initAudio, reanudarAudio } from "../systems/audio.js";
+import { initAudio, iniciarMusicaAmbiente, reanudarAudio } from "../systems/audio.js";
 
 const el = document.getElementById("pantalla-inicio");
 
@@ -23,6 +23,7 @@ if (el) {
     // Y para pedir pantalla completa (ver pedirPantallaCompleta())
     initAudio();
     reanudarAudio();
+    iniciarMusicaAmbiente();
     pedirPantallaCompleta();
     window.removeEventListener("keydown", cerrarInicio);
     window.removeEventListener("pointerdown", cerrarInicio);
