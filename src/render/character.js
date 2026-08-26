@@ -1336,12 +1336,28 @@ export function renderEnemigo(e) {
           const fr = frames[Math.floor(animGlobal * 8) % frames.length] || frames[0];
           const obj3 = masCercano(e.x, e.y);
           const flip3 = obj3 ? e.x > obj3.x : false;
+          // Sombra en el suelo -- esta rama devuelve antes de llegar a la
+          // sombra genérica de más abajo (e.y + e.r*0.9, calibrada para el
+          // resto de enemigos), así que necesita la suya. Este pack viene
+          // pre-alineado con los PIES ya prácticamente en e.y (medido por
+          // píxeles: fila 109 de 128 en TODOS los frames, casi exactamente
+          // el mismo punto que el desplazamiento -fr.height*0.86 de abajo
+          // produce) -- por eso el offset es casi nulo y NO e.r*0.9, o la
+          // sombra quedaría muy por debajo de los pies reales y el jefe
+          // seguiría pareciendo flotar aunque hubiera sombra.
+          cx.fillStyle = "rgba(0,0,0,.4)";
+          cx.beginPath();
+          cx.ellipse(e.x, e.y + 2, e.r * 0.85, e.r * 0.28, 0, 0, TAU);
+          cx.fill();
           cx.save();
           cx.imageSmoothingEnabled = false;
           if (e.hurtT > 0) cx.globalAlpha = 0.8;
           cx.translate(e.x, e.y);
           if (flip3) cx.scale(-1, 1);
-          if (fr) cx.drawImage(fr, -fr.width / 2, -fr.height * 0.86);
+          // 109/128: fila real de los pies, medida por píxeles en las 53
+          // hojas del pack (idle/walk/atk/hit) -- todas coinciden exacto,
+          // confirma que el "escenario fijo" del pack es de verdad fijo.
+          if (fr) cx.drawImage(fr, -fr.width / 2, -fr.height * (109 / 128));
           cx.restore();
           cx.globalAlpha = 1;
           // barra de vida + nombre (mismo patrón que El Magnate arriba)
