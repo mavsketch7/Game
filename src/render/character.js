@@ -734,7 +734,16 @@ export function renderJugador(p) {
               const fr = frames[Math.floor(prog * frames.length)] || frames[0];
               const ww0 = fr.naturalWidth || fr.width, wh0 = fr.naturalHeight || fr.height;
               const s2 = 22 / Math.max(ww0, wh0);
-              cx.drawImage(fr, 8 - (ww0 * s2) / 2, -(wh0 * s2) / 2, ww0 * s2, wh0 * s2);
+              const wDib = ww0 * s2, hDib = wh0 * s2;
+              // La mano (ancla real "m-d" de la hoja COMPARTIDA de idle/correr --
+              // ver REAL_IDLE_ANCLA en sprites.js, no hay marca específica de
+              // arquero para reposo) cae muy cerca del tobillo en varias
+              // direcciones. Centrar el arco ahí (mitad arriba/mitad abajo del
+              // pivote, como antes) lo hacía asomar por debajo de los pies --
+              // bug reportado: "el arco se dibuja debajo del personaje". Se
+              // ancla como una empuñadura real: la mayor parte del arco por
+              // ENCIMA de la mano y solo el limbo inferior por debajo.
+              cx.drawImage(fr, 8 - wDib / 2, -hDib * 0.82, wDib, hDib);
             }
             cx.shadowBlur = 0;
           } else {
