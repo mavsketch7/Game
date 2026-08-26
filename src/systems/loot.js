@@ -41,8 +41,12 @@ export function genItem(f, forceRar, forceSlot) {
           slot = forceSlot || az(SLOTS);
         const pools = {
           arma: ["atk", "atk", "crit", "cdr"],
-          armadura: ["hp", "hp", "armor", "vel"],
-          accesorio: ["crit", "vel", "cdr", "hp", "atk"],
+          escudo: ["hp", "armor", "armor", "vel"],
+          casco: ["hp", "hp", "crit", "cdr"],
+          peto: ["hp", "hp", "armor", "vel"],
+          piernas: ["vel", "vel", "hp", "armor"],
+          collar: ["cdr", "cdr", "crit", "vel"],
+          anillo: ["crit", "vel", "cdr", "hp", "atk"],
         };
         const stats = {},
           pool = [...pools[slot]];

@@ -1,6 +1,6 @@
 // Auto-generated during the modularization refactor (2026-07-23).
 import { H, W } from "./canvas.js";
-import { COLORES_J, ORDEN_ROLES, ROLES, XP_TABLA } from "./constants.js";
+import { COLORES_J, ORDEN_ROLES, ROLES, SLOTS, XP_TABLA } from "./constants.js";
 import { META } from "./save.js";
 import { AJ } from "./settings.js";
 import { G, setG } from "./state.js";
@@ -133,7 +133,7 @@ export function nuevaPartida() {
             lvlT: 0,
             cartasElegidas: [],
             bolsa: [],
-            equipo: { arma: null, armadura: null, accesorio: null },
+            equipo: Object.fromEntries(SLOTS.map((s) => [s, null])),
             // estadísticas de la sesión actual, para el ranking en vivo (Tab)
             statDano: 0,
             statDerrotados: 0,

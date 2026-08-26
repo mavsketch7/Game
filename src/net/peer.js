@@ -1,7 +1,7 @@
 // Auto-generated during the modularization refactor (2026-07-23).
 import Peer from "peerjs";
 import { H } from "../core/canvas.js";
-import { SALA_H, SALA_W } from "../core/constants.js";
+import { SALA_H, SALA_W, SLOTS } from "../core/constants.js";
 import { META } from "../core/save.js";
 import { G, setG } from "../core/state.js";
 import { render } from "../render/world.js";
@@ -461,11 +461,10 @@ function serPlayer(p) {
           trail: (p.trail || []).map((tr) => ({ x: tr.x, y: tr.y, t: tr.t })),
           lvlT: p.lvlT,
           cartasPendientes: p.cartasPendientes,
-          eqR: {
-            a: p.equipo.arma ? p.equipo.arma.rareza : -1,
-            r: p.equipo.armadura ? p.equipo.armadura.rareza : -1,
-            c: p.equipo.accesorio ? p.equipo.accesorio.rareza : -1,
-          },
+          // array posicional sobre SLOTS (antes 3 claves fijas a/r/c) --
+          // así crecer SLOTS (ver core/constants.js) no requiere tocar la
+          // serialización de red.
+          eqR: SLOTS.map((s) => (p.equipo[s] ? p.equipo[s].rareza : -1)),
           skin: META.skins.equipada[p.rol] || "",
           ns: {
             hpMax: t.hpMax,
@@ -663,11 +662,9 @@ function recibirSnapshot(s) {
           ...sp,
           ctrl: { tipo: "net" },
           inp: { mx: sp.inp ? 0 : 0, my: 0, atkHeld: false },
-          equipo: {
-            arma: sp.eqR.a >= 0 ? { rareza: sp.eqR.a } : null,
-            armadura: sp.eqR.r >= 0 ? { rareza: sp.eqR.r } : null,
-            accesorio: sp.eqR.c >= 0 ? { rareza: sp.eqR.c } : null,
-          },
+          equipo: Object.fromEntries(
+            SLOTS.map((s, i) => [s, sp.eqR[i] >= 0 ? { rareza: sp.eqR[i] } : null]),
+          ),
           atrapado: sp.atrapadoB ? {} : null,
           supCd: [0, 0, 0],
           skillCd: 0,

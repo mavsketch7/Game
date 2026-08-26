@@ -150,8 +150,8 @@ export function renderHUD() {
           cx.globalAlpha = p.ko ? 0.6 : 0.95;
           cx.fillRect(x - 4, y + 65, 198, 3);
           cx.globalAlpha = 1;
-          // marco del retrato con color de rareza de armadura
-          const armR = p.equipo.armadura ? p.equipo.armadura.rareza : -1;
+          // marco del retrato con color de rareza del peto
+          const armR = p.equipo.peto ? p.equipo.peto.rareza : -1;
           cx.fillStyle = "#0a0812";
           cx.fillRect(x - 1, y + 2, 27, 31);
           cx.drawImage(spriteJugador(p), x, y + 4, 24, 28);

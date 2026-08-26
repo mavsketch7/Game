@@ -627,9 +627,11 @@ export function renderJugador(p) {
         }
         cx.globalAlpha = 1;
 
-        // accesorio: gema flotante sobre la cabeza
-        if (eq.accesorio && !formaAnimal) {
-          const gcol = RAREZAS[eq.accesorio.rareza].col;
+        // anillo: gema flotante sobre la cabeza (antes "accesorio", partido
+        // en collar/anillo al pasar a 7 slots -- ver core/constants.js:
+        // SLOTS. El collar todavía no tiene efecto visual propio).
+        if (eq.anillo && !formaAnimal) {
+          const gcol = RAREZAS[eq.anillo.rareza].col;
           cx.save();
           cx.translate(p.x, p.y - 34 + Math.sin(animGlobal * 3 + p.idx) * 2);
           cx.rotate(animGlobal * 1.5);
@@ -1015,9 +1017,12 @@ export function renderJugador(p) {
         // escudo/libro, no gira con la puntería ni el swing -- se lleva pegada
         // al cuerpo, en el lado contrario a la mano del arma (que sí sigue la
         // puntería), volteándose solo con el mismo flip del propio personaje.
-        // Comparte tier de rareza con el arma principal (mismo equipo).
+        // Tier de rareza del slot "escudo" (brazo izquierdo, ver
+        // core/constants.js: SLOTS) si hay uno equipado; si no, 0 (dibujo
+        // base sin teñir) -- antes tomaba prestada la rareza del arma
+        // porque no existía un ítem de escudo real que equipar.
         const oimg = !formaAnimal
-          && ((OFFHAND_IMG_RAREZA[p.rol] && OFFHAND_IMG_RAREZA[p.rol][eq.arma ? eq.arma.rareza : 0]) || OFFHAND_IMG[p.rol]);
+          && ((OFFHAND_IMG_RAREZA[p.rol] && OFFHAND_IMG_RAREZA[p.rol][eq.escudo ? eq.escudo.rareza : 0]) || OFFHAND_IMG[p.rol]);
         if (oimg) {
           const ow0 = oimg.naturalWidth || oimg.width, oh0 = oimg.naturalHeight || oimg.height;
           const so = CONFIG_ARMA.offTam / Math.max(ow0, oh0);

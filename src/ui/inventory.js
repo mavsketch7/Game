@@ -348,8 +348,8 @@ function celdaItem(it, idx, p, equipada) {
       }
 
 // Misma rareza Y mismo slot (y misma clase si es arma) -- ver
-// gruposFusionables() para el porqué: armadura y accesorio no son
-// intercambiables aunque compartan rareza.
+// gruposFusionables() para el porqué: los 7 slots no son intercambiables
+// entre sí aunque compartan rareza (un casco y un collar Épicos no fusionan).
 function mismoGrupoFusion(a, b) {
         if (a.rareza !== b.rareza || a.slot !== b.slot) return false;
         if (a.slot === "arma" && a.clase !== b.clase) return false;

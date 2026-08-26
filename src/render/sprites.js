@@ -159,7 +159,7 @@ const VIAL_ROWS = [
 
 const GEMA_ROWS = ["..KK..", ".KXXK.", "KXXXXK", ".KXXK.", "..KK.."];
 
-// Iconos de drop por slot (arma/armadura/accesorio), teñidos por rareza --
+// Iconos de drop por slot (ver core/constants.js: SLOTS), teñidos por rareza --
 // para que se vea de un vistazo QUÉ ha caído, no solo su rareza (antes
 // todos los objetos caían con el mismo icono de gema, ver iconoDrop()).
 const ESPADA_ROWS = [
@@ -181,7 +181,50 @@ const ESCUDO_ROWS = [
       ];
 const ANILLO_ROWS = ["..KK..", ".K..K.", "K.XX.K", ".K..K.", "..KK.."];
 
-const ICONO_DROP_ROWS = { arma: ESPADA_ROWS, armadura: ESCUDO_ROWS, accesorio: ANILLO_ROWS };
+// Slots añadidos al pasar de 3 a 7 en la ficha de personaje (ver
+// core/constants.js: SLOTS) -- mismo DSL de filas que los de arriba,
+// "escudo" (mano izquierda) reutiliza directamente ESCUDO_ROWS (ya es un
+// icono de escudo, encaja tal cual con el nuevo slot de offhand).
+const CASCO_ROWS = [
+  "..KKKK..",
+  ".KXXXXK.",
+  "KXXXXXXK",
+  "KXXKKXXK",
+  "KXXKKXXK",
+  ".KKKKKK.",
+];
+const PETO_ROWS = [
+  "K.KKKK.K",
+  "KXXXXXXK",
+  "KXXKKXXK",
+  "KXXXXXXK",
+  "KXXXXXXK",
+  ".KKKKKK.",
+];
+const PIERNAS_ROWS = [
+  "KXK.KXK",
+  "KXK.KXK",
+  "KXK.KXK",
+  "KXKKKXK",
+  "KKK.KKK",
+];
+const COLLAR_ROWS = [
+  "K.....K",
+  ".K...K.",
+  "..K.K..",
+  "..KXK..",
+  "..XXX..",
+];
+
+const ICONO_DROP_ROWS = {
+  arma: ESPADA_ROWS,
+  escudo: ESCUDO_ROWS,
+  casco: CASCO_ROWS,
+  peto: PETO_ROWS,
+  piernas: PIERNAS_ROWS,
+  collar: COLLAR_ROWS,
+  anillo: ANILLO_ROWS,
+};
 const iconoDropCache = {};
 
 // Perezoso y cacheado por slot+rareza: así una futura rareza por encima de
@@ -1562,7 +1605,7 @@ SPR.sastre = buildSprite(HERO_ROWS, {
 const compCache = {};
 
 export function spriteJugador(p) {
-        const armR = p.equipo.armadura ? p.equipo.armadura.rareza : -1;
+        const armR = p.equipo.peto ? p.equipo.peto.rareza : -1;
         const skinId = META.skins.equipada[p.rol] || "";
         const key = p.rol + "#" + armR + "#" + skinId;
         if (compCache[key]) return compCache[key];

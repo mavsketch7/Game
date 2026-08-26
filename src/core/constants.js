@@ -227,7 +227,22 @@ export const SUPS = [
         },
       ];
 
-export const SLOTS = ["arma", "armadura", "accesorio"];
+export const SLOTS = ["arma", "escudo", "casco", "peto", "piernas", "collar", "anillo"];
+
+// Etiqueta visible en la ficha de personaje -- "arma" internamente sigue
+// siendo la misma clave de siempre (restricción por clase, pivote de
+// dibujo del arma en render/character.js, etc.), solo se le cambia el
+// nombre que ve el jugador a "Brazo derecho" para encajar con el resto de
+// slots de la ficha en forma de libro.
+export const SLOT_LABEL = {
+  arma: "Brazo derecho",
+  escudo: "Brazo izquierdo",
+  casco: "Casco",
+  peto: "Peto",
+  piernas: "Piernas",
+  collar: "Collar",
+  anillo: "Anillo",
+};
 
 export const RAREZAS = [
         { n: "Común", cls: "r0", col: "#b9b2c6", m: 1 },
@@ -249,15 +264,12 @@ export const NOMBRES_ARMA_CLASE = {
       };
 
 export const NOMBRES_ITEM = {
-        armadura: ["Coraza", "Manto", "Cota", "Piel", "Égida", "Sudario"],
-        accesorio: [
-          "Anillo",
-          "Talismán",
-          "Sello",
-          "Vial",
-          "Reliquia",
-          "Amuleto",
-        ],
+        escudo: ["Escudo", "Broquel", "Rodela", "Pavés", "Égida"],
+        casco: ["Yelmo", "Capucha", "Corona", "Máscara", "Capacete"],
+        peto: ["Coraza", "Manto", "Cota", "Piel", "Sudario"],
+        piernas: ["Grebas", "Botas", "Calzas", "Zancos", "Espinilleras"],
+        collar: ["Collar", "Gargantilla", "Medallón", "Cadena", "Amuleto"],
+        anillo: ["Anillo", "Talismán", "Sello", "Vial", "Reliquia"],
       };
 
 export const SUFIJOS = [

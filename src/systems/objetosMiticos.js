@@ -29,7 +29,7 @@ export const OBJETOS_MITICOS = [
         {
           id: "coraza_fenix",
           nombre: "Coraza del Fénix",
-          slot: "armadura",
+          slot: "peto",
           clase: null,
           statPool: ["hp", "hp", "armor"],
           efecto: "fenix",
@@ -38,7 +38,7 @@ export const OBJETOS_MITICOS = [
         {
           id: "manto_sombras",
           nombre: "Manto de las Sombras",
-          slot: "armadura",
+          slot: "peto",
           clase: null,
           statPool: ["hp", "vel", "armor"],
           efecto: "sombras",
@@ -47,7 +47,7 @@ export const OBJETOS_MITICOS = [
         {
           id: "anillo_tiempo",
           nombre: "Anillo del Tiempo Robado",
-          slot: "accesorio",
+          slot: "anillo",
           clase: null,
           statPool: ["crit", "cdr", "vel"],
           efecto: "robatiempo",
@@ -56,7 +56,7 @@ export const OBJETOS_MITICOS = [
         {
           id: "amuleto_vampirico",
           nombre: "Amuleto Vampírico",
-          slot: "accesorio",
+          slot: "collar",
           clase: null,
           statPool: ["hp", "atk", "crit"],
           efecto: "vampirismo",
