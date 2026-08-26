@@ -881,7 +881,14 @@ export function iniciarPlanta() {
               j.nombre = "Guardián de Hielo";
               j.hp = Math.round(j.hp * 1.5);
               j.hpMax = j.hp;
-              j.r = 46;
+              // Hitbox (círculo de colisión/alcance de golpe, no el tamaño
+              // visual -- ese lo fija FROST_ALTO en render/sprites.js, no
+              // esto) ajustado al ancho real del sprite: medido por píxeles,
+              // el cuerpo ocupa ~40-43% del ancho nativo (192px) en
+              // idle/walk, que sobre el lienzo ya recompuesto (276px de
+              // ancho) da un semiancho de ~55-60px -- 46 se quedaba corto y
+              // dejaba hombros/brazos fuera del círculo de golpe.
+              j.r = 58;
               j.knockRes = 0.6;
               j.faseHielo1 = false;
               j.faseHielo2 = false;

@@ -1354,10 +1354,14 @@ export function renderEnemigo(e) {
           if (e.hurtT > 0) cx.globalAlpha = 0.8;
           cx.translate(e.x, e.y);
           if (flip3) cx.scale(-1, 1);
-          // 109/128: fila real de los pies, medida por píxeles en las 53
-          // hojas del pack (idle/walk/atk/hit) -- todas coinciden exacto,
-          // confirma que el "escenario fijo" del pack es de verdad fijo.
-          if (fr) cx.drawImage(fr, -fr.width / 2, -fr.height * (109 / 128));
+          // 0.86: MISMA constante que usa cargarFramesSueltos() al componer
+          // `fr` (ver render/sprites.js) para colocar los pies dentro del
+          // lienzo ya recompuesto -- ahí es donde vive la medición real por
+          // píxeles (109/128), no aquí. `fr` YA no es el PNG crudo, así que
+          // reescribir esto con 109/128 (como hice antes) desalinea los
+          // pies: hay que replicar el 0.86 del compositor tal cual, o la
+          // sombra de más arriba y los pies dejan de coincidir.
+          if (fr) cx.drawImage(fr, -fr.width / 2, -fr.height * 0.86);
           cx.restore();
           cx.globalAlpha = 1;
           // barra de vida + nombre (mismo patrón que El Magnate arriba)
