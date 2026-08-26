@@ -6,11 +6,11 @@ import { NET } from "../net/peer.js";
 import { activarParry, atacar, castSup, cicloElem, dashAtaque, disparoSecundario, esquivar, habilidad, interactuar, transformar } from "./abilities.js";
 import { aplicarMusica, initAudio, reanudarAudio } from "./audio.js";
 import { abrirInfo, cerrarInfo } from "../ui/info.js";
-import { cambiarPestanaInv, cerrarInv } from "../ui/inventory.js";
+import { cambiarPestanaInv, cerrarInv, irPestanaInv } from "../ui/inventory.js";
 import { construirMenu } from "../ui/menu.js";
 import { toggleMenuPausa } from "../ui/pauseMenu.js";
 import { cerrarArenaPvp } from "../ui/pvp.js";
-import { abrirAjustes, cerrarAjustes, toggleSilencioRapido } from "../ui/settingsOverlay.js";
+import { toggleSilencioRapido } from "../ui/settingsOverlay.js";
 import { cerrarTienda } from "../ui/shop.js";
 import { cerrarSkins } from "../ui/skins.js";
 import { cerrarYunque } from "../ui/workbench.js";
@@ -144,7 +144,7 @@ export function pollPads() {
                 initAudio();
                 reanudarAudio();
                 aplicarMusica();
-                abrirAjustes();
+                irPestanaInv("ajustes");
               }
               if (G.activo && !G.pausa && !p.ko) {
                 if (edge(6) || edge(4)) activarParry(p);
@@ -191,7 +191,6 @@ export const M = {
       };
 
 const OVERLAYS_PAD = [
-        "ajustes",
         "cartas-overlay",
         "info-overlay",
         "tienda",
@@ -255,7 +254,6 @@ function padCierra() {
         else if (ov === "yunque") cerrarYunque();
         else if (ov === "arena-pvp") cerrarArenaPvp();
         else if (ov === "info-overlay") cerrarInfo();
-        else if (ov === "ajustes") cerrarAjustes();
         padFoco = 0;
       }
 
@@ -351,19 +349,13 @@ window.addEventListener("keydown", (e) => {
         }
         if (k === "g") {
           e.preventDefault();
+          if (!G || !G.activo) return;
           initAudio();
           reanudarAudio();
           aplicarMusica();
-          if (document.getElementById("ajustes").classList.contains("oculto"))
-            abrirAjustes();
-          else cerrarAjustes();
-          return;
-        }
-        if (
-          k === "escape" &&
-          !document.getElementById("ajustes").classList.contains("oculto")
-        ) {
-          cerrarAjustes();
+          if (document.getElementById("inv").classList.contains("oculto"))
+            irPestanaInv("ajustes");
+          else cerrarInv();
           return;
         }
         if (k === "m" && (G || document.getElementById("menu"))) {

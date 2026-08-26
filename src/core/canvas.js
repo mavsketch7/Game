@@ -1,7 +1,7 @@
 // Auto-generated during the modularization refactor (2026-07-23).
 import { AJ } from "./settings.js";
-// nota: abrirAjustes se importa dinámicamente más abajo (no de forma
-// estática) para evitar un ciclo de módulos: ui/settingsOverlay.js
+// nota: abrirInv se importa dinámicamente más abajo (no de forma
+// estática) para evitar un ciclo de módulos: ui/inventory.js
 // importa de este mismo archivo, y ese ciclo hacía que "cv"/"W"/"H" se
 // leyeran antes de inicializarse cuando el grafo se cargaba en cierto
 // orden (ver systems/input.js, que registra listeners sobre `cv` en su
@@ -128,8 +128,11 @@ export function toggleFullscreen() {
         }
         setTimeout(() => {
           ajustarLienzo();
-          if (!document.getElementById("ajustes").classList.contains("oculto"))
-            import("../ui/settingsOverlay.js").then(({ abrirAjustes }) => abrirAjustes());
+          // Refresca la pestaña del libro que esté abierta (no solo Ajustes)
+          // para que el botón Activar/Salir se actualice si el cambio de
+          // pantalla completa vino de fuera (F11, Esc del navegador...).
+          if (!document.getElementById("inv").classList.contains("oculto"))
+            import("../ui/inventory.js").then(({ abrirInv }) => abrirInv());
         }, 200);
       }
 

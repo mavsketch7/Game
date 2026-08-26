@@ -106,13 +106,14 @@ async function entrarEnPartida(page, clicksCarrusel) {
     await page.click(".flecha-der");
     await page.waitForTimeout(120);
   }
-  // "Lobby del grupo" (bando Buenos/Malos) vive en Ajustes desde el
-  // rediseño de la escena de selección (2026-08-25) -- ver ui/menu.js.
-  await page.click("#btn-ajustes");
+  // "Lobby del grupo" (bando Buenos/Malos) vive en el popover de la
+  // hoguera desde el rediseño de la ficha de personaje como libro
+  // (2026-08-26) -- ver ui/menu.js: construirPopoverFogata().
+  await page.click("#icono-fogata");
   await page.waitForTimeout(200);
-  await page.click('#seg-lobby button:has-text("Buenos")');
+  await page.click('#popover-fogata-ajustes button:has-text("Buenos")');
   await page.waitForTimeout(200);
-  await page.click("text=Cerrar");
+  await page.click("#popover-fogata .popover-cerrar");
   await page.waitForTimeout(200);
   await page.click("text=Marcar listo");
   await page.waitForTimeout(300);

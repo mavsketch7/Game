@@ -7,8 +7,10 @@
 import { COLORES_J, LOBBIES, ORDEN_ROLES, ROLES } from "../core/constants.js";
 import { nuevaPartida } from "../core/gameflow.js";
 import { MEJORAS_TIENDA, META } from "../core/save.js";
+import { AJ } from "../core/settings.js";
 import { NET, crearSalaOnline, enviarRolPropio, netEnviarLobby, unirseSalaOnline } from "../net/peer.js";
 import { crearGremio, miGremio, rankingGremios, salirGremio, unirseGremio } from "../systems/guilds.js";
+import { sfx } from "../systems/audio.js";
 import { idJugador } from "../systems/identity.js";
 import { M } from "../systems/input.js";
 import { abrirInfo } from "./info.js";
@@ -196,6 +198,62 @@ function construirGremioControles(s, i) {
   }
   return fila;
 }
+
+// Lobby del grupo (bando) y fuego amigo: vivían en el panel de Ajustes,
+// solo visibles ANTES de empezar partida -- al mudar Ajustes al libro
+// (solo alcanzable con partida activa) se quedaban sin ningún sitio
+// donde tocarlos, así que pasan aquí, al popover de la hoguera (decisión
+// del usuario). setLobby()/toggleFuegoAmigo() llamaban antes a
+// abrirAjustes() para autorrefrescarse; ahora hacen lo mismo con este
+// popover -- setLobby() además dispara construirMenu() completo (no solo
+// el popover) porque M.lobby también condiciona si "Empezar expedición"
+// está habilitado y se sincroniza a los invitados vía netEnviarLobby()
+// (dentro de construirMenu()), igual que hacía el import() dinámico a
+// menu.js que usaba antes desde ui/settingsOverlay.js.
+function construirPopoverFogata() {
+  const cont = document.getElementById("popover-fogata-ajustes");
+  if (!cont) return;
+  cont.innerHTML =
+    '<div class="ajuste-fila"><div><h4>⚔ Lobby del grupo</h4>' +
+    '<div class="a-desc">Bando de tu grupo esta partida (bonus para todos).</div></div>' +
+    '<div class="ajuste-ctrl"><div class="seg">' +
+    Object.entries(LOBBIES)
+      .map(
+        ([id, l]) =>
+          '<button class="' +
+          (M.lobby === id ? "on" : "") +
+          '" onclick="setLobby(\'' +
+          id +
+          "')\">" +
+          l.icon +
+          " " +
+          l.nombre +
+          "</button>",
+      )
+      .join("") +
+    "</div></div></div>" +
+    '<div class="ajuste-fila"><div><h4>🔥 Fuego amigo</h4>' +
+    '<div class="a-desc">Ataques, flechas y áreas dañan a tus compañeros al 50%.</div></div>' +
+    '<div class="ajuste-ctrl"><button class="btn' +
+    (AJ.fuegoAmigo ? " dorado" : "") +
+    '" onclick="toggleFuegoAmigo()">' +
+    (AJ.fuegoAmigo ? "Activado" : "Desactivado") +
+    "</button></div></div>";
+}
+
+function setLobby(id) {
+  M.lobby = id;
+  sfx("ui");
+  construirMenu();
+}
+
+function toggleFuegoAmigo() {
+  AJ.fuegoAmigo = !AJ.fuegoAmigo;
+  sfx("ui");
+  construirPopoverFogata();
+}
+window.setLobby = setLobby;
+window.toggleFuegoAmigo = toggleFuegoAmigo;
 
 function construirPopoverGremio() {
   const cont = document.getElementById("popover-gremio-cont");
@@ -404,6 +462,9 @@ export function construirMenu() {
         if (!document.getElementById("popover-gremio").classList.contains("oculto")) {
           construirPopoverGremio();
         }
+        if (!document.getElementById("popover-fogata").classList.contains("oculto")) {
+          construirPopoverFogata();
+        }
 
         // Leyenda de botones de mando: UNA sola, fija abajo al centro,
         // en vez de repetida dentro de cada tarjeta con mando -- así el
@@ -462,7 +523,10 @@ export function mostrarLobbySincronizado(slots, lobby) {
 document.getElementById("btn-empezar").onclick = nuevaPartida;
 
 document.getElementById("icono-ayuda").onclick = () => togglePopover("ayuda");
-document.getElementById("icono-fogata").onclick = () => togglePopover("fogata");
+document.getElementById("icono-fogata").onclick = () => {
+  togglePopover("fogata");
+  if (!document.getElementById("popover-fogata").classList.contains("oculto")) construirPopoverFogata();
+};
 document.getElementById("icono-gremio").onclick = () => {
   togglePopover("gremio");
   if (!document.getElementById("popover-gremio").classList.contains("oculto")) construirPopoverGremio();

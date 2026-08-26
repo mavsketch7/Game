@@ -1,10 +1,13 @@
 // Auto-generated during the modularization refactor (2026-07-23).
+import { ajustarLienzo, esPantallaCompleta, maximizado, toggleFullscreen } from "../core/canvas.js";
 import { ETQ, FORMAS_INFO, MAX_NIV_PJ, PRECIO_VENTA, RAREZAS, ROLES, SLOTS, SLOT_LABEL } from "../core/constants.js";
 import { abandonarPartida } from "../core/gameflow.js";
 import { META } from "../core/save.js";
+import { AJ, aplicarTexto } from "../core/settings.js";
 import { G } from "../core/state.js";
 import { fxOnda, fxParticulas } from "../render/effects.js";
 import { iconoDrop } from "../render/sprites.js";
+import { aplicarMusica, initAudio, sfx } from "../systems/audio.js";
 import { CARD_RAREZAS } from "../systems/cards.js";
 import { statsTot } from "../systems/combat.js";
 import { M } from "../systems/input.js";
@@ -66,7 +69,7 @@ export function cambiarPestanaInv(dir) {
         abrirInv();
       }
 
-function irPestanaInv(id) {
+export function irPestanaInv(id) {
         invTab = id;
         idxSel = -1;
         fragSel = null;
@@ -1194,13 +1197,127 @@ function tabHerreria(p) {
         );
       }
 
+// Ajustes: antes overlay aparte (#ajustes, accesible con el botón ⚙ incluso
+// antes de tener partida) -- ahora pestaña del libro, solo alcanzable con
+// partida activa. "Lobby del grupo"/"Fuego amigo" (antes aquí, solo
+// visibles pre-partida) se mudaron al popover de la hoguera en la
+// selección de personaje (ver ui/menu.js: construirPopoverFogata()), que
+// sigue siendo alcanzable antes de jugar -- aquí ya no pintan nada.
 function tabAjustes() {
+        const pct = (v) => Math.round(v * 100);
+        const segTexto = [
+          ["S", 0.85],
+          ["M", 1],
+          ["L", 1.2],
+          ["XL", 1.45],
+        ];
         return (
-          '<div style="padding:26px 8px;text-align:center;color:var(--ceniza)">' +
-          '<h3 style="color:var(--vespero);font-size:1rem">⚙ Ajustes</h3>' +
-          '<p style="margin-top:8px;font-size:.85rem">Esta pestaña está en construcción. De momento los ajustes siguen disponibles en el botón ⚙ de la esquina.</p>' +
-          "</div>"
+          '<div class="ajuste-fila"><div><h4>🖥 Pantalla completa</h4>' +
+          '<div class="a-desc">Ocupa toda la pantalla (también con F11 o la tecla F).</div></div>' +
+          '<div class="ajuste-ctrl"><button class="btn' +
+          (esPantallaCompleta() || maximizado ? " dorado" : "") +
+          '" onclick="toggleFullscreen()">' +
+          (esPantallaCompleta() || maximizado ? "Salir" : "Activar") +
+          "</button></div></div>" +
+          '<div class="ajuste-fila"><div><h4>🔍 Tamaño / resolución</h4>' +
+          '<div class="a-desc">Escala el juego para aprovechar tu monitor. "Auto" lo ajusta a la ventana.</div></div>' +
+          '<div class="ajuste-ctrl"><div class="seg" id="seg-escala">' +
+          [
+            ["Auto", "auto"],
+            ["×1", "1"],
+            ["×2", "2"],
+            ["×3", "3"],
+            ["×4", "4"],
+          ]
+            .map(
+              ([lab, v]) =>
+                '<button class="' +
+                (AJ.escala === v ? "on" : "") +
+                '" onclick="setEscala(\'' +
+                v +
+                "')\">" +
+                lab +
+                "</button>",
+            )
+            .join("") +
+          "</div></div></div>" +
+          '<div class="ajuste-fila"><div><h4>🔇 Silencio total</h4>' +
+          '<div class="a-desc">Corta música y efectos de golpe.</div></div>' +
+          '<div class="ajuste-ctrl"><button class="btn' +
+          (AJ.silencio ? " dorado" : "") +
+          '" onclick="toggleSilencio()">' +
+          (AJ.silencio ? "Silenciado" : "Con sonido") +
+          "</button></div></div>" +
+          '<div class="ajuste-fila"><div><h4>🔊 Volumen general</h4>' +
+          '<div class="a-desc">Nivel maestro de todo el audio.</div></div>' +
+          '<div class="ajuste-ctrl"><input type="range" min="0" max="100" value="' +
+          pct(AJ.volMaster) +
+          '" oninput="setVol(\'volMaster\',this.value)"><span class="val-num" id="v-master">' +
+          pct(AJ.volMaster) +
+          "%</span></div></div>" +
+          '<div class="ajuste-fila"><div><h4>💥 Efectos</h4>' +
+          '<div class="a-desc">Golpes, magia, monedas, subidas de nivel.</div></div>' +
+          '<div class="ajuste-ctrl"><input type="range" min="0" max="100" value="' +
+          pct(AJ.volSfx) +
+          '" oninput="setVol(\'volSfx\',this.value)"><span class="val-num" id="v-sfx">' +
+          pct(AJ.volSfx) +
+          "%</span></div></div>" +
+          '<div class="ajuste-fila"><div><h4>🎵 Música</h4>' +
+          '<div class="a-desc">Melodía ambiental de la Torre.</div></div>' +
+          '<div class="ajuste-ctrl"><input type="range" min="0" max="100" value="' +
+          pct(AJ.volMus) +
+          '" oninput="setVol(\'volMus\',this.value)"><span class="val-num" id="v-mus">' +
+          pct(AJ.volMus) +
+          "%</span></div></div>" +
+          '<div class="ajuste-fila"><div><h4>🔤 Tamaño del texto</h4>' +
+          '<div class="a-desc">Escala los textos de menús, ficha y ayudas.</div></div>' +
+          '<div class="ajuste-ctrl"><div class="seg" id="seg-texto">' +
+          segTexto
+            .map(
+              ([lab, v]) =>
+                '<button class="' +
+                (Math.abs(AJ.texto - v) < 0.01 ? "on" : "") +
+                '" onclick="setTexto(' +
+                v +
+                ')">' +
+                lab +
+                "</button>",
+            )
+            .join("") +
+          "</div></div></div>"
         );
+      }
+
+function setVol(cual, v) {
+        initAudio();
+        AJ[cual] = +v / 100;
+        const el = document.getElementById(
+          { volMaster: "v-master", volSfx: "v-sfx", volMus: "v-mus" }[cual],
+        );
+        if (el) el.textContent = Math.round(v) + "%";
+        aplicarMusica();
+        if (cual !== "volMus") sfx("ui");
+      }
+
+function toggleSilencio() {
+        AJ.silencio = !AJ.silencio;
+        initAudio();
+        aplicarMusica();
+        abrirInv();
+      }
+
+function setTexto(v) {
+        AJ.texto = v;
+        aplicarTexto();
+        abrirInv();
+        sfx("ui");
+      }
+
+function setEscala(v) {
+        AJ.escala = v;
+        ajustarLienzo();
+        abrirInv();
+        sfx("ui");
       }
 
 export function abrirInv() {
@@ -1432,7 +1549,11 @@ window.cerrarInv = cerrarInv;
 window.darItem = darItem;
 window.permitirSoltar = permitirSoltar;
 window.quitarResaltadoSlot = quitarResaltadoSlot;
+window.setEscala = setEscala;
+window.setTexto = setTexto;
+window.setVol = setVol;
 window.soltarEnSlot = soltarEnSlot;
+window.toggleSilencio = toggleSilencio;
 window.equipar = equipar;
 window.filtrarBolsa = filtrarBolsa;
 window.fusionRapida = fusionRapida;

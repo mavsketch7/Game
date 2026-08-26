@@ -272,9 +272,6 @@ body.pantalla-completa canvas#lienzo {
 body.pantalla-completa #hint {
   display: none;
 }
-:fullscreen #btn-ajustes {
-  z-index: 30;
-}
 #hint {
   width: min(980px, 100%);
   margin-top: 8px;
@@ -349,6 +346,11 @@ body.pantalla-completa #hint {
 }
 .icono-escena {
   position: absolute;
+  /* Sin esto, .escena-slots (la rejilla de tarjetas, más abajo en el DOM
+     -- ver index.html) pinta encima en cualquier viewport donde su caja
+     invisible llegue hasta la altura de estos iconos, aunque no haya
+     ninguna tarjeta visible ahí: bloqueaba el clic en la hoguera. */
+  z-index: 2;
   border: none;
   background-color: transparent;
   background-repeat: no-repeat;
@@ -2378,31 +2380,9 @@ body.pantalla-completa #hint {
   box-shadow: 0 0 12px rgba(233, 180, 92, 0.35);
 }
 
-/* ===== Ajustes ===== */
-#btn-ajustes {
-  position: absolute;
-  top: 14px;
-  right: 14px;
-  z-index: 15;
-  width: 42px;
-  height: 42px;
-  border-radius: 50%;
-  border: 1px solid var(--borde);
-  background: rgba(20, 16, 28, 0.82);
-  color: var(--hueso);
-  font-size: 1.3rem;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition:
-    transform 0.2s,
-    border-color 0.2s;
-}
-#btn-ajustes:hover {
-  border-color: var(--vespero);
-  transform: rotate(45deg);
-}
+/* ===== Ajustes (pestaña del libro, ver ui/inventory.js: tabAjustes() --
+   también reutilizada por el popover de la hoguera para Lobby/Fuego amigo,
+   ver ui/menu.js: construirPopoverFogata()) ===== */
 .ajuste-fila {
   display: flex;
   justify-content: space-between;
@@ -2428,6 +2408,18 @@ body.pantalla-completa #hint {
   align-items: center;
   gap: 8px;
   flex-shrink: 0;
+}
+/* El popover de la hoguera es angosto (min(320px,92%), ver .popover) --
+   .ajuste-fila está pensada para el ancho del libro, aquí se apila en
+   columna en vez de lado a lado para que no se rompa el texto. */
+#popover-fogata-ajustes .ajuste-fila {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 10px 12px;
+}
+#popover-fogata-ajustes .ajuste-ctrl {
+  width: 100%;
 }
 .ajuste-fila input[type="range"] {
   width: 130px;
