@@ -2064,6 +2064,109 @@ body.pantalla-completa #hint {
   background: var(--vespero);
 }
 
+/* ===== Herrería: yunque + martillo animado (ver ui/inventory.js:
+   tabHerreria()/chispasForjaHtml()) -- mismo mecanismo de partículas por
+   CSS que las luciérnagas de la pantalla de selección (N <span> con
+   --dx/--dy propios sobre un @keyframes compartido, ver ui/menu.js). El
+   martillo golpea (clase .golpea, aplicada solo en el render que sigue a
+   una fusión real -- ver golpeMartilloPendiente en inventory.js) y las
+   chispas saltan del punto de impacto; al ser animaciones de un solo
+   disparo (no infinite) no hace falta limpiarlas a mano, se quedan quietas
+   en su estado final hasta el siguiente re-render. */
+.herreria-escena {
+  position: relative;
+  height: 150px;
+  margin-bottom: 6px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+.herreria-yunque {
+  width: 190px;
+  aspect-ratio: 51 / 28;
+  background-image: url("/assets/ui/ui-ingame/yunque-forja-objetos.png");
+  background-size: 100% 100%;
+  image-rendering: pixelated;
+  filter: drop-shadow(0 6px 10px rgba(0, 0, 0, 0.6));
+}
+.herreria-martillo {
+  position: absolute;
+  width: 66px;
+  aspect-ratio: 32 / 48;
+  background-image: url("/assets/ui/ui-ingame/martillo-forja.png");
+  background-size: 100% 100%;
+  image-rendering: pixelated;
+  left: 50%;
+  bottom: 76px;
+  transform: translateX(6px) rotate(-32deg);
+  transform-origin: 75% 88%;
+  filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.5));
+}
+.herreria-martillo.golpea {
+  animation: golpe-martillo 0.45s ease-in-out;
+}
+@keyframes golpe-martillo {
+  0% {
+    transform: translateX(6px) rotate(-32deg);
+  }
+  40% {
+    transform: translateX(6px) rotate(12deg) translateY(14px);
+  }
+  58% {
+    transform: translateX(6px) rotate(12deg) translateY(14px);
+  }
+  100% {
+    transform: translateX(6px) rotate(-32deg);
+  }
+}
+.fusion-slots-forja {
+  position: absolute;
+  bottom: 74px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 8px;
+  z-index: 1;
+}
+.fusion-slots-forja .fusion-slot {
+  width: 92px;
+  min-height: 40px;
+  font-size: 0.62rem;
+  background: rgba(10, 8, 17, 0.75);
+}
+.chispa-forja {
+  position: absolute;
+  left: 50%;
+  bottom: 76px;
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #fff2c0 0%, #ffb347 55%, transparent 80%);
+  box-shadow: 0 0 4px 1px rgba(255, 180, 80, 0.7);
+  opacity: 0;
+  animation: chispa-forja-vuelo 0.55s ease-out forwards;
+  pointer-events: none;
+}
+@keyframes chispa-forja-vuelo {
+  0% {
+    opacity: 1;
+    transform: translate(-50%, 0) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(calc(-50% + var(--dx)), var(--dy)) scale(0.4);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .herreria-martillo.golpea {
+    animation: none;
+  }
+  .chispa-forja {
+    animation: none;
+    opacity: 0;
+  }
+}
+
 /* ===== Fusión de objetos ===== */
 .fusion-panel {
   background: linear-gradient(150deg, #221a10, #2c2114);

@@ -51,6 +51,11 @@ let invTab = "personaje";
 let idxSel = -1;
 // uid del fragmento de la bolsa de Alma elegido para colocar (null = ninguno)
 let fragSel = null;
+// true justo tras una fusión real (ver fusionar() más abajo) -- lo lee y
+// consume tabHerreria() para que el martillo golpee y salten chispas SOLO
+// en el render que sigue a una fusión, no cada vez que se repinta la
+// pestaña por cualquier otro motivo.
+let golpeMartilloPendiente = false;
 
 export function cambiarPestanaInv(dir) {
         const i = PESTANAS_INV.findIndex((t) => t.id === invTab);
@@ -476,6 +481,7 @@ function fusionRapida() {
 function fusionar() {
         const p = G.players[G.invSel] || G.players[0];
         if (p.fusionSel.length !== 3) return;
+        golpeMartilloPendiente = true;
         const rarF = p.fusionSel[0].rareza;
         const base = p.fusionSel[0];
         // sacar los 3 de la bolsa
@@ -1086,6 +1092,30 @@ function gridBolsa(p) {
 // evolucionan), reubicada aquí desde la antigua pestaña "Equipamiento" --
 // el yunque/martillo/chispas del boceto llegan en un pase aparte, de
 // momento la mecánica ya funciona igual que antes bajo el nuevo nombre.
+// N chispas con deriva aleatoria propia (--dx/--dy), un solo disparo al
+// golpear el martillo -- mismo mecanismo que las luciérnagas de la
+// pantalla de selección (ver ui/menu.js), aquí generadas en HTML en vez de
+// añadidas por JS porque tabHerreria() ya reconstruye todo el DOM de la
+// pestaña de golpe.
+function chispasForjaHtml() {
+        let html = "";
+        for (let i = 0; i < 10; i++) {
+          const ang = ((Math.random() * 140 - 70) - 90) * (Math.PI / 180);
+          const dist = 18 + Math.random() * 26;
+          const dx = Math.cos(ang) * dist;
+          const dy = Math.sin(ang) * dist;
+          html +=
+            '<span class="chispa-forja" style="--dx:' +
+            dx.toFixed(0) +
+            "px;--dy:" +
+            dy.toFixed(0) +
+            "px;animation-delay:" +
+            (Math.random() * 0.12).toFixed(2) +
+            's"></span>';
+        }
+        return html;
+      }
+
 function tabHerreria(p) {
         p.fusionSel = p.fusionSel.filter((it) => p.bolsa.includes(it));
         const slotsF = [0, 1, 2]
@@ -1124,20 +1154,33 @@ function tabHerreria(p) {
               (nRapidas > 1 ? "s" : "") +
               ")</button>"
             : '<button class="btn" disabled title="Necesitas 3 objetos de la misma rareza">⚡ Fusión rápida (0)</button>';
+        const golpe = golpeMartilloPendiente;
+        golpeMartilloPendiente = false;
+        const escena =
+          '<div class="herreria-escena">' +
+          '<div class="herreria-martillo' +
+          (golpe ? " golpea" : "") +
+          '"></div>' +
+          '<div class="herreria-yunque"></div>' +
+          '<div class="fusion-slots-forja">' +
+          slotsF +
+          "</div>" +
+          (golpe ? chispasForjaHtml() : "") +
+          "</div>";
         const fusion =
           '<div class="fusion-panel">' +
-          '<b style="font-size:.9rem;color:var(--vespero)">⚒ Herrería — Mesa de fusión</b>' +
+          '<b style="font-size:.9rem;color:var(--vespero)">⚒ Herrería</b>' +
           '<div style="font-size:.72rem;color:var(--ceniza);margin-top:2px">Combina 3 objetos de la MISMA rareza (mismo slot, y misma clase si son armas) → evolucionan a la superior.</div>' +
-          '<div class="fusion-slots">' +
-          slotsF +
+          '<div style="text-align:center;margin-top:8px">' +
           fusBtn +
           "</div>" +
-          '<div style="margin-top:8px">' +
+          '<div style="margin-top:8px;text-align:center">' +
           btnRapida +
           ' <span style="font-size:.7rem;color:var(--ceniza)">coge 3 iguales automáticamente (prioriza la rareza más alta)</span></div>' +
           avisoF +
           "</div>";
         return (
+          escena +
           fusion +
           '<h3 style="margin-top:14px;font-size:.85rem;color:var(--vespero)">Bolsa de ' +
           escHtml(p.nombre) +
