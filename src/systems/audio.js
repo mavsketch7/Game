@@ -373,6 +373,13 @@ export function sfxAterrizaje(rareza) {
         oscBrillo.stop(now + 0.16);
       }
 
+// Música sintetizada de la mazmorra (el "chun chun chun" de fondo) --
+// DESACTIVADA de momento a petición del usuario. Se deja MUS_NOTAS/
+// tickMusica intactos para poder reactivarla o sustituirla más adelante
+// (p.ej. por una pista real, como ya se hizo con la ambiental de la
+// selección -- ver iniciarMusicaAmbiente()/detenerMusicaAmbiente()).
+const MUSICA_SINTETIZADA_ACTIVA = false;
+
 const MUS_NOTAS = [
         110, 0, 146.83, 0, 130.81, 0, 164.81, 0, 110, 0, 98, 0, 130.81, 0,
         123.47, 0,
@@ -418,7 +425,8 @@ export function aplicarMusica() {
         if (!audioCtx) return;
         const objetivo = AJ.silencio ? 0 : AJ.volMaster * AJ.volMus;
         musGain.gain.setTargetAtTime(objetivo, audioCtx.currentTime, 0.4);
-        if (!musTimer && !AJ.silencio) musTimer = setInterval(tickMusica, 430);
+        if (MUSICA_SINTETIZADA_ACTIVA && !musTimer && !AJ.silencio)
+          musTimer = setInterval(tickMusica, 430);
         if (audioAmbiente && ambienteActivo) {
           audioAmbiente.volume = AJ.silencio ? 0 : AJ.volMaster * AJ.volMus * VOL_AMBIENTE;
           if (AJ.silencio) audioAmbiente.pause();
@@ -433,7 +441,7 @@ export function aplicarMusica() {
 // ni con los SFX de la UI). Motor aparte de musGain/tickMusica de arriba
 // (HTMLAudioElement en vez de un buffer de Web Audio) porque es un loop
 // largo de un archivo real, no notas sintetizadas nota a nota.
-const VOL_AMBIENTE = 0.7;
+const VOL_AMBIENTE = 0.35;
 let audioAmbiente = null;
 let ambienteActivo = false;
 
