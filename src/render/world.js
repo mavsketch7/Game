@@ -3,7 +3,7 @@ import { H, TAU, W, animGlobal, avanzarAnimGlobal, cx } from "../core/canvas.js"
 import { ELEMENTOS, MAX_PLANTA, RAREZAS, SALA_H, SALA_W, SUPS } from "../core/constants.js";
 import { G } from "../core/state.js";
 import { renderHUD } from "./hud.js";
-import { CAMPFIRE_CELDA, FROST_GUARDIAN, KENNEY_TILE, SANGRE_ANIM, SANGRE_DUR, SHEETS, SPR, assetOK, campfireFrame, iconoDrop, remateMuroPatron, wallPatron } from "./sprites.js";
+import { CAMPFIRE_CELDA, FROST_GUARDIAN, KENNEY_TILE, PILAR_HIELO_FRAMES, SANGRE_ANIM, SANGRE_DUR, SHEETS, SPR, assetOK, campfireFrame, iconoDrop, remateMuroPatron, wallPatron } from "./sprites.js";
 import { drawSprite } from "./spriteDraw.js";
 import { renderEnemigo, renderJugador, renderMira } from "./character.js";
 import { clamp, hexRgba, ri, rnd } from "../utils/helpers.js";
@@ -644,25 +644,28 @@ export function render() {
           cx.beginPath();
           cx.ellipse(pl.x, pl.y + pl.r * 0.55, pl.r, pl.r * 0.4, 0, 0, TAU);
           cx.fill();
-          if (pl.hielo && assetOK("pilar_hielo")) {
+          if (pl.hielo && PILAR_HIELO_FRAMES.length) {
             // Pilares de hielo del Guardián (ver core/loop.js: rama "hielo")
-            // -- sprite real cuadrado, a diferencia de la columna genérica
-            // de mazmorra (más alta que ancha), así que se dimensiona por
-            // igual en ancho/alto en vez de por aspect ratio de la fuente.
-            const src = SHEETS["pilar_hielo"];
+            // -- 8 fases de rotura reales (hoja en rejilla, ver
+            // PILAR_HIELO_FRAMES en render/sprites.js: intacto -> grietas ->
+            // se parte -> escombro), elegidas por fracción de vida perdida,
+            // no por tiempo. Cada fase ya viene recortada y anclada por su
+            // borde inferior (mismo criterio de bbox-alfa que los frames del
+            // héroe), así que basta con dibujarla con el mismo ancla que
+            // usaba el sprite estático anterior (borde inferior en
+            // pl.y + pl.r*0.5, junto al centro de la sombra).
+            const frac = pl.hpMax > 0 ? 1 - pl.hp / pl.hpMax : 0;
+            const idxFase = Math.min(
+              PILAR_HIELO_FRAMES.length - 1,
+              Math.floor(frac * PILAR_HIELO_FRAMES.length),
+            );
+            const frame = PILAR_HIELO_FRAMES[idxFase];
             const ps = pl.r * 2.6;
-            // El PNG llena casi todo el cuadro 74x74 (comprobado por
-            // píxeles: apenas hay margen transparente abajo), así que el
-            // borde inferior de la imagen ES la base visual del pilar --
-            // se ancla igual que el fallback procedural de abajo (borde
-            // inferior en pl.y + pl.r*0.5, cerca del centro de la sombra
-            // en pl.y + pl.r*0.55) en vez del 0.92 de antes, que lo dejaba
-            // flotando muy por encima de su propia sombra.
             const psY = pl.y + pl.r * 0.5 - ps;
             cx.save();
             cx.imageSmoothingEnabled = false;
             if (pl.hurtT > 0) cx.globalAlpha = 0.85;
-            cx.drawImage(src, pl.x - ps / 2, psY, ps, ps);
+            cx.drawImage(frame, pl.x - ps / 2, psY, ps, ps);
             if (pl.hurtT > 0) {
               cx.globalCompositeOperation = "source-atop";
               cx.fillStyle = "rgba(255,255,255,.55)";

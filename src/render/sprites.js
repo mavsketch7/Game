@@ -15,7 +15,6 @@ function assetUrl(name) {
 
 const ASSET_SRC = {
         jefe_cerdo: assetUrl("jefe_cerdo"),
-        pilar_hielo: assetUrl("frost-column"),
         suelo1: assetUrl("suelo1"),
         suelo2: assetUrl("suelo2"),
         // Hoguera real (30 frames de 32x32 en 960x32) -- misma hoja que ya
@@ -1034,6 +1033,55 @@ function cargarHojaFrames(url, destSize, onListo, sinAmpliar) {
   im.src = url;
 }
 
+// Como cargarHojaFrames(), pero para una hoja en REJILLA (cols x rows,
+// celdas no necesariamente cuadradas) en vez de una sola fila de cuadros
+// -- caso de las fases de rotura del pilar de hielo (4x2: pilar intacto ->
+// grietas -> se parte -> escombro). Mismo criterio de recorte por bbox
+// alfa y una única escala compartida (del bbox más alto, normalmente el
+// primer fotograma intacto) que cargarHojaFrames(): así cada fase se ve
+// más PEQUEÑA que la anterior a medida que se rompe (el efecto deseado,
+// no un artefacto a corregir) pero SIEMPRE con los pies en el mismo borde
+// inferior del cuadro de destino, para que drawSpriteBottom()/el dibujo
+// manual con ancla inferior no la haga "flotar" al cambiar de fase.
+function cargarHojaFramesGrid(url, cols, rows, destSize, onListo) {
+  const im = new Image();
+  im.onload = () => {
+    const cellW = im.naturalWidth / cols;
+    const cellH = im.naturalHeight / rows;
+    const tmp = document.createElement("canvas");
+    tmp.width = cellW;
+    tmp.height = cellH;
+    const tg = tmp.getContext("2d");
+    tg.imageSmoothingEnabled = false;
+    const frameCount = cols * rows;
+    const bboxes = [];
+    for (let i = 0; i < frameCount; i++) {
+      const fx = i % cols, fy = Math.floor(i / cols);
+      tg.clearRect(0, 0, cellW, cellH);
+      tg.drawImage(im, fx * cellW, fy * cellH, cellW, cellH, 0, 0, cellW, cellH);
+      bboxes.push(bboxAlfa(tg, cellW, cellH) || { x: 0, y: 0, w: cellW, h: cellH });
+    }
+    const altoMax = Math.max(...bboxes.map((b) => b.h));
+    const escala = (destSize * 0.86) / altoMax;
+    const frames = [];
+    for (let i = 0; i < frameCount; i++) {
+      const fx = i % cols, fy = Math.floor(i / cols);
+      const b = bboxes[i];
+      const c = document.createElement("canvas");
+      c.width = destSize;
+      c.height = destSize;
+      const g = c.getContext("2d");
+      g.imageSmoothingEnabled = false;
+      const w = b.w * escala, h = b.h * escala;
+      g.drawImage(im, fx * cellW + b.x, fy * cellH + b.y, b.w, b.h, (destSize - w) / 2, destSize - h, w, h);
+      frames.push(c);
+    }
+    onListo(frames);
+  };
+  im.onerror = () => console.warn("No se pudo cargar hoja de animación (rejilla): " + url);
+  im.src = url;
+}
+
 // Como cargarHojaFrames(), pero para packs que entregan UN archivo PNG
 // suelto por fotograma (en vez de una única hoja horizontal) -- caso del
 // Frost Guardian: idle_1..6.png, walk_1..10.png, etc. A diferencia de
@@ -1534,6 +1582,17 @@ for (const anim in FROST_ANIM) {
     FROST_GUARDIAN[anim] = frames;
   });
 }
+
+// Fases de rotura del pilar de hielo del Guardián (ver render/world.js,
+// bucle de G.pilares, rama pl.hielo): hoja en rejilla 4x2 -- fila 1 intacto
+// -> grietas, fila 2 se parte -> escombro en el suelo (8 fases en total).
+// world.js elige la fase por fracción de vida perdida (pl.hp/pl.hpMax), no
+// por tiempo. destSize=160: resolución de horneado generosa, luego
+// world.js la reescala al tamaño real del pilar (pl.r*2.6) al dibujar.
+export const PILAR_HIELO_FRAMES = [];
+cargarHojaFramesGrid(assetUrl("pilar-hielo-frames"), 4, 2, 160, (frames) => {
+  PILAR_HIELO_FRAMES.push(...frames);
+});
 
 // Imagen/escala BASE de un enemigo por tipo (sin la animación de correr de
 // MOB_RUN, que sustituye el frame según el reloj de animación -- eso es
