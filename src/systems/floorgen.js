@@ -909,6 +909,17 @@ export function iniciarPlanta() {
               // algo por encima del cap normal de jefe (130).
               j.vel = Math.min(Math.round(j.vel * 1.7), 155);
               j.pasoT = 0;
+              // Descarta cualquier pilar decorativo genérico (ponPilares()
+              // más arriba, antes de que existiera el jefe) que haya caído
+              // encima o pegado al Guardián -- confirmado por Playwright:
+              // esto, no un desajuste del sprite, era la causa real del
+              // "el jefe flota sobre la sombra": la sombra de ESE pilar
+              // (independiente, no `pl.hielo`) asomaba por detrás del
+              // Guardián mientras el pilar en sí quedaba oculto tras su
+              // sprite, mucho más ancho que su hitbox.
+              G.pilares = G.pilares.filter(
+                (pl) => Math.hypot(pl.x - j.x, pl.y - j.y) > j.r + 90,
+              );
             }
             // 4-5 hogueras estratégicas repartidas en pentágono alrededor
             // del centro de la sala -- pedido expreso del usuario para
