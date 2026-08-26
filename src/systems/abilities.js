@@ -343,7 +343,15 @@ export function danoPilar(pl, dmg) {
             fxParticulas(pl.x, pl.y - 10, 16, "#57496f");
           }
           G.shake = Math.max(G.shake, 3);
-          G.decals.push({ x: pl.x, y: pl.y });
+          // Sin decal de escombro para los pilares de hielo del Guardián:
+          // confirmado por Playwright (reproducido a propósito), su sombra
+          // (rgba(0,0,0,.3), ver el bucle de G.decals en render/world.js) se
+          // ve casi siempre cerca del jefe -- este se pasa la pelea entera
+          // moviéndose por la misma sala pequeña donde él mismo hizo caer
+          // esos pilares -- y se confunde con una segunda sombra "flotando"
+          // detrás de la suya propia. El resto de pilares de la mazmorra
+          // conservan su escombro como siempre.
+          if (!pl.hielo) G.decals.push({ x: pl.x, y: pl.y });
           if (Math.random() < PROB_DROP_MITICO_ROTO)
             dropItem(pl.x, pl.y, genObjetoMitico(G.planta || 1));
           else if (Math.random() < 0.35)
