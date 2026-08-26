@@ -11,7 +11,7 @@ import { construirMenu } from "../ui/menu.js";
 import { banner, toast } from "../ui/notifications.js";
 import { mostrar, ocultar } from "../ui/overlays.js";
 import { az, clamp, ri, rnd } from "../utils/helpers.js";
-import { iniciarMusicaAmbiente, sfxDropEpico } from "./audio.js";
+import { ajustarVolumenAmbienteEnPartida, iniciarMusicaAmbiente, sfxDropEpico } from "./audio.js";
 
 export function genItem(f, forceRar, forceSlot) {
         // mayor probabilidad de rarezas altas en plantas avanzadas
@@ -218,6 +218,9 @@ function reiniciar() {
         M.slots.forEach((s) => (s.listo = false));
         construirMenu();
         mostrar("menu");
+        // vuelve al volumen normal de la ambiental (más baja mientras se
+        // jugaba, ver nuevaPartida() en core/gameflow.js)
+        ajustarVolumenAmbienteEnPartida(false);
         iniciarMusicaAmbiente();
       }
 

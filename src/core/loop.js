@@ -11,7 +11,7 @@ import { sfx, sfxAterrizaje, sfxCargaCuchillo, sfxCargaLista, sfxGolpeAire, sfxG
 import { esJefe, escalaEnemigo } from "../systems/bosses.js";
 import { curarP, danoAEnemigo, danoAlJugador, explotarBomber, ganarXP, masCercano, matarEnemigo, spawnClon, spawnEnemigo, statsTot, tipoAleatorio, vivos } from "../systems/combat.js";
 import { JUICE, actualizarEstilo } from "../systems/juice.js";
-import { aplicarLimites, colisionaMuro, cruzarPuerta, dentroForma, iniciarPlanta, salaActual } from "../systems/floorgen.js";
+import { aplicarLimites, colisionaMuro, cruzarPuerta, dentroForma, iniciarPlanta, ponPilares, salaActual } from "../systems/floorgen.js";
 import { leerInput } from "../systems/input.js";
 import { finPartida, plantaDespejada } from "../systems/loot.js";
 import { abrirCartasParaJugador } from "../ui/cardsOverlay.js";
@@ -56,6 +56,39 @@ const FLECHA_CLAVADA_VIDA = 5;
 function agregarFlechaClavada(entry) {
   G.flechasClavadas.push(entry);
   if (G.flechasClavadas.length > MAX_FLECHAS_CLAVADAS) G.flechasClavadas.shift();
+}
+
+// Guardián de Hielo (primer jefe real, planta 5 -- ver systems/floorgen.js
+// para el spawn, render/character.js para el sprite): al cruzar cada
+// umbral de vida caen `n` pilares de hielo (ver ponPilares() en
+// systems/floorgen.js, ya reutilizable tal cual en pleno combate) y
+// aparecen un par de mobs. Mientras alguno de esos pilares siga en pie,
+// el jefe se regenera -- e.hpTopeFase evita que la regeneración
+// recupere más allá del punto en que se cruzó el umbral (nunca deshace
+// daño ya hecho ANTES de esta fase, solo el de la fase actual si se
+// tarda demasiado en romper los pilares).
+function iniciarFaseHielo(e, n) {
+  ponPilares(G.planta, n);
+  const nuevos = G.pilares.slice(-n);
+  const hpPilar = 70 + G.planta * 3;
+  nuevos.forEach((pl) => {
+    pl.hielo = true;
+    // ponPilares() sortea destructible al ~55% -- estos SIEMPRE tienen
+    // que poder romperse (si no, la fase queda imposible de superar y el
+    // jefe se regenera para siempre).
+    pl.destructible = true;
+    pl.hp = hpPilar;
+    pl.hpMax = hpPilar;
+  });
+  e.pilaresFase = nuevos;
+  e.regenerando = true;
+  e.hpTopeFase = e.hp;
+  const nMobs = G.planta >= 50 ? 3 : 2;
+  for (let k = 0; k < nMobs; k++) spawnEnemigo(G.planta, tipoAleatorio(G.planta), false);
+  fxOnda(e.x, e.y, 70, "#7fc9e8");
+  fxParticulas(e.x, e.y, 18, "#bfe6f7");
+  G.shake = Math.max(G.shake, 5);
+  banner("¡El Guardián de Hielo invoca " + n + " pilares de hielo!");
 }
 
 export function update(dt) {
@@ -898,6 +931,66 @@ export function update(dt) {
               continue;
             }
 
+            // ===== PRIMER JEFE REAL: Guardián de Hielo =====
+            if (arq === "hielo") {
+              e.atkCdJefe -= dt;
+              if (e.atkT > 0) {
+                e.atkT -= dt;
+                const prog = 1 - e.atkT / e.atkTMax;
+                // el golpe conecta a mitad del gesto de ataque (real,
+                // 14 frames) -- da tiempo a leer el telegrafiado en vez
+                // de hacer daño en el instante 0 del swing.
+                if (prog >= 0.5 && !e.atkGolpeo) {
+                  e.atkGolpeo = true;
+                  for (const p of vivos())
+                    if (Math.hypot(p.x - e.x, p.y - e.y) < e.r + p.r + 16)
+                      danoAlJugador(p, e.atk, { melee: e });
+                  fxOnda(e.x, e.y, e.r + 20, "#bfe6f7");
+                  G.shake = Math.max(G.shake, 3);
+                }
+                e.moviendose = false;
+              } else if (d > e.r + obj.r + 10) {
+                e.x += Math.cos(dir) * velF * dt;
+                e.y += Math.sin(dir) * velF * dt;
+                e.moviendose = true;
+              } else {
+                e.moviendose = false;
+                if (e.atkCdJefe <= 0) {
+                  e.atkT = e.atkTMax;
+                  e.atkGolpeo = false;
+                  e.atkCdJefe = 2.2;
+                }
+              }
+
+              // umbrales de vida: caen pilares + mobs, empieza a regenerar
+              if (!e.faseHielo1 && e.hp < e.hpMax * 0.75) {
+                e.faseHielo1 = true;
+                iniciarFaseHielo(e, 2);
+              } else if (!e.faseHielo2 && e.hp < e.hpMax * 0.5) {
+                e.faseHielo2 = true;
+                iniciarFaseHielo(e, 4);
+              } else if (!e.faseHielo3 && e.hp < e.hpMax * 0.25) {
+                e.faseHielo3 = true;
+                iniciarFaseHielo(e, 6);
+              }
+
+              if (e.regenerando) {
+                const algunPilarVivo = e.pilaresFase.some((pl) => G.pilares.includes(pl));
+                if (!algunPilarVivo) {
+                  e.regenerando = false;
+                  toast("❄ Pilares destruidos — el Guardián vuelve a ser vulnerable", "#7fd4c1");
+                } else {
+                  e.hp = Math.min(e.hpTopeFase, e.hp + e.hpMax * 0.04 * dt);
+                }
+              }
+
+              e.x = clamp(e.x, e.r, SALA_W - e.r);
+              e.y = clamp(e.y, e.r, SALA_H - e.r);
+              aplicarLimites(e);
+              e.hurtT = Math.max(0, e.hurtT - dt);
+              continue;
+            }
+
             // --- teletransporte + siega del Segador ---
             if ((arq === "segador" || arq === "eterno") && e.segT > 0) {
               e.segT -= dt;
@@ -1453,6 +1546,22 @@ export function update(dt) {
             }
           }
           if (!cerca) G.nivelLock = false;
+        }
+
+        // Portal de pruebas (QA, ?qa=1): salta directo a la planta 5 (el
+        // Guardián de Hielo) para poder probar el jefe sin bajar 4 plantas
+        // primero cada vez. Mismo patrón de "lock" que el NPC de nivel de
+        // arriba.
+        if (G.escena === "lobby" && G.jefeNpcQA) {
+          const cercaJefeQA = vivos().some(
+            (q) => Math.hypot(G.jefeNpcQA.x - q.x, G.jefeNpcQA.y - q.y) < 50,
+          );
+          if (cercaJefeQA && !G.jefeQALock && !G.pausa) {
+            G.jefeQALock = true;
+            G.planta = 5;
+            iniciarPlanta();
+          }
+          if (!cercaJefeQA) G.jefeQALock = false;
         }
 
         // fogata

@@ -8,11 +8,18 @@ import { TAU } from "../core/canvas.js";
 // escala de sala real.
 import { NOMBRE_CLIMA, SALA_H as H, SALA_W as W } from "../core/constants.js";
 import { G } from "../core/state.js";
+import { detenerMusicaJefe, iniciarMusicaJefe } from "./audio.js";
 import { DESC_ARQ, arquetipoJefe, esJefe, nombreJefe } from "./bosses.js";
 import { spawnClon, spawnEnemigo, statsTot, tipoAleatorio } from "./combat.js";
 import { CUSTOM_ROOMS } from "./customRooms.js";
 import { banner, toast } from "../ui/notifications.js";
 import { az, clamp, ri, rnd } from "../utils/helpers.js";
+
+// El Magnate (cerdo presidencial, jefe secreto de la planta 5) queda "en
+// standby" desde que el Guardián de Hielo pasó a ser el jefe real de esa
+// planta -- código intacto, solo inalcanzable, para un desbloqueo secreto
+// futuro (mismo patrón que MUSICA_SINTETIZADA_ACTIVA en systems/audio.js).
+const MAGNATE_ACTIVO = false;
 
 function climaAleatorio() {
         const r = Math.random();
@@ -355,7 +362,7 @@ function ponObjeto(o) {
         }
       }
 
-function ponPilares(f, nPil) {
+export function ponPilares(f, nPil) {
         for (let i = 0; i < nPil; i++) {
           const dest = Math.random() < 0.55;
           let px2,
@@ -764,6 +771,11 @@ export function cruzarPuerta(pu) {
 export function iniciarPlanta() {
         const f = G.planta,
           N = G.players.length;
+        // Pista de jefe: se para SIEMPRE al cambiar de planta (no-op si no
+        // estaba sonando) -- si la nueva planta también es de jefe, se
+        // vuelve a arrancar más abajo (crossfade limpio en vez de dejarla
+        // sonando de una planta de jefe a la siguiente sin transición).
+        detenerMusicaJefe();
         G.escena = "torre";
         G.projs = [];
         G.areas = [];
@@ -782,6 +794,10 @@ export function iniciarPlanta() {
         G.skinNpc = null;
         G.arenaNpc = null;
         G.nivelNpc = null;
+        // Portal de pruebas (QA) del vestíbulo -- sin esto se quedaba
+        // "pegado" en pantalla al entrar a cualquier planta (mismo bug
+        // que ya evitan mercader/skinNpc/arenaNpc/nivelNpc de arriba).
+        G.jefeNpcQA = null;
         G.clima = climaAleatorio();
 
         function reposicionarJugadores() {
@@ -807,6 +823,10 @@ export function iniciarPlanta() {
         }
 
         if (esJefe(f)) {
+          // Crossfade a la pista del jefe (fundido de entrada natural,
+          // ver iniciarMusicaJefe() en systems/audio.js) al entrar en su
+          // sala.
+          iniciarMusicaJefe();
           // plantas de jefe: SIEMPRE una única sala, sin mazmorra multi-sala
           G.mazmorra = null;
           G.puertas = [];
@@ -825,8 +845,9 @@ export function iniciarPlanta() {
           ponPilares(f, ri(1, 2));
           ponHazardsYObjetos(f);
           const arq = arquetipoJefe(f);
-          if (f === 5) {
-            // JEFE SECRETO: El Magnate (cerdo presidencial) — solo para test en planta 5
+          if (MAGNATE_ACTIVO && f === 5) {
+            // JEFE SECRETO: El Magnate (cerdo presidencial) — en standby,
+            // ver MAGNATE_ACTIVO arriba.
             spawnEnemigo(f, "jefe");
             const j = G.enemigos.find((e) => e.jefe);
             if (j) {
@@ -837,6 +858,30 @@ export function iniciarPlanta() {
               j.hpMax = j.hp;
               j.r = 40;
               j.knockRes = 0.5;
+            }
+            for (let i = 0; i < N - 1; i++) spawnEnemigo(f, "melee");
+          } else if (f === 5) {
+            // PRIMER JEFE REAL: Guardián de Hielo -- ver core/loop.js
+            // (rama arq==="hielo") para la IA y la mecánica de pilares,
+            // render/character.js para el sprite animado real.
+            spawnEnemigo(f, "jefe");
+            const j = G.enemigos.find((e) => e.jefe);
+            if (j) {
+              j.arquetipo = "hielo";
+              j.nombre = "Guardián de Hielo";
+              j.hp = Math.round(j.hp * 1.5);
+              j.hpMax = j.hp;
+              j.r = 46;
+              j.knockRes = 0.6;
+              j.faseHielo1 = false;
+              j.faseHielo2 = false;
+              j.faseHielo3 = false;
+              j.regenerando = false;
+              j.pilaresFase = [];
+              j.atkT = 0;
+              j.atkTMax = 0.9;
+              j.moviendose = false;
+              j.atkCdJefe = 1.4;
             }
             for (let i = 0; i < N - 1; i++) spawnEnemigo(f, "melee");
           } else if (arq === "gemelos") {
@@ -874,7 +919,7 @@ export function iniciarPlanta() {
           : "";
         const nombreJ = esJefe(f)
           ? f === 5
-            ? "El Magnate"
+            ? (MAGNATE_ACTIVO ? "El Magnate" : "Guardián de Hielo")
             : nombreJefe(f)
           : "";
         banner(
@@ -887,9 +932,11 @@ export function iniciarPlanta() {
         if (esJefe(f))
           toast(
             f === 5
-              ? "⭐ JEFE SECRETO: El Magnate ha aparecido…"
+              ? (MAGNATE_ACTIVO
+                  ? "⭐ JEFE SECRETO: El Magnate ha aparecido…"
+                  : "❄ El Guardián de Hielo despierta… destruye sus pilares para evitar que se regenere")
               : "Arquetipo: " + DESC_ARQ[arquetipoJefe(f)],
-            f === 5 ? "#e9b45c" : "#c07be0",
+            f === 5 ? "#7fc9e8" : "#c07be0",
           );
       }
 

@@ -8,7 +8,7 @@ import { render } from "../render/world.js";
 import { activarParry, castSup, disparoSecundario, esquivar, habilidad, interactuar, transformar } from "../systems/abilities.js";
 import { statsTot } from "../systems/combat.js";
 import { M, keys, mouse } from "../systems/input.js";
-import { aplicarMusica, detenerMusicaAmbiente, initAudio, reanudarAudio, sfx } from "../systems/audio.js";
+import { ajustarVolumenAmbienteEnPartida, aplicarMusica, initAudio, reanudarAudio, sfx } from "../systems/audio.js";
 import { invSel } from "../ui/inventory.js";
 import { construirMenu, mostrarLobbySincronizado } from "../ui/menu.js";
 import { banner, toast } from "../ui/notifications.js";
@@ -404,7 +404,7 @@ function onDataCliente(d) {
           recibirSnapshot(d.s);
         } else if (d.t === "inicio") {
           ocultar("menu");
-          detenerMusicaAmbiente();
+          ajustarVolumenAmbienteEnPartida(true);
         } else if (d.t === "fin") {
           /* el host controla el fin */
         } else if (d.t === "fx") {
@@ -737,7 +737,7 @@ function recibirSnapshot(s) {
         // PeerJS: en cuanto llega el primer estado real de partida, se
         // oculta el menú igualmente (recibir estado implica que ya empezó).
         ocultar("menu");
-        detenerMusicaAmbiente();
+        ajustarVolumenAmbienteEnPartida(true);
       }
 
 export function netEnviarInputCliente() {

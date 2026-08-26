@@ -9,7 +9,7 @@ import { ELEMENTOS, RAREZAS, SUPS } from "../core/constants.js";
 import { G } from "../core/state.js";
 import { fxParticulas } from "./effects.js";
 import { drawSprite, drawSpriteBottom } from "./spriteDraw.js";
-import { ARQUERO_BOW, ARQUERO_BOW_DUR, ATTACK_DUR, CONFIG_ARMA, DASH_ATTACK_DUR, ESC_FORMA, MIRA_IZQUIERDA_POR_DEFECTO, MOB_RUN, MUERTE_DUR, OFFHAND_IMG, OFFHAND_IMG_RAREZA, REAL_ATTACK, REAL_ATTACK_ANCLA, REAL_DASH, REAL_DASH_ANCLA, REAL_HURT, REAL_IDLE, REAL_IDLE_ANCLA, REAL_MUERTE, REAL_RUN, REAL_RUN_ANCLA, REAL_SPECIAL, REAL_SPECIAL_ANCLA, REAL_SPRITE_SCALE, SHEETS, SPECIAL_ATTACK_DUR, SPR, SPR_FORMAS, TAM_HEROE, WEAPON_IMG, WEAPON_IMG_RAREZA, assetOK, seleccionarImgEnemigo, spriteJugador } from "./sprites.js";
+import { ARQUERO_BOW, ARQUERO_BOW_DUR, ATTACK_DUR, CONFIG_ARMA, DASH_ATTACK_DUR, ESC_FORMA, FROST_GUARDIAN, MARTILLO_THOR_IMG, MIRA_IZQUIERDA_POR_DEFECTO, MOB_RUN, MUERTE_DUR, OFFHAND_IMG, OFFHAND_IMG_RAREZA, REAL_ATTACK, REAL_ATTACK_ANCLA, REAL_DASH, REAL_DASH_ANCLA, REAL_HURT, REAL_IDLE, REAL_IDLE_ANCLA, REAL_MUERTE, REAL_RUN, REAL_RUN_ANCLA, REAL_SPECIAL, REAL_SPECIAL_ANCLA, REAL_SPRITE_SCALE, SHEETS, SPECIAL_ATTACK_DUR, SPR, SPR_FORMAS, TAM_HEROE, WEAPON_IMG, WEAPON_IMG_RAREZA, assetOK, seleccionarImgEnemigo, spriteJugador } from "./sprites.js";
 import { CARGA_ARQ_MAX, CARGA_ARQ_ZONA, CARGA_CUCH_MAX, CARGA_CUCH_ZONA, groundTarget } from "../systems/abilities.js";
 import { masCercano } from "../systems/combat.js";
 import { mouse } from "../systems/input.js";
@@ -798,7 +798,13 @@ export function renderJugador(p) {
             // esquemático de abajo (CONFIG_ARMA.grip ~ empuñadura,
             // CONFIG_ARMA.reach ~ alcance de la hoja) para que encaje con
             // puntería/swing.
-            const wimg = (WEAPON_IMG_RAREZA[p.rol] && WEAPON_IMG_RAREZA[p.rol][rarezaArma]) || WEAPON_IMG[p.rol];
+            // Martillo de Thor: imagen propia ya teñida azul zafiro (ver
+            // MARTILLO_THOR_IMG en sprites.js), en vez del lookup normal
+            // por rareza -- se ve distinto a un Épico normal a propósito.
+            const wimg =
+              (eq.arma && eq.arma.id === "martillo_thor" && MARTILLO_THOR_IMG) ||
+              (WEAPON_IMG_RAREZA[p.rol] && WEAPON_IMG_RAREZA[p.rol][rarezaArma]) ||
+              WEAPON_IMG[p.rol];
             if (wimg) {
               const ww0 = wimg.naturalWidth || wimg.width, wh0 = wimg.naturalHeight || wimg.height;
               const { grip: GRIP, reach: REACH } = CONFIG_ARMA;
@@ -1304,6 +1310,56 @@ export function renderEnemigo(e) {
           cx.font = "800 12px Alegreya Sans";
           cx.textAlign = "center";
           cx.fillText("⭐ " + e.nombre + " ⭐", e.x, e.y - e.r * 2.5);
+          return;
+        }
+        // PRIMER JEFE REAL: Guardián de Hielo (ver core/loop.js: rama
+        // arq==="hielo", systems/floorgen.js: spawn en planta 5). Sprite
+        // real animado (FROST_GUARDIAN, ver render/sprites.js), a
+        // diferencia del resto de jefes (dibujo procedural reescalado) --
+        // mismo criterio de "pipeline aparte" que la rama `cerdo` de
+        // arriba. Prioridad de animación: herido > ataque > caminar > idle
+        // (mismo criterio que calcularPoseHeroe con el héroe), indexada
+        // por animGlobal -- los enemigos no llevan reloj de animación
+        // propio, mismo idiom que MOB_RUN más abajo.
+        if (e.arquetipo === "hielo") {
+          let frames = FROST_GUARDIAN.idle;
+          if (e.hurtT > 0 && FROST_GUARDIAN.hit.length) {
+            const prog = clamp(1 - e.hurtT / 0.12, 0, 0.999);
+            frames = FROST_GUARDIAN.hit;
+            frames = [frames[Math.floor(prog * frames.length)]];
+          } else if (e.atkT > 0 && FROST_GUARDIAN.atk.length) {
+            const prog = clamp(1 - e.atkT / (e.atkTMax || 0.9), 0, 0.999);
+            frames = [FROST_GUARDIAN.atk[Math.floor(prog * FROST_GUARDIAN.atk.length)]];
+          } else if (e.moviendose && FROST_GUARDIAN.walk.length) {
+            frames = FROST_GUARDIAN.walk;
+          }
+          const fr = frames[Math.floor(animGlobal * 8) % frames.length] || frames[0];
+          const obj3 = masCercano(e.x, e.y);
+          const flip3 = obj3 ? e.x > obj3.x : false;
+          cx.save();
+          cx.imageSmoothingEnabled = false;
+          if (e.hurtT > 0) cx.globalAlpha = 0.8;
+          cx.translate(e.x, e.y);
+          if (flip3) cx.scale(-1, 1);
+          if (fr) cx.drawImage(fr, -fr.width / 2, -fr.height * 0.86);
+          cx.restore();
+          cx.globalAlpha = 1;
+          // barra de vida + nombre (mismo patrón que El Magnate arriba)
+          const w3 = 90;
+          cx.fillStyle = "#0d0b15";
+          cx.fillRect(e.x - w3 / 2, e.y - e.r * 2.5, w3, 6);
+          cx.fillStyle = "#7fc9e8";
+          cx.fillRect(e.x - w3 / 2, e.y - e.r * 2.5, (w3 * Math.max(0, e.hp)) / e.hpMax, 6);
+          cx.fillStyle = "#bfe6f7";
+          cx.font = "800 12px Alegreya Sans";
+          cx.textAlign = "center";
+          cx.fillText("❄ " + e.nombre + " ❄", e.x, e.y - e.r * 2.7);
+          if (e.regenerando) {
+            const nVivos = (e.pilaresFase || []).filter((pl) => G.pilares.includes(pl)).length;
+            cx.fillStyle = "#eaf6ff";
+            cx.font = "700 11px Alegreya Sans";
+            cx.fillText("🧊 Destruye los pilares (" + nVivos + " restantes)", e.x, e.y - e.r * 2.7 - 14);
+          }
           return;
         }
         // Sprite/escala base (ver seleccionarImgEnemigo en render/sprites.js

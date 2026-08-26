@@ -391,6 +391,13 @@ export function matarEnemigo(e, duenio) {
         fxDesintegrarEnemigo(e, duenio ? e.x > duenio.x : false);
         fxParticulas(e.x, e.y, e.jefe ? 10 : 4, "#6a5a94");
         if (e.jefe) G.shake = Math.max(G.shake, 8);
+        // Guardián de Hielo: sin sprite procedural que desintegrar (ver
+        // seleccionarImgEnemigo en render/sprites.js, devuelve null para
+        // arquetipo "hielo") -- colapso real con sus propios frames de
+        // muerte en su lugar (ver render/world.js: fx "jefeMuere").
+        if (e.arquetipo === "hielo") {
+          G.fx.push({ tipo: "jefeMuere", x: e.x, y: e.y, t: 0.9, t0: 0.9 });
+        }
         // Bonus de estilo al rematar (ver systems/juice.js) -- premia
         // cerrar el combo con una muerte, no solo encadenar golpes.
         aplicarEstilo(false, true);
@@ -426,7 +433,23 @@ export function matarEnemigo(e, duenio) {
             val,
           });
         }
-        if (e.jefe || e.mini || Math.random() < 0.22) {
+        if (e.arquetipo === "hielo") {
+          // Guardián de Hielo: drop GARANTIZADO y siempre el mismo arma
+          // única (no el roll aleatorio de jefe normal) -- base de stats
+          // via genItem (mismo escalado que cualquier arma Épica de esta
+          // planta), nombre/efecto/id sobreescritos a mano. El efecto real
+          // (congela 4s en golpe básico) se comprueba en golpeArco()
+          // (systems/abilities.js) vía tieneEfecto(p,"congela_thor").
+          const martillo = genItem(G.planta, 2, "arma");
+          martillo.clase = null;
+          martillo.nombre = "Martillo de Thor";
+          martillo.id = "martillo_thor";
+          martillo.efecto = "congela_thor";
+          martillo.efectoDesc = "Ataques básicos: congela al enemigo golpeado 4s";
+          martillo.kills = 0;
+          const pvM = posDropValida(e.x, e.y);
+          dropItem(pvM.x, pvM.y, martillo);
+        } else if (e.jefe || e.mini || Math.random() < 0.22) {
           const it2 = genItem(G.planta + (e.jefe ? 2 : e.mini ? 1 : 0));
           if (e.jefe)
             it2.rareza = Math.max(

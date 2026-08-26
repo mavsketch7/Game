@@ -6,8 +6,9 @@ import { AJ } from "./settings.js";
 import { G, setG } from "./state.js";
 import { NET, netBroadcast } from "../net/peer.js";
 import {
+  ajustarVolumenAmbienteEnPartida,
   aplicarMusica,
-  detenerMusicaAmbiente,
+  detenerMusicaJefe,
   initAudio,
   reanudarAudio,
 } from "../systems/audio.js";
@@ -21,7 +22,11 @@ export function nuevaPartida() {
         initAudio();
         reanudarAudio();
         aplicarMusica();
-        detenerMusicaAmbiente();
+        // La ambiental ya NO se corta al empezar a jugar -- sigue de
+        // fondo, solo más baja (pedido explícito del usuario). Vuelve a
+        // su volumen normal al terminar la run y regresar al menú (ver
+        // reiniciar() en systems/loot.js).
+        ajustarVolumenAmbienteEnPartida(true);
         const players = [];
         M.slots.forEach((s, i) => {
           if (!s.activo) return;
@@ -198,6 +203,9 @@ export function nuevaPartida() {
       }
 
 export function iniciarLobby() {
+        // por si se abandona la partida estando en la sala de un jefe
+        // (ver abandonarPartida() más abajo) -- no-op si no estaba sonando.
+        detenerMusicaJefe();
         G.escena = "lobby";
         G.planta = 0;
         G.estilo = { puntos: 0, rango: 0, rangoT: 0, decayT: 0 };
@@ -246,6 +254,10 @@ export function iniciarLobby() {
           // las tarjetas de mejora sin tener que jugar plantas enteras. Ver
           // el disparador de proximidad en core/loop.js.
           G.nivelNpc = { x: 250, y: 90 };
+          // Portal de pruebas (QA): salta directo a la planta 5 (el
+          // Guardián de Hielo) sin tener que bajar 4 plantas primero. Ver
+          // el disparador de proximidad en core/loop.js.
+          G.jefeNpcQA = { x: 250, y: 160 };
         }
         G.tiendaLock = false;
         G.skinLock = false;

@@ -15,6 +15,7 @@ function assetUrl(name) {
 
 const ASSET_SRC = {
         jefe_cerdo: assetUrl("jefe_cerdo"),
+        pilar_hielo: assetUrl("frost-column"),
         suelo1: assetUrl("suelo1"),
         suelo2: assetUrl("suelo2"),
         // "pilar" quitado: el archivo que usaba (pilar.png) resultó ser en
@@ -231,6 +232,10 @@ const iconoDropCache = {};
 // legendario (índice 4+) funciona sola, sin tocar este código ni añadir
 // más variantes a mano -- el color sale siempre de RAREZAS[rareza].col.
 export function iconoDrop(item) {
+        // Martillo de Thor: icono real (azul zafiro, ver MARTILLO_THOR_IMG
+        // más abajo) en vez del icono procedural genérico de "arma" -- si
+        // todavía no cargó, cae al procedural de siempre por esta vez.
+        if (item.id === "martillo_thor" && MARTILLO_THOR_IMG) return MARTILLO_THOR_IMG;
         const rows = ICONO_DROP_ROWS[item.slot];
         if (!rows) return SPR.gema[Math.min(item.rareza, SPR.gema.length - 1)];
         const clave = item.slot + "|" + item.rareza;
@@ -1011,6 +1016,67 @@ function cargarHojaFrames(url, destSize, onListo, sinAmpliar) {
   im.src = url;
 }
 
+// Como cargarHojaFrames(), pero para packs que entregan UN archivo PNG
+// suelto por fotograma (en vez de una única hoja horizontal) -- caso del
+// Frost Guardian: idle_1..6.png, walk_1..10.png, etc. A diferencia de
+// cargarHojaFrames(), aquí NO se recorta cada frame por su bbox alfa:
+// medido a mano (comparando varios frames de idle/walk/atk/hit), este
+// pack ya viene con el personaje alineado en un "escenario" de tamaño
+// fijo -- los pies caen SIEMPRE en el mismo píxel relativo, sea cual sea
+// la animación (excepto la muerte, que se hunde progresivamente, normal).
+// Recortar por bbox como con el héroe destruiría esa alineación y metería
+// jitter entre animaciones -- en vez de eso se escala el escenario entero
+// UNA sola vez (misma escala/posición para todos los frames) según
+// `pieFrac`/`centroFrac` (fracción del alto/ancho original donde caen los
+// pies/el centro, medidos una vez por pack). El lienzo de salida respeta
+// el aspect ratio real del frame (no fuerza un cuadrado como destSize en
+// cargarHojaFrames) para no recortar los brazos/armas que se extienden
+// mucho durante un ataque.
+function cargarFramesSueltos(urls, destAlto, pieFrac, centroFrac, onListo) {
+  const imgs = new Array(urls.length);
+  let restantes = urls.length;
+  const onUna = () => {
+    if (--restantes === 0) componer();
+  };
+  urls.forEach((url, i) => {
+    const im = new Image();
+    im.onload = () => {
+      imgs[i] = im;
+      onUna();
+    };
+    im.onerror = () => {
+      console.warn("No se pudo cargar frame suelto: " + url);
+      onUna();
+    };
+    im.src = url;
+  });
+  function componer() {
+    const base = imgs.find((im) => im);
+    if (!base) {
+      onListo([]);
+      return;
+    }
+    const fw = base.naturalWidth, fh = base.naturalHeight;
+    const canvasAlto = destAlto;
+    const canvasAncho = Math.round(destAlto * (fw / fh));
+    const escala = (canvasAlto * 0.86) / fh;
+    const w = fw * escala, h = fh * escala;
+    const destX = canvasAncho / 2 - centroFrac * w;
+    const destY = canvasAlto * 0.86 - pieFrac * h;
+    const frames = imgs.map((im) => {
+      if (!im) return null;
+      const c = document.createElement("canvas");
+      c.width = canvasAncho;
+      c.height = canvasAlto;
+      const g = c.getContext("2d");
+      g.imageSmoothingEnabled = false;
+      g.drawImage(im, destX, destY, w, h);
+      return c;
+    });
+    onListo(frames);
+  }
+}
+
 // Nombres de hitbox (herramienta de marcado del plugin de Aseprite que se
 // está usando -- exporta un JSON con un hitbox con nombre por punto
 // marcado, agrupado por tag de animación, ver puntosPorFrameDesdeHitbox
@@ -1424,6 +1490,33 @@ for (const keyMob in MOB_RUN_SRC) {
   cargarHojaFrames(MOB_RUN_SRC[keyMob], destSize, (frames) => { MOB_RUN[keyMob] = frames; });
 }
 
+// Guardián de Hielo (primer jefe real del juego, planta 5 -- ver
+// core/loop.js: rama `arq === "hielo"`, systems/floorgen.js). Pack de
+// sprites reales entregado como PNG sueltos (uno por fotograma, no una
+// hoja), ver cargarFramesSueltos() más arriba. FROST_PIE_FRAC/
+// FROST_CENTRO_FRAC salen de medir a mano la posición de los pies/centro
+// en frames de varias animaciones distintas (todas 192x128, pies siempre
+// en y≈109, centro en x≈95-98 -- el pack viene pre-alineado en un
+// "escenario" fijo).
+const FROST_PIE_FRAC = 109 / 128;
+const FROST_CENTRO_FRAC = 0.5;
+// r=46 (TIPOS.jefe normal usa r=28, ver systems/combat.js): imponente a
+// propósito, es el primer jefe real del juego.
+const FROST_ALTO = 46 * FACTOR_SPRITE_HITBOX;
+const FROST_ANIM = { idle: 6, walk: 10, atk: 14, hit: 7, death: 16 };
+const FROST_CARPETA = { idle: "idle", walk: "walk", atk: "1_atk", hit: "take_hit", death: "death" };
+
+export const FROST_GUARDIAN = { idle: [], walk: [], atk: [], hit: [], death: [] };
+
+for (const anim in FROST_ANIM) {
+  const n = FROST_ANIM[anim];
+  const carpeta = FROST_CARPETA[anim];
+  const urls = Array.from({ length: n }, (_, i) => assetUrl(`enemies/frost_guardian/${carpeta}_${i + 1}`));
+  cargarFramesSueltos(urls, FROST_ALTO, FROST_PIE_FRAC, FROST_CENTRO_FRAC, (frames) => {
+    FROST_GUARDIAN[anim] = frames;
+  });
+}
+
 // Imagen/escala BASE de un enemigo por tipo (sin la animación de correr de
 // MOB_RUN, que sustituye el frame según el reloj de animación -- eso es
 // dinámico por fotograma y se queda en renderEnemigo, ver render/character.js).
@@ -1437,7 +1530,7 @@ for (const keyMob in MOB_RUN_SRC) {
 export function seleccionarImgEnemigo(e) {
   if (e.dummy) return { img: SPR.dummy, esc: 1, mobKey: null };
   if (e.clonRol) return { img: SPR[e.clonRol], esc: 1, mobKey: null };
-  if (e.cerdo || e.portalT > 0) return null;
+  if (e.cerdo || e.portalT > 0 || e.arquetipo === "hielo") return null;
   if (e.jefe) return { img: SPR.brutoB, esc: G.planta >= 90 ? 2.4 : 2, mobKey: null };
   if (e.mini) return { img: SPR.slime, esc: 1.7, mobKey: null };
   if (e.tipo === "tank") return { img: SPR.golem, esc: e.elite ? 1.5 : 1.25, mobKey: "golem" };
@@ -1524,6 +1617,22 @@ for (const rolOff in OFFHAND_SRC) {
     OFFHAND_IMG_RAREZA[rolOff] = variantes;
   });
 }
+
+// Martillo de Thor (drop garantizado del Guardián de Hielo, ver
+// systems/combat.js: matarEnemigo()) -- "azul zafiro" pedido a propósito
+// distinto del morado normal de Épico (RAREZAS[2].col), así que se tiñe
+// aparte en vez de tirar de WEAPON_IMG_RAREZA.clerigo[2]. Carga su propia
+// copia de la base hammer-wood (en vez de esperar a WEAPON_IMG.clerigo,
+// que se rellena de forma asíncrona más arriba y podría no estar listo
+// todavía) para no depender de orden de carga entre los dos.
+export let MARTILLO_THOR_IMG = null;
+(() => {
+  const im = new Image();
+  im.onload = () => {
+    MARTILLO_THOR_IMG = teñirSprite(im, "#2f5fd6");
+  };
+  im.src = WEAPON_SRC.clerigo;
+})();
 
 // Arco del arquero: 3 frames (relajado / medio tensado / tensado del todo,
 // recortados de Weapons/Wood/Wood.png -- animación real "Bow", no un giro de

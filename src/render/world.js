@@ -3,7 +3,7 @@ import { H, TAU, W, animGlobal, avanzarAnimGlobal, cx } from "../core/canvas.js"
 import { ELEMENTOS, MAX_PLANTA, RAREZAS, SALA_H, SALA_W, SUPS } from "../core/constants.js";
 import { G } from "../core/state.js";
 import { renderHUD } from "./hud.js";
-import { KENNEY_TILE, SANGRE_ANIM, SANGRE_DUR, SHEETS, SPR, assetOK, iconoDrop, remateMuroPatron, wallPatron } from "./sprites.js";
+import { FROST_GUARDIAN, KENNEY_TILE, SANGRE_ANIM, SANGRE_DUR, SHEETS, SPR, assetOK, iconoDrop, remateMuroPatron, wallPatron } from "./sprites.js";
 import { drawSprite } from "./spriteDraw.js";
 import { renderEnemigo, renderJugador, renderMira } from "./character.js";
 import { clamp, hexRgba, ri, rnd } from "../utils/helpers.js";
@@ -617,7 +617,26 @@ export function render() {
           cx.beginPath();
           cx.ellipse(pl.x, pl.y + pl.r * 0.55, pl.r, pl.r * 0.4, 0, 0, TAU);
           cx.fill();
-          if (assetOK("pilar")) {
+          if (pl.hielo && assetOK("pilar_hielo")) {
+            // Pilares de hielo del Guardián (ver core/loop.js: rama "hielo")
+            // -- sprite real cuadrado, a diferencia de la columna genérica
+            // de mazmorra (más alta que ancha), así que se dimensiona por
+            // igual en ancho/alto en vez de por aspect ratio de la fuente.
+            const src = SHEETS["pilar_hielo"];
+            const ps = pl.r * 2.6;
+            cx.save();
+            cx.imageSmoothingEnabled = false;
+            if (pl.hurtT > 0) cx.globalAlpha = 0.85;
+            cx.drawImage(src, pl.x - ps / 2, pl.y - ps * 0.92, ps, ps);
+            if (pl.hurtT > 0) {
+              cx.globalCompositeOperation = "source-atop";
+              cx.fillStyle = "rgba(255,255,255,.55)";
+              cx.fillRect(pl.x - ps / 2, pl.y - ps * 0.92, ps, ps);
+              cx.globalCompositeOperation = "source-over";
+              cx.globalAlpha = 1;
+            }
+            cx.restore();
+          } else if (assetOK("pilar")) {
             const src = SHEETS["pilar"];
             const ph = pl.r * 3.4,
               pw = (ph * src.naturalWidth) / src.naturalHeight;
@@ -635,6 +654,24 @@ export function render() {
               cx.globalAlpha = 1;
             }
             cx.restore();
+          } else if (pl.hielo) {
+            // Fallback procedural con paleta helada (celeste/blanco) por si
+            // el sprite no cargó -- mismo mecanismo que el fallback morado
+            // de abajo, solo cambia la paleta.
+            cx.fillStyle = pl.hurtT > 0 ? "#eaf6ff" : "#5f9fc9";
+            cx.fillRect(
+              pl.x - pl.r * 0.85,
+              pl.y - pl.r * 1.5,
+              pl.r * 1.7,
+              pl.r * 2,
+            );
+            cx.fillStyle = "#bfe6f7";
+            cx.beginPath();
+            cx.ellipse(pl.x, pl.y - pl.r * 1.5, pl.r * 0.95, pl.r * 0.35, 0, 0, TAU);
+            cx.fill();
+            cx.beginPath();
+            cx.ellipse(pl.x, pl.y + pl.r * 0.5, pl.r * 0.9, pl.r * 0.32, 0, 0, TAU);
+            cx.fill();
           } else {
             const cuerpo = pl.destructible ? "#3d3555" : "#2d2742";
             const tapa = pl.destructible ? "#4d4468" : "#3a3453";
@@ -894,6 +931,24 @@ export function render() {
           cx.fillStyle = "#e9b45c";
           cx.font = "700 10px Alegreya Sans";
           cx.fillText("NPC NIVEL (QA) — acércate", m.x, m.y + 34);
+        }
+        // Portal de pruebas (QA, ?qa=1): salto directo a la planta 5
+        if (G.jefeNpcQA) {
+          const mj = G.jefeNpcQA;
+          for (let k = 0; k < 3; k++) {
+            cx.strokeStyle = "rgba(127,201,232," + (0.9 - k * 0.28) + ")";
+            cx.lineWidth = 3;
+            cx.beginPath();
+            cx.arc(mj.x, mj.y, 22 - k * 6 + Math.sin(animGlobal * 3 + k) * 2, 0, TAU);
+            cx.stroke();
+          }
+          cx.fillStyle = "#bfe6f7";
+          cx.font = "700 13px Alegreya Sans";
+          cx.textAlign = "center";
+          cx.fillText("❄", mj.x, mj.y + 5);
+          cx.fillStyle = "#7fc9e8";
+          cx.font = "700 10px Alegreya Sans";
+          cx.fillText("PORTAL AL JEFE (QA) — acércate", mj.x, mj.y + 34);
         }
 
         // drops
@@ -1454,6 +1509,24 @@ export function render() {
             const tamP = f.tam || 4;
             cx.fillRect(f.x - tamP / 2, f.y - tamP / 2, tamP, tamP);
             cx.globalAlpha = 1;
+          } else if (f.tipo === "jefeMuere") {
+            // Colapso del Guardián de Hielo: el enemigo ya se quitó de
+            // G.enemigos al instante (como cualquier otro, ver matarEnemigo
+            // en systems/combat.js) -- este fx de un solo disparo reutiliza
+            // sus propios frames de muerte reales (FROST_GUARDIAN.death,
+            // ver render/sprites.js) como una animación aparte en vez de
+            // retrasar su desaparición/loot.
+            const frames = FROST_GUARDIAN.death;
+            if (frames.length) {
+              const idx = Math.min(frames.length - 1, Math.floor((1 - k) * frames.length));
+              const fr = frames[idx];
+              if (fr) {
+                cx.globalAlpha = k;
+                cx.imageSmoothingEnabled = false;
+                cx.drawImage(fr, f.x - fr.width / 2, f.y - fr.height * 0.86);
+                cx.globalAlpha = 1;
+              }
+            }
           }
         }
 

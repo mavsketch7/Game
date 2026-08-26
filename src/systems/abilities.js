@@ -217,6 +217,14 @@ function golpeArco(p, dir, rango, arco, dmgBase, esPicaro) {
                 e.poisonOwner = p;
               }
               if (p.imbuido) aplicarImbuido(p, e);
+              // Martillo de Thor (drop garantizado del Guardián de Hielo,
+              // ver systems/combat.js: matarEnemigo()) -- congela de
+              // verdad (stunT, no solo ralentiza) al enemigo golpeado por
+              // un ataque básico. Solo aquí: golpeArco() es el único
+              // punto de daño melee básico, proyectiles/habilidades no
+              // pasan por aquí.
+              if (!e.dummy && tieneEfecto(p, "congela_thor"))
+                e.stunT = Math.max(e.stunT, 4);
             }
           }
         }

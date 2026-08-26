@@ -1,5 +1,6 @@
 // Auto-generated during the modularization refactor (2026-07-23).
 import { AJ } from "../core/settings.js";
+import { clamp } from "../utils/helpers.js";
 
 let audioCtx = null,
         musGain = null,
@@ -428,22 +429,57 @@ export function aplicarMusica() {
         if (MUSICA_SINTETIZADA_ACTIVA && !musTimer && !AJ.silencio)
           musTimer = setInterval(tickMusica, 430);
         if (audioAmbiente && ambienteActivo) {
-          audioAmbiente.volume = AJ.silencio ? 0 : AJ.volMaster * AJ.volMus * VOL_AMBIENTE;
+          audioAmbiente.volume = volObjetivoAmbiente();
           if (AJ.silencio) audioAmbiente.pause();
           else if (audioAmbiente.paused) audioAmbiente.play().catch(() => {});
         }
+        if (audioJefe && jefeActivo) {
+          audioJefe.volume = volObjetivoJefe();
+          if (AJ.silencio) audioJefe.pause();
+          else if (audioJefe.paused) audioJefe.play().catch(() => {});
+        }
       }
 
+// Fundido genérico por interpolación en el tiempo (no por pasos fijos de
+// volumen/frame, que dependían del refresco de pantalla) -- un solo
+// mecanismo reutilizado por la ambiental, la pista de jefe, y sus
+// fundidos de entrada Y salida, en vez de 4 bucles casi iguales.
+function fundirAudio(el, objetivo, dur, alTerminar) {
+  const inicio = el.volume;
+  const t0 = performance.now();
+  function paso(ahora) {
+    const k = dur > 0 ? clamp((ahora - t0) / (dur * 1000), 0, 1) : 1;
+    // Clamp explícito: con dos fundidos solapados sobre el MISMO elemento
+    // (p.ej. iniciarMusicaAmbiente() + ajustarVolumenAmbienteEnPartida()
+    // casi seguidos, cada uno con su propio `inicio` capturado en
+    // instantes distintos) el valor intermedio puede salirse un poco de
+    // [0,1] -- el setter de HTMLMediaElement.volume lanza si eso pasa,
+    // así que se recorta siempre, no solo por estética.
+    el.volume = clamp(inicio + (objetivo - inicio) * k, 0, 1);
+    if (k < 1) requestAnimationFrame(paso);
+    else if (alTerminar) alTerminar();
+  }
+  requestAnimationFrame(paso);
+}
+
 // Música ambiental real (archivo, no sintetizada) para la pantalla de
-// carga ("Pulsa Start") y la selección de personaje -- suena "flojito"
-// a propósito (VOL_AMBIENTE la reduce aparte del volMaster/volMus, para
-// que quede de fondo y no compita con la música sintetizada de la Torre
-// ni con los SFX de la UI). Motor aparte de musGain/tickMusica de arriba
-// (HTMLAudioElement en vez de un buffer de Web Audio) porque es un loop
-// largo de un archivo real, no notas sintetizadas nota a nota.
+// carga ("Pulsa Start"), la selección de personaje Y AHORA TAMBIÉN
+// durante la partida (antes se cortaba de golpe al entrar a jugar, ver
+// nuevaPartida() en core/gameflow.js -- pedido explícito: que se quede
+// sonando, solo más bajo). `volAmbienteContexto` es ese "más bajo": 1 en
+// selección, reducido ya jugando, 0 mientras suena una pista de jefe
+// (ver iniciarMusicaJefe() más abajo, that's a crossfade real, no un
+// silencio). VOL_AMBIENTE (aparte de volMaster/volMus) la mantiene de
+// fondo a propósito, sin competir con SFX/pista de jefe.
 const VOL_AMBIENTE = 0.35;
 let audioAmbiente = null;
 let ambienteActivo = false;
+let volAmbienteContexto = 1;
+
+function volObjetivoAmbiente() {
+  if (AJ.silencio || !ambienteActivo) return 0;
+  return AJ.volMaster * AJ.volMus * VOL_AMBIENTE * volAmbienteContexto;
+}
 
 function crearAudioAmbiente() {
   if (audioAmbiente) return audioAmbiente;
@@ -458,26 +494,74 @@ function crearAudioAmbiente() {
 
 // Llamar tras initAudio()/reanudarAudio() (primer gesto real del usuario --
 // ver cerrarInicio() en ui/intro.js), así arranca en cuanto el navegador
-// deja sonar audio. Sigue sonando durante toda la selección de personaje
-// hasta que detenerMusicaAmbiente() la corta al empezar la partida.
+// deja sonar audio. Con fundido de entrada (antes saltaba directa al
+// volumen final) para que el primer sonido de la partida no sea un golpe
+// seco. Sigue sonando durante selección Y partida -- ya no hay
+// detenerMusicaAmbiente() en nuevaPartida(), solo un volumen más bajo
+// (ver ajustarVolumenAmbienteEnPartida()).
 export function iniciarMusicaAmbiente() {
   ambienteActivo = true;
   const a = crearAudioAmbiente();
-  if (!AJ.silencio) a.play().catch(() => {});
-  aplicarMusica();
+  if (!AJ.silencio) {
+    a.play().catch(() => {});
+    fundirAudio(a, volObjetivoAmbiente(), 1.2);
+  }
 }
 
-// Fundido de salida suave (en vez de corte seco) al entrar a la mazmorra,
-// donde toma el relevo la música sintetizada de la Torre. Ver nuevaPartida()
-// en core/gameflow.js.
+// Fundido de salida suave (en vez de corte seco). Ya NO se llama al
+// empezar partida (ver core/gameflow.js/net/peer.js) -- queda para
+// cuando de verdad haga falta apagarla del todo (p.ej. silencio manual).
 export function detenerMusicaAmbiente() {
   ambienteActivo = false;
   if (!audioAmbiente || audioAmbiente.paused) return;
-  const a = audioAmbiente;
-  const paso = () => {
-    a.volume = Math.max(0, a.volume - 0.04);
-    if (a.volume > 0) requestAnimationFrame(paso);
-    else a.pause();
-  };
-  requestAnimationFrame(paso);
+  fundirAudio(audioAmbiente, 0, 0.6, () => audioAmbiente.pause());
+}
+
+// Baja (bajo=true, al empezar a jugar) o restaura (bajo=false, al volver
+// de la sala de un jefe) el volumen de la ambiental SIN pararla -- sigue
+// sonando en bucle de fondo todo el rato, solo cambia de nivel.
+export function ajustarVolumenAmbienteEnPartida(bajo) {
+  volAmbienteContexto = bajo ? 0.45 : 1;
+  if (audioAmbiente && ambienteActivo && !AJ.silencio)
+    fundirAudio(audioAmbiente, volObjetivoAmbiente(), 1.5);
+}
+
+// Pista de la sala del jefe (archivo real, un loop por jefe -- de momento
+// solo el Guardián de Hielo). Crossfade con la ambiental: al entrar la
+// ambiental baja a 0 (sin pausarse del todo hasta llegar ahí, lista para
+// retomar) mientras esta sube; al salir, al revés. Mismo mecanismo de
+// HTMLAudioElement + fundirAudio() que la ambiental.
+const VOL_JEFE = 0.55;
+let audioJefe = null;
+let jefeActivo = false;
+
+function volObjetivoJefe() {
+  if (AJ.silencio || !jefeActivo) return 0;
+  return AJ.volMaster * AJ.volMus * VOL_JEFE;
+}
+
+function crearAudioJefe() {
+  if (audioJefe) return audioJefe;
+  audioJefe = new Audio(`${import.meta.env.BASE_URL}assets/audio/musica_jefe_1.mp3`);
+  audioJefe.loop = true;
+  audioJefe.volume = 0;
+  document.body.appendChild(audioJefe);
+  return audioJefe;
+}
+
+export function iniciarMusicaJefe() {
+  jefeActivo = true;
+  const a = crearAudioJefe();
+  if (!AJ.silencio) {
+    a.play().catch(() => {});
+    fundirAudio(a, volObjetivoJefe(), 1.5);
+  }
+  if (audioAmbiente && ambienteActivo) fundirAudio(audioAmbiente, 0, 1.5);
+}
+
+export function detenerMusicaJefe() {
+  jefeActivo = false;
+  if (audioJefe && !audioJefe.paused) fundirAudio(audioJefe, 0, 1.5, () => audioJefe.pause());
+  if (audioAmbiente && ambienteActivo && !AJ.silencio)
+    fundirAudio(audioAmbiente, volObjetivoAmbiente(), 1.5);
 }
