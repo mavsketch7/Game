@@ -18,6 +18,14 @@ const ASSET_SRC = {
         pilar_hielo: assetUrl("frost-column"),
         suelo1: assetUrl("suelo1"),
         suelo2: assetUrl("suelo2"),
+        // Hoguera real (30 frames de 32x32 en 960x32) -- misma hoja que ya
+        // anima por CSS en la pantalla de selección (.icono-fogata en
+        // styles/main.css). Vive en public/assets/ui/seleccion/, no en
+        // assets/sprites/, así que no usa assetUrl() (que asume esa ruta).
+        // Pedido expreso del usuario: usarla para TODAS las hogueras del
+        // juego (el descanso de G.fogata y las de alivio de la sala del
+        // Guardián de Hielo, ver G.hoguerasJefe en systems/floorgen.js).
+        campfire_sheet: `${import.meta.env.BASE_URL}assets/ui/seleccion/campfire-sheet.png`,
         // "pilar" quitado: el archivo que usaba (pilar.png) resultó ser en
         // realidad un fragmento de pared, no una columna independiente --
         // ver conversación. assetOK("pilar") en world.js sigue devolviendo
@@ -46,6 +54,16 @@ for (const k in ASSET_SRC) {
 export function assetOK(k) {
         return SHEETS[k] && SHEETS[k].complete && SHEETS[k].naturalWidth > 0;
       }
+
+// Frame actual de campfire_sheet (30 frames de 32x32, bucle de 1.8s -- ver
+// ASSET_SRC arriba): por tiempo REAL, no por animGlobal (que otras hojas
+// usan a un ritmo distinto), así que cualquier hoguera dibujada en
+// cualquier sala respira exactamente igual que el icono CSS de selección.
+export const CAMPFIRE_FRAMES = 30;
+export const CAMPFIRE_CELDA = 32;
+export function campfireFrame() {
+  return Math.floor((performance.now() / 1800) * CAMPFIRE_FRAMES) % CAMPFIRE_FRAMES;
+}
 
 export function buildSprite(rows, pal, esc) {
         esc = esc || 3;
@@ -232,10 +250,10 @@ const iconoDropCache = {};
 // legendario (índice 4+) funciona sola, sin tocar este código ni añadir
 // más variantes a mano -- el color sale siempre de RAREZAS[rareza].col.
 export function iconoDrop(item) {
-        // Martillo de Thor: icono real (azul zafiro, ver MARTILLO_THOR_IMG
+        // Martillo de Frhor: icono real (azul zafiro, ver MARTILLO_FRHOR_IMG
         // más abajo) en vez del icono procedural genérico de "arma" -- si
         // todavía no cargó, cae al procedural de siempre por esta vez.
-        if (item.id === "martillo_thor" && MARTILLO_THOR_IMG) return MARTILLO_THOR_IMG;
+        if (item.id === "martillo_frhor" && MARTILLO_FRHOR_IMG) return MARTILLO_FRHOR_IMG;
         const rows = ICONO_DROP_ROWS[item.slot];
         if (!rows) return SPR.gema[Math.min(item.rareza, SPR.gema.length - 1)];
         const clave = item.slot + "|" + item.rareza;
@@ -1618,18 +1636,18 @@ for (const rolOff in OFFHAND_SRC) {
   });
 }
 
-// Martillo de Thor (drop garantizado del Guardián de Hielo, ver
+// Martillo de Frhor (drop garantizado del Guardián de Hielo, ver
 // systems/combat.js: matarEnemigo()) -- "azul zafiro" pedido a propósito
 // distinto del morado normal de Épico (RAREZAS[2].col), así que se tiñe
 // aparte en vez de tirar de WEAPON_IMG_RAREZA.clerigo[2]. Carga su propia
 // copia de la base hammer-wood (en vez de esperar a WEAPON_IMG.clerigo,
 // que se rellena de forma asíncrona más arriba y podría no estar listo
 // todavía) para no depender de orden de carga entre los dos.
-export let MARTILLO_THOR_IMG = null;
+export let MARTILLO_FRHOR_IMG = null;
 (() => {
   const im = new Image();
   im.onload = () => {
-    MARTILLO_THOR_IMG = teñirSprite(im, "#2f5fd6");
+    MARTILLO_FRHOR_IMG = teñirSprite(im, "#2f5fd6");
   };
   im.src = WEAPON_SRC.clerigo;
 })();

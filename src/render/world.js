@@ -3,7 +3,7 @@ import { H, TAU, W, animGlobal, avanzarAnimGlobal, cx } from "../core/canvas.js"
 import { ELEMENTOS, MAX_PLANTA, RAREZAS, SALA_H, SALA_W, SUPS } from "../core/constants.js";
 import { G } from "../core/state.js";
 import { renderHUD } from "./hud.js";
-import { FROST_GUARDIAN, KENNEY_TILE, SANGRE_ANIM, SANGRE_DUR, SHEETS, SPR, assetOK, iconoDrop, remateMuroPatron, wallPatron } from "./sprites.js";
+import { CAMPFIRE_CELDA, FROST_GUARDIAN, KENNEY_TILE, SANGRE_ANIM, SANGRE_DUR, SHEETS, SPR, assetOK, campfireFrame, iconoDrop, remateMuroPatron, wallPatron } from "./sprites.js";
 import { drawSprite } from "./spriteDraw.js";
 import { renderEnemigo, renderJugador, renderMira } from "./character.js";
 import { clamp, hexRgba, ri, rnd } from "../utils/helpers.js";
@@ -122,6 +122,37 @@ function dibujarAvisoTecla(x, y, letra) {
         cx.textBaseline = "middle";
         cx.fillText(letra, 0, 1);
         cx.restore();
+      }
+
+// Hoguera real (campfire_sheet, ver render/sprites.js) centrada en (x,y) a
+// tamaño `tam` -- usada por TODAS las hogueras del juego (descanso y
+// alivio de la sala del jefe). Si el asset aún no cargó, cae a un dibujo
+// procedural sencillo (llama triangular) en vez de dejar un hueco vacío.
+function dibujarHogueraReal(x, y, tam) {
+        if (assetOK("campfire_sheet")) {
+          const frame = campfireFrame();
+          cx.imageSmoothingEnabled = false;
+          cx.drawImage(
+            SHEETS.campfire_sheet,
+            frame * CAMPFIRE_CELDA,
+            0,
+            CAMPFIRE_CELDA,
+            CAMPFIRE_CELDA,
+            x - tam / 2,
+            y - tam / 2,
+            tam,
+            tam,
+          );
+        } else {
+          const fl = Math.sin(animGlobal * 14) * 2;
+          cx.fillStyle = "#ff7d4d";
+          cx.beginPath();
+          cx.moveTo(x - tam * 0.35, y + tam * 0.4);
+          cx.lineTo(x, y - tam * 0.5 - fl);
+          cx.lineTo(x + tam * 0.35, y + tam * 0.4);
+          cx.closePath();
+          cx.fill();
+        }
       }
 
 export function render() {
@@ -315,27 +346,13 @@ export function render() {
           }
         }
 
-        // fogata
+        // fogata (de descanso, un único uso por planta)
         if (G.fogata) {
           const f = G.fogata;
           cx.fillStyle = "#4a3b2c";
           cx.fillRect(f.x - 10, f.y + 2, 20, 5);
           if (!G.fogataUsada) {
-            const fl = Math.sin(animGlobal * 14) * 2;
-            cx.fillStyle = "#ff7d4d";
-            cx.beginPath();
-            cx.moveTo(f.x - 7, f.y + 3);
-            cx.lineTo(f.x, f.y - 12 - fl);
-            cx.lineTo(f.x + 7, f.y + 3);
-            cx.closePath();
-            cx.fill();
-            cx.fillStyle = "#ffd27f";
-            cx.beginPath();
-            cx.moveTo(f.x - 4, f.y + 3);
-            cx.lineTo(f.x, f.y - 6 - fl);
-            cx.lineTo(f.x + 4, f.y + 3);
-            cx.closePath();
-            cx.fill();
+            dibujarHogueraReal(f.x, f.y - 2, 16);
             if (G.descansoT > 0) {
               cx.strokeStyle = "#7fd4c1";
               cx.lineWidth = 3;
@@ -354,6 +371,16 @@ export function render() {
             cx.fillRect(f.x - 4, f.y - 3, 8, 4);
           }
         }
+
+        // hogueras de alivio de la sala del Guardián de Hielo (contrarrestan
+        // el debuff de congelación ambiental por proximidad, ver
+        // core/loop.js) -- siempre encendidas, no se "usan" ni se apagan.
+        if (G.hoguerasJefe)
+          for (const hg of G.hoguerasJefe) {
+            cx.fillStyle = "#4a3b2c";
+            cx.fillRect(hg.x - 10, hg.y + 2, 20, 5);
+            dibujarHogueraReal(hg.x, hg.y - 2, 16);
+          }
 
         // portal / escalera hacia arriba
         if (G.portal) {
@@ -624,14 +651,22 @@ export function render() {
             // igual en ancho/alto en vez de por aspect ratio de la fuente.
             const src = SHEETS["pilar_hielo"];
             const ps = pl.r * 2.6;
+            // El PNG llena casi todo el cuadro 74x74 (comprobado por
+            // píxeles: apenas hay margen transparente abajo), así que el
+            // borde inferior de la imagen ES la base visual del pilar --
+            // se ancla igual que el fallback procedural de abajo (borde
+            // inferior en pl.y + pl.r*0.5, cerca del centro de la sombra
+            // en pl.y + pl.r*0.55) en vez del 0.92 de antes, que lo dejaba
+            // flotando muy por encima de su propia sombra.
+            const psY = pl.y + pl.r * 0.5 - ps;
             cx.save();
             cx.imageSmoothingEnabled = false;
             if (pl.hurtT > 0) cx.globalAlpha = 0.85;
-            cx.drawImage(src, pl.x - ps / 2, pl.y - ps * 0.92, ps, ps);
+            cx.drawImage(src, pl.x - ps / 2, psY, ps, ps);
             if (pl.hurtT > 0) {
               cx.globalCompositeOperation = "source-atop";
               cx.fillStyle = "rgba(255,255,255,.55)";
-              cx.fillRect(pl.x - ps / 2, pl.y - ps * 0.92, ps, ps);
+              cx.fillRect(pl.x - ps / 2, psY, ps, ps);
               cx.globalCompositeOperation = "source-over";
               cx.globalAlpha = 1;
             }
@@ -740,7 +775,12 @@ export function render() {
             cx.beginPath();
             cx.ellipse(o.x, o.y + 12, 11, 4, 0, 0, TAU);
             cx.fill();
-            drawSprite(SPR.barril, o.x, o.y);
+            // Tamaño explícito (antes drawSprite() centrado al tamaño
+            // nativo del sprite, 24x24 -- "enorme" según el usuario) en
+            // vez de por esc uniforme: así se puede pedir 16x22 (más alto
+            // que ancho, como un barril real) sin rediseñar BARRIL_ROWS.
+            cx.imageSmoothingEnabled = false;
+            cx.drawImage(SPR.barril, o.x - 8, o.y - 11, 16, 22);
           } else if (o.tipo === "cofre") {
             cx.fillStyle = "rgba(0,0,0,.3)";
             cx.beginPath();

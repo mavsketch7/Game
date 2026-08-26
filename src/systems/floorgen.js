@@ -21,6 +21,12 @@ import { az, clamp, ri, rnd } from "../utils/helpers.js";
 // futuro (mismo patrón que MUSICA_SINTETIZADA_ACTIVA en systems/audio.js).
 const MAGNATE_ACTIVO = false;
 
+// Radio de "calor" alrededor de cada hoguera de la sala del Guardián de
+// Hielo (ver G.hoguerasJefe más abajo y el debuff de congelación en
+// core/loop.js) dentro del cual el jugador se libra de la ralentización
+// ambiental de esa sala.
+export const RADIO_HOGUERA_JEFE = 140;
+
 function climaAleatorio() {
         const r = Math.random();
         return r < 0.45
@@ -798,6 +804,10 @@ export function iniciarPlanta() {
         // "pegado" en pantalla al entrar a cualquier planta (mismo bug
         // que ya evitan mercader/skinNpc/arenaNpc/nivelNpc de arriba).
         G.jefeNpcQA = null;
+        // Hogueras de alivio del Guardián de Hielo (ver debuff de
+        // congelación en core/loop.js) -- solo existen en su sala, se
+        // limpian aquí para no arrastrarse a otras plantas.
+        G.hoguerasJefe = [];
         G.clima = climaAleatorio();
 
         function reposicionarJugadores() {
@@ -879,9 +889,35 @@ export function iniciarPlanta() {
               j.regenerando = false;
               j.pilaresFase = [];
               j.atkT = 0;
-              j.atkTMax = 0.9;
+              // Windup/cadencia de ataque más rápidos que la versión inicial
+              // (0.9s/2.2s) -- pedido expreso del usuario ("tiene que
+              // atacar algo más rápido a melee"). El render escala la
+              // animación real (14 frames) a este mismo atkTMax, así que
+              // acortarlo también acelera el gesto visual, no solo el daño.
+              j.atkTMax = 0.62;
               j.moviendose = false;
-              j.atkCdJefe = 1.4;
+              j.atkCdJefe = 0.9;
+              // Más rápido que el jefe genérico (TIPOS.jefe.velM=0.75 lo
+              // deja muy lento) -- pedido expreso ("y moverse"). Tope propio
+              // algo por encima del cap normal de jefe (130).
+              j.vel = Math.min(Math.round(j.vel * 1.7), 155);
+              j.pasoT = 0;
+            }
+            // 4-5 hogueras estratégicas repartidas en pentágono alrededor
+            // del centro de la sala -- pedido expreso del usuario para
+            // paliar el debuff de congelación ambiental (ver core/loop.js)
+            // sin obstruir el combate: ninguna cae sobre el punto de
+            // aparición de los jugadores (abajo, reposicionarJugadores) ni
+            // sobre la escalera de retirada (arriba-izquierda).
+            {
+              const cxB = W / 2, cyB = H / 2, rB = 380;
+              G.hoguerasJefe = [-90, -18, 54, 126, 198].map((deg) => {
+                const rad = (deg * Math.PI) / 180;
+                return {
+                  x: Math.round(cxB + rB * Math.cos(rad)),
+                  y: Math.round(cyB + rB * Math.sin(rad)),
+                };
+              });
             }
             for (let i = 0; i < N - 1; i++) spawnEnemigo(f, "melee");
           } else if (arq === "gemelos") {

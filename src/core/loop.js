@@ -11,7 +11,7 @@ import { sfx, sfxAterrizaje, sfxCargaCuchillo, sfxCargaLista, sfxGolpeAire, sfxG
 import { esJefe, escalaEnemigo } from "../systems/bosses.js";
 import { curarP, danoAEnemigo, danoAlJugador, explotarBomber, ganarXP, masCercano, matarEnemigo, spawnClon, spawnEnemigo, statsTot, tipoAleatorio, vivos } from "../systems/combat.js";
 import { JUICE, actualizarEstilo } from "../systems/juice.js";
-import { aplicarLimites, colisionaMuro, cruzarPuerta, dentroForma, iniciarPlanta, ponPilares, salaActual } from "../systems/floorgen.js";
+import { RADIO_HOGUERA_JEFE, aplicarLimites, colisionaMuro, cruzarPuerta, dentroForma, iniciarPlanta, ponPilares, salaActual } from "../systems/floorgen.js";
 import { leerInput } from "../systems/input.js";
 import { finPartida, plantaDespejada } from "../systems/loot.js";
 import { abrirCartasParaJugador } from "../ui/cardsOverlay.js";
@@ -187,7 +187,7 @@ export function update(dt) {
           } else {
             const n = Math.hypot(p.inp.mx, p.inp.my);
             if (n > 0) {
-              let velEf = t.vel * (p.enOrtiga ? 0.72 : 1);
+              let velEf = t.vel * (p.enOrtiga ? 0.72 : 1) * (p.congelado ? 0.6 : 1);
               vx = (p.inp.mx / n) * velEf * Math.min(1, n);
               vy = (p.inp.my / n) * velEf * Math.min(1, n);
             }
@@ -221,6 +221,13 @@ export function update(dt) {
 
           // ---- zonas del suelo ----
           p.enOrtiga = false;
+          // Debuff ambiental de la sala del Guardián de Hielo: ralentiza
+          // salvo cerca de una de las hogueras de alivio (pedido expreso
+          // del usuario). Atado a la presencia con vida del jefe (no a un
+          // flag de tipo de sala) para que se apague solo al derrotarlo.
+          p.congelado =
+            G.enemigos.some((en) => en.jefe && en.arquetipo === "hielo" && en.hp > 0) &&
+            !(G.hoguerasJefe || []).some((hg) => Math.hypot(hg.x - p.x, hg.y - p.y) < RADIO_HOGUERA_JEFE);
           if (p.hazTick > 0) p.hazTick -= dt;
           let sobrePeligro = false;
           for (const hz of G.hazards) {
@@ -958,8 +965,23 @@ export function update(dt) {
                 if (e.atkCdJefe <= 0) {
                   e.atkT = e.atkTMax;
                   e.atkGolpeo = false;
-                  e.atkCdJefe = 2.2;
+                  // Cadencia más agresiva que la versión inicial (2.2s) --
+                  // pedido expreso ("tiene que atacar algo más rápido").
+                  e.atkCdJefe = 1.3;
                 }
+              }
+
+              // Temblor de pantalla a cada paso mientras se mueve -- pedido
+              // expreso ("cada paso hará que tiemble la pantalla"). Cadencia
+              // atada a la velocidad real (más rápido = pasos más seguidos).
+              if (e.moviendose) {
+                e.pasoT = (e.pasoT || 0) - dt;
+                if (e.pasoT <= 0) {
+                  e.pasoT = 26 / Math.max(1, e.vel); // ~26px por zancada
+                  G.shake = Math.max(G.shake, 4);
+                }
+              } else {
+                e.pasoT = 0;
               }
 
               // umbrales de vida: caen pilares + mobs, empieza a regenerar

@@ -132,6 +132,7 @@ export function nuevaPartida() {
             rootT: 0,
             hazTick: 0,
             enOrtiga: false,
+            congelado: false,
             safeX: 0,
             safeY: 0,
             fusionSel: [],

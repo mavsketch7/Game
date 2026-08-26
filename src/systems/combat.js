@@ -437,14 +437,15 @@ export function matarEnemigo(e, duenio) {
           // Guardián de Hielo: drop GARANTIZADO y siempre el mismo arma
           // única (no el roll aleatorio de jefe normal) -- base de stats
           // via genItem (mismo escalado que cualquier arma Épica de esta
-          // planta), nombre/efecto/id sobreescritos a mano. El efecto real
-          // (congela 4s en golpe básico) se comprueba en golpeArco()
-          // (systems/abilities.js) vía tieneEfecto(p,"congela_thor").
+          // planta), nombre/efecto/id sobreescritos a mano. Frhor (de
+          // "frozen"), no Thor -- pedido expreso del usuario. El efecto
+          // real (congela 4s en golpe básico) se comprueba en golpeArco()
+          // (systems/abilities.js) vía tieneEfecto(p,"congela_frhor").
           const martillo = genItem(G.planta, 2, "arma");
           martillo.clase = null;
-          martillo.nombre = "Martillo de Thor";
-          martillo.id = "martillo_thor";
-          martillo.efecto = "congela_thor";
+          martillo.nombre = "Martillo de Frhor";
+          martillo.id = "martillo_frhor";
+          martillo.efecto = "congela_frhor";
           martillo.efectoDesc = "Ataques básicos: congela al enemigo golpeado 4s";
           martillo.kills = 0;
           const pvM = posDropValida(e.x, e.y);

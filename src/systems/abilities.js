@@ -6,7 +6,7 @@ import { ELEMENTOS, ELEM_MAGO, FORMAS_DRUIDA, FORMAS_INFO, RAREZAS, ROLES, SALA_
 import { update } from "../core/loop.js";
 import { G } from "../core/state.js";
 import { fxEstocada, fxOnda, fxParticulas, fxTajo, fxTexto } from "../render/effects.js";
-import { sfx, sfxDisparoArco, sfxGolpeAire, sfxGolpeCritico, sfxImpactoGuerrero, sfxImpactoPicaro } from "./audio.js";
+import { sfx, sfxDisparoArco, sfxGolpeAire, sfxGolpeCritico, sfxImpactoFrhor, sfxImpactoGuerrero, sfxImpactoPicaro, sfxRompeBarril, sfxRompeHielo, sfxSwingFrhor } from "./audio.js";
 import { curarP, danoAEnemigo, danoAlJugador, masCercano, statsTot, vivos } from "./combat.js";
 import { posDropValida } from "./floorgen.js";
 import { JUICE } from "./juice.js";
@@ -176,6 +176,11 @@ function golpeArco(p, dir, rango, arco, dmgBase, esPicaro) {
         // decide más abajo (uno sintético + uno real a la vez sonaba raro,
         // "no encaja"). El resto sigue con el "golpe" genérico de siempre.
         if (p.rol !== "guerrero" && !esPicaro) sfx("golpe");
+        // Martillo de Frhor: silbido del martillazo AL AIRE, antes de saber
+        // si golpea (pedido expreso del usuario) -- suena siempre que se
+        // blande, independientemente de si conecta; el impacto real (más
+        // abajo) es un sonido aparte y se superpone a propósito.
+        if (tieneEfecto(p, "congela_frhor")) sfxSwingFrhor();
         let hits = 0,
           huboCrit = false;
         for (const e of G.enemigos) {
@@ -217,13 +222,13 @@ function golpeArco(p, dir, rango, arco, dmgBase, esPicaro) {
                 e.poisonOwner = p;
               }
               if (p.imbuido) aplicarImbuido(p, e);
-              // Martillo de Thor (drop garantizado del Guardián de Hielo,
-              // ver systems/combat.js: matarEnemigo()) -- congela de
-              // verdad (stunT, no solo ralentiza) al enemigo golpeado por
-              // un ataque básico. Solo aquí: golpeArco() es el único
+              // Martillo de Frhor (drop garantizado del Guardián de
+              // Hielo, ver systems/combat.js: matarEnemigo()) -- congela
+              // de verdad (stunT, no solo ralentiza) al enemigo golpeado
+              // por un ataque básico. Solo aquí: golpeArco() es el único
               // punto de daño melee básico, proyectiles/habilidades no
               // pasan por aquí.
-              if (!e.dummy && tieneEfecto(p, "congela_thor"))
+              if (!e.dummy && tieneEfecto(p, "congela_frhor"))
                 e.stunT = Math.max(e.stunT, 4);
             }
           }
@@ -276,7 +281,12 @@ function golpeArco(p, dir, rango, arco, dmgBase, esPicaro) {
         // con `hits`/`huboCrit` calculados, en vez de al principio de la
         // función. El crítico manda: si algún enemigo alcanzado fue
         // crítico, suena la muestra de crítico en vez de una normal.
-        if (p.rol === "guerrero") {
+        if (hits > 0 && !huboCrit && tieneEfecto(p, "congela_frhor")) {
+          // Martillo de Frhor: sonido propio (impacto_guerrero_2/3, más
+          // fuerte) por encima del de la clase -- el crítico sigue
+          // sonando como crítico, eso no cambia.
+          sfxImpactoFrhor();
+        } else if (p.rol === "guerrero") {
           if (hits === 0) sfxGolpeAire();
           else if (huboCrit) sfxGolpeCritico();
           else sfxImpactoGuerrero();
@@ -321,8 +331,17 @@ export function danoPilar(pl, dmg) {
         if (!pl.destructible || pl.hp <= 0) return;
         pl.hp -= Math.round(dmg);
         pl.hurtT = 0.15;
+        // Pilares de hielo del Guardián: tintineo agudo en CADA golpe (no
+        // solo al romperse), pedido expreso del usuario -- el resto de
+        // pilares (mazmorra normal) se quedan mudos como hasta ahora.
+        if (pl.hielo) sfx("hielo");
         if (pl.hp <= 0) {
-          fxParticulas(pl.x, pl.y - 10, 16, "#57496f");
+          if (pl.hielo) {
+            sfxRompeHielo();
+            fxParticulas(pl.x, pl.y - 10, 18, "#bfe6f7");
+          } else {
+            fxParticulas(pl.x, pl.y - 10, 16, "#57496f");
+          }
           G.shake = Math.max(G.shake, 3);
           G.decals.push({ x: pl.x, y: pl.y });
           if (Math.random() < PROB_DROP_MITICO_ROTO)
@@ -344,6 +363,7 @@ export function golpeObjeto(o, dmg) {
         if (o.tipo === "barril") {
           o.hp -= dmg;
           if (o.hp <= 0) {
+            sfxRompeBarril();
             fxParticulas(o.x, o.y, 10, "#6b4a2c");
             if (Math.random() < PROB_DROP_MITICO_ROTO)
               dropItem(o.x, o.y, genObjetoMitico(G.planta || 1));

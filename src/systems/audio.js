@@ -82,6 +82,25 @@ const GRUPOS_SONIDO = {
     { nombre: "impacto_picaro_1", ext: "m4a", offset: 0.06 },
     { nombre: "impacto_picaro_2", ext: "m4a", offset: 0.15 },
   ],
+  // Martillo de Frhor (drop del Guardián de Hielo, ver systems/combat.js):
+  // pedido expreso del usuario -- SOLO las variantes 2/3 de golpe de
+  // guerrero (más "duras" que la 1), reproducidas más fuerte que el
+  // impacto normal (ver sfxImpactoFrhor). Reutiliza los mismos archivos
+  // ya cargados por impactoGuerrero, no hace falta cargarlos aparte.
+  impactoFrhor: [
+    { nombre: "impacto_guerrero_2", ext: "m4a", offset: 0.19 },
+    { nombre: "impacto_guerrero_3", ext: "m4a", offset: 0.0 },
+  ],
+  // Martillo de Frhor: silbido del martillazo al AIRE, antes de saber si
+  // conecta -- las 3 muestras alternan al azar (mismo mecanismo de rotación
+  // que impactoGuerrero) para que no suene idéntico cada golpe. Offsets
+  // medidos decodificando cada muestra (mismo método que el resto del
+  // grupo, ver comentario de GRUPOS_SONIDO arriba).
+  swingFrhor: [
+    { nombre: "hammer-swingheavy", ext: "m4a", offset: 0.165 },
+    { nombre: "hammer-swing1", ext: "m4a", offset: 0.114 },
+    { nombre: "hammer-swingheavy2", ext: "m4a", offset: 0.112 },
+  ],
   golpeAire: [{ nombre: "golpe_aire", ext: "m4a", offset: 0.61 }],
   golpeCritico: [{ nombre: "golpe_critico", ext: "m4a", offset: 0.43 }],
   paso: [{ nombre: "paso_1", ext: "wav", offset: 0 }],
@@ -203,6 +222,17 @@ function reproducirSonidoControlable(grupo, volMul, loop) {
 // Guerrero: golpe que conecta -- rota entre las 3 variantes impactodirecto.
 export function sfxImpactoGuerrero() {
   reproducirSonidoReal("impactoGuerrero", 0.75);
+}
+// Martillo de Frhor: golpe básico que conecta, MÁS fuerte que el impacto
+// normal (0.95 vs 0.75) -- pedido expreso del usuario ("más duros").
+export function sfxImpactoFrhor() {
+  reproducirSonidoReal("impactoFrhor", 0.95);
+}
+// Martillo de Frhor: silbido del golpe al lanzarlo, ANTES de resolver si
+// impacta -- se dispara al iniciar el swing, no al conectar (ver
+// golpeArco en systems/abilities.js).
+export function sfxSwingFrhor() {
+  reproducirSonidoReal("swingFrhor", 0.8);
 }
 // Pícaro: golpe de daga que conecta -- alterna entre las 2 variantes.
 export function sfxImpactoPicaro() {
@@ -372,6 +402,75 @@ export function sfxAterrizaje(rareza) {
         gBrillo.connect(audioCtx.destination);
         oscBrillo.start(now);
         oscBrillo.stop(now + 0.16);
+      }
+
+// Barril roto: golpe grave de madera + un "traqueteo" de astillas encima
+// (varios pulsos cortos y decrecientes en vez de un solo tono, para que
+// se lea como algo que se hace pedazos, no un golpe limpio). Sin archivo
+// real -- mismo criterio en capas que sfxDropEpico/sfxAterrizaje.
+export function sfxRompeBarril() {
+        if (AJ.silencio || !audioCtx) return;
+        reanudarAudio();
+        const now = audioCtx.currentTime;
+        const vol = AJ.volMaster * AJ.volSfx;
+        const oscGrave = audioCtx.createOscillator();
+        const gGrave = audioCtx.createGain();
+        oscGrave.type = "square";
+        oscGrave.frequency.setValueAtTime(180, now);
+        oscGrave.frequency.exponentialRampToValueAtTime(55, now + 0.14);
+        gGrave.gain.setValueAtTime(0.5 * vol, now);
+        gGrave.gain.exponentialRampToValueAtTime(0.0001, now + 0.15);
+        oscGrave.connect(gGrave);
+        gGrave.connect(audioCtx.destination);
+        oscGrave.start(now);
+        oscGrave.stop(now + 0.17);
+        for (let i = 0; i < 4; i++) {
+          const t0 = now + 0.02 + i * 0.035 + Math.random() * 0.015;
+          const o = audioCtx.createOscillator();
+          const g = audioCtx.createGain();
+          o.type = "square";
+          o.frequency.value = 300 + Math.random() * 500;
+          g.gain.setValueAtTime(0.16 * vol * (1 - i * 0.18), t0);
+          g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.05);
+          o.connect(g);
+          g.connect(audioCtx.destination);
+          o.start(t0);
+          o.stop(t0 + 0.06);
+        }
+      }
+
+// Pilar de hielo roto: estallido de cristal -- un barrido agudo
+// descendente-luego-ascendente ("crac") más un puñado de tintineos altos
+// dispersos encima, más brillante y frío que el golpe de madera de arriba.
+export function sfxRompeHielo() {
+        if (AJ.silencio || !audioCtx) return;
+        reanudarAudio();
+        const now = audioCtx.currentTime;
+        const vol = AJ.volMaster * AJ.volSfx;
+        const oscCrac = audioCtx.createOscillator();
+        const gCrac = audioCtx.createGain();
+        oscCrac.type = "sawtooth";
+        oscCrac.frequency.setValueAtTime(1200, now);
+        oscCrac.frequency.exponentialRampToValueAtTime(300, now + 0.09);
+        gCrac.gain.setValueAtTime(0.4 * vol, now);
+        gCrac.gain.exponentialRampToValueAtTime(0.0001, now + 0.1);
+        oscCrac.connect(gCrac);
+        gCrac.connect(audioCtx.destination);
+        oscCrac.start(now);
+        oscCrac.stop(now + 0.12);
+        for (let i = 0; i < 5; i++) {
+          const t0 = now + 0.03 + i * 0.03 + Math.random() * 0.02;
+          const o = audioCtx.createOscillator();
+          const g = audioCtx.createGain();
+          o.type = "sine";
+          o.frequency.value = 1600 + Math.random() * 1400;
+          g.gain.setValueAtTime(0.14 * vol, t0);
+          g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.18);
+          o.connect(g);
+          g.connect(audioCtx.destination);
+          o.start(t0);
+          o.stop(t0 + 0.2);
+        }
       }
 
 // Música sintetizada de la mazmorra (el "chun chun chun" de fondo) --
