@@ -1925,6 +1925,92 @@ body.pantalla-completa #hint {
   color: var(--alba);
 }
 
+/* ===== Página "Ficha de Personaje": preview animado + slots de equipo +
+   stats (ver ui/inventory.js: tabPersonaje()). Columna de slots a la
+   izquierda, preview centrado, stats a la derecha; inventario/filtros
+   debajo a todo lo ancho (reutiliza .grid-inv ya existente). */
+.ficha-libro-top {
+  display: grid;
+  grid-template-columns: 150px 1fr 220px;
+  gap: 16px;
+  align-items: stretch;
+}
+.ficha-libro-slots {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+.ficha-libro-preview {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  text-align: center;
+}
+.ficha-libro-preview canvas {
+  image-rendering: pixelated;
+  background: radial-gradient(ellipse 70% 60% at center, #241b12 0%, transparent 75%);
+}
+.ficha-libro-stats {
+  background: var(--piedra2);
+  border: 1px solid var(--borde);
+  border-radius: 8px;
+  padding: 10px 12px;
+  align-self: start;
+}
+.eq-slot {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--piedra2);
+  border: 1px solid var(--borde);
+  border-radius: 8px;
+  padding: 6px 8px;
+  min-height: 44px;
+  cursor: pointer;
+}
+.eq-slot.vacio {
+  opacity: 0.55;
+  border-style: dashed;
+}
+/* Resaltado mientras se arrastra un ítem de la bolsa por encima -- ver
+   soltarEnSlot()/ondragover en inventory.js. */
+.eq-slot.arrastre-sobre {
+  outline: 2px solid var(--vespero);
+  background: #2e2416;
+}
+.eq-slot-ico {
+  width: 26px;
+  height: 26px;
+  image-rendering: pixelated;
+  flex-shrink: 0;
+}
+.eq-slot-info {
+  min-width: 0;
+}
+.eq-slot-label {
+  font-size: 0.58rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ceniza);
+}
+.eq-slot-nombre {
+  font-size: 0.72rem;
+  font-weight: 800;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* Celda de bolsa arrastrable -- ver arrastrarItemInicio() en inventory.js. */
+.item-cell[draggable="true"] {
+  cursor: grab;
+}
+.item-cell.arrastrando {
+  opacity: 0.4;
+}
+
 /* ===== Tienda del mercader ===== */
 .tienda-cab {
   text-align: center;
@@ -2309,59 +2395,92 @@ body.pantalla-completa #hint {
   font-size: 0.78rem;
   color: var(--ceniza);
 }
-/* ===== Ficha de personaje: pestañas (Personaje/Equipamiento/Estadísticas/
-   Mapa). El objetivo es que la cabecera (título, pestaña de jugador,
-   pestañas de sección) se quede siempre visible y solo el CONTENIDO de la
-   pestaña activa haga scroll si no cabe -- así se evita el scroll largo de
-   antes, donde había que bajar por toda la ficha para llegar a la bolsa. */
+/* ===== Ficha de personaje: libro con pestañas en V (Personaje/Herrería/
+   Alma/Mapa/Ajustes) -- reemplaza la fila de pestañas horizontal de antes.
+   La cabecera (título, pestaña de jugador) y la barra de pestañas en V se
+   quedan siempre visibles; solo el CONTENIDO de la página hace scroll si
+   no cabe. La "V" de la pestaña activa es un placeholder por CSS
+   (clip-path) hasta que llegue el asset final -- entonces solo cambia
+   .tab-v a background-image, sin tocar el JS que las genera. */
 #inv.overlay {
   align-items: stretch;
+  padding: 14px;
 }
 #inv .overlay-inner {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
+  width: 100%;
   height: 100%;
   min-height: 0;
+  gap: 0;
 }
-.tabs-inv {
+.libro-tabs {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  flex-shrink: 0;
+  padding-top: 28px;
+}
+.tab-v {
+  position: relative;
   display: flex;
   align-items: center;
-  gap: 6px;
-  flex-wrap: wrap;
-  margin-top: 10px;
-  border-bottom: 1px solid var(--borde);
-  padding-bottom: 8px;
+  gap: 8px;
+  width: 132px;
+  height: 50px;
+  padding: 0 16px 0 12px;
+  background: linear-gradient(135deg, #2c2114, #1c150d);
+  border: 1px solid var(--borde);
+  color: var(--ceniza);
+  font-family: "Dungeon Font", "Cinzel", serif;
+  font-size: 0.76rem;
+  font-weight: 700;
+  text-align: left;
+  cursor: pointer;
+  clip-path: polygon(0 0, 80% 0, 100% 50%, 80% 100%, 0 100%);
+  transition:
+    transform 0.15s,
+    filter 0.15s;
+}
+.tab-v:hover:not(.activa) {
+  filter: brightness(1.25);
+}
+.tab-v-ico {
+  font-size: 1.1rem;
   flex-shrink: 0;
 }
-.tab-inv {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  border: 1px solid var(--borde);
-  background: var(--piedra2);
-  color: var(--ceniza);
-  border-radius: 8px 8px 0 0;
-  padding: 7px 14px;
-  font-size: 0.82rem;
-  font-weight: 700;
-}
-.tab-inv-ico {
-  font-size: 1.05rem;
-}
-.tab-inv.activa {
-  color: var(--hueso);
+.tab-v.activa {
+  background: linear-gradient(135deg, var(--vespero), #c9a35a);
+  color: #1a1206;
   border-color: var(--vespero);
-  background: #2e2416;
-  box-shadow: 0 -2px 0 var(--vespero) inset;
+  transform: translateX(8px);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.5);
+  z-index: 1;
 }
-.tabs-inv-hint {
-  margin-left: auto;
-  font-size: 0.68rem;
+.libro-pagina {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  margin-left: -1px;
+  padding: 16px 22px;
+  background: linear-gradient(160deg, #2a2013, #1c150d);
+  border: 1px solid var(--borde);
+  border-radius: 4px 14px 14px 4px;
+  box-shadow:
+    inset 0 0 40px rgba(0, 0, 0, 0.35),
+    0 10px 30px rgba(0, 0, 0, 0.5);
+}
+.libro-hint {
+  font-size: 0.62rem;
   color: var(--ceniza);
+  margin-top: auto;
+  max-width: 110px;
 }
 .inv-contenido {
   width: 100%;
-  margin-top: 6px;
+  margin-top: 10px;
   flex: 1;
   min-height: 0;
   overflow-y: auto;
@@ -2457,8 +2576,19 @@ body.pantalla-completa #hint {
   box-shadow: 0 6px 18px rgba(0, 0, 0, 0.55);
   pointer-events: none;
 }
-.item-cell:hover .item-tooltip {
+.item-cell:hover .item-tooltip,
+.eq-slot:hover .item-tooltip {
   display: block;
+}
+/* Los eq-slot viven en la columna estrecha de la izquierda -- centrar el
+   tooltip sobre ellos (como hace .item-cell, pensado para una rejilla
+   ancha) lo saca de la pantalla por el borde izquierdo. Se abre a la
+   derecha del slot, hacia el resto de la página, en su lugar. */
+.eq-slot .item-tooltip {
+  left: calc(100% + 8px);
+  bottom: auto;
+  top: 50%;
+  transform: translateY(-50%);
 }
 .tt-nombre {
   font-weight: 800;

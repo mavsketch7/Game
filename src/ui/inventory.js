@@ -1,10 +1,10 @@
 // Auto-generated during the modularization refactor (2026-07-23).
-import { ETQ, FORMAS_INFO, MAX_NIV_PJ, PRECIO_VENTA, RAREZAS, ROLES, SLOTS } from "../core/constants.js";
+import { ETQ, FORMAS_INFO, MAX_NIV_PJ, PRECIO_VENTA, RAREZAS, ROLES, SLOTS, SLOT_LABEL } from "../core/constants.js";
 import { abandonarPartida } from "../core/gameflow.js";
 import { META } from "../core/save.js";
 import { G } from "../core/state.js";
 import { fxOnda, fxParticulas } from "../render/effects.js";
-import { iconoDrop, spriteJugador } from "../render/sprites.js";
+import { iconoDrop } from "../render/sprites.js";
 import { CARD_RAREZAS } from "../systems/cards.js";
 import { statsTot } from "../systems/combat.js";
 import { M } from "../systems/input.js";
@@ -41,10 +41,10 @@ function escHtml(s) {
 // G, porque no hace falta sincronizarla por red ni guardarla.
 const PESTANAS_INV = [
         { id: "personaje", ico: "🧑", nombre: "Personaje" },
-        { id: "equipo", ico: "🎒", nombre: "Equipamiento" },
+        { id: "herreria", ico: "⚒", nombre: "Herrería" },
         { id: "alma", ico: "🔮", nombre: "Alma" },
-        { id: "stats", ico: "📊", nombre: "Estadísticas" },
         { id: "mapa", ico: "🗺", nombre: "Mapa" },
+        { id: "ajustes", ico: "⚙", nombre: "Ajustes" },
       ];
 let invTab = "personaje";
 // objeto de la bolsa seleccionado en la pestaña Equipamiento (-1 = ninguno)
@@ -297,6 +297,7 @@ function celdaItem(it, idx, p, equipada) {
           tagClase = ROLES[it.clase].nombre.split(" ")[0];
         }
         const seleccionada = !equipada && idx === idxSel;
+        const etiquetaSlot = SLOT_LABEL[it.slot] || it.slot;
         return (
           '<div class="item-cell ' +
           rar.cls +
@@ -304,7 +305,13 @@ function celdaItem(it, idx, p, equipada) {
           '" style="border-color:' +
           rar.col +
           '"' +
-          (equipada ? "" : ' onclick="selItemInv(' + idx + ')"') +
+          (equipada
+            ? ""
+            : ' draggable="true" ondragstart="arrastrarItemInicio(event,' +
+              idx +
+              ')" ondragend="arrastrarItemFin(event)" onclick="selItemInv(' +
+              idx +
+              ')"') +
           ">" +
           '<img class="item-cell-ico" src="' +
           iconoUrl(it) +
@@ -315,7 +322,7 @@ function celdaItem(it, idx, p, equipada) {
           escHtml(it.nombre) +
           "</div>" +
           '<div class="item-cell-tipo">' +
-          it.slot +
+          etiquetaSlot +
           (tagClase ? " · " + tagClase : "") +
           "</div>" +
           '<div class="item-cell-impacto">' +
@@ -328,7 +335,7 @@ function celdaItem(it, idx, p, equipada) {
           escHtml(it.nombre) +
           "</div>" +
           '<div class="tt-slot">' +
-          it.slot +
+          etiquetaSlot +
           (tagClase ? " · " + tagClase : "") +
           ' · <span class="' +
           rar.cls +
@@ -529,6 +536,125 @@ function fusionar() {
 
 // ---- Contenido de cada pestaña ----
 
+// Celda de un slot de equipo en la columna "paper doll" de la Ficha de
+// Personaje -- distinta de celdaItem() (pensada para la rejilla de la
+// bolsa): compacta, con drop-target de arrastrar-y-soltar (ver
+// arrastrarItemInicio/soltarEnSlot más abajo) y tooltip con los stats
+// propios del objeto ya equipado (sin comparación, no hay nada que
+// comparar contra sí mismo).
+function celdaSlotEquipo(slot, p) {
+        const it = p.equipo[slot];
+        const label = SLOT_LABEL[slot] || slot;
+        const dropAttrs =
+          ' ondragover="permitirSoltar(event)" ondragleave="quitarResaltadoSlot(event)" ondrop="soltarEnSlot(event,\'' +
+          slot +
+          '\')"';
+        if (!it) {
+          return (
+            '<div class="eq-slot vacio"' +
+            dropAttrs +
+            ">" +
+            '<div class="eq-slot-info"><div class="eq-slot-label">' +
+            label +
+            '</div><div class="eq-slot-nombre" style="color:var(--ceniza);font-weight:400">Vacío</div></div>' +
+            "</div>"
+          );
+        }
+        const rar = RAREZAS[it.rareza];
+        return (
+          '<div class="eq-slot" style="border-color:' +
+          rar.col +
+          '"' +
+          dropAttrs +
+          ">" +
+          '<img class="eq-slot-ico" src="' +
+          iconoUrl(it) +
+          '" alt="" />' +
+          '<div class="eq-slot-info">' +
+          '<div class="eq-slot-label">' +
+          label +
+          "</div>" +
+          '<div class="eq-slot-nombre ' +
+          rar.cls +
+          '">' +
+          escHtml(it.nombre) +
+          "</div>" +
+          "</div>" +
+          '<div class="item-tooltip">' +
+          '<div class="tt-nombre ' +
+          rar.cls +
+          '">' +
+          escHtml(it.nombre) +
+          "</div>" +
+          '<div class="tt-slot">' +
+          label +
+          ' · <span class="' +
+          rar.cls +
+          '">' +
+          rar.n +
+          "</span></div>" +
+          (it.efectoDesc
+            ? '<div class="tt-efecto">✦ ' + escHtml(it.efectoDesc) + "</div>"
+            : "") +
+          (typeof it.kills === "number"
+            ? '<div class="tt-efecto">🗡 ' + it.kills + " kills con esta arma</div>"
+            : "") +
+          '<div class="tt-stat-linea">' +
+          fmtStats(it.stats) +
+          "</div>" +
+          "</div>" +
+          "</div>"
+        );
+      }
+
+function filtroCtrlHtml(p) {
+        const filtro = p.filtroBolsa || "todos";
+        return (
+          '<div style="display:flex;gap:6px;align-items:center;margin:2px 0 8px;flex-wrap:wrap">' +
+          '<span style="font-size:.75rem;color:var(--ceniza)">Filtrar:</span>' +
+          '<div class="seg">' +
+          [["Todo", "todos"], ...SLOTS.map((s) => [SLOT_LABEL[s] || s, s])]
+            .map(
+              ([lab, v]) =>
+                '<button class="' +
+                (filtro === v ? "on" : "") +
+                '" onclick="filtrarBolsa(\'' +
+                v +
+                "')\">" +
+                lab +
+                "</button>",
+            )
+            .join("") +
+          "</div></div>"
+        );
+      }
+
+function ordCtrlHtml(p) {
+        const ord = p.ordenBolsa || "rareza";
+        return (
+          '<div style="display:flex;gap:6px;align-items:center;margin:10px 0 2px;flex-wrap:wrap">' +
+          '<span style="font-size:.75rem;color:var(--ceniza)">Ordenar:</span>' +
+          '<div class="seg">' +
+          [
+            ["Rareza", "rareza"],
+            ["Tipo", "slot"],
+            ["Poder", "valor"],
+          ]
+            .map(
+              ([lab, v]) =>
+                '<button class="' +
+                (ord === v ? "on" : "") +
+                '" onclick="ordenarBolsa(\'' +
+                v +
+                "')\">" +
+                lab +
+                "</button>",
+            )
+            .join("") +
+          "</div></div>"
+        );
+      }
+
 function tabPersonaje(p, t, b) {
         const xpPct =
           p.nivel >= MAX_NIV_PJ ? 100 : Math.round((p.xp / p.xpSig) * 100);
@@ -556,9 +682,21 @@ function tabPersonaje(p, t, b) {
               })
               .join("")
           : '<span style="color:var(--ceniza);font-size:.72rem">Ninguna todavía — sube de nivel</span>';
+        const slotsHtml = SLOTS.map((s) => celdaSlotEquipo(s, p)).join("");
+        const statsHtml =
+          fichaStat("⚔", "Daño", t.atk, null) +
+          fichaStat(
+            "❤",
+            "Vida",
+            Math.ceil(p.hp) + " / " + t.hpMax,
+            (p.hp / t.hpMax) * 100,
+          ) +
+          fichaStat("🛡", "Armadura", t.armor, null) +
+          fichaStat("🎯", "Crítico", t.crit + "%", (t.crit / 85) * 100) +
+          fichaStat("💨", "Velocidad", t.vel, null) +
+          fichaStat("⏱", "Red. CD", t.cdr + "%", (t.cdr / 55) * 100);
         return (
           '<div class="ficha-cab">' +
-          '<canvas id="ficha-retrato" width="72" height="84"></canvas>' +
           '<div class="ficha-datos">' +
           '<h3 style="color:' +
           p.color +
@@ -596,30 +734,30 @@ function tabPersonaje(p, t, b) {
           "</div>" +
           "</div>" +
           "</div>" +
+          '<div class="ficha-libro-top">' +
+          '<div class="ficha-libro-slots">' +
+          slotsHtml +
+          "</div>" +
+          '<div class="ficha-libro-preview"><canvas id="ficha-retrato" width="160" height="180"></canvas></div>' +
+          '<div class="ficha-libro-stats">' +
+          statsHtml +
+          "</div>" +
+          "</div>" +
           '<h3 style="margin-top:14px;font-size:.85rem;color:var(--vespero)">Mejoras de nivel (' +
           p.cartasElegidas.length +
           ")</h3>" +
           '<div class="chips-mejoras">' +
           chips +
-          "</div>"
-        );
-      }
-
-function tabStats(p, t) {
-        return (
-          '<div class="ficha-stats">' +
-          fichaStat("⚔", "Daño", t.atk, null) +
-          fichaStat(
-            "❤",
-            "Vida",
-            Math.ceil(p.hp) + " / " + t.hpMax,
-            (p.hp / t.hpMax) * 100,
-          ) +
-          fichaStat("🛡", "Armadura", t.armor, null) +
-          fichaStat("🎯", "Crítico", t.crit + "%", (t.crit / 85) * 100) +
-          fichaStat("💨", "Velocidad", t.vel, null) +
-          fichaStat("⏱", "Red. CD", t.cdr + "%", (t.cdr / 55) * 100) +
           "</div>" +
+          '<h3 style="margin-top:14px;font-size:.85rem;color:var(--vespero)">Bolsa de ' +
+          escHtml(p.nombre) +
+          " (" +
+          p.bolsa.length +
+          ")</h3>" +
+          filtroCtrlHtml(p) +
+          ordCtrlHtml(p) +
+          gridBolsa(p) +
+          panelAccionItem(p) +
           rankingSesion()
         );
       }
@@ -889,7 +1027,7 @@ function panelAccionItem(p) {
           escHtml(it.nombre) +
           "</div>" +
           '<div class="panel-item-slot">' +
-          it.slot +
+          (SLOT_LABEL[it.slot] || it.slot) +
           ' · <span class="' +
           rar.cls +
           '">' +
@@ -944,16 +1082,11 @@ function gridBolsa(p) {
         );
       }
 
-function tabEquipo(p) {
-        const eqCells = SLOTS.map((s) => {
-          const it = p.equipo[s];
-          return it
-            ? celdaItem(it, -1, p, true)
-            : '<div class="item-cell vacio"><div class="item-cell-tipo">' +
-                s +
-                '</div><div class="item-cell-nombre" style="color:var(--ceniza)">Vacío</div></div>';
-        }).join("");
-        // ---- panel de fusión ----
+// Herrería: la mesa de fusión de siempre (3 objetos de la misma rareza →
+// evolucionan), reubicada aquí desde la antigua pestaña "Equipamiento" --
+// el yunque/martillo/chispas del boceto llegan en un pase aparte, de
+// momento la mecánica ya funciona igual que antes bajo el nuevo nombre.
+function tabHerreria(p) {
         p.fusionSel = p.fusionSel.filter((it) => p.bolsa.includes(it));
         const slotsF = [0, 1, 2]
           .map((k) => {
@@ -993,7 +1126,7 @@ function tabEquipo(p) {
             : '<button class="btn" disabled title="Necesitas 3 objetos de la misma rareza">⚡ Fusión rápida (0)</button>';
         const fusion =
           '<div class="fusion-panel">' +
-          '<b style="font-size:.85rem;color:var(--vespero)">⚗️ Mesa de fusión</b>' +
+          '<b style="font-size:.9rem;color:var(--vespero)">⚒ Herrería — Mesa de fusión</b>' +
           '<div style="font-size:.72rem;color:var(--ceniza);margin-top:2px">Combina 3 objetos de la MISMA rareza (mismo slot, y misma clase si son armas) → evolucionan a la superior.</div>' +
           '<div class="fusion-slots">' +
           slotsF +
@@ -1004,61 +1137,26 @@ function tabEquipo(p) {
           ' <span style="font-size:.7rem;color:var(--ceniza)">coge 3 iguales automáticamente (prioriza la rareza más alta)</span></div>' +
           avisoF +
           "</div>";
-        const ord = p.ordenBolsa || "rareza";
-        const ordCtrl =
-          '<div style="display:flex;gap:6px;align-items:center;margin:10px 0 2px;flex-wrap:wrap">' +
-          '<span style="font-size:.75rem;color:var(--ceniza)">Ordenar:</span>' +
-          '<div class="seg">' +
-          [
-            ["Rareza", "rareza"],
-            ["Tipo", "slot"],
-            ["Poder", "valor"],
-          ]
-            .map(
-              ([lab, v]) =>
-                '<button class="' +
-                (ord === v ? "on" : "") +
-                '" onclick="ordenarBolsa(\'' +
-                v +
-                "')\">" +
-                lab +
-                "</button>",
-            )
-            .join("") +
-          "</div></div>";
-        const filtro = p.filtroBolsa || "todos";
-        const filtroCtrl =
-          '<div style="display:flex;gap:6px;align-items:center;margin:2px 0 8px;flex-wrap:wrap">' +
-          '<span style="font-size:.75rem;color:var(--ceniza)">Filtrar:</span>' +
-          '<div class="seg">' +
-          [["Todo", "todos"], ...SLOTS.map((s) => [s, s])]
-            .map(
-              ([lab, v]) =>
-                '<button class="' +
-                (filtro === v ? "on" : "") +
-                '" onclick="filtrarBolsa(\'' +
-                v +
-                "')\">" +
-                lab +
-                "</button>",
-            )
-            .join("") +
-          "</div></div>";
         return (
-          '<h3 style="margin-top:0;font-size:.85rem;color:var(--vespero)">Equipado</h3>' +
-          '<div class="grid-inv grid-equipado">' +
-          eqCells +
-          "</div>" +
           fusion +
           '<h3 style="margin-top:14px;font-size:.85rem;color:var(--vespero)">Bolsa de ' +
           escHtml(p.nombre) +
           " (" +
           p.bolsa.length +
           ")</h3>" +
-          filtroCtrl +
-          ordCtrl +
+          filtroCtrlHtml(p) +
+          ordCtrlHtml(p) +
           gridBolsa(p) +
           panelAccionItem(p)
+        );
+      }
+
+function tabAjustes() {
+        return (
+          '<div style="padding:26px 8px;text-align:center;color:var(--ceniza)">' +
+          '<h3 style="color:var(--vespero);font-size:1rem">⚙ Ajustes</h3>' +
+          '<p style="margin-top:8px;font-size:.85rem">Esta pestaña está en construcción. De momento los ajustes siguen disponibles en el botón ⚙ de la esquina.</p>' +
+          "</div>"
         );
       }
 
@@ -1086,23 +1184,28 @@ export function abrirInv() {
           .join("");
         const pestanas = PESTANAS_INV.map(
           (tb) =>
-            '<button class="tab-inv' +
+            '<button class="tab-v' +
             (invTab === tb.id ? " activa" : "") +
             '" onclick="irPestanaInv(\'' +
             tb.id +
-            "')\"><span class=\"tab-inv-ico\">" +
+            "')\"><span class=\"tab-v-ico\">" +
             tb.ico +
-            '</span><span class="tab-inv-nombre">' +
+            '</span><span class="tab-v-nombre">' +
             tb.nombre +
             "</span></button>",
         ).join("");
         let contenido;
-        if (invTab === "equipo") contenido = tabEquipo(p);
+        if (invTab === "herreria") contenido = tabHerreria(p);
         else if (invTab === "alma") contenido = tabAlma();
-        else if (invTab === "stats") contenido = tabStats(p, t);
         else if (invTab === "mapa") contenido = tabMapa();
+        else if (invTab === "ajustes") contenido = tabAjustes();
         else contenido = tabPersonaje(p, t, b);
         document.getElementById("inv-inner").innerHTML =
+          '<div class="libro-tabs">' +
+          pestanas +
+          '<span class="libro-hint">LB/RB para cambiar</span>' +
+          "</div>" +
+          '<div class="libro-pagina">' +
           '<div class="fila-cerrar"><h2 class="display">Ficha de personaje</h2>' +
           '<div style="display:flex;gap:8px">' +
           (G.escena === "torre"
@@ -1116,32 +1219,13 @@ export function abrirInv() {
           '<div class="tabs-jug">' +
           tabsJug +
           "</div>" +
-          '<div class="tabs-inv">' +
-          pestanas +
-          ' <span class="tabs-inv-hint">LB/RB para cambiar</span>' +
-          "</div>" +
           '<div class="inv-contenido">' +
           contenido +
+          "</div>" +
           "</div>";
         mostrar("inv");
-        // retrato grande (solo existe en el DOM cuando la pestaña Personaje
-        // está activa, ver tabPersonaje())
-        const rc = document.getElementById("ficha-retrato");
-        if (rc) {
-          const g = rc.getContext("2d");
-          g.imageSmoothingEnabled = false;
-          g.clearRect(0, 0, 72, 84);
-          {
-            const img = spriteJugador(p);
-            g.drawImage(
-              img,
-              (72 - img.width * 1.6) / 2,
-              (84 - img.height * 1.6) / 2,
-              img.width * 1.6,
-              img.height * 1.6,
-            );
-          }
-        }
+        if (invTab === "personaje") iniciarRetratoAnimado(p);
+        else detenerRetratoAnimado();
       }
 
 export function invSel(i) {
@@ -1151,11 +1235,88 @@ export function invSel(i) {
       }
 
 export function cerrarInv() {
+        detenerRetratoAnimado();
         ocultar("inv");
         if (G) {
           G.pausa = false;
           G.confirmAband = false;
         }
+      }
+
+// ---- Preview animado en idle (canvas #ficha-retrato, pestaña Personaje) ----
+// import() dinámico para no crear un ciclo de módulos: render/character.js
+// importa systems/input.js, que a su vez importa este archivo de forma
+// estática (cambiarPestanaInv/cerrarInv) -- mismo motivo/patrón que
+// setLobby() en ui/settingsOverlay.js.
+let retratoRAF = null;
+let retratoAnimT = 0;
+
+function detenerRetratoAnimado() {
+        if (retratoRAF) {
+          cancelAnimationFrame(retratoRAF);
+          retratoRAF = null;
+        }
+      }
+
+function iniciarRetratoAnimado(p) {
+        detenerRetratoAnimado();
+        const canvas = document.getElementById("ficha-retrato");
+        if (!canvas) return;
+        const ctx = canvas.getContext("2d");
+        let ultimo = performance.now();
+        import("../render/character.js").then(({ renderRetratoIdle }) => {
+          const paso = (ahora) => {
+            const dt = Math.min(0.05, (ahora - ultimo) / 1000);
+            ultimo = ahora;
+            retratoAnimT += dt;
+            renderRetratoIdle(ctx, p, canvas.width, canvas.height, retratoAnimT);
+            retratoRAF = requestAnimationFrame(paso);
+          };
+          retratoRAF = requestAnimationFrame(paso);
+        });
+      }
+
+// ---- Arrastrar y soltar: bolsa -> slot de equipo (ver celdaSlotEquipo) ----
+let arrastreIdx = null;
+
+function arrastrarItemInicio(ev, idx) {
+        arrastreIdx = idx;
+        ev.dataTransfer.effectAllowed = "move";
+        ev.dataTransfer.setData("text/plain", String(idx));
+        ev.currentTarget.classList.add("arrastrando");
+      }
+
+function arrastrarItemFin(ev) {
+        ev.currentTarget.classList.remove("arrastrando");
+        arrastreIdx = null;
+      }
+
+function permitirSoltar(ev) {
+        ev.preventDefault();
+        ev.currentTarget.classList.add("arrastre-sobre");
+      }
+
+function quitarResaltadoSlot(ev) {
+        ev.currentTarget.classList.remove("arrastre-sobre");
+      }
+
+function soltarEnSlot(ev, slot) {
+        ev.preventDefault();
+        ev.currentTarget.classList.remove("arrastre-sobre");
+        const idx =
+          arrastreIdx != null
+            ? arrastreIdx
+            : parseInt(ev.dataTransfer.getData("text/plain"), 10);
+        arrastreIdx = null;
+        if (Number.isNaN(idx)) return;
+        const p = G.players[G.invSel] || G.players[0];
+        const it = p.bolsa[idx];
+        if (!it) return;
+        if (it.slot !== slot) {
+          toast("Ese objeto no va en ese hueco", "#c9a35a");
+          return;
+        }
+        equipar(idx);
       }
 
 function equipar(idx) {
@@ -1222,8 +1383,13 @@ function darItem(idx, targetIdx) {
       }
 
 // Expuestas en window: referenciadas desde onclick="..." en HTML generado dinámicamente.
+window.arrastrarItemFin = arrastrarItemFin;
+window.arrastrarItemInicio = arrastrarItemInicio;
 window.cerrarInv = cerrarInv;
 window.darItem = darItem;
+window.permitirSoltar = permitirSoltar;
+window.quitarResaltadoSlot = quitarResaltadoSlot;
+window.soltarEnSlot = soltarEnSlot;
 window.equipar = equipar;
 window.filtrarBolsa = filtrarBolsa;
 window.fusionRapida = fusionRapida;

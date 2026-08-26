@@ -47,7 +47,7 @@ export function abrirMenuPausa() {
     "</div>" +
     '<div id="mp-botones">' +
     '<button class="mp-btn" style="background-image:url(\'' + uiSrc("btn-inventory.png") + '\')" ' +
-    'onclick="cerrarMenuPausa();irPestanaInv(\'equipo\')" aria-label="Inventory"></button>' +
+    'onclick="cerrarMenuPausa();irPestanaInv(\'personaje\')" aria-label="Inventory"></button>' +
     '<button class="mp-btn" style="background-image:url(\'' + uiSrc("btn-map.png") + '\')" ' +
     'onclick="cerrarMenuPausa();irPestanaInv(\'mapa\')" aria-label="Map"></button>' +
     (mostrarQuit

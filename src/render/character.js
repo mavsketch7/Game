@@ -219,6 +219,47 @@ function calcularPoseHeroe(p, x, yPies, mov) {
         }
       }
 
+// Preview animado en idle para overlays HTML (ver ui/inventory.js: la
+// ficha de personaje) -- reutiliza calcularPoseHeroe() (pura, sin dibujar,
+// no toca `cx`) para la MISMA selección de frame/dirección que el
+// personaje real en el canvas de juego, pero dibuja sobre un contexto
+// propio del overlay en vez del `cx` del juego: drawSprite/drawSpriteBottom
+// (render/spriteDraw.js) están fijados a ese `cx` a propósito (primitivas
+// compartidas con el resto del render real), así que aquí se hace el
+// drawImage a mano en vez de tocarlas -- cero riesgo para el render real.
+// `anim` es un reloj propio del overlay (ver iniciarRetratoAnimado en
+// inventory.js), no p.anim -- ese se congela mientras G.pausa está activo
+// (la ficha siempre pausa), así que reusarlo dejaría el preview estático.
+export function renderRetratoIdle(ctx, p, w, h, anim) {
+  ctx.imageSmoothingEnabled = false;
+  ctx.clearRect(0, 0, w, h);
+  const pFalso = {
+    ...p,
+    aim: -Math.PI / 2,
+    anim,
+    inp: null,
+    swingT: 0,
+    dashAtkT: 0,
+    cargaArqT: 0,
+    golpeT: 0,
+  };
+  const { img, flip } = calcularPoseHeroe(pFalso, 0, 0, false);
+  if (!img) return;
+  // El personaje real ocupa solo una fracción del cuadro TAM_HEROE (mucho
+  // margen transparente alrededor, ver cargarHojaFramesConAncla en
+  // sprites.js) -- en el canvas de juego eso se compensa con el zoom de la
+  // cámara, que este preview aislado no tiene. Zoom fijo para que se vea
+  // como un retrato de verdad y no como un icono perdido en una esquina.
+  const ZOOM_RETRATO = 3.4;
+  const esc = (REAL_SPRITE_SCALE[p.rol] || 1) * ZOOM_RETRATO;
+  ctx.save();
+  ctx.translate(Math.round(w / 2), Math.round(h * 0.88));
+  if (flip) ctx.scale(-1, 1);
+  ctx.scale(esc, esc);
+  ctx.drawImage(img, -img.width / 2, -img.height);
+  ctx.restore();
+}
+
 export function renderMira() {
         if (!G || !G.activo || !G.players) return;
         for (const p of G.players) {
