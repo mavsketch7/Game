@@ -52,6 +52,13 @@ const CDS_LINEALES = [
 // límite se quita la más antigua, así no hace falta vaciar el array ni
 // tocar nada al cargar el juego.
 const MAX_FLECHAS_CLAVADAS = 24;
+
+// Radio de colisión sólida de un barril (16x22 en pantalla, ver
+// render/world.js) -- antes era puramente decorativo (sin colisión
+// ninguna, ni contra jugadores ni contra enemigos), pedido expreso del
+// usuario: "son objetos sólidos". Compartido por jugador/enemigos/jefe
+// para no repetir el número en cada sitio.
+const BARRIL_R = 7;
 const FLECHA_CLAVADA_VIDA = 5;
 function agregarFlechaClavada(entry) {
   G.flechasClavadas.push(entry);
@@ -215,6 +222,19 @@ export function update(dt) {
               const a = Math.atan2(p.y - pl.y, p.x - pl.x);
               p.x = pl.x + Math.cos(a) * (pl.r + p.r);
               p.y = pl.y + Math.sin(a) * (pl.r + p.r);
+            }
+          }
+          // Barriles: eran puramente decorativos, sin colisión -- pedido
+          // expreso ("son objetos sólidos"). BARRIL_R a ojo del sprite real
+          // (16x22, ver render/world.js), un pelín menor que el semiancho
+          // para no sentirse "invisible y más grande de lo que se ve".
+          for (const o of G.objetos) {
+            if (o.tipo !== "barril") continue;
+            const d = Math.hypot(p.x - o.x, p.y - o.y);
+            if (d < BARRIL_R + p.r) {
+              const a = Math.atan2(p.y - o.y, p.x - o.x) || rnd(0, TAU);
+              p.x = o.x + Math.cos(a) * (BARRIL_R + p.r);
+              p.y = o.y + Math.sin(a) * (BARRIL_R + p.r);
             }
           }
           aplicarLimites(p);
@@ -1011,6 +1031,32 @@ export function update(dt) {
                 }
               }
 
+              // Colisión sólida con pilares y barriles -- a diferencia de
+              // los enemigos genéricos (ver más abajo en este mismo
+              // bucle), esta rama es autocontenida y no pasaba por ahí:
+              // el jefe atravesaba tanto los pilares normales como los
+              // que él mismo invoca. Pedido expreso del usuario ("los
+              // pilares que invoca el golem tampoco deben atravesarse").
+              // Sin daño pasivo al empujar (a diferencia de los mobs
+              // normales) para no interferir con el ritmo de la mecánica
+              // de romper pilares a propósito.
+              for (const pl of G.pilares) {
+                const dPl = Math.hypot(e.x - pl.x, e.y - pl.y);
+                if (dPl < pl.r + e.r) {
+                  const aPl = Math.atan2(e.y - pl.y, e.x - pl.x) || rnd(0, TAU);
+                  e.x = pl.x + Math.cos(aPl) * (pl.r + e.r);
+                  e.y = pl.y + Math.sin(aPl) * (pl.r + e.r);
+                }
+              }
+              for (const o of G.objetos) {
+                if (o.tipo !== "barril") continue;
+                const dB = Math.hypot(e.x - o.x, e.y - o.y);
+                if (dB < BARRIL_R + e.r) {
+                  const aB = Math.atan2(e.y - o.y, e.x - o.x) || rnd(0, TAU);
+                  e.x = o.x + Math.cos(aB) * (BARRIL_R + e.r);
+                  e.y = o.y + Math.sin(aB) * (BARRIL_R + e.r);
+                }
+              }
               e.x = clamp(e.x, e.r, SALA_W - e.r);
               e.y = clamp(e.y, e.r, SALA_H - e.r);
               aplicarLimites(e);
@@ -1366,6 +1412,18 @@ export function update(dt) {
                 e.pilCd = 1;
                 danoPilar(pl, e.atk * 0.7);
               }
+            }
+          }
+          // Barriles: mismo empuje sólido que contra el jugador (ver arriba
+          // en el bucle de jugadores) -- antes solo los pilares bloqueaban
+          // a los enemigos.
+          for (const o of G.objetos) {
+            if (o.tipo !== "barril") continue;
+            const dd = Math.hypot(e.x - o.x, e.y - o.y);
+            if (dd < BARRIL_R + e.r) {
+              const a2 = Math.atan2(e.y - o.y, e.x - o.x) || rnd(0, TAU);
+              e.x = o.x + Math.cos(a2) * (BARRIL_R + e.r);
+              e.y = o.y + Math.sin(a2) * (BARRIL_R + e.r);
             }
           }
           e.x = clamp(e.x, 24, SALA_W - 24);

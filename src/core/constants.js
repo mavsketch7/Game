@@ -14,6 +14,14 @@ export const SALA_H = 1000;
 
 export const COLORES_J = ["#e9b45c", "#7fd4c1", "#c084f0", "#e06070"];
 
+// Duración de la fase de escombro de un pilar de hielo tras llegar a 0 de
+// vida (ver systems/abilities.js: danoPilar, pl.rotoT) -- compartida con
+// render/world.js, que la usa para calcular en qué fotograma de las 8
+// fases de rotura va según cuánto lleva reproduciéndose, no según la
+// fracción de vida perdida (pedido expreso: la animación debe correr AL
+// romperse, no ir cambiando golpe a golpe mientras sigue con vida).
+export const PILAR_ROTO_DUR = 0.55;
+
 export const ROLES = {
         guerrero: {
           nombre: "Guerrero",

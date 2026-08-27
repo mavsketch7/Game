@@ -1,6 +1,6 @@
 // Auto-generated during the modularization refactor (2026-07-23).
 import { H, TAU, W, animGlobal, avanzarAnimGlobal, cx } from "../core/canvas.js";
-import { ELEMENTOS, MAX_PLANTA, RAREZAS, SALA_H, SALA_W, SUPS } from "../core/constants.js";
+import { ELEMENTOS, MAX_PLANTA, PILAR_ROTO_DUR, RAREZAS, SALA_H, SALA_W, SUPS } from "../core/constants.js";
 import { G } from "../core/state.js";
 import { renderHUD } from "./hud.js";
 import { CAMPFIRE_CELDA, FROST_GUARDIAN, KENNEY_TILE, PILAR_HIELO_FRAMES, SANGRE_ANIM, SANGRE_DUR, SHEETS, SPR, assetOK, campfireFrame, iconoDrop, remateMuroPatron, wallPatron } from "./sprites.js";
@@ -649,17 +649,23 @@ export function render() {
             // Pilares de hielo del Guardián (ver core/loop.js: rama "hielo")
             // -- 8 fases de rotura reales (hoja en rejilla, ver
             // PILAR_HIELO_FRAMES en render/sprites.js: intacto -> grietas ->
-            // se parte -> escombro), elegidas por fracción de vida perdida,
-            // no por tiempo. Cada fase ya viene recortada y anclada por su
-            // borde inferior (mismo criterio de bbox-alfa que los frames del
-            // héroe), así que basta con dibujarla con el mismo ancla que
-            // usaba el sprite estático anterior (borde inferior en
-            // pl.y + pl.r*0.5, junto al centro de la sombra).
-            const frac = pl.hpMax > 0 ? 1 - pl.hp / pl.hpMax : 0;
-            const idxFase = Math.min(
-              PILAR_HIELO_FRAMES.length - 1,
-              Math.floor(frac * PILAR_HIELO_FRAMES.length),
-            );
+            // se parte -> escombro). Pedido expreso del usuario: la
+            // animación debe REPRODUCIRSE al romperse (golpe final, hp a
+            // 0), no ir cambiando de fase golpe a golpe mientras el pilar
+            // sigue con vida -- "queda raro". Mientras tenga vida se queda
+            // en la fase intacta (0); las grietas/barra de vida de más
+            // abajo ya comunican el daño acumulado sin tocar el sprite. Al
+            // romperse, pl.rotoT (ver systems/abilities.js) cuenta atrás
+            // desde PILAR_ROTO_DUR y aquí se traduce en avanzar por las 8
+            // fases en ese mismo tiempo, terminando en el escombro justo
+            // cuando toca desaparecer de G.pilares.
+            const idxFase =
+              pl.rotoT > 0
+                ? Math.min(
+                    PILAR_HIELO_FRAMES.length - 1,
+                    Math.floor((1 - pl.rotoT / PILAR_ROTO_DUR) * PILAR_HIELO_FRAMES.length),
+                  )
+                : 0;
             const frame = PILAR_HIELO_FRAMES[idxFase];
             const ps = pl.r * 2.6;
             const psY = pl.y + pl.r * 0.5 - ps;

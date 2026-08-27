@@ -2,7 +2,7 @@
 import { TAU } from "../core/canvas.js";
 // Alias: el único uso de W/H de este archivo es un clamp de objetivo
 // DENTRO de la sala (mundo) -- ver el mismo truco en systems/floorgen.js.
-import { ELEMENTOS, ELEM_MAGO, FORMAS_DRUIDA, FORMAS_INFO, RAREZAS, ROLES, SALA_H as H, SALA_W as W, SUPS } from "../core/constants.js";
+import { ELEMENTOS, ELEM_MAGO, FORMAS_DRUIDA, FORMAS_INFO, PILAR_ROTO_DUR, RAREZAS, ROLES, SALA_H as H, SALA_W as W, SUPS } from "../core/constants.js";
 import { update } from "../core/loop.js";
 import { G } from "../core/state.js";
 import { fxEstocada, fxOnda, fxParticulas, fxTajo, fxTexto } from "../render/effects.js";
@@ -375,7 +375,7 @@ export function danoPilar(pl, dmg) {
             // que ya usa con pl.hurtT) y lo quita de G.pilares al llegar a
             // 0. La mecánica de "vulnerable de nuevo" no espera a esto (ver
             // core/loop.js: algunPilarVivo ya exige pl.hp > 0).
-            pl.rotoT = 0.55;
+            pl.rotoT = PILAR_ROTO_DUR;
           } else {
             const idx = G.pilares.indexOf(pl);
             if (idx >= 0) G.pilares.splice(idx, 1);
