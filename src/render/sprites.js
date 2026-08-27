@@ -1945,11 +1945,14 @@ function teñirSprite(img, color) {
 
 // Carga la pieza base y, en cuanto está lista, pre-genera sus 5 variantes de
 // rareza (RAREZAS, ver core/constants.js) -- baratas de calcular (iconos
-// pequeños) así que se hacen todas de una vez, no bajo demanda.
+// pequeños) así que se hacen todas de una vez, no bajo demanda. Común
+// (índice 0) se queda con el color de madera original, SIN teñir -- pedido
+// expreso del usuario: el tinte es una señal de "esto es especial", no
+// tiene sentido aplicarlo también al arma más básica sin ninguna rareza.
 function cargarConVariantesRareza(src, onListo) {
   const im = new Image();
   im.onload = () => {
-    const variantes = RAREZAS.map((r) => teñirSprite(im, r.col));
+    const variantes = RAREZAS.map((r, i) => (i === 0 ? im : teñirSprite(im, r.col)));
     onListo(im, variantes);
   };
   im.onerror = () => console.warn("No se pudo cargar: " + src);

@@ -429,37 +429,63 @@ export function renderMira() {
       }
 
 function dibujarCargaMago(p, tx, ty) {
-        cx.fillStyle = ELEMENTOS[p.elemento].color;
-        cx.beginPath();
-        cx.arc(tx, ty, 4, 0, TAU);
-        cx.fill();
-        cx.fillStyle = "rgba(255,255,255,.55)";
-        cx.beginPath();
-        cx.arc(tx - 1.3, ty - 1.4, 1.3, 0, TAU);
-        cx.fill();
+        const col = ELEMENTOS[p.elemento].color;
+        // Orbe en bloques de pixel art (no un arco liso, pedido expreso:
+        // "juega con el pixel art y dale dinamismo") -- núcleo romboidal +
+        // brillo que pulsa + 3 chispas orbitando SIEMPRE, no solo al
+        // cargar, para que no se vea un punto muerto en reposo.
+        const PX = 1.6;
+        cx.save();
+        cx.translate(tx, ty);
+        const nucleo = [
+          [0, -2],
+          [-1, -1], [0, -1], [1, -1],
+          [-1, 0], [0, 0], [1, 0],
+          [0, 1],
+        ];
+        cx.fillStyle = col;
+        for (const [nx, ny] of nucleo) cx.fillRect(nx * PX - PX / 2, ny * PX - PX / 2, PX, PX);
+        const pulso = 0.5 + Math.sin(animGlobal * 6) * 0.5;
+        cx.fillStyle = `rgba(255,255,255,${(0.5 + pulso * 0.4).toFixed(2)})`;
+        cx.fillRect(-PX * 1.2, -PX * 2.2, PX, PX);
+        for (let i = 0; i < 3; i++) {
+          const ang = animGlobal * 2.4 + (i * TAU) / 3;
+          const rad = 5.5;
+          const sx = Math.cos(ang) * rad;
+          const sy = Math.sin(ang) * rad * 0.55;
+          cx.globalAlpha = 0.35 + 0.45 * ((Math.sin(ang) + 1) / 2);
+          cx.fillStyle = col;
+          cx.fillRect(sx - PX / 2, sy - PX / 2, PX, PX);
+        }
+        cx.globalAlpha = 1;
+        cx.restore();
+
         if (p.cargaT > 0) {
           const c = clamp(p.cargaT / 1.1, 0, 1);
+          cx.save();
+          cx.translate(tx, ty);
           cx.fillStyle = "rgba(192,132,240,.3)";
           cx.beginPath();
-          cx.arc(tx, ty, 4 + c * 11 + Math.sin(animGlobal * 20) * 1.5, 0, TAU);
+          cx.arc(0, 0, 4 + c * 11 + Math.sin(animGlobal * 20) * 1.5, 0, TAU);
           cx.fill();
           cx.fillStyle = "#c084f0";
           cx.beginPath();
-          cx.arc(tx, ty, 3 + c * 8, 0, TAU);
+          cx.arc(0, 0, 3 + c * 8, 0, TAU);
           cx.fill();
           cx.fillStyle = "#e8d5ff";
           cx.beginPath();
-          cx.arc(tx, ty, (3 + c * 8) * 0.45, 0, TAU);
+          cx.arc(0, 0, (3 + c * 8) * 0.45, 0, TAU);
           cx.fill();
           if (c >= 1) {
             cx.strokeStyle = "#fff";
             cx.globalAlpha = 0.5 + Math.sin(animGlobal * 22) * 0.4;
             cx.lineWidth = 1.5;
             cx.beginPath();
-            cx.arc(tx, ty, 4 + c * 11, 0, TAU);
+            cx.arc(0, 0, 4 + c * 11, 0, TAU);
             cx.stroke();
             cx.globalAlpha = 1;
           }
+          cx.restore();
         }
       }
 
@@ -1159,10 +1185,32 @@ export function renderJugador(p) {
         // para que no salte de sitio al activarse/desactivarse esa capa.
         if (!formaAnimal && p.rol === "mago") {
           cx.save();
-          cx.translate(p.x, p.y + 3);
+          // Mismo pivote que el dibujo real del arma más arriba (ancla real
+          // de mano si hay, si no el pivote fijo + GRIP) -- antes SIEMPRE
+          // usaba el pivote fijo aunque la hoja actual tuviera ancla real,
+          // así que el orbe y la vara podían caer en sitios distintos
+          // ("la bola flota", reportado). gripDibujoOrbe reproduce el mismo
+          // `gripDibujo` que usa esa rama para que la cuenta de abajo
+          // encaje en los dos casos.
+          let gripDibujoOrbe;
+          if (anclaMano) {
+            cx.translate(anclaMano.x, anclaMano.y);
+            gripDibujoOrbe = 0;
+          } else {
+            cx.translate(p.x, p.y + 3);
+            gripDibujoOrbe = CONFIG_ARMA.grip;
+          }
           cx.rotate(p.aim);
           cx.scale(CONFIG_ARMA.escala, CONFIG_ARMA.escala);
-          dibujarCargaMago(p, 26, 0);
+          // Punta real de la vara: (25,5) en el PNG nativo de magic-wood.png
+          // (29x10, horizontal -- ver WEAPON_SRC en sprites.js), medido a
+          // mano por el usuario. Misma fórmula de escala que usa la rama
+          // horizontal del dibujo de armas de abajo (s = (REACH-GRIP)/
+          // max(ancho,alto)) para caer exactamente donde se dibuja la
+          // punta; y=5 es el centro vertical del PNG (10px de alto), por
+          // eso da 0 en el eje local.
+          const sVara = (CONFIG_ARMA.reach - CONFIG_ARMA.grip) / 29;
+          dibujarCargaMago(p, gripDibujoOrbe + 25 * sVara, (5 - 5) * sVara);
           cx.restore();
         }
         // Barra de carga (arquero/pícaro): a diferencia del orbe del mago

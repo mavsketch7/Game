@@ -94,6 +94,34 @@ export function genItem(f, forceRar, forceSlot) {
         };
       }
 
+const NOMBRE_ARMA_BASICA = {
+  guerrero: "Espada de Aprendiz",
+  arquero: "Arco de Aprendiz",
+  picaro: "Daga de Aprendiz",
+  mago: "Vara de Aprendiz",
+  clerigo: "Maza de Aprendiz",
+  druida: "Báculo de Aprendiz",
+};
+
+// Arma de partida: antes un jugador nuevo empezaba con equipo.arma = null
+// (ver nuevaPartida() en core/gameflow.js) -- WEAPON_IMG/WEAPON_IMG_RAREZA
+// (render/sprites.js) ya dibujaban un arma por defecto a partir del rol,
+// pero sin ningún objeto real detrás: no aparecía en la bolsa, sin nombre,
+// sin tooltip. Rareza Común fija y sin stats (es el punto de partida, no
+// una mejora) -- arteIdx=0 para las clases con pack de variantes reales
+// (ver ARMA_ARTE_VARIANTES arriba) para que también se vea con arte real
+// desde el primer segundo, no solo tras el primer drop.
+export function armaBasica(rol) {
+  return {
+    slot: "arma",
+    clase: rol,
+    rareza: 0,
+    nombre: NOMBRE_ARMA_BASICA[rol] || "Arma de Aprendiz",
+    stats: {},
+    ...(ARMA_ARTE_VARIANTES[rol] ? { arteIdx: 0 } : {}),
+  };
+}
+
 // Único punto de entrada para soltar una pieza de equipo al suelo (cofres,
 // muertes de enemigo, recompensa de planta despejada...) -- centraliza el
 // contador de tiempo que usa el rayo de luz al caer (ver render/world.js) y

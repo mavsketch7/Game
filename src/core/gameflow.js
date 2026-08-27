@@ -14,6 +14,7 @@ import {
 } from "../systems/audio.js";
 import { statsTot } from "../systems/combat.js";
 import { M } from "../systems/input.js";
+import { armaBasica } from "../systems/loot.js";
 import { abrirInv, cerrarInv, invSel } from "../ui/inventory.js";
 import { banner, toast } from "../ui/notifications.js";
 import { ocultar } from "../ui/overlays.js";
@@ -148,7 +149,9 @@ export function nuevaPartida() {
             lvlT: 0,
             cartasElegidas: [],
             bolsa: [],
-            equipo: Object.fromEntries(SLOTS.map((s) => [s, null])),
+            // arma: ver armaBasica() en systems/loot.js -- antes null, sin
+            // ningún objeto real detrás (no aparecía en la bolsa/ficha).
+            equipo: { ...Object.fromEntries(SLOTS.map((s) => [s, null])), arma: armaBasica(rol) },
             // estadísticas de la sesión actual, para el ranking en vivo (Tab)
             statDano: 0,
             statDerrotados: 0,
