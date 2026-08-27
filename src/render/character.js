@@ -1206,10 +1206,23 @@ export function renderEnemigo(e) {
           cx.globalAlpha = 1;
           return;
         }
-        cx.fillStyle = "rgba(0,0,0,.35)";
-        cx.beginPath();
-        cx.ellipse(e.x, e.y + e.r * 0.9, e.r * 0.8, e.r * 0.3, 0, 0, TAU);
-        cx.fill();
+        // Causa REAL de la "doble sombra" del Guardián de Hielo (confirmado:
+        // ocurre incluso en sala vacía, sin ningún pilar/barril cerca) --
+        // esta sombra genérica se dibuja aquí de forma INCONDICIONAL, antes
+        // de llegar a las ramas de jefe con sprite real (`e.cerdo`,
+        // `e.arquetipo === "hielo"`, más abajo), que YA dibujan la suya
+        // propia calibrada a su sprite/pies reales. Sin este guard, el
+        // Guardián (y El Magnate, aunque esté en standby) pintaba DOS
+        // sombras cada frame: esta genérica (offset e.r*0.9 hacia abajo,
+        // pensada para el dibujo procedural por defecto de los mobs) más la
+        // suya, centrada en sus pies -- la de abajo asomaba como una sombra
+        // extra y flotante.
+        if (!(e.cerdo || e.arquetipo === "hielo")) {
+          cx.fillStyle = "rgba(0,0,0,.35)";
+          cx.beginPath();
+          cx.ellipse(e.x, e.y + e.r * 0.9, e.r * 0.8, e.r * 0.3, 0, 0, TAU);
+          cx.fill();
+        }
 
         // muñeco de pruebas: sprite fijo + medidor de DPS
         if (e.dummy) {

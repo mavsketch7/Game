@@ -638,13 +638,44 @@ export function render() {
         }
 
         // pilares (columnas): usa el sprite de columna de mazmorra si está cargado
+        //
+        // "Doble sombra" del Guardián de Hielo -- causa real (confirmada por
+        // Playwright, ver también el filtro de spawn en floorgen.js:
+        // G.pilares = G.pilares.filter(...)): la sombra de un pilar cercano
+        // (elipse independiente, offset hacia abajo) puede asomar por
+        // detrás del Guardián mientras el CUERPO del pilar sí queda oculto
+        // tras su sprite -- mucho más ancho que su hitbox real (e.r=58 de
+        // colisión, pero el dibujo ocupa bastante más). El filtro de
+        // floorgen.js solo corrige esto en el punto de aparición del jefe,
+        // UNA vez; con el rodeo de pilares del enjambre (ver
+        // core/loop.js: calcularRumboEnjambre) el jefe vuelve a acercarse
+        // a pilares durante todo el combate (se pega hasta pl.r+e.r+4, unos
+        // 86px con un pilar normal), así que hace falta la MISMA supresión
+        // pero dinámica, cada frame -- se oculta solo la sombra (el cuerpo
+        // del pilar se sigue dibujando normal: si está delante del jefe se
+        // ve bien, si está detrás lo tapa el propio sprite, que es el
+        // comportamiento correcto). Radio más ajustado que el filtro de
+        // spawn (pensado para garantizar despeje, no para juzgar solape
+        // visual frame a frame): el ancho real del sprite del jefe ronda su
+        // propio radio (e.r), así que jefeHielo.r+40 cubre el caso de
+        // "pegado" con margen sin ocultar la sombra de un pilar que ya
+        // quedó claramente al lado, visible.
+        const jefeHieloVivo = G.enemigos.find(
+          (en) => en.jefe && en.arquetipo === "hielo" && en.hp > 0,
+        );
         for (const pl of G.pilares) {
           if (pl.hurtT > 0) pl.hurtT -= 0.016;
           if (pl.rotoT > 0) pl.rotoT -= 0.016;
-          cx.fillStyle = "rgba(0,0,0,.35)";
-          cx.beginPath();
-          cx.ellipse(pl.x, pl.y + pl.r * 0.55, pl.r, pl.r * 0.4, 0, 0, TAU);
-          cx.fill();
+          const sombraOculta =
+            jefeHieloVivo &&
+            Math.hypot(pl.x - jefeHieloVivo.x, pl.y - jefeHieloVivo.y) <
+              jefeHieloVivo.r + 40;
+          if (!sombraOculta) {
+            cx.fillStyle = "rgba(0,0,0,.35)";
+            cx.beginPath();
+            cx.ellipse(pl.x, pl.y + pl.r * 0.55, pl.r, pl.r * 0.4, 0, 0, TAU);
+            cx.fill();
+          }
           if (pl.hielo && PILAR_HIELO_FRAMES.length) {
             // Pilares de hielo del Guardián (ver core/loop.js: rama "hielo")
             // -- 8 fases de rotura reales (hoja en rejilla, ver
