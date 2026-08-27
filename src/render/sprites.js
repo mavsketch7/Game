@@ -1092,13 +1092,20 @@ function cargarHojaFramesGrid(url, cols, rows, destSize, onListo) {
 // la animación (excepto la muerte, que se hunde progresivamente, normal).
 // Recortar por bbox como con el héroe destruiría esa alineación y metería
 // jitter entre animaciones -- en vez de eso se escala el escenario entero
-// UNA sola vez (misma escala/posición para todos los frames) según
-// `pieFrac`/`centroFrac` (fracción del alto/ancho original donde caen los
-// pies/el centro, medidos una vez por pack). El lienzo de salida respeta
-// el aspect ratio real del frame (no fuerza un cuadrado como destSize en
-// cargarHojaFrames) para no recortar los brazos/armas que se extienden
-// mucho durante un ataque.
-function cargarFramesSueltos(urls, destAlto, pieFrac, centroFrac, onListo) {
+// UNA sola vez (misma escala para todos los frames, tomada del bbox más
+// alto) y se ancla por el borde INFERIOR dentro de un lienzo cuadrado
+// destSize x destSize -- mismo criterio que cargarHojaFrames(), aplicado a
+// un pack con un PNG suelto por fotograma en vez de una sola hoja. Antes
+// (cargarFramesSueltos, "escenario fijo") asumía que el pack venía
+// pre-alineado a mano en un lienzo constante -- dejó de valer en cuanto el
+// usuario recortó los PNG del Frost Guardian cada uno a su propio
+// contenido (dimensiones ya no uniformes entre frames, comprobado por
+// archivo: idle_1 79x92, walk_6 93x92, etc.), así que ahora se mide el
+// bbox alfa de CADA frame por separado, igual que ya hace cargarHojaFrames
+// con el héroe -- funciona tanto con frames ya recortados a mano como con
+// los que todavía traigan el lienzo 192x128 sin recortar (bboxAlfa lo
+// encuentra solo), así que sirve aunque el recorte del pack esté a medias.
+function cargarFramesSueltosTrim(urls, destSize, onListo) {
   const imgs = new Array(urls.length);
   let restantes = urls.length;
   const onUna = () => {
@@ -1117,26 +1124,29 @@ function cargarFramesSueltos(urls, destAlto, pieFrac, centroFrac, onListo) {
     im.src = url;
   });
   function componer() {
-    const base = imgs.find((im) => im);
-    if (!base) {
-      onListo([]);
-      return;
-    }
-    const fw = base.naturalWidth, fh = base.naturalHeight;
-    const canvasAlto = destAlto;
-    const canvasAncho = Math.round(destAlto * (fw / fh));
-    const escala = (canvasAlto * 0.86) / fh;
-    const w = fw * escala, h = fh * escala;
-    const destX = canvasAncho / 2 - centroFrac * w;
-    const destY = canvasAlto * 0.86 - pieFrac * h;
-    const frames = imgs.map((im) => {
+    const bboxes = imgs.map((im) => {
       if (!im) return null;
+      const w = im.naturalWidth, h = im.naturalHeight;
+      const tmp = document.createElement("canvas");
+      tmp.width = w;
+      tmp.height = h;
+      const tg = tmp.getContext("2d");
+      tg.imageSmoothingEnabled = false;
+      tg.drawImage(im, 0, 0);
+      return bboxAlfa(tg, w, h) || { x: 0, y: 0, w, h };
+    });
+    const altoMax = Math.max(...bboxes.filter(Boolean).map((b) => b.h), 1);
+    const escala = (destSize * 0.86) / altoMax;
+    const frames = imgs.map((im, i) => {
+      if (!im) return null;
+      const b = bboxes[i];
       const c = document.createElement("canvas");
-      c.width = canvasAncho;
-      c.height = canvasAlto;
+      c.width = destSize;
+      c.height = destSize;
       const g = c.getContext("2d");
       g.imageSmoothingEnabled = false;
-      g.drawImage(im, destX, destY, w, h);
+      const w = b.w * escala, h = b.h * escala;
+      g.drawImage(im, b.x, b.y, b.w, b.h, (destSize - w) / 2, destSize - h, w, h);
       return c;
     });
     onListo(frames);
@@ -1559,13 +1569,8 @@ for (const keyMob in MOB_RUN_SRC) {
 // Guardián de Hielo (primer jefe real del juego, planta 5 -- ver
 // core/loop.js: rama `arq === "hielo"`, systems/floorgen.js). Pack de
 // sprites reales entregado como PNG sueltos (uno por fotograma, no una
-// hoja), ver cargarFramesSueltos() más arriba. FROST_PIE_FRAC/
-// FROST_CENTRO_FRAC salen de medir a mano la posición de los pies/centro
-// en frames de varias animaciones distintas (todas 192x128, pies siempre
-// en y≈109, centro en x≈95-98 -- el pack viene pre-alineado en un
-// "escenario" fijo).
-const FROST_PIE_FRAC = 109 / 128;
-const FROST_CENTRO_FRAC = 0.5;
+// hoja), cada uno ya recortado a su propio contenido (dimensiones NO
+// uniformes entre frames) -- ver cargarFramesSueltosTrim() más arriba.
 // r=46 (TIPOS.jefe normal usa r=28, ver systems/combat.js): imponente a
 // propósito, es el primer jefe real del juego.
 const FROST_ALTO = 46 * FACTOR_SPRITE_HITBOX;
@@ -1578,7 +1583,7 @@ for (const anim in FROST_ANIM) {
   const n = FROST_ANIM[anim];
   const carpeta = FROST_CARPETA[anim];
   const urls = Array.from({ length: n }, (_, i) => assetUrl(`enemies/frost_guardian/${carpeta}_${i + 1}`));
-  cargarFramesSueltos(urls, FROST_ALTO, FROST_PIE_FRAC, FROST_CENTRO_FRAC, (frames) => {
+  cargarFramesSueltosTrim(urls, FROST_ALTO, (frames) => {
     FROST_GUARDIAN[anim] = frames;
   });
 }

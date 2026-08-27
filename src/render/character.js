@@ -1338,31 +1338,16 @@ export function renderEnemigo(e) {
           const flip3 = obj3 ? e.x > obj3.x : false;
           // Sombra en el suelo -- esta rama devuelve antes de llegar a la
           // sombra genérica de más abajo (e.y + e.r*0.9, calibrada para el
-          // resto de enemigos), así que necesita la suya. Este pack viene
-          // pre-alineado con los PIES ya prácticamente en e.y (medido por
-          // píxeles: fila 109 de 128 en TODOS los frames, casi exactamente
-          // el mismo punto que el desplazamiento -fr.height*0.86 de abajo
-          // produce) -- por eso el offset es casi nulo y NO e.r*0.9, o la
-          // sombra quedaría muy por debajo de los pies reales y el jefe
-          // seguiría pareciendo flotar aunque hubiera sombra.
+          // resto de enemigos), así que necesita la suya. cargarFramesSueltosTrim
+          // (render/sprites.js) ya ancla cada frame por su borde INFERIOR
+          // real (bbox alfa, mismo criterio que el héroe) dentro de `fr`,
+          // así que los pies caen EXACTOS en e.y -- sin offset a ojo.
           cx.fillStyle = "rgba(0,0,0,.4)";
           cx.beginPath();
-          cx.ellipse(e.x, e.y + 2, e.r * 0.85, e.r * 0.28, 0, 0, TAU);
+          cx.ellipse(e.x, e.y, e.r * 0.85, e.r * 0.28, 0, 0, TAU);
           cx.fill();
-          cx.save();
-          cx.imageSmoothingEnabled = false;
           if (e.hurtT > 0) cx.globalAlpha = 0.8;
-          cx.translate(e.x, e.y);
-          if (flip3) cx.scale(-1, 1);
-          // 0.86: MISMA constante que usa cargarFramesSueltos() al componer
-          // `fr` (ver render/sprites.js) para colocar los pies dentro del
-          // lienzo ya recompuesto -- ahí es donde vive la medición real por
-          // píxeles (109/128), no aquí. `fr` YA no es el PNG crudo, así que
-          // reescribir esto con 109/128 (como hice antes) desalinea los
-          // pies: hay que replicar el 0.86 del compositor tal cual, o la
-          // sombra de más arriba y los pies dejan de coincidir.
-          if (fr) cx.drawImage(fr, -fr.width / 2, -fr.height * 0.86);
-          cx.restore();
+          if (fr) drawSpriteBottom(fr, e.x, e.y, flip3);
           cx.globalAlpha = 1;
           // barra de vida + nombre (mismo patrón que El Magnate arriba)
           const w3 = 90;

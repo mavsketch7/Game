@@ -4,7 +4,7 @@ import { ELEMENTOS, MAX_PLANTA, RAREZAS, SALA_H, SALA_W, SUPS } from "../core/co
 import { G } from "../core/state.js";
 import { renderHUD } from "./hud.js";
 import { CAMPFIRE_CELDA, FROST_GUARDIAN, KENNEY_TILE, PILAR_HIELO_FRAMES, SANGRE_ANIM, SANGRE_DUR, SHEETS, SPR, assetOK, campfireFrame, iconoDrop, remateMuroPatron, wallPatron } from "./sprites.js";
-import { drawSprite } from "./spriteDraw.js";
+import { drawSprite, drawSpriteBottom } from "./spriteDraw.js";
 import { renderEnemigo, renderJugador, renderMira } from "./character.js";
 import { clamp, hexRgba, ri, rnd } from "../utils/helpers.js";
 
@@ -640,6 +640,7 @@ export function render() {
         // pilares (columnas): usa el sprite de columna de mazmorra si está cargado
         for (const pl of G.pilares) {
           if (pl.hurtT > 0) pl.hurtT -= 0.016;
+          if (pl.rotoT > 0) pl.rotoT -= 0.016;
           cx.fillStyle = "rgba(0,0,0,.35)";
           cx.beginPath();
           cx.ellipse(pl.x, pl.y + pl.r * 0.55, pl.r, pl.r * 0.4, 0, 0, TAU);
@@ -744,8 +745,11 @@ export function render() {
             );
             cx.fill();
           }
-          // grietas / barra de vida según daño
-          if (pl.destructible && pl.hp < pl.hpMax) {
+          // grietas / barra de vida según daño -- se salta mientras se
+          // reproduce la fase final de rotura (pl.rotoT): el escombro ya
+          // comunica "destruido" por sí solo, no hace falta apilar grietas
+          // + barra vacía encima.
+          if (pl.destructible && pl.hp < pl.hpMax && !(pl.rotoT > 0)) {
             const danio = 1 - pl.hp / pl.hpMax;
             cx.strokeStyle = "rgba(10,8,17,.7)";
             cx.lineWidth = 1.5;
@@ -770,6 +774,11 @@ export function render() {
             );
           }
         }
+        // quita los pilares de hielo que ya terminaron de reproducir su
+        // fase de rotura (ver systems/abilities.js: danoPilar) -- fuera del
+        // bucle de arriba para no mutar G.pilares mientras se recorre.
+        if (G.pilares.some((pl) => pl.rotoT !== undefined && pl.rotoT <= 0))
+          G.pilares = G.pilares.filter((pl) => pl.rotoT === undefined || pl.rotoT > 0);
 
         // objetos del nivel
         for (const o of G.objetos) {
@@ -1565,8 +1574,11 @@ export function render() {
               const fr = frames[idx];
               if (fr) {
                 cx.globalAlpha = k;
-                cx.imageSmoothingEnabled = false;
-                cx.drawImage(fr, f.x - fr.width / 2, f.y - fr.height * 0.86);
+                // drawSpriteBottom, no el -fr.height*0.86 de antes: ese
+                // offset era del loader "escenario fijo" viejo
+                // (cargarFramesSueltos); cargarFramesSueltosTrim ya ancla
+                // cada frame por su borde inferior real dentro del lienzo.
+                drawSpriteBottom(fr, f.x, f.y);
                 cx.globalAlpha = 1;
               }
             }

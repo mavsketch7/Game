@@ -343,15 +343,20 @@ export function danoPilar(pl, dmg) {
             fxParticulas(pl.x, pl.y - 10, 16, "#57496f");
           }
           G.shake = Math.max(G.shake, 3);
-          // Sin decal de escombro para los pilares de hielo del Guardián:
-          // confirmado por Playwright (reproducido a propósito), su sombra
+          // Sin decal de escombro mientras el Guardián de Hielo siga vivo en
+          // la sala -- confirmado por Playwright (reproducido a propósito):
+          // no basta con silenciar solo SUS pilares (pl.hielo), porque el
+          // jefe se pasa toda la pelea deambulando por la sala entera
+          // persiguiendo al jugador, así que tarde o temprano acaba de pie
+          // junto al escombro de un pilar normal también, y esa sombra
           // (rgba(0,0,0,.3), ver el bucle de G.decals en render/world.js) se
-          // ve casi siempre cerca del jefe -- este se pasa la pelea entera
-          // moviéndose por la misma sala pequeña donde él mismo hizo caer
-          // esos pilares -- y se confunde con una segunda sombra "flotando"
-          // detrás de la suya propia. El resto de pilares de la mazmorra
-          // conservan su escombro como siempre.
-          if (!pl.hielo) G.decals.push({ x: pl.x, y: pl.y });
+          // confunde con una segunda sombra suya "flotando" detrás. Fuera de
+          // esta sala, cualquier pilar normal conserva su escombro de
+          // siempre.
+          const jefeHieloVivo = G.enemigos.some(
+            (en) => en.jefe && en.arquetipo === "hielo" && en.hp > 0,
+          );
+          if (!jefeHieloVivo) G.decals.push({ x: pl.x, y: pl.y });
           if (Math.random() < PROB_DROP_MITICO_ROTO)
             dropItem(pl.x, pl.y, genObjetoMitico(G.planta || 1));
           else if (Math.random() < 0.35)
@@ -361,8 +366,20 @@ export function danoPilar(pl, dmg) {
               y: pl.y,
               val: Math.max(1, Math.round(1 + G.planta * 0.2)),
             });
-          const idx = G.pilares.indexOf(pl);
-          if (idx >= 0) G.pilares.splice(idx, 1);
+          if (pl.hielo) {
+            // Deja la última fase (escombro) visible un momento en vez de
+            // desaparecer del array en el mismo tick en que llega a 0 de
+            // vida -- pedido expreso ("debería reproducirse al romperse"):
+            // antes no daba tiempo a ver el resultado de la rotura.
+            // render/world.js decrementa pl.rotoT cada frame (mismo patrón
+            // que ya usa con pl.hurtT) y lo quita de G.pilares al llegar a
+            // 0. La mecánica de "vulnerable de nuevo" no espera a esto (ver
+            // core/loop.js: algunPilarVivo ya exige pl.hp > 0).
+            pl.rotoT = 0.55;
+          } else {
+            const idx = G.pilares.indexOf(pl);
+            if (idx >= 0) G.pilares.splice(idx, 1);
+          }
           toast("¡Columna destruida!", "#9a93ab");
         }
       }

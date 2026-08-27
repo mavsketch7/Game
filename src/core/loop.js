@@ -997,7 +997,12 @@ export function update(dt) {
               }
 
               if (e.regenerando) {
-                const algunPilarVivo = e.pilaresFase.some((pl) => G.pilares.includes(pl));
+                // pl.hp > 0: un pilar con vida a 0 puede seguir un
+                // momento en G.pilares reproduciendo su fase de escombro
+                // (pl.rotoT, ver systems/abilities.js) -- eso es solo
+                // cosmético, no debe retrasar que el jefe vuelva a ser
+                // vulnerable.
+                const algunPilarVivo = e.pilaresFase.some((pl) => G.pilares.includes(pl) && pl.hp > 0);
                 if (!algunPilarVivo) {
                   e.regenerando = false;
                   toast("❄ Pilares destruidos — el Guardián vuelve a ser vulnerable", "#7fd4c1");
