@@ -233,7 +233,13 @@ export function iniciarLobby() {
         G.fogataUsada = true;
         G.pilares = [];
         G.mercader = { x: W - 130, y: H / 2 - 40 };
-        G.skinNpc = { x: 110, y: H / 2 - 40 };
+        // Sastre de skins: quitado del lobby a petición expresa del usuario
+        // (dejaba de tener sentido con el nuevo sistema de armadura visual
+        // real). Se deja `null` en vez de borrar todo ui/skins.js -- el
+        // render/interacción de world.js/loop.js ya están gateados en
+        // `if (G.skinNpc)`, así que no aparece ni es interactuable sin tocar
+        // nada más.
+        G.skinNpc = null;
         G.arenaNpc = { x: W / 2, y: H - 130 };
         G.yunqueNpc = { x: W - 130, y: 90 };
         // Cofre de pruebas (QA): solo aparece con ?qa=1 en la URL -- a

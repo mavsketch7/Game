@@ -468,14 +468,22 @@ export function matarEnemigo(e, duenio) {
           // Set de armadura en capas del guerrero (primera prueba del
           // sistema, ver render/character.js: CASCO_*/PETO_*/PIERNAS_* en
           // render/sprites.js): también GARANTIZADO, mismo criterio que el
-          // martillo -- Épica fija, sin depender del roll aleatorio de jefe
-          // normal. Sin `clase` (a diferencia del martillo): cualquier rol
-          // puede equipar casco/peto/piernas, igual que el resto del loot de
-          // esos slots -- solo el guerrero tiene arte de armadura dibujado
-          // todavía, el resto simplemente no se ve armado hasta que existan
-          // esas capas.
+          // martillo -- Mítica fija (rareza 4, ver RAREZAS en
+          // core/constants.js), nombre/id sobreescritos a mano igual que el
+          // martillo -- pedido expreso del usuario. Sin `clase` (a
+          // diferencia del martillo): cualquier rol puede equipar casco/
+          // peto/piernas, igual que el resto del loot de esos slots -- solo
+          // el guerrero tiene arte de armadura dibujado todavía, el resto
+          // simplemente no se ve armado hasta que existan esas capas.
+          const PIEZAS_FRHOR = {
+            casco: { nombre: "Casco de Frhor", id: "casco_frhor" },
+            peto: { nombre: "Peto de Frhor", id: "peto_frhor" },
+            piernas: { nombre: "Grebas de Frhor", id: "grebas_frhor" },
+          };
           for (const slotArm of ["casco", "peto", "piernas"]) {
-            const pieza = genItem(G.planta, 2, slotArm);
+            const pieza = genItem(G.planta, 4, slotArm);
+            pieza.nombre = PIEZAS_FRHOR[slotArm].nombre;
+            pieza.id = PIEZAS_FRHOR[slotArm].id;
             const pvA = posDropValida(e.x + rnd(-16, 16), e.y + rnd(-16, 16));
             dropItem(pvA.x, pvA.y, pieza);
           }

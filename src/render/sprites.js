@@ -1704,6 +1704,20 @@ for (const anim in FROST_ANIM) {
   });
 }
 
+// Muñeco de pruebas (torre-vespero-assets/Dummy, ver core/gameflow.js: los
+// 3 dummy que aparecen en el lobby, r=15): 4 PNG sueltos (mismo criterio que
+// el Guardián de Hielo, ver cargarFramesSueltosTrim arriba) -- es la
+// reacción de "golpeado" del propio pack, no una animación de reposo/golpe
+// separada, así que el frame 0 hace de pose de reposo y el resto se juega
+// en secuencia mientras dura `e.hurtT` (ver render/character.js).
+const DUMMY_ALTO = 15 * FACTOR_SPRITE_HITBOX;
+export const DUMMY_HIT = [];
+cargarFramesSueltosTrim(
+  Array.from({ length: 4 }, (_, i) => assetUrl(`dummy/hit_${i + 1}`)),
+  DUMMY_ALTO,
+  (frames) => { DUMMY_HIT.push(...frames); },
+);
+
 // Fases de rotura del pilar de hielo del Guardián (ver render/world.js,
 // bucle de G.pilares, rama pl.hielo): hoja en rejilla 4x2 -- fila 1 intacto
 // -> grietas, fila 2 se parte -> escombro en el suelo (8 fases en total).

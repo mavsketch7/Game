@@ -9,7 +9,7 @@ import { ELEMENTOS, RAREZAS, SUPS } from "../core/constants.js";
 import { G } from "../core/state.js";
 import { fxParticulas } from "./effects.js";
 import { drawSprite, drawSpriteBottom } from "./spriteDraw.js";
-import { ARQUERO_BOW, ARQUERO_BOW_DUR, ATTACK_DUR, CASCO_ATTACK, CASCO_HURT, CASCO_IDLE, CASCO_RUN, CONFIG_ARMA, DASH_ATTACK_DUR, ESC_FORMA, FROST_GUARDIAN, MARTILLO_FRHOR_IMG, MIRA_IZQUIERDA_POR_DEFECTO, MOB_RUN, MUERTE_DUR, OFFHAND_IMG, OFFHAND_IMG_RAREZA, PETO_ATTACK, PETO_HURT, PETO_IDLE, PETO_RUN, PIERNAS_ATTACK, PIERNAS_HURT, PIERNAS_IDLE, PIERNAS_RUN, REAL_ATTACK, REAL_ATTACK_ANCLA, REAL_DASH, REAL_DASH_ANCLA, REAL_HURT, REAL_IDLE, REAL_IDLE_ANCLA, REAL_MUERTE, REAL_RUN, REAL_RUN_ANCLA, REAL_SPECIAL, REAL_SPECIAL_ANCLA, REAL_SPRITE_SCALE, SHEETS, SPECIAL_ATTACK_DUR, SPR, SPR_FORMAS, TAM_HEROE, WEAPON_IMG, WEAPON_IMG_RAREZA, assetOK, seleccionarImgEnemigo, spriteJugador } from "./sprites.js";
+import { ARQUERO_BOW, ARQUERO_BOW_DUR, ATTACK_DUR, CASCO_ATTACK, CASCO_HURT, CASCO_IDLE, CASCO_RUN, CONFIG_ARMA, DASH_ATTACK_DUR, DUMMY_HIT, ESC_FORMA, FROST_GUARDIAN, MARTILLO_FRHOR_IMG, MIRA_IZQUIERDA_POR_DEFECTO, MOB_RUN, MUERTE_DUR, OFFHAND_IMG, OFFHAND_IMG_RAREZA, PETO_ATTACK, PETO_HURT, PETO_IDLE, PETO_RUN, PIERNAS_ATTACK, PIERNAS_HURT, PIERNAS_IDLE, PIERNAS_RUN, REAL_ATTACK, REAL_ATTACK_ANCLA, REAL_DASH, REAL_DASH_ANCLA, REAL_HURT, REAL_IDLE, REAL_IDLE_ANCLA, REAL_MUERTE, REAL_RUN, REAL_RUN_ANCLA, REAL_SPECIAL, REAL_SPECIAL_ANCLA, REAL_SPRITE_SCALE, SHEETS, SPECIAL_ATTACK_DUR, SPR, SPR_FORMAS, TAM_HEROE, WEAPON_IMG, WEAPON_IMG_RAREZA, assetOK, seleccionarImgEnemigo, spriteJugador } from "./sprites.js";
 import { CARGA_ARQ_MAX, CARGA_ARQ_ZONA, CARGA_CUCH_MAX, CARGA_CUCH_ZONA, groundTarget } from "../systems/abilities.js";
 import { masCercano } from "../systems/combat.js";
 import { mouse } from "../systems/input.js";
@@ -1284,13 +1284,20 @@ export function renderEnemigo(e) {
           cx.fill();
         }
 
-        // muñeco de pruebas: sprite fijo + medidor de DPS
+        // muñeco de pruebas: sprite real (torre-vespero-assets/Dummy, ver
+        // DUMMY_HIT en render/sprites.js) + medidor de DPS. Frame 0 = reposo;
+        // al recibir un golpe (e.hurtT, mismo campo que ya usa cualquier
+        // enemigo para el flinch, ver danoAEnemigo en systems/combat.js:
+        // `e.hurtT = 0.12`) se reproduce la reacción completa según el
+        // progreso de esos 0.12s. Cae al icono procedural (SPR.dummy) si el
+        // pack todavía no cargó, mismo criterio que el resto del pipeline.
         if (e.dummy) {
-          drawSprite(
-            SPR.dummy,
-            e.x,
-            e.y - 2 + (e.hurtT > 0 ? rnd(-1.5, 1.5) : 0),
-          );
+          const HURT_DUR = 0.12;
+          const frameIdx = e.hurtT > 0
+            ? Math.min(DUMMY_HIT.length - 1, Math.floor((1 - e.hurtT / HURT_DUR) * DUMMY_HIT.length))
+            : 0;
+          const img = DUMMY_HIT.length ? DUMMY_HIT[frameIdx] : SPR.dummy;
+          drawSprite(img, e.x, e.y - 2);
           let dps = 0;
           for (const l of e.dmgLog) dps += l.d;
           dps = Math.round(dps / 5);
