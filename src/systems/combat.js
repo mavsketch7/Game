@@ -465,6 +465,20 @@ export function matarEnemigo(e, duenio) {
           martillo.kills = 0;
           const pvM = posDropValida(e.x, e.y);
           dropItem(pvM.x, pvM.y, martillo);
+          // Set de armadura en capas del guerrero (primera prueba del
+          // sistema, ver render/character.js: CASCO_*/PETO_*/PIERNAS_* en
+          // render/sprites.js): también GARANTIZADO, mismo criterio que el
+          // martillo -- Épica fija, sin depender del roll aleatorio de jefe
+          // normal. Sin `clase` (a diferencia del martillo): cualquier rol
+          // puede equipar casco/peto/piernas, igual que el resto del loot de
+          // esos slots -- solo el guerrero tiene arte de armadura dibujado
+          // todavía, el resto simplemente no se ve armado hasta que existan
+          // esas capas.
+          for (const slotArm of ["casco", "peto", "piernas"]) {
+            const pieza = genItem(G.planta, 2, slotArm);
+            const pvA = posDropValida(e.x + rnd(-16, 16), e.y + rnd(-16, 16));
+            dropItem(pvA.x, pvA.y, pieza);
+          }
         } else if (e.jefe || e.mini || Math.random() < 0.22) {
           const it2 = genItem(G.planta + (e.jefe ? 2 : e.mini ? 1 : 0));
           if (e.jefe)

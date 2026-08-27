@@ -9,7 +9,7 @@ import { ELEMENTOS, RAREZAS, SUPS } from "../core/constants.js";
 import { G } from "../core/state.js";
 import { fxParticulas } from "./effects.js";
 import { drawSprite, drawSpriteBottom } from "./spriteDraw.js";
-import { ARQUERO_BOW, ARQUERO_BOW_DUR, ATTACK_DUR, CONFIG_ARMA, DASH_ATTACK_DUR, ESC_FORMA, FROST_GUARDIAN, MARTILLO_FRHOR_IMG, MIRA_IZQUIERDA_POR_DEFECTO, MOB_RUN, MUERTE_DUR, OFFHAND_IMG, OFFHAND_IMG_RAREZA, REAL_ATTACK, REAL_ATTACK_ANCLA, REAL_DASH, REAL_DASH_ANCLA, REAL_HURT, REAL_IDLE, REAL_IDLE_ANCLA, REAL_MUERTE, REAL_RUN, REAL_RUN_ANCLA, REAL_SPECIAL, REAL_SPECIAL_ANCLA, REAL_SPRITE_SCALE, SHEETS, SPECIAL_ATTACK_DUR, SPR, SPR_FORMAS, TAM_HEROE, WEAPON_IMG, WEAPON_IMG_RAREZA, assetOK, seleccionarImgEnemigo, spriteJugador } from "./sprites.js";
+import { ARQUERO_BOW, ARQUERO_BOW_DUR, ATTACK_DUR, CASCO_ATTACK, CASCO_HURT, CASCO_IDLE, CASCO_RUN, CONFIG_ARMA, DASH_ATTACK_DUR, ESC_FORMA, FROST_GUARDIAN, MARTILLO_FRHOR_IMG, MIRA_IZQUIERDA_POR_DEFECTO, MOB_RUN, MUERTE_DUR, OFFHAND_IMG, OFFHAND_IMG_RAREZA, PETO_ATTACK, PETO_HURT, PETO_IDLE, PETO_RUN, PIERNAS_ATTACK, PIERNAS_HURT, PIERNAS_IDLE, PIERNAS_RUN, REAL_ATTACK, REAL_ATTACK_ANCLA, REAL_DASH, REAL_DASH_ANCLA, REAL_HURT, REAL_IDLE, REAL_IDLE_ANCLA, REAL_MUERTE, REAL_RUN, REAL_RUN_ANCLA, REAL_SPECIAL, REAL_SPECIAL_ANCLA, REAL_SPRITE_SCALE, SHEETS, SPECIAL_ATTACK_DUR, SPR, SPR_FORMAS, TAM_HEROE, WEAPON_IMG, WEAPON_IMG_RAREZA, assetOK, seleccionarImgEnemigo, spriteJugador } from "./sprites.js";
 import { CARGA_ARQ_MAX, CARGA_ARQ_ZONA, CARGA_CUCH_MAX, CARGA_CUCH_ZONA, groundTarget } from "../systems/abilities.js";
 import { masCercano } from "../systems/combat.js";
 import { mouse } from "../systems/input.js";
@@ -73,11 +73,23 @@ function calcularPoseHeroe(p, x, yPies, mov) {
         const idleFrames = REAL_IDLE[dirAim];
         const idleFrameIdx = (idleFrames && idleFrames.length) ? Math.floor(p.anim * 4) % idleFrames.length : -1;
         let img = idleFrameIdx >= 0 ? idleFrames[idleFrameIdx] : null;
+        // Capas de armadura equipable (casco/peto/piernas, ver CASCO_IDLE/
+        // PETO_IDLE/PIERNAS_IDLE etc. en sprites.js): mismo frame/dirección
+        // que el cuerpo en cada rama de abajo, para quedar pixel-alineadas --
+        // `null` si esa animación todavía no tiene arte de armadura propio
+        // (golpe especial, dash, muerte); dibujarCuerpoHeroe() simplemente no
+        // dibuja la capa en ese caso, y p.equipo decide si se dibuja o no.
+        let imgCasco = idleFrameIdx >= 0 ? (CASCO_IDLE[dirAim]?.[idleFrameIdx] || null) : null;
+        let imgPeto = idleFrameIdx >= 0 ? (PETO_IDLE[dirAim]?.[idleFrameIdx] || null) : null;
+        let imgPiernas = idleFrameIdx >= 0 ? (PIERNAS_IDLE[dirAim]?.[idleFrameIdx] || null) : null;
         // Ataque real de esta clase para `dirAim`; si esa clase no tiene arte
         // para arriba/abajo todavía (mago/pícaro, ver REAL_ATTACK_SRC en
         // sprites.js) cae a la hoja lateral antes que no mostrar nada.
         const atkPorClase = REAL_ATTACK[p.rol] || {};
         const atkFrames = atkPorClase[dirAim] || atkPorClase.side;
+        const cascoAtkPorClase = CASCO_ATTACK[p.rol] || {};
+        const petoAtkPorClase = PETO_ATTACK[p.rol] || {};
+        const piernasAtkPorClase = PIERNAS_ATTACK[p.rol] || {};
         // Encarado a usar para ESTE frame: por defecto el de la puntería
         // (idle/ataque -- miras hacia donde apuntas). Correr es la
         // excepción -- encara hacia donde te MUEVES, no hacia donde
@@ -114,6 +126,9 @@ function calcularPoseHeroe(p, x, yPies, mov) {
           anguloFacing = Math.atan2(p.dashAtkY, p.dashAtkX);
           dir = direccionDesdeAim(anguloFacing);
           usaArteClase = true;
+          // Sin arte de armadura para el dash-ataque todavía -- se oculta
+          // mientras dura este estado en vez de arrastrar el frame de idle.
+          imgCasco = imgPeto = imgPiernas = null;
           const dashFrames = REAL_DASH[p.rol]?.[dir];
           if (dashFrames && dashFrames.length) {
             const dur = DASH_ATTACK_DUR[p.rol] || 0.28;
@@ -137,6 +152,17 @@ function calcularPoseHeroe(p, x, yPies, mov) {
           const frameIdx = Math.floor(prog * framesGolpe.length);
           const fr = framesGolpe[frameIdx];
           if (fr) img = fr;
+          if (especial) {
+            // El Golpe Colosal tampoco tiene arte de armadura propio todavía.
+            imgCasco = imgPeto = imgPiernas = null;
+          } else {
+            const cascoFrames = cascoAtkPorClase[dirAim] || cascoAtkPorClase.side;
+            const petoFrames = petoAtkPorClase[dirAim] || petoAtkPorClase.side;
+            const piernasFrames = piernasAtkPorClase[dirAim] || piernasAtkPorClase.side;
+            imgCasco = (cascoFrames && cascoFrames[frameIdx]) || null;
+            imgPeto = (petoFrames && petoFrames[frameIdx]) || null;
+            imgPiernas = (piernasFrames && piernasFrames[frameIdx]) || null;
+          }
           const anclasDir = especial
             ? REAL_SPECIAL_ANCLA.guerrero[dirAim]
             : (REAL_ATTACK_ANCLA[p.rol]?.[dirAim] || REAL_ATTACK_ANCLA[p.rol]?.side);
@@ -154,6 +180,12 @@ function calcularPoseHeroe(p, x, yPies, mov) {
           const frameIdx = Math.floor(prog * atkFrames.length);
           const fr = atkFrames[frameIdx];
           if (fr) img = fr;
+          const cascoFrames = cascoAtkPorClase[dirAim] || cascoAtkPorClase.side;
+          const petoFrames = petoAtkPorClase[dirAim] || petoAtkPorClase.side;
+          const piernasFrames = piernasAtkPorClase[dirAim] || piernasAtkPorClase.side;
+          imgCasco = (cascoFrames && cascoFrames[frameIdx]) || null;
+          imgPeto = (petoFrames && petoFrames[frameIdx]) || null;
+          imgPiernas = (piernasFrames && piernasFrames[frameIdx]) || null;
           const anclasDir = REAL_ATTACK_ANCLA[p.rol]?.[dirAim] || REAL_ATTACK_ANCLA[p.rol]?.side;
           anclaLocal = anclasDir ? anclasDir[frameIdx] : null;
         } else if (p.golpeT > 0 && REAL_HURT.length) {
@@ -169,6 +201,9 @@ function calcularPoseHeroe(p, x, yPies, mov) {
           const frameIdx = Math.floor(prog * REAL_HURT.length);
           const fr = REAL_HURT[frameIdx];
           if (fr) img = fr;
+          imgCasco = CASCO_HURT[frameIdx] || null;
+          imgPeto = PETO_HURT[frameIdx] || null;
+          imgPiernas = PIERNAS_HURT[frameIdx] || null;
         } else if (mov && p.inp) {
           anguloFacing = Math.atan2(p.inp.my, p.inp.mx);
           dir = direccionDesdeAim(anguloFacing);
@@ -178,6 +213,9 @@ function calcularPoseHeroe(p, x, yPies, mov) {
             const fr = runFrames[runFrameIdx];
             if (fr) img = fr;
             anclaLocal = REAL_RUN_ANCLA[dir]?.[runFrameIdx] || null;
+            imgCasco = CASCO_RUN[dir]?.[runFrameIdx] || null;
+            imgPeto = PETO_RUN[dir]?.[runFrameIdx] || null;
+            imgPiernas = PIERNAS_RUN[dir]?.[runFrameIdx] || null;
           }
         }
         // Espejo izq/derecha: solo tiene sentido en el bucket lateral (arriba/
@@ -205,12 +243,24 @@ function calcularPoseHeroe(p, x, yPies, mov) {
         // del arma -- de espaldas ("up") el arma debe quedar tapada por el
         // cuerpo, así que el cuerpo se dibuja el último; de frente/lateral
         // el orden de siempre (cuerpo, luego arma encima) sigue valiendo.
-        return { img, flip, dir, ancla };
+        return { img, imgCasco, imgPeto, imgPiernas, flip, dir, ancla };
       }
 
-      function dibujarCuerpoHeroe(p, img, x, yPies, flip) {
+      // `pose` es el objeto devuelto por calcularPoseHeroe() -- dibuja el
+      // cuerpo y, ENCIMA (piernas -> peto -> casco, de más tapado a menos),
+      // cada capa de armadura equipada (ver core/constants.js: SLOTS) que
+      // tenga arte para este frame concreto (p.equipo.X truthy Y
+      // pose.imgX no nulo -- ver calcularPoseHeroe, `null` en los estados
+      // sin arte de armadura todavía). Equipar el peto sin el casco no
+      // dibuja el casco, y viceversa: cada capa es independiente.
+      function dibujarCuerpoHeroe(p, pose, x, yPies) {
+        const { img, imgCasco, imgPeto, imgPiernas, flip } = pose;
         if (img) {
-          drawSpriteBottom(img, x, yPies, flip, REAL_SPRITE_SCALE[p.rol] || 1);
+          const esc = REAL_SPRITE_SCALE[p.rol] || 1;
+          drawSpriteBottom(img, x, yPies, flip, esc);
+          if (p.equipo.piernas && imgPiernas) drawSpriteBottom(imgPiernas, x, yPies, flip, esc);
+          if (p.equipo.peto && imgPeto) drawSpriteBottom(imgPeto, x, yPies, flip, esc);
+          if (p.equipo.casco && imgCasco) drawSpriteBottom(imgCasco, x, yPies, flip, esc);
         } else {
           // Los assets reales todavía no cargaron (un instante, al arrancar):
           // icono estático de siempre, centrado -- no viene recolocado por
@@ -235,7 +285,11 @@ export function renderRetratoIdle(ctx, p, w, h, anim) {
   ctx.clearRect(0, 0, w, h);
   const pFalso = {
     ...p,
-    aim: -Math.PI / 2,
+    // Retrato de perfil (lateral), no de espaldas -- aim=0 -> direccionDesdeAim
+    // resuelve "side" mirando a la derecha (sin flip, cos(0)>0). Antes era
+    // -PI/2 ("up", de espaldas): pedido expreso del usuario, se ve mejor el
+    // personaje de perfil que la nuca.
+    aim: 0,
     anim,
     inp: null,
     swingT: 0,
@@ -243,7 +297,7 @@ export function renderRetratoIdle(ctx, p, w, h, anim) {
     cargaArqT: 0,
     golpeT: 0,
   };
-  const { img, flip } = calcularPoseHeroe(pFalso, 0, 0, false);
+  const { img, imgCasco, imgPeto, imgPiernas, flip } = calcularPoseHeroe(pFalso, 0, 0, false);
   if (!img) return;
   // El personaje real ocupa solo una fracción del cuadro TAM_HEROE (mucho
   // margen transparente alrededor, ver cargarHojaFramesConAncla en
@@ -257,6 +311,12 @@ export function renderRetratoIdle(ctx, p, w, h, anim) {
   if (flip) ctx.scale(-1, 1);
   ctx.scale(esc, esc);
   ctx.drawImage(img, -img.width / 2, -img.height);
+  // Mismas capas de armadura equipada que el cuerpo real en juego (ver
+  // dibujarCuerpoHeroe) -- así la ficha de personaje refleja lo que lleva
+  // puesto, no solo el cuerpo desnudo.
+  if (p.equipo.piernas && imgPiernas) ctx.drawImage(imgPiernas, -imgPiernas.width / 2, -imgPiernas.height);
+  if (p.equipo.peto && imgPeto) ctx.drawImage(imgPeto, -imgPeto.width / 2, -imgPeto.height);
+  if (p.equipo.casco && imgCasco) ctx.drawImage(imgCasco, -imgCasco.width / 2, -imgCasco.height);
   ctx.restore();
 }
 
@@ -477,7 +537,7 @@ export function renderJugador(p) {
             );
           else {
             const poseTr = calcularPoseHeroe(p, tr.x, tr.y, false);
-            dibujarCuerpoHeroe(p, poseTr.img, tr.x, tr.y, poseTr.flip);
+            dibujarCuerpoHeroe(p, poseTr, tr.x, tr.y);
           }
         }
         cx.globalAlpha = 1;
@@ -663,7 +723,7 @@ export function renderJugador(p) {
           // apuntando") -- así la silueta del cuerpo tapa la parte del arma
           // que quedaría oculta, en vez de dibujarla siempre encima.
           if (poseHeroe.dir !== "up") {
-            dibujarCuerpoHeroe(p, poseHeroe.img, p.x, p.y + bob, poseHeroe.flip);
+            dibujarCuerpoHeroe(p, poseHeroe, p.x, p.y + bob);
           }
         }
         cx.globalAlpha = 1;
@@ -1032,7 +1092,7 @@ export function renderJugador(p) {
         // ver el comentario en calcularPoseHeroe()/la asignación de
         // anclaMano más arriba.
         if (poseHeroe && poseHeroe.dir === "up") {
-          dibujarCuerpoHeroe(p, poseHeroe.img, p.x, p.y + bob, poseHeroe.flip);
+          dibujarCuerpoHeroe(p, poseHeroe, p.x, p.y + bob);
         }
 
         // Orbe de carga del mago: efecto de gameplay (no una hoja física),

@@ -990,7 +990,13 @@ function bboxAlfa(ctx, w, h) {
 // adivinar un desplazamiento a ojo. Una sola escala para toda la hoja
 // (a partir del bbox más alto de todos los frames) para que el personaje no
 // cambie de tamaño entre frames de una misma animación al alternar poses.
-function cargarHojaFrames(url, destSize, onListo, sinAmpliar) {
+// `onMeta(bboxes, escala, frameSize)`, si se pasa, se invoca justo antes de
+// `onListo` con el recorte ya calculado -- lo usa cargarCapaArmadura() más
+// abajo para recortar las capas de armadura EXACTAMENTE igual que el cuerpo
+// (misma bbox/escala por frame), así quedan pixel-alineadas con él en vez de
+// recortarse cada una por su propia silueta (que las desalinearía: un casco
+// o unas botas tienen una bbox de alfa muy distinta a la del cuerpo entero).
+function cargarHojaFrames(url, destSize, onListo, sinAmpliar, onMeta) {
   const im = new Image();
   im.onload = () => {
     const frameSize = im.naturalHeight;
@@ -1027,9 +1033,42 @@ function cargarHojaFrames(url, destSize, onListo, sinAmpliar) {
       g.drawImage(im, i * frameSize + b.x, b.y, b.w, b.h, (destSize - w) / 2, destSize - h, w, h);
       frames.push(c);
     }
+    if (onMeta) onMeta(bboxes, escala, frameSize);
     onListo(frames);
   };
   im.onerror = () => console.warn("No se pudo cargar hoja de animación: " + url);
+  im.src = url;
+}
+
+// Capa de armadura (casco/peto/piernas, ver public/assets/sprites/characters/
+// armor/): hoja hermana de una ya cargada con cargarHojaFrames/
+// cargarHojaFramesConAncla (mismo archivo .aseprite de origen, misma rejilla
+// de frames -- solo cambia qué capa quedó visible al exportar, ver el script
+// de exportación), así que NO se recorta por su propia bbox de alfa (un
+// casco o unas botas solos tienen una silueta mucho más pequeña que el
+// cuerpo entero -- recortarla aparte la desplazaría respecto al cuerpo). En
+// vez de eso reutiliza el `bboxes`/`escala`/`frameSize` ya calculados para
+// el cuerpo (capturados vía el `onMeta` de la carga del cuerpo) para que
+// caiga exactamente en el mismo sitio, frame a frame.
+function cargarCapaArmadura(url, meta, destSize, onListo) {
+  const im = new Image();
+  im.onload = () => {
+    const { bboxes, escala, frameSize } = meta;
+    const frames = [];
+    for (let i = 0; i < bboxes.length; i++) {
+      const b = bboxes[i];
+      const c = document.createElement("canvas");
+      c.width = destSize;
+      c.height = destSize;
+      const g = c.getContext("2d");
+      g.imageSmoothingEnabled = false;
+      const w = b.w * escala, h = b.h * escala;
+      g.drawImage(im, i * frameSize + b.x, b.y, b.w, b.h, (destSize - w) / 2, destSize - h, w, h);
+      frames.push(c);
+    }
+    onListo(frames);
+  };
+  im.onerror = () => console.warn("No se pudo cargar capa de armadura: " + url);
   im.src = url;
 }
 
@@ -1210,8 +1249,9 @@ function puntosPorFrameDesdeHitbox(meta, nombreHitbox) {
 // `escala`), así queda en el mismo espacio de coordenadas en el que se
 // dibuja el sprite final -- sin mantener la matemática de encaje en dos
 // sitios distintos.
-// onListo(frames, anclas)
-function cargarHojaFramesConAncla(url, destSize, onListo, sinAmpliar) {
+// onListo(frames, anclas); onMeta(bboxes, escala, frameSize) -- ver
+// cargarCapaArmadura() más abajo, mismo propósito que en cargarHojaFrames().
+function cargarHojaFramesConAncla(url, destSize, onListo, sinAmpliar, onMeta) {
   const jsonUrl = url.replace(/\.png(\?.*)?$/, ".json$1");
   const im = new Image();
   im.onload = () => {
@@ -1291,6 +1331,7 @@ function cargarHojaFramesConAncla(url, destSize, onListo, sinAmpliar) {
           }
         }
 
+        if (onMeta) onMeta(bboxes, escala, frameSize);
         onListo(frames, anclas);
       });
   };
@@ -1396,17 +1437,74 @@ export const REAL_RUN = { side: [], down: [], up: [] };
 export const REAL_IDLE_ANCLA = { side: [], down: [], up: [] };
 export const REAL_RUN_ANCLA = { side: [], down: [], up: [] };
 
+// Capas de armadura equipable (casco/peto/piernas -- primer set del juego,
+// drop real del Guardián de Hielo, ver systems/loot.js): exportadas por
+// capa desde los .aseprite en
+// torre-vespero-assets/Hero-sprites/right-left/armadura (`aseprite -b
+// --layer <capa> archivo.aseprite --sheet salida.png`, la MISMA rejilla de
+// frames que el cuerpo, solo cambia qué layer quedó visible) a
+// public/assets/sprites/characters/armor/. Cubren idle/correr (cuerpo
+// compartido, 3 direcciones) y el ataque básico del guerrero (3
+// direcciones) + herido -- especial/dash/muerte no tienen arte de
+// armadura todavía (el .aseprite de origen no trae esas capas nombradas o
+// su nº de frames no encaja con el sprite ya cargado en el juego, ver
+// conversación), así que esas animaciones simplemente no dibujan la capa
+// (queda `null`, ver calcularPoseHeroe en render/character.js), no es un
+// bug -- solo falta exportarlas el día que haya arte para ellas.
+const ARMOR_BASE_IDLE = { side: "heroB_idle_side", down: "heroB_idle_down", up: "heroB_idle_up" };
+const ARMOR_BASE_RUN = { side: "heroB_run_side", down: "heroB_run_down", up: "heroB_run_up" };
+const ARMOR_BASE_ATTACK_GUERRERO = {
+  side: "heroB_attack_guerrero_side",
+  down: "heroB_attack_guerrero_down",
+  up: "heroB_attack_guerrero_up",
+};
+const ARMOR_BASE_HURT = "heroB_hurt_down";
+
+export const CASCO_IDLE = { side: [], down: [], up: [] };
+export const PETO_IDLE = { side: [], down: [], up: [] };
+export const PIERNAS_IDLE = { side: [], down: [], up: [] };
+export const CASCO_RUN = { side: [], down: [], up: [] };
+export const PETO_RUN = { side: [], down: [], up: [] };
+export const PIERNAS_RUN = { side: [], down: [], up: [] };
+export const CASCO_ATTACK = { guerrero: {} };
+export const PETO_ATTACK = { guerrero: {} };
+export const PIERNAS_ATTACK = { guerrero: {} };
+export const CASCO_HURT = [];
+export const PETO_HURT = [];
+export const PIERNAS_HURT = [];
+
+// Carga las 3 capas de un mismo `baseName` (ver ARMOR_BASE_* arriba) usando
+// el recorte `meta` (bboxes/escala/frameSize) ya calculado para el cuerpo
+// hermano -- así quedan pixel-alineadas con él (ver cargarCapaArmadura()).
+function cargarTrioArmadura(baseName, meta, onCasco, onPeto, onPiernas) {
+  cargarCapaArmadura(assetUrl(`characters/armor/${baseName}_casco`), meta, TAM_HEROE, onCasco);
+  cargarCapaArmadura(assetUrl(`characters/armor/${baseName}_peto`), meta, TAM_HEROE, onPeto);
+  cargarCapaArmadura(assetUrl(`characters/armor/${baseName}_piernas`), meta, TAM_HEROE, onPiernas);
+}
+
 for (const dirIdle in REAL_IDLE_SRC) {
   cargarHojaFramesConAncla(REAL_IDLE_SRC[dirIdle], TAM_HEROE, (frames, anclas) => {
     REAL_IDLE[dirIdle] = frames;
     REAL_IDLE_ANCLA[dirIdle] = anclas;
-  }, true);
+  }, true, (bboxes, escala, frameSize) => {
+    cargarTrioArmadura(ARMOR_BASE_IDLE[dirIdle], { bboxes, escala, frameSize },
+      (fr) => { CASCO_IDLE[dirIdle] = fr; },
+      (fr) => { PETO_IDLE[dirIdle] = fr; },
+      (fr) => { PIERNAS_IDLE[dirIdle] = fr; },
+    );
+  });
 }
 for (const dirRun in REAL_RUN_SRC) {
   cargarHojaFramesConAncla(REAL_RUN_SRC[dirRun], TAM_HEROE, (frames, anclas) => {
     REAL_RUN[dirRun] = frames;
     REAL_RUN_ANCLA[dirRun] = anclas;
-  }, true);
+  }, true, (bboxes, escala, frameSize) => {
+    cargarTrioArmadura(ARMOR_BASE_RUN[dirRun], { bboxes, escala, frameSize },
+      (fr) => { CASCO_RUN[dirRun] = fr; },
+      (fr) => { PETO_RUN[dirRun] = fr; },
+      (fr) => { PIERNAS_RUN[dirRun] = fr; },
+    );
+  });
 }
 
 // Herido (flinch al recibir daño, ver p.golpeT en systems/combat.js) y
@@ -1424,7 +1522,13 @@ const REAL_MUERTE_SRC = assetUrl("characters/heroB_dead_down");
 export const REAL_HURT = [];
 export const REAL_MUERTE = [];
 
-cargarHojaFrames(REAL_HURT_SRC, TAM_HEROE, (frames) => { REAL_HURT.push(...frames); }, true);
+cargarHojaFrames(REAL_HURT_SRC, TAM_HEROE, (frames) => { REAL_HURT.push(...frames); }, true, (bboxes, escala, frameSize) => {
+  cargarTrioArmadura(ARMOR_BASE_HURT, { bboxes, escala, frameSize },
+    (fr) => { CASCO_HURT.push(...fr); },
+    (fr) => { PETO_HURT.push(...fr); },
+    (fr) => { PIERNAS_HURT.push(...fr); },
+  );
+});
 cargarHojaFrames(REAL_MUERTE_SRC, TAM_HEROE, (frames) => { REAL_MUERTE.push(...frames); }, true);
 
 // Duración del colapso hasta quedarse tumbado del todo -- después se
@@ -1471,10 +1575,22 @@ export const REAL_ATTACK_ANCLA = { guerrero: {}, arquero: {}, picaro: {}, mago: 
 
 for (const rolAtk in REAL_ATTACK_SRC) {
   for (const dirAtk in REAL_ATTACK_SRC[rolAtk]) {
+    // Solo el guerrero tiene arte de armadura para el ataque básico todavía
+    // (ver ARMOR_BASE_ATTACK_GUERRERO arriba) -- el resto de clases cae a
+    // `onMeta` sin usar (undefined), sin capa de armadura en su ataque.
+    const onMetaAtk = rolAtk === "guerrero"
+      ? (bboxes, escala, frameSize) => {
+          cargarTrioArmadura(ARMOR_BASE_ATTACK_GUERRERO[dirAtk], { bboxes, escala, frameSize },
+            (fr) => { CASCO_ATTACK.guerrero[dirAtk] = fr; },
+            (fr) => { PETO_ATTACK.guerrero[dirAtk] = fr; },
+            (fr) => { PIERNAS_ATTACK.guerrero[dirAtk] = fr; },
+          );
+        }
+      : undefined;
     cargarHojaFramesConAncla(REAL_ATTACK_SRC[rolAtk][dirAtk], TAM_HEROE, (frames, anclas) => {
       REAL_ATTACK[rolAtk][dirAtk] = frames;
       REAL_ATTACK_ANCLA[rolAtk][dirAtk] = anclas;
-    }, true);
+    }, true, onMetaAtk);
   }
 }
 
