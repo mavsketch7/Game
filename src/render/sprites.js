@@ -1035,13 +1035,7 @@ function bboxAlfa(ctx, w, h) {
 // adivinar un desplazamiento a ojo. Una sola escala para toda la hoja
 // (a partir del bbox más alto de todos los frames) para que el personaje no
 // cambie de tamaño entre frames de una misma animación al alternar poses.
-// `onMeta(bboxes, escala, frameSize)`, si se pasa, se invoca justo antes de
-// `onListo` con el recorte ya calculado -- lo usa cargarCapaArmadura() más
-// abajo para recortar las capas de armadura EXACTAMENTE igual que el cuerpo
-// (misma bbox/escala por frame), así quedan pixel-alineadas con él en vez de
-// recortarse cada una por su propia silueta (que las desalinearía: un casco
-// o unas botas tienen una bbox de alfa muy distinta a la del cuerpo entero).
-function cargarHojaFrames(url, destSize, onListo, sinAmpliar, onMeta) {
+function cargarHojaFrames(url, destSize, onListo, sinAmpliar) {
   const im = new Image();
   im.onload = () => {
     const frameSize = im.naturalHeight;
@@ -1078,43 +1072,130 @@ function cargarHojaFrames(url, destSize, onListo, sinAmpliar, onMeta) {
       g.drawImage(im, i * frameSize + b.x, b.y, b.w, b.h, (destSize - w) / 2, destSize - h, w, h);
       frames.push(c);
     }
-    if (onMeta) onMeta(bboxes, escala, frameSize);
     onListo(frames);
   };
   im.onerror = () => console.warn("No se pudo cargar hoja de animación: " + url);
   im.src = url;
 }
 
-// Capa de armadura (casco/peto/piernas, ver public/assets/sprites/characters/
-// armor/): hoja hermana de una ya cargada con cargarHojaFrames/
-// cargarHojaFramesConAncla (mismo archivo .aseprite de origen, misma rejilla
-// de frames -- solo cambia qué capa quedó visible al exportar, ver el script
-// de exportación), así que NO se recorta por su propia bbox de alfa (un
-// casco o unas botas solos tienen una silueta mucho más pequeña que el
-// cuerpo entero -- recortarla aparte la desplazaría respecto al cuerpo). En
-// vez de eso reutiliza el `bboxes`/`escala`/`frameSize` ya calculados para
-// el cuerpo (capturados vía el `onMeta` de la carga del cuerpo) para que
-// caiga exactamente en el mismo sitio, frame a frame.
-function cargarCapaArmadura(url, meta, destSize, onListo) {
-  const im = new Image();
-  im.onload = () => {
-    const { bboxes, escala, frameSize } = meta;
-    const frames = [];
-    for (let i = 0; i < bboxes.length; i++) {
-      const b = bboxes[i];
-      const c = document.createElement("canvas");
-      c.width = destSize;
-      c.height = destSize;
-      const g = c.getContext("2d");
-      g.imageSmoothingEnabled = false;
-      const w = b.w * escala, h = b.h * escala;
-      g.drawImage(im, i * frameSize + b.x, b.y, b.w, b.h, (destSize - w) / 2, destSize - h, w, h);
-      frames.push(c);
-    }
-    onListo(frames);
-  };
-  im.onerror = () => console.warn("No se pudo cargar capa de armadura: " + url);
-  im.src = url;
+// Cuerpo + capas de armadura (casco/peto/piernas, ver public/assets/sprites/
+// characters/armor/) de una misma animación, recortados TODOS con la MISMA
+// bbox por frame -- la UNIÓN de las bbox de alfa del cuerpo y de cada capa
+// presente, no solo la del cuerpo. Un casco o un peto pueden sobresalir un
+// poco más ancho/alto que la silueta del cuerpo solo (un penacho, una
+// hombrera) -- recortar esas capas con la bbox (más estrecha) del cuerpo
+// las cercenaba por los lados ("el casco se ve recortado", reportado).
+// `armorUrls` = { casco, peto, piernas }, cualquiera puede ser null/
+// undefined si esa animación no tiene esa capa todavía -- se omite sin más.
+// onListo(bodyFrames, anclas, { casco, peto, piernas })
+function cargarHojaConArmadura(bodyUrl, armorUrls, destSize, sinAmpliar, onListo) {
+  const jsonUrl = bodyUrl.replace(/\.png(\?.*)?$/, ".json$1");
+  const piezas = ["casco", "peto", "piernas"];
+  const imgs = { body: null, casco: null, peto: null, piernas: null };
+  let restantes = 1 + piezas.filter((p) => armorUrls[p]).length;
+  function cargarUna(key, url) {
+    const im = new Image();
+    im.onload = () => { imgs[key] = im; if (--restantes === 0) procesar(); };
+    im.onerror = () => { console.warn("No se pudo cargar: " + url); if (--restantes === 0) procesar(); };
+    im.src = url;
+  }
+  cargarUna("body", bodyUrl);
+  for (const p of piezas) if (armorUrls[p]) cargarUna(p, armorUrls[p]);
+
+  function procesar() {
+    fetch(jsonUrl, { cache: "no-store" })
+      .then((r) => (r.ok ? r.json() : null))
+      .catch(() => null)
+      .then((meta) => {
+        const bodyImg = imgs.body;
+        const frameSize = bodyImg.naturalHeight;
+        const frameCount = Math.max(1, Math.round(bodyImg.naturalWidth / frameSize));
+        const tmp = document.createElement("canvas");
+        tmp.width = frameSize;
+        tmp.height = frameSize;
+        const tg = tmp.getContext("2d");
+        tg.imageSmoothingEnabled = false;
+
+        function bboxDeFrame(im, i) {
+          if (!im) return null;
+          tg.clearRect(0, 0, frameSize, frameSize);
+          tg.drawImage(im, i * frameSize, 0, frameSize, frameSize, 0, 0, frameSize, frameSize);
+          return bboxAlfa(tg, frameSize, frameSize);
+        }
+
+        const bboxesUnion = [];
+        for (let i = 0; i < frameCount; i++) {
+          const candidatos = [imgs.body, imgs.casco, imgs.peto, imgs.piernas]
+            .map((im) => bboxDeFrame(im, i))
+            .filter(Boolean);
+          if (!candidatos.length) {
+            bboxesUnion.push({ x: 0, y: 0, w: frameSize, h: frameSize });
+            continue;
+          }
+          const minX = Math.min(...candidatos.map((b) => b.x));
+          const minY = Math.min(...candidatos.map((b) => b.y));
+          const maxX = Math.max(...candidatos.map((b) => b.x + b.w));
+          const maxY = Math.max(...candidatos.map((b) => b.y + b.h));
+          bboxesUnion.push({ x: minX, y: minY, w: maxX - minX, h: maxY - minY });
+        }
+        const altoMax = Math.max(...bboxesUnion.map((b) => b.h));
+        const escala = sinAmpliar
+          ? Math.min(1, (destSize * 0.86) / altoMax)
+          : (destSize * 0.86) / altoMax;
+
+        function recortarSerie(im) {
+          if (!im) return [];
+          const frames = [];
+          for (let i = 0; i < frameCount; i++) {
+            const b = bboxesUnion[i];
+            const c = document.createElement("canvas");
+            c.width = destSize;
+            c.height = destSize;
+            const g = c.getContext("2d");
+            g.imageSmoothingEnabled = false;
+            const w = b.w * escala, h = b.h * escala;
+            g.drawImage(im, i * frameSize + b.x, b.y, b.w, b.h, (destSize - w) / 2, destSize - h, w, h);
+            frames.push(c);
+          }
+          return frames;
+        }
+
+        const bodyFrames = recortarSerie(imgs.body);
+        const capas = {
+          casco: recortarSerie(imgs.casco),
+          peto: recortarSerie(imgs.peto),
+          piernas: recortarSerie(imgs.piernas),
+        };
+
+        // Ancla de mano (ver puntosPorFrameDesdeHitbox arriba) con la misma
+        // bbox/escala ya unificada -- mismo cálculo que cargarHojaFramesConAncla.
+        let puntosGlobales = null;
+        for (const nombre of NOMBRES_HITBOX_ARMA) {
+          const candidato = puntosPorFrameDesdeHitbox(meta, nombre);
+          if (candidato && Object.keys(candidato).length) {
+            puntosGlobales = candidato;
+            break;
+          }
+        }
+        const anclas = new Array(frameCount).fill(null);
+        if (puntosGlobales) {
+          for (let i = 0; i < frameCount; i++) {
+            const bounds = puntosGlobales[i];
+            if (!bounds) continue;
+            const b = bboxesUnion[i];
+            const sx = bounds.x + bounds.width / 2;
+            const sy = bounds.y + bounds.height / 2;
+            const w = b.w * escala, h = b.h * escala;
+            anclas[i] = {
+              x: (destSize - w) / 2 + (sx - b.x) * escala,
+              y: destSize - h + (sy - b.y) * escala,
+            };
+          }
+        }
+
+        onListo(bodyFrames, anclas, capas);
+      });
+  }
 }
 
 // Como cargarHojaFrames(), pero para una hoja en REJILLA (cols x rows,
@@ -1294,9 +1375,8 @@ function puntosPorFrameDesdeHitbox(meta, nombreHitbox) {
 // `escala`), así queda en el mismo espacio de coordenadas en el que se
 // dibuja el sprite final -- sin mantener la matemática de encaje en dos
 // sitios distintos.
-// onListo(frames, anclas); onMeta(bboxes, escala, frameSize) -- ver
-// cargarCapaArmadura() más abajo, mismo propósito que en cargarHojaFrames().
-function cargarHojaFramesConAncla(url, destSize, onListo, sinAmpliar, onMeta) {
+// onListo(frames, anclas)
+function cargarHojaFramesConAncla(url, destSize, onListo, sinAmpliar) {
   const jsonUrl = url.replace(/\.png(\?.*)?$/, ".json$1");
   const im = new Image();
   im.onload = () => {
@@ -1376,7 +1456,6 @@ function cargarHojaFramesConAncla(url, destSize, onListo, sinAmpliar, onMeta) {
           }
         }
 
-        if (onMeta) onMeta(bboxes, escala, frameSize);
         onListo(frames, anclas);
       });
   };
@@ -1518,37 +1597,31 @@ export const CASCO_HURT = [];
 export const PETO_HURT = [];
 export const PIERNAS_HURT = [];
 
-// Carga las 3 capas de un mismo `baseName` (ver ARMOR_BASE_* arriba) usando
-// el recorte `meta` (bboxes/escala/frameSize) ya calculado para el cuerpo
-// hermano -- así quedan pixel-alineadas con él (ver cargarCapaArmadura()).
-function cargarTrioArmadura(baseName, meta, onCasco, onPeto, onPiernas) {
-  cargarCapaArmadura(assetUrl(`characters/armor/${baseName}_casco`), meta, TAM_HEROE, onCasco);
-  cargarCapaArmadura(assetUrl(`characters/armor/${baseName}_peto`), meta, TAM_HEROE, onPeto);
-  cargarCapaArmadura(assetUrl(`characters/armor/${baseName}_piernas`), meta, TAM_HEROE, onPiernas);
+// URLs de las 3 capas de armadura para un `baseName` (ver ARMOR_BASE_* arriba).
+function armorUrlsDe(baseName) {
+  return {
+    casco: assetUrl(`characters/armor/${baseName}_casco`),
+    peto: assetUrl(`characters/armor/${baseName}_peto`),
+    piernas: assetUrl(`characters/armor/${baseName}_piernas`),
+  };
 }
 
 for (const dirIdle in REAL_IDLE_SRC) {
-  cargarHojaFramesConAncla(REAL_IDLE_SRC[dirIdle], TAM_HEROE, (frames, anclas) => {
+  cargarHojaConArmadura(REAL_IDLE_SRC[dirIdle], armorUrlsDe(ARMOR_BASE_IDLE[dirIdle]), TAM_HEROE, true, (frames, anclas, capas) => {
     REAL_IDLE[dirIdle] = frames;
     REAL_IDLE_ANCLA[dirIdle] = anclas;
-  }, true, (bboxes, escala, frameSize) => {
-    cargarTrioArmadura(ARMOR_BASE_IDLE[dirIdle], { bboxes, escala, frameSize },
-      (fr) => { CASCO_IDLE[dirIdle] = fr; },
-      (fr) => { PETO_IDLE[dirIdle] = fr; },
-      (fr) => { PIERNAS_IDLE[dirIdle] = fr; },
-    );
+    CASCO_IDLE[dirIdle] = capas.casco;
+    PETO_IDLE[dirIdle] = capas.peto;
+    PIERNAS_IDLE[dirIdle] = capas.piernas;
   });
 }
 for (const dirRun in REAL_RUN_SRC) {
-  cargarHojaFramesConAncla(REAL_RUN_SRC[dirRun], TAM_HEROE, (frames, anclas) => {
+  cargarHojaConArmadura(REAL_RUN_SRC[dirRun], armorUrlsDe(ARMOR_BASE_RUN[dirRun]), TAM_HEROE, true, (frames, anclas, capas) => {
     REAL_RUN[dirRun] = frames;
     REAL_RUN_ANCLA[dirRun] = anclas;
-  }, true, (bboxes, escala, frameSize) => {
-    cargarTrioArmadura(ARMOR_BASE_RUN[dirRun], { bboxes, escala, frameSize },
-      (fr) => { CASCO_RUN[dirRun] = fr; },
-      (fr) => { PETO_RUN[dirRun] = fr; },
-      (fr) => { PIERNAS_RUN[dirRun] = fr; },
-    );
+    CASCO_RUN[dirRun] = capas.casco;
+    PETO_RUN[dirRun] = capas.peto;
+    PIERNAS_RUN[dirRun] = capas.piernas;
   });
 }
 
@@ -1567,12 +1640,11 @@ const REAL_MUERTE_SRC = assetUrl("characters/heroB_dead_down");
 export const REAL_HURT = [];
 export const REAL_MUERTE = [];
 
-cargarHojaFrames(REAL_HURT_SRC, TAM_HEROE, (frames) => { REAL_HURT.push(...frames); }, true, (bboxes, escala, frameSize) => {
-  cargarTrioArmadura(ARMOR_BASE_HURT, { bboxes, escala, frameSize },
-    (fr) => { CASCO_HURT.push(...fr); },
-    (fr) => { PETO_HURT.push(...fr); },
-    (fr) => { PIERNAS_HURT.push(...fr); },
-  );
+cargarHojaConArmadura(REAL_HURT_SRC, armorUrlsDe(ARMOR_BASE_HURT), TAM_HEROE, true, (frames, anclas, capas) => {
+  REAL_HURT.push(...frames);
+  CASCO_HURT.push(...capas.casco);
+  PETO_HURT.push(...capas.peto);
+  PIERNAS_HURT.push(...capas.piernas);
 });
 cargarHojaFrames(REAL_MUERTE_SRC, TAM_HEROE, (frames) => { REAL_MUERTE.push(...frames); }, true);
 
@@ -1621,21 +1693,22 @@ export const REAL_ATTACK_ANCLA = { guerrero: {}, arquero: {}, picaro: {}, mago: 
 for (const rolAtk in REAL_ATTACK_SRC) {
   for (const dirAtk in REAL_ATTACK_SRC[rolAtk]) {
     // Solo el guerrero tiene arte de armadura para el ataque básico todavía
-    // (ver ARMOR_BASE_ATTACK_GUERRERO arriba) -- el resto de clases cae a
-    // `onMeta` sin usar (undefined), sin capa de armadura en su ataque.
-    const onMetaAtk = rolAtk === "guerrero"
-      ? (bboxes, escala, frameSize) => {
-          cargarTrioArmadura(ARMOR_BASE_ATTACK_GUERRERO[dirAtk], { bboxes, escala, frameSize },
-            (fr) => { CASCO_ATTACK.guerrero[dirAtk] = fr; },
-            (fr) => { PETO_ATTACK.guerrero[dirAtk] = fr; },
-            (fr) => { PIERNAS_ATTACK.guerrero[dirAtk] = fr; },
-          );
-        }
-      : undefined;
-    cargarHojaFramesConAncla(REAL_ATTACK_SRC[rolAtk][dirAtk], TAM_HEROE, (frames, anclas) => {
-      REAL_ATTACK[rolAtk][dirAtk] = frames;
-      REAL_ATTACK_ANCLA[rolAtk][dirAtk] = anclas;
-    }, true, onMetaAtk);
+    // (ver ARMOR_BASE_ATTACK_GUERRERO arriba) -- el resto de clases usa el
+    // loader simple de siempre, sin capas.
+    if (rolAtk === "guerrero") {
+      cargarHojaConArmadura(REAL_ATTACK_SRC[rolAtk][dirAtk], armorUrlsDe(ARMOR_BASE_ATTACK_GUERRERO[dirAtk]), TAM_HEROE, true, (frames, anclas, capas) => {
+        REAL_ATTACK[rolAtk][dirAtk] = frames;
+        REAL_ATTACK_ANCLA[rolAtk][dirAtk] = anclas;
+        CASCO_ATTACK.guerrero[dirAtk] = capas.casco;
+        PETO_ATTACK.guerrero[dirAtk] = capas.peto;
+        PIERNAS_ATTACK.guerrero[dirAtk] = capas.piernas;
+      });
+    } else {
+      cargarHojaFramesConAncla(REAL_ATTACK_SRC[rolAtk][dirAtk], TAM_HEROE, (frames, anclas) => {
+        REAL_ATTACK[rolAtk][dirAtk] = frames;
+        REAL_ATTACK_ANCLA[rolAtk][dirAtk] = anclas;
+      }, true);
+    }
   }
 }
 
