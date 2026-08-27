@@ -1183,7 +1183,12 @@ export function renderJugador(p) {
         // apaga porque el báculo ya viene en el frame de REAL_ATTACK) igual
         // que en reposo. Mismo pivote/escala que usaba la capa esquemática
         // para que no salte de sitio al activarse/desactivarse esa capa.
-        if (!formaAnimal && p.rol === "mago") {
+        // De espaldas ("up") NO se dibuja -- el cuerpo se redibuja ENCIMA
+        // del arma para esa dirección (ver el bloque justo arriba), pero el
+        // orbe se pintaba siempre el último, por encima de todo, así que se
+        // veía superpuesto sobre la espalda del personaje (reportado: "se
+        // sobrepone y queda raro").
+        if (!formaAnimal && p.rol === "mago" && poseHeroe?.dir !== "up") {
           cx.save();
           // Mismo pivote que el dibujo real del arma más arriba (ancla real
           // de mano si hay, si no el pivote fijo + GRIP) -- antes SIEMPRE
