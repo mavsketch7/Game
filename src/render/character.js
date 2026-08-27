@@ -903,7 +903,20 @@ export function renderJugador(p) {
               // puntería. Se detecta la orientación de origen por su propio
               // aspect ratio en vez de asumir "todas vienen en vertical".
               cx.translate(gripDibujo, 0);
-              if (ww0 >= wh0) {
+              // Iconos del pack "iron-weapons" (WEAPON_ART_POOL): vienen en
+              // diagonal, mango abajo-izquierda y punta arriba-derecha
+              // (icono de inventario típico, confirmado a ojo probando
+              // -45/0/+45/90/180 lado a lado), no en tira vertical con la
+              // punta arriba como el resto del pack -- el aspect ratio
+              // (cuadrados, 32x32) no sirve para detectarlo como con
+              // magic-wood.png, así que se marca explícito con `esIconoArma`.
+              // -45° endereza la punta a lo largo de +X con el mismo
+              // dibujado (0,-wh/2) que ya usa la rama horizontal de abajo.
+              const esIconoArma = !!(poolArma && poolArma.length && wimg === poolArma[eq.arma.arteIdx % poolArma.length]);
+              if (esIconoArma) {
+                cx.rotate(-Math.PI / 4);
+                cx.drawImage(wimg, 0, -wh / 2, ww, wh);
+              } else if (ww0 >= wh0) {
                 cx.drawImage(wimg, 0, -wh / 2, ww, wh);
               } else {
                 cx.rotate(Math.PI / 2);
