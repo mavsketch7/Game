@@ -966,6 +966,16 @@ body.pantalla-completa #hint {
   border-radius: 50%;
   display: inline-block;
 }
+/* Aviso discreto: J1 en teclado también puede pasar a mando pulsando A
+   (ver ui/menu.js/systems/input.js:menuPad) -- normal-case (el resto del
+   bloque .dispositivo va en mayúsculas por text-transform) y algo más
+   apagado que la etiqueta principal, para no competir con ella. */
+.hint-mando-j1 {
+  text-transform: none;
+  opacity: 0.6;
+  font-size: 0.62rem;
+  white-space: nowrap;
+}
 .fila-clase {
   display: flex;
   align-items: center;

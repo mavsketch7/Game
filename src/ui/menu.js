@@ -358,6 +358,13 @@ export function construirMenu() {
                 ? "Online"
                 : "Mando " + (s.ctrl.idx + 1)) +
             "</span>" +
+            // J1 con teclado: además de "unirse" como J2-4, un mando
+            // conectado también puede hacerse cargo directamente de J1
+            // (mismo botón A) -- pedido expreso del usuario. Aviso solo
+            // aquí, discreto, para no repetir el mismo texto en cada slot.
+            (i === 0 && s.ctrl.tipo === "kbm"
+              ? '<span class="hint-mando-j1" title="Pulsa A en un mando para jugar J1 con mando">🎮 A</span>'
+              : "") +
             '<span class="pcolor" style="background:' +
             COLORES_J[i] +
             '"></span></div>' +

@@ -272,6 +272,24 @@ function menuPad(idx, edge) {
         );
         if (!slot) {
           if (edge(0)) {
+            // J1 (M.slots[0]) es distinto del resto: siempre está activo
+            // (es quien aloja/juega en esta ventana, no "se une" ni "se
+            // va"), así que nunca aparecía en el "const libre" de abajo y
+            // ningún mando podía hacerse cargo de él -- se quedaba
+            // encerrado en teclado+ratón para siempre. Si sigue en
+            // teclado y ningún otro mando ya lo controla, el primer mando
+            // que pulse A pasa a controlarlo (mismo botón que ya usan J2-4
+            // para unirse, pedido expreso del usuario: "el jugador 1
+            // pueda jugar con mando también").
+            const slot0 = M.slots[0];
+            const idxYaUsado = M.slots.some(
+              (s) => s.ctrl && s.ctrl.tipo === "pad" && s.ctrl.idx === idx,
+            );
+            if (slot0.ctrl.tipo === "kbm" && !idxYaUsado) {
+              slot0.ctrl = { tipo: "pad", idx };
+              construirMenu();
+              return;
+            }
             const libre = M.slots.find((s) => !s.activo);
             if (libre) {
               libre.activo = true;
@@ -300,7 +318,11 @@ function menuPad(idx, edge) {
         }
         if (edge(1)) {
           if (slot.listo) slot.listo = false;
-          else {
+          else if (slot === M.slots[0]) {
+            // J1 no puede "irse" (siempre activo) -- soltar el mando aquí
+            // significa volver a teclado+ratón, no desaparecer.
+            slot.ctrl = { tipo: "kbm" };
+          } else {
             slot.activo = false;
             slot.ctrl = null;
           }
