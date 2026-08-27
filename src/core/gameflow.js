@@ -75,6 +75,15 @@ export function nuevaPartida() {
             parryComboT: 0,
             golpeT: 0,
             swingT: 0,
+            // Casteo de la ulti (Cataclismo del mago, ver habilidad() en
+            // systems/abilities.js): antes ninguna clase sin rama propia en
+            // calcularPoseHeroe (render/character.js) tenía animación de
+            // cuerpo al lanzar la ulti -- el personaje se quedaba quieto,
+            // solo se veía el efecto de área en el suelo. Mismo patrón que
+            // swingT (cooldown lineal, ver CDS_LINEALES en core/loop.js),
+            // pero separado de él a propósito: no debe interferir con un
+            // golpe básico en curso ni viceversa.
+            castUltT: 0,
             anim: Math.random() * 9,
             trail: [],
             hasteT: 0,

@@ -117,7 +117,26 @@ function calcularPoseHeroe(p, x, yPies, mov) {
         // arquero/mago quedan espejados al revés en idle/correr (bug
         // reportado: "al caminar miran al lado opuesto").
         let usaArteClase = false;
-        if (p.dashAtkT > 0) {
+        const especialPorClase = REAL_SPECIAL[p.rol] || {};
+        const framesCast = especialPorClase[dirAim] || especialPorClase.side;
+        if (p.castUltT > 0 && framesCast && framesCast.length) {
+          // Casteo de la ulti (ver p.castUltT en core/gameflow.js/loop.js y
+          // habilidad() en systems/abilities.js) -- máxima prioridad, igual
+          // que la Estocada de abajo: mientras dura, tapa cualquier otra
+          // pose (no debería solaparse con un golpe básico en curso, pero
+          // por si acaso). Sin arte para arriba/abajo todavía (mago, ver
+          // REAL_SPECIAL_SRC en sprites.js) -- cae a la hoja lateral antes
+          // que no mostrar nada, mismo criterio que REAL_ATTACK arriba.
+          usaArteClase = true;
+          imgCasco = imgPeto = imgPiernas = null; // sin arte de armadura para esto todavía
+          const dur = SPECIAL_ATTACK_DUR[p.rol] || 0.5;
+          const prog = clamp(1 - p.castUltT / dur, 0, 0.999);
+          const frameIdx = Math.floor(prog * framesCast.length);
+          const fr = framesCast[frameIdx];
+          if (fr) img = fr;
+          const anclasDir = REAL_SPECIAL_ANCLA[p.rol]?.[dirAim];
+          anclaLocal = anclasDir ? anclasDir[frameIdx] : null;
+        } else if (p.dashAtkT > 0) {
           // Estocada (dash-ataque nuevo, ver abilities.js: dashAtaque()):
           // hoja propia, encarada a la dirección de la embestida (no a la
           // puntería) -- mismo criterio que ya usa correr más abajo. Máxima

@@ -749,6 +749,12 @@ export function habilidad(p) {
                 480,
               );
           } else if (p.rol === "mago") {
+            // Casteo real (ver p.castUltT en core/gameflow.js/loop.js y la
+            // rama nueva en calcularPoseHeroe, render/character.js) --
+            // "invoca círculo" (0.6s, 7 frames), mismo valor que
+            // SPECIAL_ATTACK_DUR.mago en render/sprites.js: si se recalibra
+            // aquí, hay que tocar también ese número.
+            p.castUltT = 0.6;
             const g = groundTarget(p, 300);
             if (p.elemento === "fuego") {
               // zona que quema durante un tiempo breve

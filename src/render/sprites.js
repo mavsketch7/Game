@@ -1726,6 +1726,14 @@ const REAL_SPECIAL_SRC = {
     down: assetUrl("characters/heroB_special_guerrero_down"),
     up: assetUrl("characters/heroB_special_guerrero_up"),
   },
+  // Casteo de la ulti (Cataclismo, ver p.castUltT en core/gameflow.js/
+  // loop.js y systems/abilities.js: habilidad()) -- "Mago ataque especial
+  // 3 invoca círculo" del pack de origen, solo lateral por ahora (mismo
+  // criterio que el ataque básico de mago/pícaro/arquero, sin arte para
+  // arriba/abajo todavía).
+  mago: {
+    side: assetUrl("characters/heroB_special_mago_side"),
+  },
 };
 const REAL_DASH_SRC = {
   guerrero: {
@@ -1735,8 +1743,8 @@ const REAL_DASH_SRC = {
   },
 };
 
-export const REAL_SPECIAL = { guerrero: {} };
-export const REAL_SPECIAL_ANCLA = { guerrero: {} };
+export const REAL_SPECIAL = { guerrero: {}, mago: {} };
+export const REAL_SPECIAL_ANCLA = { guerrero: {}, mago: {} };
 export const REAL_DASH = { guerrero: {} };
 export const REAL_DASH_ANCLA = { guerrero: {} };
 
@@ -1757,7 +1765,7 @@ for (const rolDash in REAL_DASH_SRC) {
   }
 }
 
-export const SPECIAL_ATTACK_DUR = { guerrero: 0.26 };
+export const SPECIAL_ATTACK_DUR = { guerrero: 0.26, mago: 0.6 };
 export const DASH_ATTACK_DUR = { guerrero: 0.28 };
 
 // true = el arte de origen de esta clase mira a la IZQUIERDA por defecto,

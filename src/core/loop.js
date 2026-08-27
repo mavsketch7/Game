@@ -40,6 +40,7 @@ const CDS_LINEALES = [
   "golpeT",
   "swingT",
   "hasteT",
+  "castUltT",
 ];
 
 // Flechas clavadas (detalle de impacto: la flecha se queda incrustada en
