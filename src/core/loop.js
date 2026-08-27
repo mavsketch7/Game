@@ -6,7 +6,7 @@ import { META } from "./save.js";
 import { G } from "./state.js";
 import { NET, netAplicarInputs } from "../net/peer.js";
 import { fxOnda, fxParticulas, fxTexto } from "../render/effects.js";
-import { CARGA_ARQ_MAX, CARGA_ARQ_ZONA, CARGA_CUCH_MAX, CARGA_CUCH_ZONA, aplicarImbuido, atacar, danoPilar, dispararArcano, dispararFlechaCargada, golpeObjeto, lanzarCuchillo } from "../systems/abilities.js";
+import { CARGA_ARQ_MAX, CARGA_ARQ_ZONA, CARGA_CUCH_MAX, CARGA_CUCH_ZONA, actualizarSendaElemental, aplicarImbuido, atacar, danoPilar, dispararArcano, dispararFlechaCargada, golpeObjeto, lanzarCuchillo } from "../systems/abilities.js";
 import { sfx, sfxAterrizaje, sfxCargaCuchillo, sfxCargaLista, sfxGolpeAire, sfxGolpeCritico, sfxImpactoGuerrero, sfxImpactoProyectil, sfxPaso, sfxTensarArco } from "../systems/audio.js";
 import { esJefe, escalaEnemigo } from "../systems/bosses.js";
 import { curarP, danoAEnemigo, danoAlJugador, explotarBomber, ganarXP, masCercano, matarEnemigo, spawnClon, spawnEnemigo, statsTot, tipoAleatorio, vivos } from "../systems/combat.js";
@@ -41,6 +41,8 @@ const CDS_LINEALES = [
   "swingT",
   "hasteT",
   "castUltT",
+  "sendaT",
+  "sendaCd",
 ];
 
 // Flechas clavadas (detalle de impacto: la flecha se queda incrustada en
@@ -276,6 +278,7 @@ export function update(dt) {
           for (const k of CDS_LINEALES) if (p[k] > 0) p[k] -= dt;
           for (let i = 0; i < 3; i++) if (p.supCd[i] > 0) p.supCd[i] -= dt;
           if (p.formCd > 0) p.formCd -= dt;
+          actualizarSendaElemental(p, dt);
           p.res = clamp(
             p.res +
               (p.rol === "mago" || p.rol === "clerigo" ? 16 : 14) *

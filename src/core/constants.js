@@ -211,6 +211,15 @@ export const ELEMENTOS = {
 
 export const ELEM_MAGO = ["fuego", "hielo", "arcano"];
 
+// Senda Elemental (mago, tecla C -- ver sendaElemental() en
+// systems/abilities.js): buff largo, no un golpe puntual -- mientras dura,
+// el mago deja tras de sí un rastro de parches del elemento activo
+// (ELEMENTOS[p.elemento]), reutilizando el mismo sistema de áreas que ya
+// usa la ulti (crearArea). Coste/cd altos a propósito para que NO esté
+// activo todo el rato (dur=60s con cd=50s da un ~55% de uptime como
+// mucho, jugando perfecto).
+export const SENDA_ELEMENTAL = { nombre: "Senda Elemental", corto: "Senda", coste: 50, cd: 50, dur: 60 };
+
 export const SUPS = [
         {
           nombre: "Área de sanación",

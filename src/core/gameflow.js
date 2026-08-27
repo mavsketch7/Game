@@ -85,6 +85,15 @@ export function nuevaPartida() {
             // pero separado de él a propósito: no debe interferir con un
             // golpe básico en curso ni viceversa.
             castUltT: 0,
+            // Senda Elemental (mago, tecla C -- ver SENDA_ELEMENTAL en
+            // core/constants.js y sendaElemental()/actualizarSendaElemental()
+            // en systems/abilities.js): sendaT cuenta hacia atrás mientras
+            // dura el buff (60s), sendaCd es su propio cooldown (separado
+            // del de la ulti), _sendaTick es el reloj interno que decide
+            // cuándo toca dejar el siguiente parche del rastro.
+            sendaT: 0,
+            sendaCd: 0,
+            _sendaTick: 0,
             anim: Math.random() * 9,
             trail: [],
             hasteT: 0,

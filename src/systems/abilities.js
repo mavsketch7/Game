@@ -2,7 +2,7 @@
 import { TAU } from "../core/canvas.js";
 // Alias: el único uso de W/H de este archivo es un clamp de objetivo
 // DENTRO de la sala (mundo) -- ver el mismo truco en systems/floorgen.js.
-import { ELEMENTOS, ELEM_MAGO, FORMAS_DRUIDA, FORMAS_INFO, PILAR_ROTO_DUR, RAREZAS, ROLES, SALA_H as H, SALA_W as W, SUPS } from "../core/constants.js";
+import { ELEMENTOS, ELEM_MAGO, FORMAS_DRUIDA, FORMAS_INFO, PILAR_ROTO_DUR, RAREZAS, ROLES, SALA_H as H, SALA_W as W, SENDA_ELEMENTAL, SUPS } from "../core/constants.js";
 import { update } from "../core/loop.js";
 import { G } from "../core/state.js";
 import { fxEstocada, fxImpacto, fxOnda, fxParticulas, fxTajo, fxTexto } from "../render/effects.js";
@@ -697,6 +697,48 @@ function crearArea(x, y, r, elemento, mult, duenio) {
           nace: 0.15,
         });
         fxOnda(x, y, rFinal, el.color);
+      }
+
+// Senda Elemental (mago, tecla C -- ver SENDA_ELEMENTAL en
+// core/constants.js): buff propio, con su tecla/ranura dedicada, distinto
+// del ataque básico y de la ulti (Cataclismo). Mientras dura (p.sendaT,
+// decrece solo -- ver CDS_LINEALES en core/loop.js), el mago deja un
+// rastro de parches del elemento activo tras de sí (actualizarSendaElemental,
+// llamada cada frame desde core/loop.js), reutilizando crearArea() -- mismo
+// daño/ralentización que ya aplican los hazards de área existentes, sin
+// inventar un sistema de colisión nuevo.
+export function sendaElemental(p) {
+        if (p.rol !== "mago") return;
+        if (p.sendaCd > 0) return;
+        if (p.res < SENDA_ELEMENTAL.coste) {
+          fxTexto(p.x, p.y - 24, "sin " + ROLES[p.rol].resNombre.toLowerCase(), "#9a93ab");
+          return;
+        }
+        p.res -= SENDA_ELEMENTAL.coste;
+        p.sendaCd = SENDA_ELEMENTAL.cd;
+        p.sendaT = SENDA_ELEMENTAL.dur;
+        p._sendaTick = 0;
+        const el = ELEMENTOS[p.elemento];
+        fxTexto(p.x, p.y - 24, "Senda de " + el.nombre, el.color, true);
+        fxOnda(p.x, p.y, 40, el.color);
+        sfx("ulti");
+      }
+
+// Cadencia de parches mientras dura la Senda -- 0.25s da un rastro
+// continuo (cada parche vive 1.9-2.6s según el elemento, ver ELEMENTOS en
+// core/constants.js, así que varios se solapan a la vez) sin generar un
+// parche por frame. mult=0.4: más flojo que la ulti a propósito, es un
+// efecto pasivo de moverse, no un golpe concreto.
+const SENDA_INTERVALO = 0.25;
+const SENDA_MULT = 0.4;
+const SENDA_RADIO = 32;
+export function actualizarSendaElemental(p, dt) {
+        if (p.sendaT <= 0) return;
+        p._sendaTick -= dt;
+        if (p._sendaTick <= 0) {
+          p._sendaTick = SENDA_INTERVALO;
+          crearArea(p.x, p.y, SENDA_RADIO, p.elemento, SENDA_MULT, p);
+        }
       }
 
 export function habilidad(p) {

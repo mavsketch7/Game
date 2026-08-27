@@ -1,6 +1,6 @@
 // Auto-generated during the modularization refactor (2026-07-23).
 import { H, W, animGlobal, cx } from "../core/canvas.js";
-import { ELEMENTOS, ELEM_MAGO, FORMAS_DRUIDA, FORMAS_INFO, MAX_NIV_PJ, MAX_PLANTA, NOMBRE_CLIMA, RAREZAS, ROLES, SUPS } from "../core/constants.js";
+import { ELEMENTOS, ELEM_MAGO, FORMAS_DRUIDA, FORMAS_INFO, MAX_NIV_PJ, MAX_PLANTA, NOMBRE_CLIMA, RAREZAS, ROLES, SENDA_ELEMENTAL, SUPS } from "../core/constants.js";
 import { META } from "../core/save.js";
 import { G } from "../core/state.js";
 import { K, spriteJugador } from "./sprites.js";
@@ -204,6 +204,18 @@ export function renderHUD() {
               cx.textAlign = "center";
               cx.fillText(k + 1, x + 60 + k * 20, iy + 12);
             });
+            // Senda Elemental (tecla C, ver SENDA_ELEMENTAL en
+            // core/constants.js) -- 4º icono, justo después de los 3 de
+            // elemento, coloreado con el elemento activo ahora mismo.
+            iconoCd(
+              x + 52 + 3 * 20,
+              iy,
+              16,
+              "C",
+              p.sendaCd,
+              SENDA_ELEMENTAL.cd,
+              ELEMENTOS[p.elemento].color,
+            );
           } else if (p.rol === "clerigo") {
             SUPS.forEach((s, k) =>
               iconoCd(
