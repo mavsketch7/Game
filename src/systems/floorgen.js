@@ -909,6 +909,13 @@ export function iniciarPlanta() {
               // algo por encima del cap normal de jefe (130).
               j.vel = Math.min(Math.round(j.vel * 1.7), 155);
               j.pasoT = 0;
+              // Cooldowns de sus ataques a distancia (esquirla que
+              // enraíza + lluvia de zona, ver core/loop.js: rama
+              // "hielo") y marca de tiempo de aparición para el enrage
+              // suave si la pelea se alarga (tVida en ese mismo bloque).
+              j.esquirlaCd = rnd(3, 4.5);
+              j.lluviaCd = rnd(5, 7);
+              j.tInicio = G.stats.tiempo;
               // Descarta cualquier pilar decorativo genérico (ponPilares()
               // más arriba, antes de que existiera el jefe) que haya caído
               // encima o pegado al Guardián -- confirmado por Playwright:

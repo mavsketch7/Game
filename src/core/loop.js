@@ -91,7 +91,12 @@ function iniciarFaseHielo(e, n) {
   e.pilaresFase = nuevos;
   e.regenerando = true;
   e.hpTopeFase = e.hp;
-  const nMobs = G.planta >= 50 ? 3 : 2;
+  // Antes fijo (2/3 según planta), sin mirar cuántos jugadores hay -- con
+  // un grupo de 4 apenas se notaba. Escalado a la party, igual que ya
+  // escala el HP del jefe (multCoop en systems/combat.js): con la IA de
+  // enjambre (calcularRumboEnjambre) estos mobs ya rodean y flanquean
+  // solos, así que más mobs es presión real, no un montón amontonado.
+  const nMobs = 1 + G.players.length;
   for (let k = 0; k < nMobs; k++) spawnEnemigo(G.planta, tipoAleatorio(G.planta), false);
   fxOnda(e.x, e.y, 70, "#7fc9e8");
   fxParticulas(e.x, e.y, 18, "#bfe6f7");
@@ -432,7 +437,11 @@ export function update(dt) {
                   "#c9a35a",
                 );
               }
-            } else if (hz.tipo === "ortiga" || hz.tipo === "telarana") {
+            } else if (
+              hz.tipo === "ortiga" ||
+              hz.tipo === "telarana" ||
+              hz.tipo === "escarcha"
+            ) {
               p.enOrtiga = true;
               if (p.hazTick <= 0 && p.invulT <= 0) {
                 p.hazTick = 0.5;
@@ -1096,6 +1105,66 @@ export function update(dt) {
             // ===== PRIMER JEFE REAL: Guardián de Hielo =====
             if (arq === "hielo") {
               e.atkCdJefe -= dt;
+
+              // Enrage suave si la pelea se alarga (ver j.tInicio en
+              // floorgen.js, fijado al aparecer): pasados 100s reales sin
+              // caer, acelera hasta un 35% los cooldowns de sus ataques a
+              // distancia -- evita partidas eternas por turtling, sin
+              // límite duro ni derrota automática.
+              const tVida = G.stats.tiempo - (e.tInicio ?? G.stats.tiempo);
+              const enrage = clamp((tVida - 100) / 100, 0, 0.35);
+
+              // "Esquirla de hielo": proyectil que enraíza -- mismo efecto
+              // que ya usa la Tejedora (pr.root, ver el manejo de
+              // proyectiles: p.rootT = 1.2), solo cambia el sprite
+              // (tipo "carambano", ya dibujado en render/world.js sin
+              // ningún uso hasta ahora) y el dueño. Activo SIEMPRE, incluso
+              // regenerando -- obliga a esquivar también fuera de rango de
+              // melee, sobre todo a quien esté quieto rompiendo un pilar.
+              e.esquirlaCd -= dt;
+              if (e.esquirlaCd <= 0) {
+                e.esquirlaCd = rnd(4.5, 5.5) * (1 - enrage);
+                const nDisparos = e.faseHielo3 ? 2 : 1;
+                for (let k = 0; k < nDisparos; k++) {
+                  const a2 =
+                    Math.atan2(obj.y - e.y, obj.x - e.x) +
+                    (k - (nDisparos - 1) / 2) * 0.3;
+                  G.projs.push({
+                    owner: "e",
+                    x: e.x,
+                    y: e.y,
+                    vx: Math.cos(a2) * 250,
+                    vy: Math.sin(a2) * 250,
+                    r: 5,
+                    dmg: e.atk * 0.7,
+                    tipo: "carambano",
+                    color: "#7fc9e8",
+                    ttl: 2.6,
+                    root: true,
+                  });
+                }
+                sfx("hielo");
+              }
+
+              // "Lluvia de esquirlas": telegrafiado de zona reskinado del
+              // meteoro que ya usan magma/eterno (G.rayos, ry.meteoro),
+              // una por jugador vivo -- presión de sala que no depende de
+              // que el jefe esté cerca ni de si está regenerando.
+              e.lluviaCd -= dt;
+              if (e.lluviaCd <= 0) {
+                e.lluviaCd = rnd(7, 9) * (1 - enrage);
+                for (const p of vivos())
+                  G.rayos.push({
+                    x: clamp(p.x + rnd(-30, 30), 40, SALA_W - 40),
+                    y: clamp(p.y + rnd(-30, 30), 40, SALA_H - 40),
+                    t: 1.0,
+                    meteoro: true,
+                    hielo: true,
+                    dmg: e.atk * 1.1,
+                  });
+                banner("❄ ¡Lluvia de esquirlas!");
+              }
+
               if (e.atkT > 0) {
                 e.atkT -= dt;
                 const prog = 1 - e.atkT / e.atkTMax;
@@ -1134,6 +1203,27 @@ export function update(dt) {
                 if (e.pasoT <= 0) {
                   e.pasoT = 26 / Math.max(1, e.vel); // ~26px por zancada
                   G.shake = Math.max(G.shake, 4);
+                  // Escarcha residual: 1 de cada 3 zancadas deja un parche
+                  // de hielo bajo sus pies -- mismo hazard que ya usa la
+                  // Tejedora (tipo "escarcha", mismo manejo de
+                  // ralentización + tick de daño que "telarana"/"ortiga",
+                  // ver más abajo en este bucle -- solo cambia el dibujo,
+                  // ver render/world.js). Con el combate avanzando el
+                  // suelo se va llenando de charcos: presión acumulativa
+                  // sin mecánica nueva. Tope para no saturar la sala si la
+                  // pelea se alarga mucho.
+                  if (Math.random() < 0.33 && G.hazards.length < 24) {
+                    G.hazards.push({
+                      tipo: "escarcha",
+                      x: e.x,
+                      y: e.y + e.r * 0.6,
+                      r: 34,
+                      estado: 0,
+                      t: 0,
+                      fase: 0,
+                      ttl: 9,
+                    });
+                  }
                 }
               } else {
                 e.pasoT = 0;
@@ -1162,7 +1252,15 @@ export function update(dt) {
                   e.regenerando = false;
                   toast("❄ Pilares destruidos — el Guardián vuelve a ser vulnerable", "#7fd4c1");
                 } else {
-                  e.hp = Math.min(e.hpTopeFase, e.hp + e.hpMax * 0.04 * dt);
+                  // Más urgente según avanza la pelea (4%/s en fase 1,
+                  // 5% en fase 2, 6% en fase 3) -- aprieta el ritmo de
+                  // "hay que romper los pilares YA" sin tocar la lógica,
+                  // solo el número según cuántos umbrales ya se cruzaron.
+                  const faseActual = e.faseHielo3 ? 3 : e.faseHielo2 ? 2 : 1;
+                  e.hp = Math.min(
+                    e.hpTopeFase,
+                    e.hp + e.hpMax * (0.04 + 0.01 * faseActual) * dt,
+                  );
                 }
               }
 

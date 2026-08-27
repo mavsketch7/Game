@@ -593,13 +593,41 @@ export function render() {
               cx.closePath();
               cx.fill();
             }
+          } else if (hz.tipo === "escarcha") {
+            // Escarcha residual del Guardián de Hielo (ver core/loop.js:
+            // rama "hielo") -- mismo hazard que "ortiga"/"telarana"
+            // (ralentiza + tick de daño, código compartido más arriba),
+            // solo cambia el dibujo: cristales de hielo en vez de espinas.
+            cx.fillStyle = "#bfe6f7";
+            cx.globalAlpha = 0.3 + Math.sin(animGlobal * 5 + hz.x) * 0.06;
+            cx.beginPath();
+            cx.ellipse(hz.x, hz.y, hz.r, hz.r * 0.72, 0, 0, TAU);
+            cx.fill();
+            cx.globalAlpha = 1;
+            for (let k = 0; k < 6; k++) {
+              const a = (k / 6) * TAU + hz.fase * 0.2;
+              const sx = hz.x + Math.cos(a) * hz.r * 0.55,
+                sy = hz.y + Math.sin(a) * hz.r * 0.42;
+              cx.fillStyle = k % 2 ? "#7fc9e8" : "#eaf6ff";
+              cx.beginPath();
+              cx.moveTo(sx, sy - 7);
+              cx.lineTo(sx + 3, sy);
+              cx.lineTo(sx, sy + 4);
+              cx.lineTo(sx - 3, sy);
+              cx.closePath();
+              cx.fill();
+            }
           }
         }
 
         // telegrafiados de rayos y meteoros
         for (const ry of G.rayos) {
           const k = 1 - ry.t / (ry.meteoro ? 1.0 : 0.85);
-          cx.strokeStyle = ry.meteoro ? "#ff7d4d" : "#cfe4ff";
+          // "Lluvia de esquirlas" del Guardián de Hielo (ver core/loop.js:
+          // rama "hielo") reutiliza el meteoro de magma/eterno tal cual,
+          // solo con `ry.hielo` para pintarlo celeste en vez de anaranjado
+          // -- mismo telegrafiado/daño, ningún sistema nuevo.
+          cx.strokeStyle = ry.hielo ? "#bfe6f7" : ry.meteoro ? "#ff7d4d" : "#cfe4ff";
           cx.globalAlpha = 0.4 + Math.sin(animGlobal * 18) * 0.25;
           cx.lineWidth = 2;
           cx.beginPath();
@@ -610,13 +638,13 @@ export function render() {
           cx.stroke();
           cx.globalAlpha = 1;
           if (ry.meteoro) {
-            // el meteoro cayendo
+            // el meteoro (o esquirla de hielo) cayendo
             const my = ry.y - 260 * (1 - k);
-            cx.fillStyle = "#ff9d3d";
+            cx.fillStyle = ry.hielo ? "#cfe4ff" : "#ff9d3d";
             cx.beginPath();
             cx.arc(ry.x + 30 * (1 - k), my, 6, 0, TAU);
             cx.fill();
-            cx.strokeStyle = "rgba(255,125,77,.5)";
+            cx.strokeStyle = ry.hielo ? "rgba(191,230,247,.5)" : "rgba(255,125,77,.5)";
             cx.lineWidth = 3;
             cx.beginPath();
             cx.moveTo(ry.x + 30 * (1 - k) + 8, my - 14);
