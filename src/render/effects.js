@@ -1,7 +1,7 @@
 // Auto-generated during the modularization refactor (2026-07-23).
 import { TAU } from "../core/canvas.js";
 import { G } from "../core/state.js";
-import { SANGRE_ANIM, SANGRE_DUR, seleccionarImgEnemigo } from "./sprites.js";
+import { IMPACT_VFX, IMPACT_VFX_DUR, SANGRE_ANIM, SANGRE_DUR, seleccionarImgEnemigo } from "./sprites.js";
 import { rnd } from "../utils/helpers.js";
 
 // id incremental y estable: net/peer.js lo usa para mandar los fx nuevos al
@@ -69,6 +69,16 @@ export function fxSangre(x, y, dirEmpuje, escala) {
           t: dur,
           t0: dur,
         });
+      }
+
+// Chispazo de impacto real (ver IMPACT_VFX en render/sprites.js) al golpear
+// un objeto del escenario -- barril, pilar destructible (ver golpeObjeto/
+// danoPilar en systems/abilities.js) -- en CADA golpe, no solo al romperlo
+// (eso ya tenía su propio fxParticulas de escombros). Sin dirección/escala:
+// a diferencia de fxSangre, es un chispazo simétrico, no un splat orientado.
+export function fxImpacto(x, y) {
+        if (!IMPACT_VFX.length) return; // hoja aún sin cargar (arranque)
+        G.fx.push({ id: _fxId++, tipo: "impacto", x, y, t: IMPACT_VFX_DUR, t0: IMPACT_VFX_DUR });
       }
 
 // size/spread opcionales (por defecto 4px y sin dispersión de origen, el

@@ -1718,6 +1718,24 @@ cargarFramesSueltosTrim(
   (frames) => { DUMMY_HIT.push(...frames); },
 );
 
+// Destello de impacto (torre-vespero-assets/Dummy/Impact-Vfx, misma entrega
+// que el muñeco de pruebas de arriba): chispazo genérico al golpear un
+// objeto del escenario (barriles, pilares destructibles -- ver fxImpacto en
+// render/effects.js, llamado desde golpeObjeto/danoPilar en
+// systems/abilities.js), no solo al romperlo. 4 PNG ya a tamaño uniforme
+// (20x26, confirmado por archivo) y pre-centrados por el propio artista --
+// a diferencia de DUMMY_HIT/FROST_GUARDIAN (que anclan por los pies), aquí
+// no hace falta recorte/reposicionado: se cargan tal cual y se dibujan
+// centrados en el punto de impacto (mismo criterio que SANGRE_ANIM).
+export const IMPACT_VFX = [];
+for (let iImpact = 1; iImpact <= 4; iImpact++) {
+  const imImpact = new Image();
+  const idxImpact = iImpact - 1;
+  imImpact.onload = () => { IMPACT_VFX[idxImpact] = imImpact; };
+  imImpact.src = assetUrl(`fx/impact_${iImpact}`);
+}
+export const IMPACT_VFX_DUR = 4 / 15; // mismo ritmo que SANGRE_FPS (~15fps)
+
 // Fases de rotura del pilar de hielo del Guardián (ver render/world.js,
 // bucle de G.pilares, rama pl.hielo): hoja en rejilla 4x2 -- fila 1 intacto
 // -> grietas, fila 2 se parte -> escombro en el suelo (8 fases en total).

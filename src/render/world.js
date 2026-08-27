@@ -3,7 +3,7 @@ import { H, TAU, W, animGlobal, avanzarAnimGlobal, cx } from "../core/canvas.js"
 import { ELEMENTOS, MAX_PLANTA, PILAR_ROTO_DUR, RAREZAS, SALA_H, SALA_W, SUPS } from "../core/constants.js";
 import { G } from "../core/state.js";
 import { renderHUD } from "./hud.js";
-import { CAMPFIRE_CELDA, FROST_GUARDIAN, KENNEY_TILE, PILAR_HIELO_FRAMES, SANGRE_ANIM, SANGRE_DUR, SHEETS, SPR, assetOK, campfireFrame, iconoDrop, remateMuroPatron, wallPatron } from "./sprites.js";
+import { CAMPFIRE_CELDA, FROST_GUARDIAN, IMPACT_VFX, KENNEY_TILE, PILAR_HIELO_FRAMES, SANGRE_ANIM, SANGRE_DUR, SHEETS, SPR, assetOK, campfireFrame, iconoDrop, remateMuroPatron, wallPatron } from "./sprites.js";
 import { drawSprite, drawSpriteBottom } from "./spriteDraw.js";
 import { renderEnemigo, renderJugador, renderMira } from "./character.js";
 import { clamp, hexRgba, ri, rnd } from "../utils/helpers.js";
@@ -1617,6 +1617,20 @@ export function render() {
               cx.drawImage(imgSangre, -wSangre / 2, -hSangre / 2, wSangre, hSangre);
               cx.globalAlpha = 1;
               cx.restore();
+            }
+          } else if (f.tipo === "impacto") {
+            // Chispazo de impacto real (ver fxImpacto en render/effects.js y
+            // IMPACT_VFX en render/sprites.js) -- simétrico, sin rotación ni
+            // flip (a diferencia de "sangre"), centrado en el punto de golpe.
+            const fIdxImpact = Math.min(
+              IMPACT_VFX.length - 1,
+              Math.max(0, Math.floor(((f.t0 - f.t) / f.t0) * IMPACT_VFX.length)),
+            );
+            const imgImpact = IMPACT_VFX[fIdxImpact];
+            if (imgImpact) {
+              cx.globalAlpha = k < 0.2 ? k / 0.2 : 1;
+              cx.drawImage(imgImpact, f.x - imgImpact.width / 2, f.y - imgImpact.height / 2);
+              cx.globalAlpha = 1;
             }
           } else if (f.tipo === "part") {
             f.x += f.vx * 0.016;

@@ -5,7 +5,7 @@ import { TAU } from "../core/canvas.js";
 import { ELEMENTOS, ELEM_MAGO, FORMAS_DRUIDA, FORMAS_INFO, PILAR_ROTO_DUR, RAREZAS, ROLES, SALA_H as H, SALA_W as W, SUPS } from "../core/constants.js";
 import { update } from "../core/loop.js";
 import { G } from "../core/state.js";
-import { fxEstocada, fxOnda, fxParticulas, fxTajo, fxTexto } from "../render/effects.js";
+import { fxEstocada, fxImpacto, fxOnda, fxParticulas, fxTajo, fxTexto } from "../render/effects.js";
 import { sfx, sfxDisparoArco, sfxGolpeAire, sfxGolpeCritico, sfxImpactoFrhor, sfxImpactoGuerrero, sfxImpactoPicaro, sfxRompeBarril, sfxRompeHielo, sfxSwingFrhor } from "./audio.js";
 import { curarP, danoAEnemigo, danoAlJugador, masCercano, statsTot, vivos } from "./combat.js";
 import { posDropValida } from "./floorgen.js";
@@ -331,6 +331,7 @@ export function danoPilar(pl, dmg) {
         if (!pl.destructible || pl.hp <= 0) return;
         pl.hp -= Math.round(dmg);
         pl.hurtT = 0.15;
+        fxImpacto(pl.x, pl.y - 10);
         // Pilares de hielo del Guardián: tintineo agudo en CADA golpe (no
         // solo al romperse), pedido expreso del usuario -- el resto de
         // pilares (mazmorra normal) se quedan mudos como hasta ahora.
@@ -387,6 +388,7 @@ export function danoPilar(pl, dmg) {
 export function golpeObjeto(o, dmg) {
         if (o.tipo === "barril") {
           o.hp -= dmg;
+          fxImpacto(o.x, o.y - 6);
           if (o.hp <= 0) {
             sfxRompeBarril();
             fxParticulas(o.x, o.y, 10, "#6b4a2c");
