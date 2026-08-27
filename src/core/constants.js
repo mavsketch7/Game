@@ -237,6 +237,16 @@ export const SUPS = [
 
 export const SLOTS = ["arma", "escudo", "casco", "peto", "piernas", "collar", "anillo"];
 
+// Nº de variantes de arte real por clase para el arma (pack "iron-weapons",
+// ver public/assets/sprites/weapons/iron-weapons/ y WEAPON_ART_POOL en
+// render/sprites.js) -- vive aquí, no en render/sprites.js, para que
+// systems/loot.js (genItem) pueda asignar un índice estable sin depender de
+// código de render. Empieza a cambiar la mecánica de icono por clase: las
+// que no aparecen aquí (mago, clérigo, druida) siguen con el sprite único
+// de siempre (wood-weapons, teñido por rareza) hasta que tengan su propio
+// pack de variantes.
+export const ARMA_ARTE_VARIANTES = { guerrero: 6, arquero: 16, picaro: 5 };
+
 // Etiqueta visible en la ficha de personaje -- "arma" internamente sigue
 // siendo la misma clave de siempre (restricción por clase, pivote de
 // dibujo del arma en render/character.js, etc.), solo se le cambia el

@@ -1,7 +1,7 @@
 // Auto-generated during the modularization refactor (2026-07-23).
 // Alias: los usos de W/H aquí son posiciones DENTRO de la sala (mundo) --
 // ver el mismo truco en systems/floorgen.js.
-import { MAX_PLANTA, NOMBRES_ARMA_CLASE, NOMBRES_ITEM, ORDEN_ROLES, PRECIO_VENTA, RAREZAS, ROLES, SALA_H as H, SALA_W as W, SLOTS, SUFIJOS } from "../core/constants.js";
+import { ARMA_ARTE_VARIANTES, MAX_PLANTA, NOMBRES_ARMA_CLASE, NOMBRES_ITEM, ORDEN_ROLES, PRECIO_VENTA, RAREZAS, ROLES, SALA_H as H, SALA_W as W, SLOTS, SUFIJOS } from "../core/constants.js";
 import { META, guardarMeta } from "../core/save.js";
 import { G, setG } from "../core/state.js";
 import { posDropValida } from "./floorgen.js";
@@ -75,12 +75,22 @@ export function genItem(f, forceRar, forceSlot) {
         } else {
           nombreBase = az(NOMBRES_ITEM[slot]);
         }
+        // Arte real por variante (ver ARMA_ARTE_VARIANTES arriba y
+        // WEAPON_ART_POOL en render/sprites.js): índice ESTABLE asignado al
+        // generarse, no recalculado cada vez que se dibuja -- así el mismo
+        // objeto siempre muestra el mismo icono, en el suelo, en la bolsa y
+        // equipado. Solo las clases con pack de variantes (guerrero/
+        // arquero/pícaro por ahora) lo llevan; el resto sigue sin `arteIdx`
+        // y cae al sprite único teñido por rareza de siempre (ver iconoDrop
+        // en render/sprites.js).
+        const nVariantes = slot === "arma" ? ARMA_ARTE_VARIANTES[clase] : undefined;
         return {
           slot,
           clase,
           rareza: riX,
           nombre: nombreBase + " " + az(SUFIJOS),
           stats,
+          ...(nVariantes ? { arteIdx: ri(0, nVariantes - 1) } : {}),
         };
       }
 

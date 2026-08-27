@@ -9,7 +9,7 @@ import { ELEMENTOS, RAREZAS, SUPS } from "../core/constants.js";
 import { G } from "../core/state.js";
 import { fxParticulas } from "./effects.js";
 import { drawSprite, drawSpriteBottom } from "./spriteDraw.js";
-import { ARQUERO_BOW, ARQUERO_BOW_DUR, ATTACK_DUR, CASCO_ATTACK, CASCO_HURT, CASCO_IDLE, CASCO_RUN, CONFIG_ARMA, DASH_ATTACK_DUR, DUMMY_HIT, ESC_FORMA, FROST_GUARDIAN, MARTILLO_FRHOR_IMG, MIRA_IZQUIERDA_POR_DEFECTO, MOB_RUN, MUERTE_DUR, OFFHAND_IMG, OFFHAND_IMG_RAREZA, PETO_ATTACK, PETO_HURT, PETO_IDLE, PETO_RUN, PIERNAS_ATTACK, PIERNAS_HURT, PIERNAS_IDLE, PIERNAS_RUN, REAL_ATTACK, REAL_ATTACK_ANCLA, REAL_DASH, REAL_DASH_ANCLA, REAL_HURT, REAL_IDLE, REAL_IDLE_ANCLA, REAL_MUERTE, REAL_RUN, REAL_RUN_ANCLA, REAL_SPECIAL, REAL_SPECIAL_ANCLA, REAL_SPRITE_SCALE, SHEETS, SPECIAL_ATTACK_DUR, SPR, SPR_FORMAS, TAM_HEROE, WEAPON_IMG, WEAPON_IMG_RAREZA, assetOK, seleccionarImgEnemigo, spriteJugador } from "./sprites.js";
+import { ARQUERO_BOW, ARQUERO_BOW_DUR, ATTACK_DUR, CASCO_ATTACK, CASCO_HURT, CASCO_IDLE, CASCO_RUN, CONFIG_ARMA, DASH_ATTACK_DUR, DUMMY_HIT, ESC_FORMA, FROST_GUARDIAN, MARTILLO_FRHOR_IMG, MIRA_IZQUIERDA_POR_DEFECTO, MOB_RUN, MUERTE_DUR, OFFHAND_IMG, OFFHAND_IMG_RAREZA, PETO_ATTACK, PETO_HURT, PETO_IDLE, PETO_RUN, PIERNAS_ATTACK, PIERNAS_HURT, PIERNAS_IDLE, PIERNAS_RUN, REAL_ATTACK, REAL_ATTACK_ANCLA, REAL_DASH, REAL_DASH_ANCLA, REAL_HURT, REAL_IDLE, REAL_IDLE_ANCLA, REAL_MUERTE, REAL_RUN, REAL_RUN_ANCLA, REAL_SPECIAL, REAL_SPECIAL_ANCLA, REAL_SPRITE_SCALE, SHEETS, SPECIAL_ATTACK_DUR, SPR, SPR_FORMAS, TAM_HEROE, WEAPON_ART_POOL, WEAPON_IMG, WEAPON_IMG_RAREZA, assetOK, seleccionarImgEnemigo, spriteJugador } from "./sprites.js";
 import { CARGA_ARQ_MAX, CARGA_ARQ_ZONA, CARGA_CUCH_MAX, CARGA_CUCH_ZONA, groundTarget } from "../systems/abilities.js";
 import { masCercano } from "../systems/combat.js";
 import { mouse } from "../systems/input.js";
@@ -818,7 +818,13 @@ export function renderJugador(p) {
           }
           cx.scale(CONFIG_ARMA.escala, CONFIG_ARMA.escala);
           const rarezaArma = eq.arma ? eq.arma.rareza : 0;
-          if (rarezaArma >= 1 && wcol) {
+          // Destello leve solo a partir de Épico (2) -- antes arrancaba en
+          // Raro (1), pedido expreso del usuario al pasar las armas con
+          // arte real (ver WEAPON_ART_POOL en sprites.js) a mantener su
+          // color propio sin recolorear: la rareza la transmite SOLO este
+          // halo (+ el rayo de luz del drop en world.js), así que debe
+          // quedar reservado a lo genuinamente raro, no a cualquier Raro.
+          if (rarezaArma >= 2 && wcol) {
             cx.shadowColor = wcol;
             cx.shadowBlur = 3 + rarezaArma * 2;
           }
@@ -861,8 +867,16 @@ export function renderJugador(p) {
             // Martillo de Frhor: imagen propia ya teñida azul zafiro (ver
             // MARTILLO_FRHOR_IMG en sprites.js), en vez del lookup normal
             // por rareza -- se ve distinto a un Épico normal a propósito.
+            // Arma con arte real por variante (pack "iron-weapons", ver
+            // WEAPON_ART_POOL/genItem): tiene prioridad sobre el sprite
+            // único reteñido -- se muestra tal cual, tal como cayó, sin
+            // recolorear (solo guerrero/pícaro pasan por aquí con
+            // `arteIdx`; arquero tiene su propio arco animado más arriba y
+            // mago/clérigo/druida siguen sin pack de variantes todavía).
+            const poolArma = eq.arma && eq.arma.arteIdx !== undefined ? WEAPON_ART_POOL[eq.arma.clase] : null;
             const wimg =
               (eq.arma && eq.arma.id === "martillo_frhor" && MARTILLO_FRHOR_IMG) ||
+              (poolArma && poolArma.length && poolArma[eq.arma.arteIdx % poolArma.length]) ||
               (WEAPON_IMG_RAREZA[p.rol] && WEAPON_IMG_RAREZA[p.rol][rarezaArma]) ||
               WEAPON_IMG[p.rol];
             if (wimg) {

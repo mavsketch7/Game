@@ -248,11 +248,56 @@ const iconoDropCache = {};
 // Perezoso y cacheado por slot+rareza: así una futura rareza por encima de
 // legendario (índice 4+) funciona sola, sin tocar este código ni añadir
 // más variantes a mano -- el color sale siempre de RAREZAS[rareza].col.
+// Icono real por id fijo (piezas del set de Frhor, ver systems/combat.js:
+// matarEnemigo -- reutiliza el frame de idle-abajo ya cargado para la
+// armadura en capas del guerrero, ver CASCO_IDLE/PETO_IDLE/PIERNAS_IDLE más
+// abajo, en vez de recortar un icono nuevo aparte). Mismo criterio que
+// MARTILLO_FRHOR_IMG: id concreto -> imagen concreta, sin pasar por rareza.
+// El frame de origen es un lienzo TAM_HEROE x TAM_HEROE (68x68) con mucho
+// margen transparente alrededor (pensado para alinearse con el cuerpo, no
+// para servir de icono) -- sin recortar por su propia bbox de alfa
+// (bboxAlfa, ver más abajo) el icono se veía como un punto minúsculo en la
+// esquina del hueco de equipo. Recorte perezoso y cacheado por id, mismo
+// criterio que iconoDropCache.
+const iconoFrhorCache = {};
+function iconoFrhor(item) {
+  let frame = null;
+  if (item.id === "casco_frhor") frame = CASCO_IDLE.down[0];
+  else if (item.id === "peto_frhor") frame = PETO_IDLE.down[0];
+  else if (item.id === "grebas_frhor") frame = PIERNAS_IDLE.down[0];
+  if (!frame) return null;
+  if (!iconoFrhorCache[item.id]) {
+    const b = bboxAlfa(frame.getContext("2d"), frame.width, frame.height) ||
+      { x: 0, y: 0, w: frame.width, h: frame.height };
+    const c = document.createElement("canvas");
+    c.width = b.w;
+    c.height = b.h;
+    const g = c.getContext("2d");
+    g.imageSmoothingEnabled = false;
+    g.drawImage(frame, b.x, b.y, b.w, b.h, 0, 0, b.w, b.h);
+    iconoFrhorCache[item.id] = c;
+  }
+  return iconoFrhorCache[item.id];
+}
+
 export function iconoDrop(item) {
         // Martillo de Frhor: icono real (azul zafiro, ver MARTILLO_FRHOR_IMG
         // más abajo) en vez del icono procedural genérico de "arma" -- si
         // todavía no cargó, cae al procedural de siempre por esta vez.
         if (item.id === "martillo_frhor" && MARTILLO_FRHOR_IMG) return MARTILLO_FRHOR_IMG;
+        const imgFrhor = iconoFrhor(item);
+        if (imgFrhor) return imgFrhor;
+        // Arma con arte real por variante (pack "iron-weapons", ver
+        // WEAPON_ART_POOL más abajo y genItem() en systems/loot.js, que
+        // asigna `arteIdx` de forma ESTABLE al generarse) -- se muestra tal
+        // cual, sin recolorear por rareza: esa señal ya la da el rayo de luz
+        // del drop (render/world.js) y el halo del arma en mano
+        // (render/character.js), no un tinte del propio icono.
+        if (item.slot === "arma" && item.arteIdx !== undefined) {
+          const pool = WEAPON_ART_POOL[item.clase];
+          const imgArma = pool && pool.length ? pool[item.arteIdx % pool.length] : null;
+          if (imgArma) return imgArma;
+        }
         const rows = ICONO_DROP_ROWS[item.slot];
         if (!rows) return SPR.gema[Math.min(item.rareza, SPR.gema.length - 1)];
         const clave = item.slot + "|" + item.rareza;
@@ -1879,6 +1924,40 @@ cargarHojaFrames(assetUrl("weapons/wood-weapons/bow-tension"), 32, (frames) => {
 });
 
 export const ARQUERO_BOW_DUR = 0.35; // duración del gesto de tensar el arco al atacar
+
+// Pool de arte real por variante para el arma (pack "iron-weapons", ver
+// public/assets/sprites/weapons/iron-weapons/ y ARMA_ARTE_VARIANTES en
+// core/constants.js) -- cambia la mecánica de icono: en vez de UN sprite
+// base reteñido por rareza (WEAPON_IMG_RAREZA, arriba), cada objeto
+// generado guarda su propio `arteIdx` ESTABLE (ver genItem() en
+// systems/loot.js) y siempre muestra ESA imagen concreta, sin recolorear --
+// la rareza se transmite con el halo/brillo (ver character.js/world.js), no
+// tiñendo el sprite. "picaro" (daga) tiene huecos reales en la numeración
+// de archivo (no hay daga (2)/(3)) -- de ahí la lista explícita en vez de
+// un rango 1..N como guerrero/arquero.
+const IRON_WEAPON_NUMS = {
+  guerrero: [1, 2, 3, 4, 5, 6],
+  arquero: Array.from({ length: 16 }, (_, i) => i + 1),
+  picaro: [1, 4, 5, 6, 7],
+};
+const IRON_WEAPON_PREFIX = { guerrero: "sword", arquero: "arco", picaro: "daga" };
+export const WEAPON_ART_POOL = { guerrero: [], arquero: [], picaro: [] };
+for (const rolIron in IRON_WEAPON_NUMS) {
+  IRON_WEAPON_NUMS[rolIron].forEach((n, idx) => {
+    const im = new Image();
+    im.onload = () => {
+      const c = document.createElement("canvas");
+      c.width = im.naturalWidth;
+      c.height = im.naturalHeight;
+      const g = c.getContext("2d");
+      g.imageSmoothingEnabled = false;
+      g.drawImage(im, 0, 0);
+      WEAPON_ART_POOL[rolIron][idx] = c;
+    };
+    im.onerror = () => console.warn("No se pudo cargar arte de arma: " + im.src);
+    im.src = `${import.meta.env.BASE_URL}assets/sprites/weapons/iron-weapons/${IRON_WEAPON_PREFIX[rolIron]} (${n}).png`;
+  });
+}
 
 // Sangre de impacto (torre-vespero-assets/BloodFX Batch 1): sustituye el
 // simple estallido de píxeles cuadrados de fxParticulas por una salpicadura
