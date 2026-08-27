@@ -441,8 +441,17 @@ export function matarEnemigo(e, duenio) {
           // "frozen"), no Thor -- pedido expreso del usuario. El efecto
           // real (congela 4s en golpe básico) se comprueba en golpeArco()
           // (systems/abilities.js) vía tieneEfecto(p,"congela_frhor").
+          // clase="guerrero" (no null/libre como los Míticos, ver
+          // objetosMiticos.js) -- pedido expreso del usuario: un arquero
+          // podía equiparla. Además de eso, golpeArco() es el ÚNICO punto
+          // donde se comprueba el efecto congelante; el ataque básico del
+          // clérigo (que también usa martillo como base visual) es un
+          // proyectil, nunca pasa por ahí -- si cualquier clase pudiera
+          // equiparla, el efecto se quedaría muerto para la mitad de
+          // ellas. Guerrero es quien mejor encaja (arma pesada, golpeArco
+          // como ataque básico de verdad).
           const martillo = genItem(G.planta, 2, "arma");
-          martillo.clase = null;
+          martillo.clase = "guerrero";
           martillo.nombre = "Martillo de Frhor";
           martillo.id = "martillo_frhor";
           martillo.efecto = "congela_frhor";

@@ -148,7 +148,20 @@ export function pollPads() {
               }
               if (G.activo && !G.pausa && !p.ko) {
                 if (edge(6) || edge(4)) activarParry(p);
-                if (edge(0)) esquivar(p);
+                if (edge(0)) {
+                  // A: esquivar de normal, pero si hay algo interactuable
+                  // cerca (cofre/objeto en el suelo/puerta o muro secreto
+                  // -- mismas comprobaciones que interactuar() en
+                  // abilities.js, recalculadas cada frame en core/loop.js)
+                  // interactúa en su lugar. Pedido expreso del usuario: A
+                  // no recogía equipo porque interactuar() solo estaba en
+                  // el clic del stick izquierdo (botón 10), un mando poco
+                  // descubrible -- se mantiene como alternativa, esto no
+                  // lo quita.
+                  if (p.cofreObj || p.dropObj || p.secretoObj || p.secretoParedObj)
+                    interactuar(p);
+                  else esquivar(p);
+                }
                 if (edge(3)) habilidad(p);
                 if (edge(10)) interactuar(p);
                 // Estocada (mando): clic del stick derecho -- dashAtaque()
