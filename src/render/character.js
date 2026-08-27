@@ -9,7 +9,7 @@ import { ELEMENTOS, RAREZAS, SUPS } from "../core/constants.js";
 import { G } from "../core/state.js";
 import { fxParticulas } from "./effects.js";
 import { drawSprite, drawSpriteBottom } from "./spriteDraw.js";
-import { ARQUERO_BOW, ARQUERO_BOW_DUR, ATTACK_DUR, CASCO_ATTACK, CASCO_HURT, CASCO_IDLE, CASCO_RUN, CONFIG_ARMA, DASH_ATTACK_DUR, DUMMY_HIT, ESC_FORMA, FROST_GUARDIAN, MARTILLO_FRHOR_IMG, MIRA_IZQUIERDA_POR_DEFECTO, MOB_RUN, MUERTE_DUR, OFFHAND_IMG, OFFHAND_IMG_RAREZA, PETO_ATTACK, PETO_HURT, PETO_IDLE, PETO_RUN, PIERNAS_ATTACK, PIERNAS_HURT, PIERNAS_IDLE, PIERNAS_RUN, REAL_ATTACK, REAL_ATTACK_ANCLA, REAL_DASH, REAL_DASH_ANCLA, REAL_HURT, REAL_IDLE, REAL_IDLE_ANCLA, REAL_MUERTE, REAL_RUN, REAL_RUN_ANCLA, REAL_SPECIAL, REAL_SPECIAL_ANCLA, REAL_SPRITE_SCALE, SHEETS, SPECIAL_ATTACK_DUR, SPR, SPR_FORMAS, TAM_HEROE, WEAPON_ART_POOL, WEAPON_IMG, WEAPON_IMG_RAREZA, assetOK, seleccionarImgEnemigo, spriteJugador } from "./sprites.js";
+import { ARQUERO_BOW, ARQUERO_BOW_DUR, ATTACK_DUR, CASCO_ATTACK, CASCO_HURT, CASCO_IDLE, CASCO_RUN, CONFIG_ARMA, DASH_ATTACK_DUR, DUMMY_HIT, ESC_FORMA, FROST_GUARDIAN, MARTILLO_FRHOR_IMG, MIRA_IZQUIERDA_POR_DEFECTO, MOB_RUN, MUERTE_DUR, OFFHAND_IMG, OFFHAND_IMG_RAREZA, PETO_ATTACK, PETO_HURT, PETO_IDLE, PETO_RUN, PIERNAS_ATTACK, PIERNAS_HURT, PIERNAS_IDLE, PIERNAS_RUN, REAL_ATTACK, REAL_ATTACK_ANCLA, REAL_DASH, REAL_DASH_ANCLA, REAL_HURT, REAL_IDLE, REAL_IDLE_ANCLA, REAL_MUERTE, REAL_RUN, REAL_RUN_ANCLA, REAL_SPECIAL, REAL_SPECIAL_ANCLA, REAL_SPRITE_SCALE, SHEETS, SPECIAL_ATTACK_DUR, SPR, SPR_FORMAS, TAM_HEROE, WEAPON_ART_POOL, WEAPON_IMG, WEAPON_IMG_RAREZA, armaHiltTip, assetOK, seleccionarImgEnemigo, spriteJugador } from "./sprites.js";
 import { CARGA_ARQ_MAX, CARGA_ARQ_ZONA, CARGA_CUCH_MAX, CARGA_CUCH_ZONA, groundTarget } from "../systems/abilities.js";
 import { masCercano } from "../systems/combat.js";
 import { mouse } from "../systems/input.js";
@@ -904,16 +904,26 @@ export function renderJugador(p) {
               // aspect ratio en vez de asumir "todas vienen en vertical".
               cx.translate(gripDibujo, 0);
               // Iconos del pack "iron-weapons" (WEAPON_ART_POOL): vienen en
-              // diagonal, mango abajo-izquierda y punta arriba-derecha
-              // (icono de inventario típico, confirmado a ojo probando
-              // -45/0/+45/90/180 lado a lado), no en tira vertical con la
-              // punta arriba como el resto del pack -- el aspect ratio
-              // (cuadrados, 32x32) no sirve para detectarlo como con
+              // diagonal (icono de inventario típico), no en tira vertical
+              // con la punta arriba como el resto del pack -- el aspect
+              // ratio (cuadrados, 32x32) no sirve para detectarlo como con
               // magic-wood.png, así que se marca explícito con `esIconoArma`.
-              // -45° endereza la punta a lo largo de +X con el mismo
-              // dibujado (0,-wh/2) que ya usa la rama horizontal de abajo.
+              // Se ancla por su punto de MANGO real (ver armaHiltTip() en
+              // sprites.js, medido a mano en Aseprite por el usuario/por
+              // mí) y se rota exactamente -atan2(punta-mango) para que la
+              // punta caiga siempre a lo largo de la puntería -- confirmado
+              // con un barrido numérico de 0.5° (no solo a ojo, que llevó a
+              // dos intentos previos fallidos con un ángulo fijo). Sin datos
+              // calibrados para esa variante concreta (arquero, u otra
+              // futura), cae al mismo -45° de siempre como aproximación.
               const esIconoArma = !!(poolArma && poolArma.length && wimg === poolArma[eq.arma.arteIdx % poolArma.length]);
-              if (esIconoArma) {
+              const datosHiltTip = esIconoArma ? armaHiltTip(eq.arma.clase, eq.arma.arteIdx) : null;
+              if (datosHiltTip) {
+                const { hilt, tip } = datosHiltTip;
+                const rotIcono = -Math.atan2(tip[1] - hilt[1], tip[0] - hilt[0]);
+                cx.rotate(rotIcono);
+                cx.drawImage(wimg, -hilt[0] * s, -hilt[1] * s, ww, wh);
+              } else if (esIconoArma) {
                 cx.rotate(-Math.PI / 4);
                 cx.drawImage(wimg, 0, -wh / 2, ww, wh);
               } else if (ww0 >= wh0) {

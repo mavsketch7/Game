@@ -2032,6 +2032,27 @@ for (const rolIron in IRON_WEAPON_NUMS) {
   });
 }
 
+// Punto de mango y de punta (píxeles del PNG de 32x32 origen, medidos a
+// mano en Aseprite) por variante -- para orientar el arma en mano según su
+// propio dibujo real en vez de un ángulo fijo adivinado (ver render/
+// character.js: rotación = -atan2(punta-mango), confirmado con un barrido
+// numérico de ángulos, no solo a ojo). guerrero: las 6 variantes de
+// "sword" (incluye una hoz y un látigo, pero comparten la MISMA plantilla
+// de mango abajo-derecha / punta arriba-izquierda, confirmado comparando
+// las 6 en rejilla) usan el mismo punto. picaro: mismo criterio con
+// "daga", plantilla más corta. arquero no tiene entrada aquí a propósito
+// -- el arco en mano usa su propia animación de tensado (ARQUERO_BOW más
+// arriba), nunca pasa por este camino; el arco de iron-weapons solo se ve
+// en el suelo/inventario (iconoDrop), sin rotación que calibrar.
+const ARMA_HILT_TIP = {
+  guerrero: Array(6).fill({ hilt: [25, 25], tip: [4, 4] }),
+  picaro: Array(5).fill({ hilt: [24, 24], tip: [7, 7] }),
+};
+export function armaHiltTip(clase, arteIdx) {
+  const arr = ARMA_HILT_TIP[clase];
+  return arr ? arr[arteIdx % arr.length] : null;
+}
+
 // Sangre de impacto (torre-vespero-assets/BloodFX Batch 1): sustituye el
 // simple estallido de píxeles cuadrados de fxParticulas por una salpicadura
 // real dibujada a mano, con su propia animación de crecimiento -> goteo.
