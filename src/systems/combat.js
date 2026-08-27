@@ -290,6 +290,12 @@ export function spawnEnemigo(f, tipo, esElite, posFija) {
           fase: Math.random() * TAU,
           invoco: false,
           invoco2: false,
+          // Ángulo fijo de aproximación en el cerco (ver
+          // core/loop.js: calcularRumboEnjambre / systems/navegacion.js)
+          // -- cada enemigo lo mantiene toda su vida (gira lento en
+          // combate) para que un grupo rodee al jugador desde ángulos
+          // distintos en vez de amontonarse todos en el mismo punto.
+          anguloFlanqueo: Math.random() * TAU,
         });
       }
 

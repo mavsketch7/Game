@@ -13,6 +13,7 @@ import { curarP, danoAEnemigo, danoAlJugador, explotarBomber, ganarXP, masCercan
 import { JUICE, actualizarEstilo } from "../systems/juice.js";
 import { RADIO_HOGUERA_JEFE, aplicarLimites, colisionaMuro, cruzarPuerta, dentroForma, iniciarPlanta, ponPilares, salaActual } from "../systems/floorgen.js";
 import { leerInput } from "../systems/input.js";
+import { actualizarNavegacion, obtenerRumbo } from "../systems/navegacion.js";
 import { finPartida, plantaDespejada } from "../systems/loot.js";
 import { abrirCartasParaJugador } from "../ui/cardsOverlay.js";
 import { banner, toast } from "../ui/notifications.js";
@@ -96,6 +97,138 @@ function iniciarFaseHielo(e, n) {
   fxParticulas(e.x, e.y, 18, "#bfe6f7");
   G.shake = Math.max(G.shake, 5);
   banner("¡El Guardián de Hielo invoca " + n + " pilares de hielo!");
+}
+
+// Enjambre "pensante": combina el flow field (rodea muros/pilares, ver
+// systems/navegacion.js) con separación entre enemigos y un ángulo de
+// flanqueo fijo por enemigo (e.anguloFlanqueo, asignado al nacer en
+// combat.js: spawnEnemigo) para que un grupo no se apile en un punto ni
+// ataque todos en fila. Devuelve solo el ÁNGULO para las líneas
+// "caminar hacia el objetivo" de cada arquetipo -- el apuntado de
+// ataques/proyectiles, el kiting de retirada y los checks de rango
+// siguen usando `dir`/`d` (línea recta real, adyacencia física), sin
+// tocar. Los jefes (e.jefe) no flanquean -- deben ir derechos a rango
+// de golpe, no orbitar; sí se benefician del rodeo de muros/pilares y
+// de la separación (para no atravesarse con mobs invocados).
+const RADIO_COMPROMISO = 200;
+const HOLGURA_LINEA_LIBRE = 50;
+const RADIO_SEPARACION = 40;
+const LIMITE_ENEMIGOS_SEPARACION = 40;
+const MARGEN_OBSTACULO_STEER = 24;
+
+function calcularRumboEnjambre(e, obj, d, dt) {
+  const rumbo = obtenerRumbo(e.x, e.y);
+  let dirBase;
+  if (rumbo.ang === null) {
+    // sin celda/ruta conocida: línea recta de toda la vida como red de
+    // seguridad -- nunca debe congelarse por un fallo del pathfinding.
+    dirBase = Math.atan2(obj.y - e.y, obj.x - e.x);
+  } else if (
+    !e.jefe &&
+    d < RADIO_COMPROMISO &&
+    rumbo.dist - d < HOLGURA_LINEA_LIBRE
+  ) {
+    // cerca y sin muro real de por medio (el propio flow field ya dice
+    // que el camino mide casi lo mismo que la línea recta): en vez de
+    // ir directo al jugador, cada enemigo va a un punto a su alrededor
+    // en su ángulo de flanqueo, que gira lento -- así rodean en vez de
+    // apilarse en fila.
+    e.anguloFlanqueo = (e.anguloFlanqueo || 0) + dt * 0.2;
+    const radio = obj.r + e.r + 20;
+    const tx = obj.x + Math.cos(e.anguloFlanqueo) * radio;
+    const ty = obj.y + Math.sin(e.anguloFlanqueo) * radio;
+    dirBase = Math.atan2(ty - e.y, tx - e.x);
+  } else {
+    dirBase = rumbo.ang;
+  }
+
+  // Rodeo de pilares "pegados": la rejilla del flow field solo infla
+  // pilares un margen fijo pequeño (ver systems/navegacion.js -- pensado
+  // para el enemigo más pequeño), así que un enemigo grande (jefe,
+  // minijefe, tank) puede tocar el borde real de colisión (pl.r+e.r)
+  // mucho antes de que la rejilla lo considere "bloqueado", y dirBase
+  // sigue apuntando casi al centro. Un simple empuje de repulsión ahí se
+  // anula casi del todo contra ese rumbo (probado con el jefe, r=58: se
+  // queda "empatado" pegado al borde sin apenas avance tangencial). En
+  // vez de recalcular un desvío desde cero cada frame (el ruido
+  // numérico cerca del punto de contacto puede alternar de lado y dejar
+  // un avance tangencial neto ~0), se detecta el contacto UNA vez y se
+  // camina en tangente a su borde en un sentido FIJO durante todo el
+  // contacto (elegido al empezar, hacia el lado más corto para llegar
+  // al objetivo) -- garantiza progreso angular real cada frame en vez
+  // de forcejear. Se suelta solo en cuanto deja de estar pegado a ESE
+  // pilar (el flow field ya tira de él hacia fuera en cuanto hay hueco).
+  let pilarPegado = null;
+  for (const pl of G.pilares) {
+    if (Math.hypot(e.x - pl.x, e.y - pl.y) < pl.r + e.r + 4) {
+      pilarPegado = pl;
+      break;
+    }
+  }
+  if (pilarPegado) {
+    if (e._rodeoPilar !== pilarPegado) {
+      e._rodeoPilar = pilarPegado;
+      const angRadial = Math.atan2(e.y - pilarPegado.y, e.x - pilarPegado.x);
+      const angObjetivo = Math.atan2(obj.y - pilarPegado.y, obj.x - pilarPegado.x);
+      let diff = angObjetivo - angRadial;
+      while (diff > Math.PI) diff -= TAU;
+      while (diff < -Math.PI) diff += TAU;
+      e._rodeoSigno = diff >= 0 ? 1 : -1;
+    }
+    const angRadial = Math.atan2(e.y - pilarPegado.y, e.x - pilarPegado.x);
+    dirBase = angRadial + (Math.PI / 2) * e._rodeoSigno;
+  } else {
+    e._rodeoPilar = null;
+  }
+
+  // Separación: nudge aditivo lejos de enemigos cercanos, no un
+  // comportamiento aparte -- así el enemigo sigue avanzando aunque le
+  // empujen. Se salta con salas muy pobladas (?qa=1, ~100 enemigos)
+  // donde no se nota visualmente y sí en rendimiento.
+  let sepX = 0,
+    sepY = 0;
+  if (G.enemigos.length <= LIMITE_ENEMIGOS_SEPARACION) {
+    for (const otro of G.enemigos) {
+      if (otro === e || otro.hp <= 0) continue;
+      const dx = e.x - otro.x,
+        dy = e.y - otro.y;
+      const dd = Math.hypot(dx, dy);
+      const radioMin = e.r + otro.r + RADIO_SEPARACION;
+      if (dd > 0 && dd < radioMin) {
+        const peso = (radioMin - dd) / radioMin;
+        sepX += (dx / dd) * peso;
+        sepY += (dy / dd) * peso;
+      }
+    }
+  }
+
+  // Repulsión de muros cercanos: la rejilla del flow field solo infla
+  // los obstáculos un margen fijo pequeño (ver systems/navegacion.js --
+  // calibrado para el enemigo más pequeño), así que un enemigo grande
+  // (jefe, minijefe, tank) puede recibir una dirección que en realidad
+  // apunta dentro de su propio cuerpo cerca de un muro. Empuje radial
+  // simple (a diferencia de los pilares, aquí no se ha observado el
+  // "empate" -- un rectángulo grande no tiene un único centro que anule
+  // el rumbo igual que un círculo).
+  let obsX = 0,
+    obsY = 0;
+  for (const m of G.muros || []) {
+    const cx = clamp(e.x, m.x, m.x + m.w);
+    const cy = clamp(e.y, m.y, m.y + m.h);
+    const dx = e.x - cx,
+      dy = e.y - cy;
+    const dd = Math.hypot(dx, dy);
+    const radioMin = e.r + MARGEN_OBSTACULO_STEER;
+    if (dd > 0 && dd < radioMin) {
+      const peso = (radioMin - dd) / radioMin;
+      obsX += (dx / dd) * peso;
+      obsY += (dy / dd) * peso;
+    }
+  }
+
+  const vx = Math.cos(dirBase) + sepX * 0.8 + obsX * 1.3;
+  const vy = Math.sin(dirBase) + sepY * 0.8 + obsY * 1.3;
+  return vx === 0 && vy === 0 ? dirBase : Math.atan2(vy, vx);
 }
 
 export function update(dt) {
@@ -788,6 +921,7 @@ export function update(dt) {
         }
 
         // enemigos
+        if (G.enemigos.length) actualizarNavegacion();
         for (const e of G.enemigos) {
           if (e.hurtT > 0) e.hurtT -= dt;
           // destello de impacto (blanco/rojo, ver systems/juice.js) --
@@ -873,6 +1007,7 @@ export function update(dt) {
           const velF = e.vel * (e.slowT > 0 ? 0.45 : 1);
           const d = Math.hypot(obj.x - e.x, obj.y - e.y);
           const dir = Math.atan2(obj.y - e.y, obj.x - e.x);
+          const dirMov = calcularRumboEnjambre(e, obj, d, dt);
 
           if (e.jefe) {
             const arq = e.arquetipo || "invocador";
@@ -977,8 +1112,8 @@ export function update(dt) {
                 }
                 e.moviendose = false;
               } else if (d > e.r + obj.r + 10) {
-                e.x += Math.cos(dir) * velF * dt;
-                e.y += Math.sin(dir) * velF * dt;
+                e.x += Math.cos(dirMov) * velF * dt;
+                e.y += Math.sin(dirMov) * velF * dt;
                 e.moviendose = true;
               } else {
                 e.moviendose = false;
@@ -1265,8 +1400,8 @@ export function update(dt) {
             }
             const velJ = arq === "magma" ? e.vel * 0.6 : e.vel;
             if (e.segT <= 0 && d > e.r + obj.r + 6) {
-              e.x += Math.cos(dir) * velJ * (e.slowT > 0 ? 0.45 : 1) * dt;
-              e.y += Math.sin(dir) * velJ * (e.slowT > 0 ? 0.45 : 1) * dt;
+              e.x += Math.cos(dirMov) * velJ * (e.slowT > 0 ? 0.45 : 1) * dt;
+              e.y += Math.sin(dirMov) * velJ * (e.slowT > 0 ? 0.45 : 1) * dt;
             }
           } else if (e.mini) {
             // minijefe: persecución + ráfaga radial pequeña
@@ -1291,8 +1426,8 @@ export function update(dt) {
               e.fase += 0.6;
             }
             if (d > e.r + obj.r - 2) {
-              e.x += Math.cos(dir) * velF * dt;
-              e.y += Math.sin(dir) * velF * dt;
+              e.x += Math.cos(dirMov) * velF * dt;
+              e.y += Math.sin(dirMov) * velF * dt;
             }
           } else if (e.tipo === "runner") {
             // acechador: carga telegrafiada
@@ -1312,8 +1447,8 @@ export function update(dt) {
                 e.telT = 0.35;
                 e.chargeCd = 2.6;
               } else if (d > e.r + obj.r - 2) {
-                e.x += Math.cos(dir) * velF * dt;
-                e.y += Math.sin(dir) * velF * dt;
+                e.x += Math.cos(dirMov) * velF * dt;
+                e.y += Math.sin(dirMov) * velF * dt;
               }
             }
           } else if (e.tipo === "bomber") {
@@ -1327,8 +1462,8 @@ export function update(dt) {
               if (d < 48) {
                 e.fuseT = 0.7;
               } else {
-                e.x += Math.cos(dir) * velF * dt;
-                e.y += Math.sin(dir) * velF * dt;
+                e.x += Math.cos(dirMov) * velF * dt;
+                e.y += Math.sin(dirMov) * velF * dt;
               }
             }
           } else if (e.tipo === "caster") {
@@ -1342,8 +1477,8 @@ export function update(dt) {
               fxParticulas(e.x, e.y, 8, "#c07be0");
               e.blinkCd = 4;
             } else if (d > 320) {
-              e.x += Math.cos(dir) * velF * dt;
-              e.y += Math.sin(dir) * velF * dt;
+              e.x += Math.cos(dirMov) * velF * dt;
+              e.y += Math.sin(dirMov) * velF * dt;
             }
             e.shootCd -= dt;
             if (e.shootCd <= 0 && d < 440) {
@@ -1366,8 +1501,8 @@ export function update(dt) {
             }
           } else if (e.ranged) {
             if (d > 300) {
-              e.x += Math.cos(dir) * velF * dt;
-              e.y += Math.sin(dir) * velF * dt;
+              e.x += Math.cos(dirMov) * velF * dt;
+              e.y += Math.sin(dirMov) * velF * dt;
             } else if (d < 170) {
               e.x -= Math.cos(dir) * velF * 0.8 * dt;
               e.y -= Math.sin(dir) * velF * 0.8 * dt;
@@ -1391,8 +1526,8 @@ export function update(dt) {
           } else {
             // melee y tank
             if (d > e.r + obj.r - 2) {
-              e.x += Math.cos(dir) * velF * dt;
-              e.y += Math.sin(dir) * velF * dt;
+              e.x += Math.cos(dirMov) * velF * dt;
+              e.y += Math.sin(dirMov) * velF * dt;
             }
           }
 
