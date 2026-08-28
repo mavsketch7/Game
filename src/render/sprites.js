@@ -1337,7 +1337,10 @@ function cargarFramesSueltosTrim(urls, destSize, onListo) {
 // "m-d" cuando ambos existen en el mismo archivo. "bow-ps"/"bw-pl": arquero
 // abajo/arriba (nombres distintos a "b-pl" en esos dos archivos de origen,
 // ver bow-shotdown-position.json/bow-up-atack.json).
-const NOMBRES_HITBOX_ARMA = ["sword-position", "m-d", "b-pl", "bow-ps", "bw-pl"];
+// "m-i": mano IZQUIERDA (mago -- sostiene la vara en esa mano, a
+// diferencia del resto de clases que usan "m-d"/derecha, ver
+// heroB_attack_mago_side.json).
+const NOMBRES_HITBOX_ARMA = ["sword-position", "m-d", "m-i", "b-pl", "bow-ps", "bw-pl"];
 
 // El JSON de este plugin no es plano por frame: es un array de hitboxes
 // con nombre, cada uno con sus datos agrupados por TAG de animación

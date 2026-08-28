@@ -158,7 +158,11 @@ function calcularPoseHeroe(p, x, yPies, mov) {
             const anclasDir = REAL_DASH_ANCLA[p.rol]?.[dir];
             anclaLocal = anclasDir ? anclasDir[frameIdx] : null;
           }
-        } else if (p.swingT > 0 && atkFrames && atkFrames.length) {
+        } else if (
+          (p.swingT > 0 || (p.rol === "mago" && p.castCd > 0)) &&
+          atkFrames &&
+          atkFrames.length
+        ) {
           usaArteClase = true;
           // Golpe Colosal (combo a 4 pips, ver abilities.js: atacar()) usa la
           // hoja de "especial" del guerrero en vez de la básica cuando ya
@@ -167,7 +171,14 @@ function calcularPoseHeroe(p, x, yPies, mov) {
           const especial = p.rol === "guerrero" && p.atkEspecial && REAL_SPECIAL.guerrero[dirAim]?.length;
           const framesGolpe = especial ? REAL_SPECIAL.guerrero[dirAim] : atkFrames;
           const dur = (especial && SPECIAL_ATTACK_DUR[p.rol]) || ATTACK_DUR[p.rol] || 0.2;
-          const prog = clamp(1 - p.swingT / dur, 0, 0.999);
+          // Mago: castCd (0.45s) dura más que swingT/ATTACK_DUR (0.25s) --
+          // sin esto, la animación "terminaba" antes de poder lanzar el
+          // siguiente cast y el personaje volvía a idle un instante (con
+          // ataque en spam se veía como un parpadeo). Se mantiene el último
+          // frame mientras dure esa cola; si sigue atacando, el próximo
+          // cast reinicia swingT y encadena limpio, si no, en cuanto
+          // castCd llega a 0 esta rama deja de aplicar y cae a idle.
+          const prog = p.swingT > 0 ? clamp(1 - p.swingT / dur, 0, 0.999) : 0.999;
           const frameIdx = Math.floor(prog * framesGolpe.length);
           const fr = framesGolpe[frameIdx];
           if (fr) img = fr;
