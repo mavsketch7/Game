@@ -117,6 +117,11 @@ function calcularPoseHeroe(p, x, yPies, mov) {
         // arquero/mago quedan espejados al revés en idle/correr (bug
         // reportado: "al caminar miran al lado opuesto").
         let usaArteClase = false;
+        // Piernas de correr empalmadas sobre el frame de ataque (ver el
+        // bloque `p.swingT > 0` más abajo) -- `null` salvo mientras se
+        // ataca en movimiento.
+        let piernasCorrer = null;
+        let flipPiernas = false;
         const especialPorClase = REAL_SPECIAL[p.rol] || {};
         const framesCast = especialPorClase[dirAim] || especialPorClase.side;
         if (p.castUltT > 0 && framesCast && framesCast.length) {
@@ -197,6 +202,27 @@ function calcularPoseHeroe(p, x, yPies, mov) {
             ? REAL_SPECIAL_ANCLA.guerrero[dirAim]
             : (REAL_ATTACK_ANCLA[p.rol]?.[dirAim] || REAL_ATTACK_ANCLA[p.rol]?.side);
           anclaLocal = anclasDir ? anclasDir[frameIdx] : null;
+          // Piernas animadas al atacar en movimiento -- probando la opción
+          // "sin arte nuevo" (empalmar el ciclo de correr) antes de pedir
+          // sprites de ataque-en-movimiento dedicados: el frame de ataque
+          // trae las piernas fijas, así que si el jugador se sigue
+          // moviendo mientras ataca se ven "patinando". Reutiliza el
+          // cuerpo de correr (REAL_RUN, compartido entre clases) en la
+          // MISMA dirección de encarado del ataque -- no la de movimiento,
+          // para que torso y piernas no queden mirando a lados distintos
+          // -- animado por p.anim igual que el correr normal;
+          // dibujarPiernasCorrerSobreAtaque() lo pinta encima recortado a
+          // solo la franja inferior. Cada imagen lleva su propio flip
+          // porque el arte de ataque de mago/arquero mira a la izquierda
+          // por defecto y el de correr no (ver MIRA_IZQUIERDA_POR_DEFECTO).
+          if (mov && p.inp) {
+            const runFramesPiernas = REAL_RUN[dir];
+            if (runFramesPiernas && runFramesPiernas.length) {
+              const runFrameIdxPiernas = Math.floor(p.anim * 10) % runFramesPiernas.length;
+              piernasCorrer = runFramesPiernas[runFrameIdxPiernas];
+              flipPiernas = dir === "side" && Math.cos(anguloFacing) < 0;
+            }
+          }
         } else if (p.cargaArqT > 0 && atkFrames && atkFrames.length) {
           // Arquero tensando el arco (p.cargaArqT, ver core/loop.js y
           // dispararFlechaCargada en systems/abilities.js) -- misma hoja de
@@ -273,7 +299,7 @@ function calcularPoseHeroe(p, x, yPies, mov) {
         // del arma -- de espaldas ("up") el arma debe quedar tapada por el
         // cuerpo, así que el cuerpo se dibuja el último; de frente/lateral
         // el orden de siempre (cuerpo, luego arma encima) sigue valiendo.
-        return { img, imgCasco, imgPeto, imgPiernas, flip, dir, ancla };
+        return { img, imgCasco, imgPeto, imgPiernas, flip, dir, ancla, piernasCorrer, flipPiernas };
       }
 
       // `pose` es el objeto devuelto por calcularPoseHeroe() -- dibuja el
@@ -283,8 +309,30 @@ function calcularPoseHeroe(p, x, yPies, mov) {
       // pose.imgX no nulo -- ver calcularPoseHeroe, `null` en los estados
       // sin arte de armadura todavía). Equipar el peto sin el casco no
       // dibuja el casco, y viceversa: cada capa es independiente.
+      // Empalma las piernas del ciclo de correr sobre el frame de ataque
+      // (ver piernasCorrer/flipPiernas en calcularPoseHeroe) -- solo la
+      // franja INFERIOR del canvas, recortada con clip(), para no tapar
+      // el torso/brazos/arma del frame de ataque real. `flip` propio
+      // (puede diferir del cuerpo: el arte de ataque de mago/arquero mira
+      // a la izquierda por defecto, el de correr no).
+      const FRACCION_TORSO_ATAQUE = 0.62;
+      function dibujarPiernasCorrerSobreAtaque(imgPiernasCorrer, x, yPies, flipPiernas, esc) {
+        esc = esc || 1;
+        const h = imgPiernasCorrer.height, w = imgPiernasCorrer.width;
+        const bandaAlto = h * (1 - FRACCION_TORSO_ATAQUE);
+        cx.save();
+        cx.translate(Math.round(x), Math.round(yPies));
+        if (flipPiernas) cx.scale(-1, 1);
+        cx.scale(esc, esc);
+        cx.beginPath();
+        cx.rect(-w / 2, -bandaAlto, w, bandaAlto);
+        cx.clip();
+        cx.drawImage(imgPiernasCorrer, -w / 2, -h);
+        cx.restore();
+      }
+
       function dibujarCuerpoHeroe(p, pose, x, yPies) {
-        const { img, imgCasco, imgPeto, imgPiernas, flip } = pose;
+        const { img, imgCasco, imgPeto, imgPiernas, flip, piernasCorrer, flipPiernas } = pose;
         // Aura de la Senda Elemental (tecla C, ver systems/abilities.js):
         // pedido expreso de que sea "un aura con la forma del png del
         // sprite, tenue" en vez del pulso expansivo genérico que se veía
@@ -299,6 +347,7 @@ function calcularPoseHeroe(p, x, yPies, mov) {
         if (img) {
           const esc = REAL_SPRITE_SCALE[p.rol] || 1;
           drawSpriteBottom(img, x, yPies, flip, esc);
+          if (piernasCorrer) dibujarPiernasCorrerSobreAtaque(piernasCorrer, x, yPies, flipPiernas, esc);
           if (p.equipo.piernas && imgPiernas) drawSpriteBottom(imgPiernas, x, yPies, flip, esc);
           if (p.equipo.peto && imgPeto) drawSpriteBottom(imgPeto, x, yPies, flip, esc);
           if (p.equipo.casco && imgCasco) drawSpriteBottom(imgCasco, x, yPies, flip, esc);
