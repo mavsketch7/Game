@@ -112,9 +112,13 @@ function iconoCd(x, y, tam, etiqueta, cd, total, col) {
         cx.strokeStyle = "#3a3453";
         cx.strokeRect(x + 0.5, y + 0.5, tam - 1, tam - 1);
         cx.fillStyle = listo ? "#1a1206" : "#e9e3d5";
-        cx.font = "800 9px Alegreya Sans";
+        // Fuente/margen proporcionales a `tam` (en vez de fijos) -- el
+        // panel del jugador ahora usa iconos más grandes (22 en vez de
+        // 16) para que se lean bien, y esta función es la única que los
+        // dibuja, así que escala con el tamaño que le pidan.
+        cx.font = `800 ${Math.round(tam * 0.56)}px Alegreya Sans`;
         cx.textAlign = "center";
-        cx.fillText(etiqueta, x + tam / 2, y + tam - 4);
+        cx.fillText(etiqueta, x + tam / 2, y + Math.round(tam * 0.75));
       }
 
 // Iconos de testeo para buffs/debuffs activos (fila bajo las habilidades
@@ -129,111 +133,95 @@ function iconoEstado(x, y, tam, ico, col) {
         cx.globalAlpha = 1;
         cx.strokeStyle = "#3a3453";
         cx.strokeRect(x + 0.5, y + 0.5, tam - 1, tam - 1);
-        cx.font = "700 8px Alegreya Sans";
+        cx.font = `700 ${Math.round(tam * 0.58)}px Alegreya Sans`;
         cx.textAlign = "center";
-        cx.fillText(ico, x + tam / 2, y + tam - 3);
+        cx.fillText(ico, x + tam / 2, y + Math.round(tam * 0.78));
       }
 
 export function renderHUD() {
-        // Paneles inferiores subidos 20px respecto a antes (H-82 -> H-102):
-        // el panel creció esa misma cantidad (68->88, ver panelH más abajo)
-        // para la fila de buffs/debuffs, y sin este ajuste se saldrían por
-        // debajo de la pantalla.
+        // Sin panel/marco de fondo (se quitó a petición expresa: solo
+        // quedan los elementos sueltos -- avatar, barras, iconos --, cada
+        // uno con su propio fondo oscuro, más grandes que antes para que
+        // los buffs/debuffs se lean bien). Anclas movidas para dejar sitio
+        // al bloque más ancho/alto (antes 198x88, ahora ~226x108).
         const pos = [
           [16, 14],
-          [W - 206, 14],
-          [16, H - 102],
-          [W - 206, H - 102],
+          [W - 250, 14],
+          [16, H - 130],
+          [W - 250, H - 130],
         ];
         G.players.forEach((p, i) => {
           const [x, y] = pos[i] || pos[0];
           const t = statsTot(p),
             b = ROLES[p.rol];
-          // Panel plano (el marco ornamentado de Dark Ages UI se quitó a
-          // petición expresa -- competía visualmente con el resto del HUD).
-          // +20 de alto respecto al de antes (68->88) para dejar sitio a la
-          // fila de buffs/debuffs bajo los iconos de habilidad.
-          const panelH = 88;
-          const panelG = cx.createLinearGradient(x - 4, y - 4, x - 4, y - 4 + panelH);
-          panelG.addColorStop(0, "rgba(23,20,36,.86)");
-          panelG.addColorStop(1, "rgba(11,9,18,.86)");
-          cx.fillStyle = panelG;
-          cx.beginPath();
-          cx.roundRect(x - 4, y - 4, 198, panelH, 7);
-          cx.fill();
-          cx.strokeStyle = "rgba(201,163,90,.5)";
-          cx.lineWidth = 1;
-          cx.stroke();
-          // Acento de color de jugador (identifica de un vistazo quién es
-          // quién en cooperativo) -- franja bajo el panel.
-          cx.fillStyle = p.ko ? "#4a4560" : p.color;
-          cx.globalAlpha = p.ko ? 0.6 : 0.95;
-          cx.fillRect(x - 4, y - 4 + panelH + 1, 198, 3);
-          cx.globalAlpha = 1;
           // Avatar: icono representativo de la clase (de momento, en vez
           // del retrato real -- pedido expreso, "ya se pondrán los
           // definitivos" más adelante).
           cx.fillStyle = "#0a0812";
-          cx.fillRect(x - 1, y + 2, 27, 31);
-          cx.font = "18px Alegreya Sans";
+          cx.fillRect(x - 1, y + 3, 38, 44);
+          cx.font = "25px Alegreya Sans";
           cx.textAlign = "center";
-          cx.fillText(b.ico, x + 12.5, y + 23);
+          cx.fillText(b.ico, x + 18, y + 32);
           cx.strokeStyle = "#3a3453";
           cx.lineWidth = 1;
-          cx.strokeRect(x - 1.5, y + 1.5, 27, 31);
-          cx.fillStyle = p.color;
-          cx.font = "800 10px Alegreya Sans";
+          cx.strokeRect(x - 0.5, y + 3.5, 37, 43);
+          // Nombre: sin panel detrás, así que lleva su propia sombra (igual
+          // que ya hacía el texto de las barras en barra()) para seguir
+          // leyéndose sobre cualquier fondo del mundo.
+          cx.font = "800 13px Alegreya Sans";
           cx.textAlign = "left";
-          cx.fillText(p.nombre + " · " + b.nombre.split(" ")[0], x + 30, y + 7);
-          barraHP(x + 30, y + 11, 130, 10, p, t);
-          barra(x + 30, y + 23, 130, 8, p.res / b.res, "#5a9ad1", "");
+          const nombreTxt = p.nombre + " · " + b.nombre.split(" ")[0];
+          cx.fillStyle = "rgba(0,0,0,.7)";
+          cx.fillText(nombreTxt, x + 45, y + 12);
+          cx.fillStyle = p.color;
+          cx.fillText(nombreTxt, x + 44, y + 11);
+          barraHP(x + 44, y + 16, 180, 13, p, t);
+          barra(x + 44, y + 32, 180, 10, p.res / b.res, "#5a9ad1", "");
           // barra XP pequeña debajo
           const xpPct = p.nivel >= MAX_NIV_PJ ? 1 : p.xp / p.xpSig;
-          barra(x + 30, y + 33, 85, 5, xpPct, "#4a8a5a", "");
-          cx.fillStyle = "#9a93ab";
-          cx.font = "700 9px Alegreya Sans";
+          barra(x + 44, y + 45, 120, 7, xpPct, "#4a8a5a", "");
+          const nvTxt =
+            "Nv." + p.nivel + (p.cartasPendientes > 0 ? " ★" + p.cartasPendientes : "");
+          cx.font = "700 12px Alegreya Sans";
           cx.textAlign = "left";
-          cx.fillText(
-            "Nv." +
-              p.nivel +
-              (p.cartasPendientes > 0 ? " ★" + p.cartasPendientes : ""),
-            x + 118,
-            y + 39,
-          );
-          // iconos
-          const iy = y + 42;
+          cx.fillStyle = "rgba(0,0,0,.7)";
+          cx.fillText(nvTxt, x + 169, y + 53);
+          cx.fillStyle = "#c9c3d6";
+          cx.fillText(nvTxt, x + 168, y + 52);
+          // iconos de habilidad
+          const iy = y + 60;
           if (p.nivel < NIVEL_ULTI) {
             cx.fillStyle = "#1c1830";
-            cx.fillRect(x + 30, iy, 16, 16);
+            cx.fillRect(x + 44, iy, 22, 22);
             cx.strokeStyle = "#3a3453";
-            cx.strokeRect(x + 30.5, iy + 0.5, 15, 15);
+            cx.strokeRect(x + 44.5, iy + 0.5, 21, 21);
             cx.fillStyle = "#9a93ab";
-            cx.font = "800 8px Alegreya Sans";
+            cx.font = "800 10px Alegreya Sans";
             cx.textAlign = "center";
-            cx.fillText("🔒" + NIVEL_ULTI, x + 38, iy + 11);
+            cx.fillText("🔒" + NIVEL_ULTI, x + 55, iy + 15);
           } else {
-            iconoCd(x + 30, iy, 16, "Q", p.skillCd, b.skill.cd, "#e9b45c");
+            iconoCd(x + 44, iy, 22, "Q", p.skillCd, b.skill.cd, "#e9b45c");
           }
           if (p.rol === "mago") {
             ELEM_MAGO.forEach((el, k) => {
               const col = ELEMENTOS[el].color;
               const sel = p.elemento === el;
               cx.fillStyle = sel ? col : "#3a3453";
-              cx.fillRect(x + 52 + k * 20, iy, 16, 16);
+              cx.fillRect(x + 71 + k * 27, iy, 22, 22);
               cx.strokeStyle = sel ? "#e9e3d5" : "#3a3453";
-              cx.strokeRect(x + 52.5 + k * 20, iy + 0.5, 15, 15);
+              cx.strokeRect(x + 71.5 + k * 27, iy + 0.5, 21, 21);
               cx.fillStyle = sel ? "#1a1206" : "#9a93ab";
-              cx.font = "800 9px Alegreya Sans";
+              cx.font = "800 12px Alegreya Sans";
               cx.textAlign = "center";
-              cx.fillText(k + 1, x + 60 + k * 20, iy + 12);
+              cx.fillText(k + 1, x + 82 + k * 27, iy + 16);
             });
             // Senda Elemental (tecla C, ver SENDA_ELEMENTAL en
             // core/constants.js) -- 4º icono, justo después de los 3 de
             // elemento, coloreado con el elemento activo ahora mismo.
             iconoCd(
-              x + 52 + 3 * 20,
+              x + 71 + 3 * 27,
               iy,
-              16,
+              22,
               "C",
               p.sendaCd,
               SENDA_ELEMENTAL.cd,
@@ -242,9 +230,9 @@ export function renderHUD() {
           } else if (p.rol === "clerigo") {
             SUPS.forEach((s, k) =>
               iconoCd(
-                x + 52 + k * 20,
+                x + 71 + k * 27,
                 iy,
-                16,
+                22,
                 "" + (k + 1),
                 p.supCd[k],
                 s.cd,
@@ -254,23 +242,23 @@ export function renderHUD() {
           } else if (p.rol === "guerrero") {
             // Estocada (dash-ataque, Mayús · R3 -- ver systems/abilities.js:
             // dashAtaque()): cooldown 2.2 s, mismo valor fijado ahí.
-            iconoCd(x + 52, iy, 16, "⇧", p.dashAtkCd, 2.2, "#c9a35a");
+            iconoCd(x + 71, iy, 22, "⇧", p.dashAtkCd, 2.2, "#c9a35a");
           } else if (p.rol === "picaro") {
             // Cuchillo cargado (Mayús · R3 -- ver systems/abilities.js:
             // lanzarCuchillo()): cooldown 1.5 s, mismo valor fijado ahí.
-            iconoCd(x + 52, iy, 16, "⇧", p.cuchilloCd, 1.5, "#c9a35a");
+            iconoCd(x + 71, iy, 22, "⇧", p.cuchilloCd, 1.5, "#c9a35a");
           } else if (p.rol === "druida") {
             FORMAS_DRUIDA.forEach((fo, k) => {
               const fi = FORMAS_INFO[fo];
               const sel = p.forma === fo;
               cx.fillStyle = sel ? fi.color : "#3a3453";
-              cx.fillRect(x + 52 + k * 20, iy, 16, 16);
+              cx.fillRect(x + 71 + k * 27, iy, 22, 22);
               cx.strokeStyle = sel ? "#e9e3d5" : "#3a3453";
-              cx.strokeRect(x + 52.5 + k * 20, iy + 0.5, 15, 15);
+              cx.strokeRect(x + 71.5 + k * 27, iy + 0.5, 21, 21);
               cx.fillStyle = sel ? "#1a1206" : "#9a93ab";
-              cx.font = "800 9px Alegreya Sans";
+              cx.font = "800 12px Alegreya Sans";
               cx.textAlign = "center";
-              cx.fillText(k + 1, x + 60 + k * 20, iy + 12);
+              cx.fillText(k + 1, x + 82 + k * 27, iy + 16);
             });
           }
           // Fila de buffs/debuffs, bajo los iconos de habilidad -- iconos
@@ -290,8 +278,8 @@ export function renderHUD() {
           if (p.rootT > 0) estados.push({ ico: "⛓", col: "#9a5a3a" });
           if (p.enOrtiga) estados.push({ ico: "☠", col: "#6ac04a" });
           if (p.congelado) estados.push({ ico: "🥶", col: "#7fc9e8" });
-          const iy2 = iy + 19;
-          estados.forEach((es, k) => iconoEstado(x + 30 + k * 16, iy2, 14, es.ico, es.col));
+          const iy2 = iy + 27;
+          estados.forEach((es, k) => iconoEstado(x + 44 + k * 24, iy2, 20, es.ico, es.col));
         });
 
         // planta arriba-centro
