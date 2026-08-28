@@ -1,13 +1,13 @@
 // Auto-generated during the modularization refactor (2026-07-23).
 import { H, W, animGlobal, cx } from "../core/canvas.js";
-import { ELEMENTOS, ELEM_MAGO, FORMAS_DRUIDA, FORMAS_INFO, MAX_NIV_PJ, MAX_PLANTA, NOMBRE_CLIMA, RAREZAS, ROLES, SENDA_ELEMENTAL, SUPS } from "../core/constants.js";
+import { ELEMENTOS, ELEM_MAGO, FORMAS_DRUIDA, FORMAS_INFO, MAX_NIV_PJ, MAX_PLANTA, NOMBRE_CLIMA, ROLES, SENDA_ELEMENTAL, SUPS } from "../core/constants.js";
 import { META } from "../core/save.js";
 import { G } from "../core/state.js";
-import { K, spriteJugador } from "./sprites.js";
+import { K } from "./sprites.js";
 import { NIVEL_ULTI } from "../systems/abilities.js";
 import { statsTot, vivos } from "../systems/combat.js";
 import { ESTILO } from "../systems/juice.js";
-import { dibujarPanelOrnado, dibujarPlacaHorizontal } from "./uiTiles.js";
+import { dibujarPlacaHorizontal } from "./uiTiles.js";
 import { banner } from "../ui/notifications.js";
 import { clamp, lighten } from "../utils/helpers.js";
 
@@ -117,45 +117,68 @@ function iconoCd(x, y, tam, etiqueta, cd, total, col) {
         cx.fillText(etiqueta, x + tam / 2, y + tam - 4);
       }
 
+// Iconos de testeo para buffs/debuffs activos (fila bajo las habilidades
+// del panel de jugador) -- de momento un cuadro plano con el color del
+// estado + un glifo, se sustituirán por arte definitivo más adelante.
+function iconoEstado(x, y, tam, ico, col) {
+        cx.fillStyle = "#0d0b15";
+        cx.fillRect(x, y, tam, tam);
+        cx.fillStyle = col;
+        cx.globalAlpha = 0.8;
+        cx.fillRect(x, y, tam, tam);
+        cx.globalAlpha = 1;
+        cx.strokeStyle = "#3a3453";
+        cx.strokeRect(x + 0.5, y + 0.5, tam - 1, tam - 1);
+        cx.font = "700 8px Alegreya Sans";
+        cx.textAlign = "center";
+        cx.fillText(ico, x + tam / 2, y + tam - 3);
+      }
+
 export function renderHUD() {
+        // Paneles inferiores subidos 20px respecto a antes (H-82 -> H-102):
+        // el panel creció esa misma cantidad (68->88, ver panelH más abajo)
+        // para la fila de buffs/debuffs, y sin este ajuste se saldrían por
+        // debajo de la pantalla.
         const pos = [
           [16, 14],
           [W - 206, 14],
-          [16, H - 82],
-          [W - 206, H - 82],
+          [16, H - 102],
+          [W - 206, H - 102],
         ];
         G.players.forEach((p, i) => {
           const [x, y] = pos[i] || pos[0];
           const t = statsTot(p),
             b = ROLES[p.rol];
-          // Panel ornamentado (Dark Ages UI, ver render/uiTiles.js) en vez
-          // del degradado plano de siempre -- con fallback a ese mismo
-          // degradado si la hoja de UI todavía no cargó (un instante, al
-          // arrancar), para no dejar un hueco visual.
-          if (!dibujarPanelOrnado(x - 4, y - 4, 198, 68)) {
-            const panelG = cx.createLinearGradient(x - 4, y - 4, x - 4, y + 64);
-            panelG.addColorStop(0, "rgba(23,20,36,.86)");
-            panelG.addColorStop(1, "rgba(11,9,18,.86)");
-            cx.fillStyle = panelG;
-            cx.beginPath();
-            cx.roundRect(x - 4, y - 4, 198, 68, 7);
-            cx.fill();
-          }
+          // Panel plano (el marco ornamentado de Dark Ages UI se quitó a
+          // petición expresa -- competía visualmente con el resto del HUD).
+          // +20 de alto respecto al de antes (68->88) para dejar sitio a la
+          // fila de buffs/debuffs bajo los iconos de habilidad.
+          const panelH = 88;
+          const panelG = cx.createLinearGradient(x - 4, y - 4, x - 4, y - 4 + panelH);
+          panelG.addColorStop(0, "rgba(23,20,36,.86)");
+          panelG.addColorStop(1, "rgba(11,9,18,.86)");
+          cx.fillStyle = panelG;
+          cx.beginPath();
+          cx.roundRect(x - 4, y - 4, 198, panelH, 7);
+          cx.fill();
+          cx.strokeStyle = "rgba(201,163,90,.5)";
+          cx.lineWidth = 1;
+          cx.stroke();
           // Acento de color de jugador (identifica de un vistazo quién es
-          // quién en cooperativo) -- antes era el borde entero del panel;
-          // el marco ornamentado ya trae su propio borde dorado, así que
-          // ahora es una franja bajo el panel en vez de competir con el
-          // grabado en las esquinas.
+          // quién en cooperativo) -- franja bajo el panel.
           cx.fillStyle = p.ko ? "#4a4560" : p.color;
           cx.globalAlpha = p.ko ? 0.6 : 0.95;
-          cx.fillRect(x - 4, y + 65, 198, 3);
+          cx.fillRect(x - 4, y - 4 + panelH + 1, 198, 3);
           cx.globalAlpha = 1;
-          // marco del retrato con color de rareza del peto
-          const armR = p.equipo.peto ? p.equipo.peto.rareza : -1;
+          // Avatar: icono representativo de la clase (de momento, en vez
+          // del retrato real -- pedido expreso, "ya se pondrán los
+          // definitivos" más adelante).
           cx.fillStyle = "#0a0812";
           cx.fillRect(x - 1, y + 2, 27, 31);
-          cx.drawImage(spriteJugador(p), x, y + 4, 24, 28);
-          cx.strokeStyle = armR >= 0 ? RAREZAS[armR].col : "#3a3453";
+          cx.font = "18px Alegreya Sans";
+          cx.textAlign = "center";
+          cx.fillText(b.ico, x + 12.5, y + 23);
+          cx.strokeStyle = "#3a3453";
           cx.lineWidth = 1;
           cx.strokeRect(x - 1.5, y + 1.5, 27, 31);
           cx.fillStyle = p.color;
@@ -250,12 +273,25 @@ export function renderHUD() {
               cx.fillText(k + 1, x + 60 + k * 20, iy + 12);
             });
           }
-          if (p.hasteT > 0) {
-            cx.fillStyle = "#e9b45c";
-            cx.font = "800 10px Alegreya Sans";
-            cx.textAlign = "left";
-            cx.fillText("»» " + p.hasteT.toFixed(0) + "s", x + 118, iy + 12);
+          // Fila de buffs/debuffs, bajo los iconos de habilidad -- iconos
+          // de testeo (glifo + color plano), arte definitivo pendiente.
+          // Solo estados con timer/flag que ya existían en el jugador (ver
+          // core/gameflow.js), sin inventar un sistema de status nuevo.
+          const estados = [];
+          if (p.escudo > 0) estados.push({ ico: "🛡", col: "#5a9ad1" });
+          if (p.hasteT > 0) estados.push({ ico: "»»", col: "#e9b45c" });
+          if (p.invulT > 0) estados.push({ ico: "✦", col: "#e9e3d5" });
+          if (p.sendaT > 0) {
+            estados.push({
+              ico: p.elemento === "fuego" ? "🔥" : p.elemento === "hielo" ? "❄" : "🔮",
+              col: ELEMENTOS[p.elemento].color,
+            });
           }
+          if (p.rootT > 0) estados.push({ ico: "⛓", col: "#9a5a3a" });
+          if (p.enOrtiga) estados.push({ ico: "☠", col: "#6ac04a" });
+          if (p.congelado) estados.push({ ico: "🥶", col: "#7fc9e8" });
+          const iy2 = iy + 19;
+          estados.forEach((es, k) => iconoEstado(x + 30 + k * 16, iy2, 14, es.ico, es.col));
         });
 
         // planta arriba-centro
