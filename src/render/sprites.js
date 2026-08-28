@@ -1862,6 +1862,22 @@ for (let iImpact = 1; iImpact <= 4; iImpact++) {
 }
 export const IMPACT_VFX_DUR = 4 / 15; // mismo ritmo que SANGRE_FPS (~15fps)
 
+// Columna de fuego (pack_effect_fire_column, "fire_column_medium"): usada
+// por los parches de la Senda Elemental de fuego (ver a.senda en
+// render/world.js y actualizarSendaElemental() en systems/abilities.js) en
+// vez del círculo genérico -- 14 PNG sueltos, un ciclo completo de
+// nace->arde->se apaga en brasas, mismo criterio de carga simple que
+// IMPACT_VFX (ya vienen recortados/centrados por el artista, sin
+// bbox/reposicionado). Se ancla por la BASE (no el centro, ver world.js)
+// para que la llama "crezca desde el suelo" en vez de desde su centro.
+export const FIRE_COLUMN = [];
+for (let iFuego = 1; iFuego <= 14; iFuego++) {
+  const imFuego = new Image();
+  const idxFuego = iFuego - 1;
+  imFuego.onload = () => { FIRE_COLUMN[idxFuego] = imFuego; };
+  imFuego.src = assetUrl(`fx/fire_column/frame_${iFuego}`);
+}
+
 // Fases de rotura del pilar de hielo del Guardián (ver render/world.js,
 // bucle de G.pilares, rama pl.hielo): hoja en rejilla 4x2 -- fila 1 intacto
 // -> grietas, fila 2 se parte -> escombro en el suelo (8 fases en total).

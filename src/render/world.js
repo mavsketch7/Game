@@ -3,7 +3,7 @@ import { H, TAU, W, animGlobal, avanzarAnimGlobal, cx } from "../core/canvas.js"
 import { ELEMENTOS, MAX_PLANTA, PILAR_ROTO_DUR, RAREZAS, SALA_H, SALA_W, SUPS } from "../core/constants.js";
 import { G } from "../core/state.js";
 import { renderHUD } from "./hud.js";
-import { CAMPFIRE_CELDA, FROST_GUARDIAN, IMPACT_VFX, KENNEY_TILE, PILAR_HIELO_FRAMES, SANGRE_ANIM, SANGRE_DUR, SHEETS, SPR, assetOK, campfireFrame, iconoDrop, remateMuroPatron, wallPatron } from "./sprites.js";
+import { CAMPFIRE_CELDA, FIRE_COLUMN, FROST_GUARDIAN, IMPACT_VFX, KENNEY_TILE, PILAR_HIELO_FRAMES, SANGRE_ANIM, SANGRE_DUR, SHEETS, SPR, assetOK, campfireFrame, iconoDrop, remateMuroPatron, wallPatron } from "./sprites.js";
 import { drawSprite, drawSpriteBottom } from "./spriteDraw.js";
 import { renderEnemigo, renderJugador, renderMira } from "./character.js";
 import { clamp, hexRgba, ri, rnd } from "../utils/helpers.js";
@@ -450,6 +450,24 @@ export function render() {
 
         // áreas
         for (const a of G.areas) {
+          // Parches de la Senda Elemental de fuego (ver a.senda en
+          // systems/abilities.js: crearArea/actualizarSendaElemental): arte
+          // real (FIRE_COLUMN, un ciclo completo nace->arde->brasas) en vez
+          // del círculo genérico -- anclado por la BASE (a.y), no el
+          // centro, para que la llama crezca desde el suelo. Reducida a
+          // ~0.45x de su tamaño nativo (90px) para no sacar de escala al
+          // personaje. Hielo/arcano (sin pack de sprites todavía) siguen
+          // con el círculo de siempre -- ver el `if` de abajo.
+          if (a.senda && a.elemento === "fuego" && FIRE_COLUMN.length === 14) {
+            const progFuego = clamp(1 - a.ttl / (a.ttlTotal || 1), 0, 0.999);
+            const frFuego = FIRE_COLUMN[Math.floor(progFuego * FIRE_COLUMN.length)];
+            const escFuego = 0.45;
+            const fw = frFuego.width * escFuego, fh = frFuego.height * escFuego;
+            cx.globalAlpha = a.ttl < 0.4 ? a.ttl / 0.4 : 1;
+            cx.drawImage(frFuego, a.x - fw / 2, a.y - fh, fw, fh);
+            cx.globalAlpha = 1;
+            continue;
+          }
           const col =
             a.clase === "elem"
               ? ELEMENTOS[a.elemento].color

@@ -678,7 +678,7 @@ export function lanzarCuchillo(p) {
         sfxDisparoArco(); // mismo golpe de soltar que el arquero, ver dispararFlechaCargada
       }
 
-function crearArea(x, y, r, elemento, mult, duenio) {
+function crearArea(x, y, r, elemento, mult, duenio, senda) {
         const el = ELEMENTOS[elemento];
         const rFinal =
           r * (duenio && duenio._areaRadMult ? duenio._areaRadMult : 1);
@@ -693,8 +693,15 @@ function crearArea(x, y, r, elemento, mult, duenio) {
           mult: mult || 1,
           duenio,
           ttl: ttlFinal,
+          ttlTotal: ttlFinal, // para el progreso de animación de los parches de Senda, ver render/world.js
           tick: 0,
           nace: 0.15,
+          // Marca los parches de la Senda Elemental (ver
+          // actualizarSendaElemental() más abajo) para que render/world.js
+          // les dibuje la columna de fuego real (FIRE_COLUMN) en vez del
+          // círculo genérico -- las zonas de la ulti (sin este flag) siguen
+          // con el círculo de siempre.
+          ...(senda ? { senda: true } : {}),
         });
         fxOnda(x, y, rFinal, el.color);
       }
@@ -737,7 +744,7 @@ export function actualizarSendaElemental(p, dt) {
         p._sendaTick -= dt;
         if (p._sendaTick <= 0) {
           p._sendaTick = SENDA_INTERVALO;
-          crearArea(p.x, p.y, SENDA_RADIO, p.elemento, SENDA_MULT, p);
+          crearArea(p.x, p.y, SENDA_RADIO, p.elemento, SENDA_MULT, p, true);
         }
       }
 
