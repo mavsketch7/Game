@@ -329,10 +329,23 @@ export function update(dt) {
               else if (p._dashAtkCrit) sfxGolpeCritico();
               else sfxImpactoGuerrero();
             }
-          } else if (p.cargaArqT > 0 || p.cargaCuchT > 0) {
+          } else if (
+            p.cargaArqT > 0 ||
+            p.cargaCuchT > 0 ||
+            (p.rol === "mago" && (p.swingT > 0 || p.castCd > 0 || p.cargaT > 0))
+          ) {
             // Arquero tensando el arco / pícaro echando el brazo atrás
             // (ver dispararFlechaCargada/lanzarCuchillo más abajo): se
-            // quedan quietos apuntando -- vx/vy ya están a 0.
+            // quedan quietos apuntando -- vx/vy ya están a 0. Mago: rol a
+            // distancia de alto daño y poco aguante -- debe plantarse para
+            // lanzar el ataque básico, no puede kitear disparando en
+            // movimiento (ver también el bloqueo de INICIAR el cast en
+            // abilities.js: atacar()). castCd dura más que swingT (0.45s
+            // vs 0.25s), así que se mantiene quieto también durante esa
+            // cola, no solo el swing -- p.cargaT cubre el arcano, que se
+            // carga manteniendo pulsado (ver el bloque "arcano" más abajo
+            // en este mismo update()): en cuanto empieza a cargar queda
+            // plantado, aunque haya empezado a cargar en movimiento.
           } else {
             const n = Math.hypot(p.inp.mx, p.inp.my);
             if (n > 0) {

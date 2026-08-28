@@ -88,6 +88,14 @@ export function atacar(p) {
         } else if (p.rol === "mago") {
           if (p.elemento === "arcano") return; // el arcano se carga manteniendo el ataque (gestionado en el update)
           if (p.castCd > 0) return;
+          // Rol a distancia de alto daño y poco aguante: no puede kitear
+          // disparando en movimiento, tiene que plantarse (ver también el
+          // bloqueo de MOVIMIENTO mientras dura el cast en core/loop.js,
+          // que cubre que no se escape justo después de lanzar).
+          if (Math.hypot(p.inp.mx, p.inp.my) > 0.1) {
+            fxTexto(p.x, p.y - 24, "detente para lanzar", "#9a93ab");
+            return;
+          }
           if (p.res < 8) {
             fxTexto(p.x, p.y - 24, "sin maná", "#9a93ab");
             return;
