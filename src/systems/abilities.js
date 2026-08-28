@@ -731,12 +731,13 @@ export function sendaElemental(p) {
         sfx("ulti");
       }
 
-// Cadencia de parches mientras dura la Senda -- 0.12s da un rastro
-// denso y continuo (cada parche vive 1.9-2.6s según el elemento, ver
-// ELEMENTOS en core/constants.js, así que muchos se solapan a la vez)
-// sin generar un parche por frame. mult=0.4: más flojo que la ulti a
-// propósito, es un efecto pasivo de moverse, no un golpe concreto.
-const SENDA_INTERVALO = 0.12;
+// Cadencia de parches mientras dura la Senda -- 0.06s da un rastro
+// muy denso y continuo (cada parche vive 1.9-2.6s según el elemento,
+// ver ELEMENTOS en core/constants.js, así que muchos se solapan a la
+// vez) sin generar un parche por frame. mult=0.4: más flojo que la
+// ulti a propósito, es un efecto pasivo de moverse, no un golpe
+// concreto.
+const SENDA_INTERVALO = 0.06;
 const SENDA_MULT = 0.4;
 const SENDA_RADIO = 32;
 export function actualizarSendaElemental(p, dt) {
