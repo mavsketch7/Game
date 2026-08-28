@@ -14,7 +14,7 @@ import { CARGA_ARQ_MAX, CARGA_ARQ_ZONA, CARGA_CUCH_MAX, CARGA_CUCH_ZONA, groundT
 import { masCercano } from "../systems/combat.js";
 import { mouse } from "../systems/input.js";
 import { JUICE } from "../systems/juice.js";
-import { clamp, rnd } from "../utils/helpers.js";
+import { clamp, hexRgba, rnd } from "../utils/helpers.js";
 
 // Reparte los 360° de puntería en 4 cuadrantes: abajo/arriba (cuando el
 // componente vertical del aim domina) o lateral (el resto, espejado por
@@ -274,6 +274,17 @@ function calcularPoseHeroe(p, x, yPies, mov) {
       // dibuja el casco, y viceversa: cada capa es independiente.
       function dibujarCuerpoHeroe(p, pose, x, yPies) {
         const { img, imgCasco, imgPeto, imgPiernas, flip } = pose;
+        // Aura de la Senda Elemental (tecla C, ver systems/abilities.js):
+        // pedido expreso de que sea "un aura con la forma del png del
+        // sprite, tenue" en vez del pulso expansivo genérico que se veía
+        // como ruido visual -- drop-shadow es alpha-aware, así que el halo
+        // sale recortado a la silueta real del personaje sin necesidad de
+        // dibujar una máscara aparte.
+        const auraSenda = p.rol === "mago" && p.sendaT > 0;
+        if (auraSenda) {
+          const colAura = hexRgba(ELEMENTOS[p.elemento].color, 0.55);
+          cx.filter = `drop-shadow(0 0 2px ${colAura}) drop-shadow(0 0 5px ${colAura})`;
+        }
         if (img) {
           const esc = REAL_SPRITE_SCALE[p.rol] || 1;
           drawSpriteBottom(img, x, yPies, flip, esc);
@@ -286,6 +297,7 @@ function calcularPoseHeroe(p, x, yPies, mov) {
           // pies como los frames de arriba, así que se ancla como antes.
           drawSprite(spriteJugador(p), x, yPies - 6, flip, REAL_SPRITE_SCALE[p.rol] || 1);
         }
+        if (auraSenda) cx.filter = "none";
       }
 
 // Preview animado en idle para overlays HTML (ver ui/inventory.js: la

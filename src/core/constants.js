@@ -218,7 +218,7 @@ export const ELEM_MAGO = ["fuego", "hielo", "arcano"];
 // usa la ulti (crearArea). Coste/cd altos a propósito para que NO esté
 // activo todo el rato (dur=60s con cd=50s da un ~55% de uptime como
 // mucho, jugando perfecto).
-export const SENDA_ELEMENTAL = { nombre: "Senda Elemental", corto: "Senda", coste: 50, cd: 50, dur: 60 };
+export const SENDA_ELEMENTAL = { nombre: "Senda Elemental", corto: "Senda", coste: 50, cd: 50, dur: 45 };
 
 export const SUPS = [
         {

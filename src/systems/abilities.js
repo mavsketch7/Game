@@ -703,7 +703,13 @@ function crearArea(x, y, r, elemento, mult, duenio, senda) {
           // con el círculo de siempre.
           ...(senda ? { senda: true } : {}),
         });
-        fxOnda(x, y, rFinal, el.color);
+        // La Senda crea un parche cada 0.06s (ver SENDA_INTERVALO) -- un
+        // pulso expansivo por parche se leía como "ruido visual" alrededor
+        // del mago (decenas de anillos por segundo). Solo la ulti (llama a
+        // crearArea sin `senda`) sigue teniendo su pulso de impacto; la
+        // Senda se señaliza con el aura fija del sprite (ver p.sendaT en
+        // render/character.js) en vez de esto.
+        if (!senda) fxOnda(x, y, rFinal, el.color);
       }
 
 // Senda Elemental (mago, tecla C -- ver SENDA_ELEMENTAL en
@@ -731,14 +737,14 @@ export function sendaElemental(p) {
         sfx("ulti");
       }
 
-// Cadencia de parches mientras dura la Senda -- 0.03s da un rastro
-// solapado y sin huecos (cada parche vive 1.9-2.6s según el elemento,
+// Cadencia de parches mientras dura la Senda -- 0.06s da un rastro
+// muy denso y continuo (cada parche vive 1.9-2.6s según el elemento,
 // ver ELEMENTOS en core/constants.js, así que muchos se solapan a la
-// vez) sin generar un parche por frame. mult=0.4: más flojo que la
-// ulti a propósito, es un efecto pasivo de moverse, no un golpe
-// concreto.
-const SENDA_INTERVALO = 0.03;
-const SENDA_MULT = 0.4;
+// vez) sin generar un parche por frame. mult=0.9: daño moderado --
+// menos que el golpe puntual de la ulti (1.5-2, ver lanzarUlti) pero ya
+// notable, sobre todo con varios parches solapados a la vez.
+const SENDA_INTERVALO = 0.06;
+const SENDA_MULT = 0.9;
 const SENDA_RADIO = 32;
 export function actualizarSendaElemental(p, dt) {
         if (p.sendaT <= 0) return;
