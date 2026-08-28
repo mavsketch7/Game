@@ -1881,6 +1881,36 @@ for (let iFuego = 1; iFuego <= 14; iFuego++) {
   imFuego.src = assetUrl(`fx/fire_column/frame_${iFuego}`);
 }
 
+// Estallido de hielo (equivalente a FIRE_COLUMN pero para el elemento
+// hielo): 4 frames sueltos (fuente irregular, sin rejilla fija -- se
+// recortaron por columnas con contenido, manteniendo la altura COMPLETA
+// del canvas original en los 4 para que el anclaje por abajo salga
+// consistente entre frames, ver el script de recorte). Dos usos, mismo
+// array: la ulti de hielo (círculo, escala grande) y la Senda Elemental
+// con elemento hielo (rastro, escala pequeña como el fuego) -- ver
+// render/world.js.
+export const ICE_BURST = [];
+for (let iHielo = 1; iHielo <= 4; iHielo++) {
+  const imHielo = new Image();
+  const idxHielo = iHielo - 1;
+  imHielo.onload = () => { ICE_BURST[idxHielo] = imHielo; };
+  imHielo.src = assetUrl(`fx/ice_burst/frame_${iHielo}`);
+}
+
+// Bola de fuego real del ataque básico del mago (sustituye al círculo
+// procedural, ver pr.tipo === "bola" en render/world.js): hoja única de
+// 15 frames de 64x16 (animación de parpadeo de la llama en vuelo, no
+// rejilla cuadrada -- FIREBALL_FW/FH describen el frame real). Se carga
+// como una sola imagen y se recorta por frame al dibujar en vez de
+// trocearla en 15 archivos, porque no hace falta reposicionar/recortar
+// nada (ya viene lista para usarse tal cual, a diferencia de los heroB
+// que necesitan bbox/escala).
+export const FIREBALL_SHEET = new Image();
+FIREBALL_SHEET.src = assetUrl("fx/fireball/sheet");
+export const FIREBALL_FRAMES = 15;
+export const FIREBALL_FW = 64;
+export const FIREBALL_FH = 16;
+
 // Fases de rotura del pilar de hielo del Guardián (ver render/world.js,
 // bucle de G.pilares, rama pl.hielo): hoja en rejilla 4x2 -- fila 1 intacto
 // -> grietas, fila 2 se parte -> escombro en el suelo (8 fases en total).

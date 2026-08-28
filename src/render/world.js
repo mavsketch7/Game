@@ -3,7 +3,7 @@ import { H, TAU, W, animGlobal, avanzarAnimGlobal, cx } from "../core/canvas.js"
 import { ELEMENTOS, MAX_PLANTA, PILAR_ROTO_DUR, RAREZAS, SALA_H, SALA_W, SUPS } from "../core/constants.js";
 import { G } from "../core/state.js";
 import { renderHUD } from "./hud.js";
-import { CAMPFIRE_CELDA, FIRE_COLUMN, FROST_GUARDIAN, IMPACT_VFX, KENNEY_TILE, PILAR_HIELO_FRAMES, SANGRE_ANIM, SANGRE_DUR, SHEETS, SPR, assetOK, campfireFrame, iconoDrop, remateMuroPatron, wallPatron } from "./sprites.js";
+import { CAMPFIRE_CELDA, FIRE_COLUMN, FIREBALL_FH, FIREBALL_FRAMES, FIREBALL_FW, FIREBALL_SHEET, FROST_GUARDIAN, ICE_BURST, IMPACT_VFX, KENNEY_TILE, PILAR_HIELO_FRAMES, SANGRE_ANIM, SANGRE_DUR, SHEETS, SPR, assetOK, campfireFrame, iconoDrop, remateMuroPatron, wallPatron } from "./sprites.js";
 import { drawSprite, drawSpriteBottom } from "./spriteDraw.js";
 import { renderEnemigo, renderJugador, renderMira } from "./character.js";
 import { clamp, hexRgba, ri, rnd } from "../utils/helpers.js";
@@ -465,6 +465,28 @@ export function render() {
             const fw = frFuego.width * escFuego, fh = frFuego.height * escFuego;
             cx.globalAlpha = a.ttl < 0.4 ? a.ttl / 0.4 : 1;
             cx.drawImage(frFuego, a.x - fw / 2, a.y - fh, fw, fh);
+            cx.globalAlpha = 1;
+            continue;
+          }
+          // Estallido de hielo (ICE_BURST, ver sprites.js): mismo arte en
+          // los dos usos que pidió el usuario, con distinta escala --
+          // grande en el círculo de la ulti (a.senda es false ahí, la crea
+          // lanzarUlti() en abilities.js sin ese flag), chico en el rastro
+          // de la Senda Elemental con elemento hielo (a.senda true), igual
+          // que ya hace el fuego arriba. Solo 4 frames (a diferencia de
+          // los 14 del fuego) así que el estallido juega rápido (0.5s fijo,
+          // no repartido en todo el ttl del área) y se queda quieto en el
+          // último frame el resto de la vida del área -- se lee como un
+          // estallido que cristaliza y se queda ahí, no como una animación
+          // lenta arrastrada durante 2-3s.
+          if (a.elemento === "hielo" && ICE_BURST.length === 4) {
+            const edadHielo = (a.ttlTotal || 1) - a.ttl;
+            const progHielo = clamp(edadHielo / 0.5, 0, 0.999);
+            const frHielo = ICE_BURST[Math.floor(progHielo * ICE_BURST.length)];
+            const escHielo = a.senda ? 40 / 52 : 160 / 52;
+            const fw = frHielo.width * escHielo, fh = frHielo.height * escHielo;
+            cx.globalAlpha = a.ttl < 0.4 ? a.ttl / 0.4 : 1;
+            cx.drawImage(frHielo, a.x - fw / 2, a.y - fh, fw, fh);
             cx.globalAlpha = 1;
             continue;
           }
@@ -1362,19 +1384,28 @@ export function render() {
             cx.fill();
             cx.restore();
           } else if (pr.tipo === "bola") {
-            // bola de fuego con estela
-            cx.fillStyle = "rgba(255,125,77,.35)";
-            cx.beginPath();
-            cx.arc(pr.x - pr.vx * 0.02, pr.y - pr.vy * 0.02, 5, 0, TAU);
-            cx.fill();
-            cx.fillStyle = "#ff7d4d";
-            cx.beginPath();
-            cx.arc(pr.x, pr.y, 5, 0, TAU);
-            cx.fill();
-            cx.fillStyle = "#ffd27f";
-            cx.beginPath();
-            cx.arc(pr.x, pr.y, 2.5, 0, TAU);
-            cx.fill();
+            // Bola de fuego real del ataque básico del mago (sustituye al
+            // círculo procedural de antes -- ver FIREBALL_SHEET en
+            // sprites.js). Rotada según la dirección de vuelo (la hoja
+            // trae la llama apuntando a la derecha con la cola hacia la
+            // izquierda) y animada por parpadeo (loop rápido, no atado al
+            // progreso del vuelo -- es un flicker de llama, no una carga).
+            if (FIREBALL_SHEET.complete && FIREBALL_SHEET.naturalWidth) {
+              const frBola = Math.floor(animGlobal * 24) % FIREBALL_FRAMES;
+              const escBola = 0.45;
+              const fwBola = FIREBALL_FW * escBola, fhBola = FIREBALL_FH * escBola;
+              cx.save();
+              cx.translate(pr.x, pr.y);
+              cx.rotate(Math.atan2(pr.vy, pr.vx));
+              cx.drawImage(FIREBALL_SHEET, frBola * FIREBALL_FW, 0, FIREBALL_FW, FIREBALL_FH, -fwBola / 2, -fhBola / 2, fwBola, fhBola);
+              cx.restore();
+            } else {
+              // Fallback mientras carga la hoja real (un instante, al arrancar).
+              cx.fillStyle = "#ff7d4d";
+              cx.beginPath();
+              cx.arc(pr.x, pr.y, 5, 0, TAU);
+              cx.fill();
+            }
           } else if (pr.tipo === "carambano") {
             cx.save();
             cx.translate(pr.x, pr.y);
