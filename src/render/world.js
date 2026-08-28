@@ -483,9 +483,53 @@ export function render() {
             const edadHielo = (a.ttlTotal || 1) - a.ttl;
             const progHielo = clamp(edadHielo / 0.5, 0, 0.999);
             const frHielo = ICE_BURST[Math.floor(progHielo * ICE_BURST.length)];
+            const alfaHielo = a.ttl < 0.4 ? a.ttl / 0.4 : 1;
+            // Ulti (a.senda false, círculo grande): además del cristal
+            // central, unos cuantos más pequeños repartidos por el radio
+            // real del hechizo (posiciones cacheadas en la propia área la
+            // primera vez que se dibuja, para que no salten de sitio cada
+            // frame) más partículas de frío sueltas parpadeando -- pedido
+            // expreso de que el efecto "ocupe" el círculo de lanzamiento
+            // para ver el alcance de un vistazo, en vez de un único
+            // cristal suelto en el medio.
+            if (!a.senda) {
+              if (!a._iceScatter) {
+                a._iceScatter = [];
+                for (let k = 0; k < 5; k++) {
+                  a._iceScatter.push({
+                    ang: Math.random() * TAU,
+                    distFrac: 0.35 + Math.random() * 0.55,
+                    esc: 0.28 + Math.random() * 0.22,
+                  });
+                }
+                a._frost = [];
+                for (let k = 0; k < 16; k++) {
+                  a._frost.push({
+                    ang: Math.random() * TAU,
+                    distFrac: Math.random() * 0.92,
+                    ph: Math.random() * TAU,
+                  });
+                }
+              }
+              for (const f of a._frost) {
+                const r2 = a.r * f.distFrac;
+                const fx2 = a.x + Math.cos(f.ang) * r2, fy2 = a.y + Math.sin(f.ang) * r2;
+                cx.globalAlpha = alfaHielo * (0.25 + 0.55 * ((Math.sin(animGlobal * 3 + f.ph) + 1) / 2));
+                cx.fillStyle = "#cfe4ff";
+                cx.fillRect(fx2 - 1.5, fy2 - 1.5, 3, 3);
+              }
+              const escMini = 160 / 52;
+              cx.globalAlpha = alfaHielo;
+              for (const s of a._iceScatter) {
+                const sx = a.x + Math.cos(s.ang) * a.r * s.distFrac;
+                const sy = a.y + Math.sin(s.ang) * a.r * s.distFrac;
+                const fw2 = frHielo.width * escMini * s.esc, fh2 = frHielo.height * escMini * s.esc;
+                cx.drawImage(frHielo, sx - fw2 / 2, sy - fh2, fw2, fh2);
+              }
+            }
             const escHielo = a.senda ? 40 / 52 : 160 / 52;
             const fw = frHielo.width * escHielo, fh = frHielo.height * escHielo;
-            cx.globalAlpha = a.ttl < 0.4 ? a.ttl / 0.4 : 1;
+            cx.globalAlpha = alfaHielo;
             cx.drawImage(frHielo, a.x - fw / 2, a.y - fh, fw, fh);
             cx.globalAlpha = 1;
             continue;

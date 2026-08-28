@@ -894,6 +894,16 @@ export function update(dt) {
           a.ttl -= dt;
           a.tick -= dt;
           if (a.nace > 0) a.nace -= dt;
+          // Hielo se rompe en partículas al desvanecerse (pedido expreso,
+          // tanto el rastro de la Senda como la ulti -- ver ICE_BURST en
+          // render/sprites.js/world.js) -- una vez, justo al entrar en la
+          // ventana de fade (mismo umbral 0.4s que ya usa el alpha en el
+          // dibujado), no en cada frame de esa ventana.
+          if (a.elemento === "hielo" && a.ttl < 0.4 && !a._rotoHielo) {
+            a._rotoHielo = true;
+            const altoHielo = a.senda ? 40 : 160;
+            fxParticulas(a.x, a.y - altoHielo / 2, a.senda ? 6 : 16, "#cfe4ff", 3, a.senda ? 8 : 24);
+          }
           if (a.tick <= 0) {
             a.tick = 0.35;
             if (a.clase === "malArea") {

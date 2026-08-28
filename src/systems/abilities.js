@@ -751,14 +751,18 @@ export function sendaElemental(p) {
 // vez) sin generar un parche por frame. mult=0.9: daño moderado --
 // menos que el golpe puntual de la ulti (1.5-2, ver lanzarUlti) pero ya
 // notable, sobre todo con varios parches solapados a la vez.
-const SENDA_INTERVALO = 0.06;
+// Hielo aparte: el sprite de ICE_BURST (ver render/world.js) es más
+// ancho que las llamas de FIRE_COLUMN, así que al mismo intervalo se
+// amontonaba enseguida -- el doble de separación para que se lean como
+// cristales sueltos en vez de una masa pegada.
+const SENDA_INTERVALO = { fuego: 0.06, hielo: 0.12, arcano: 0.06 };
 const SENDA_MULT = 0.9;
 const SENDA_RADIO = 32;
 export function actualizarSendaElemental(p, dt) {
         if (p.sendaT <= 0) return;
         p._sendaTick -= dt;
         if (p._sendaTick <= 0) {
-          p._sendaTick = SENDA_INTERVALO;
+          p._sendaTick = SENDA_INTERVALO[p.elemento] || 0.06;
           crearArea(p.x, p.y, SENDA_RADIO, p.elemento, SENDA_MULT, p, true);
         }
       }
