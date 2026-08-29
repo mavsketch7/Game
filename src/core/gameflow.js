@@ -94,6 +94,11 @@ export function nuevaPartida() {
             sendaT: 0,
             sendaCd: 0,
             _sendaTick: 0,
+            // Cooldown propio del aviso "detente para lanzar" (mago, ver
+            // atacar() en systems/abilities.js) -- sin esto salía cada vez
+            // que intentabas atacar en movimiento, y con el ataque
+            // reintentando varias veces por segundo se sentía como spam.
+            _avisoQuietoT: 0,
             anim: Math.random() * 9,
             trail: [],
             hasteT: 0,

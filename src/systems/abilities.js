@@ -91,9 +91,16 @@ export function atacar(p) {
           // Rol a distancia de alto daño y poco aguante: no puede kitear
           // disparando en movimiento, tiene que plantarse (ver también el
           // bloqueo de MOVIMIENTO mientras dura el cast en core/loop.js,
-          // que cubre que no se escape justo después de lanzar).
+          // que cubre que no se escape justo después de lanzar). El aviso
+          // lleva su propio cooldown (_avisoQuietoT, ver core/gameflow.js)
+          // -- sin él salía en cada intento mientras el jugador mantenía
+          // atacar+moverse a la vez, y con varios intentos por segundo se
+          // sentía como spam (queja del usuario).
           if (Math.hypot(p.inp.mx, p.inp.my) > 0.1) {
-            fxTexto(p.x, p.y - 24, "detente para lanzar", "#9a93ab");
+            if (p._avisoQuietoT <= 0) {
+              fxTexto(p.x, p.y - 24, "detente para lanzar", "#9a93ab");
+              p._avisoQuietoT = 3;
+            }
             return;
           }
           if (p.res < 8) {

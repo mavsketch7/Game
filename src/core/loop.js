@@ -43,6 +43,7 @@ const CDS_LINEALES = [
   "castUltT",
   "sendaT",
   "sendaCd",
+  "_avisoQuietoT",
 ];
 
 // Flechas clavadas (detalle de impacto: la flecha se queda incrustada en
