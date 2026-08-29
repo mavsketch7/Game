@@ -917,13 +917,33 @@ export function update(dt) {
               for (const e of G.enemigos) {
                 if (e.hp <= 0 && !e.dummy) continue;
                 if (Math.hypot(e.x - a.x, e.y - a.y) < a.r + e.r * 0.5) {
-                  if (el.dps > 0)
-                    danoAEnemigo(
-                      e,
-                      el.dps * 0.35 * a.mult * dpsMult,
-                      a.duenio || G.players[0],
-                      false,
-                    );
+                  if (el.dps > 0) {
+                    // Tick de área (DoT), no un golpe directo -- toca hp a
+                    // mano igual que ya hacen veneno/quemadura más abajo en
+                    // este mismo update(), sin pasar por danoAEnemigo() y
+                    // su "juice" (hit-stop/flash/shake/sangre, ver
+                    // systems/juice.js). Con la Senda Elemental generando
+                    // muchas zonas solapadas, pasar por ahí re-disparaba el
+                    // hit-stop docenas de veces por segundo y el combate se
+                    // sentía "atascado" (queja del usuario) -- el golpe
+                    // DIRECTO (arma/proyectil/ulti) sigue pasando por
+                    // danoAEnemigo tal cual, no pierde peso.
+                    const dmg = Math.max(1, Math.round(el.dps * 0.35 * a.mult * dpsMult));
+                    if (e.dummy) {
+                      e.hp = Math.max(1, e.hp - dmg);
+                      e.dmgLog.push({ t: G.stats.tiempo, d: dmg });
+                    } else {
+                      e.hp -= dmg;
+                      const duenioTick = a.duenio || G.players[0];
+                      G.stats.dano += dmg;
+                      duenioTick.statDano = (duenioTick.statDano || 0) + dmg;
+                    }
+                    fxTexto(e.x, e.y - e.r - 6, dmg, el.color);
+                    if (!e.dummy && e.hp <= 0) {
+                      matarEnemigo(e, a.duenio || G.players[0]);
+                      continue;
+                    }
+                  }
                   if (el.slow > 0) e.slowT = Math.max(e.slowT, 0.5);
                 }
               }
