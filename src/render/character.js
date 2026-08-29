@@ -14,6 +14,7 @@ import { CARGA_ARQ_MAX, CARGA_ARQ_ZONA, CARGA_CUCH_MAX, CARGA_CUCH_ZONA, groundT
 import { masCercano } from "../systems/combat.js";
 import { mouse } from "../systems/input.js";
 import { JUICE } from "../systems/juice.js";
+import { ENEMY_BAR, ENEMY_BAR_INTERIOR } from "./uiTiles.js";
 import { clamp, hexRgba, rnd } from "../utils/helpers.js";
 
 // Reparte los 360° de puntería en 4 cuadrantes: abajo/arriba (cuando el
@@ -1700,9 +1701,32 @@ export function renderEnemigo(e) {
         }
         if (e.hp < e.hpMax) {
           const w2 = e.jefe ? 60 : e.elite ? 34 : 26;
-          cx.fillStyle = "#0d0b15";
-          cx.fillRect(e.x - w2 / 2, e.y - e.r - 10, w2, 4);
-          cx.fillStyle = e.jefe ? "#c07be0" : "#d1545c";
-          cx.fillRect(e.x - w2 / 2, e.y - e.r - 10, (w2 * e.hp) / e.hpMax, 4);
+          const barX = e.x - w2 / 2,
+            barY = e.y - e.r - 10;
+          if (ENEMY_BAR.complete && ENEMY_BAR.naturalWidth) {
+            // Marco real (enemies-hp-ui-bar-outline.png, ver
+            // render/uiTiles.js) escalado para que su hueco interior mida
+            // exactamente w2 -- así el relleno de vida ocupa el mismo
+            // sitio de siempre (barX,barY,w2,alto) y solo cambia el fondo
+            // plano de antes por el marco con relieve.
+            const escEn = w2 / ENEMY_BAR_INTERIOR.w;
+            const frameW = ENEMY_BAR.naturalWidth * escEn,
+              frameH = ENEMY_BAR.naturalHeight * escEn;
+            const interiorH = ENEMY_BAR_INTERIOR.h * escEn;
+            cx.fillStyle = e.jefe ? "#c07be0" : "#d1545c";
+            cx.fillRect(barX, barY, (w2 * e.hp) / e.hpMax, interiorH);
+            cx.drawImage(
+              ENEMY_BAR,
+              barX - ENEMY_BAR_INTERIOR.x * escEn,
+              barY - ENEMY_BAR_INTERIOR.y * escEn,
+              frameW,
+              frameH,
+            );
+          } else {
+            cx.fillStyle = "#0d0b15";
+            cx.fillRect(barX, barY, w2, 4);
+            cx.fillStyle = e.jefe ? "#c07be0" : "#d1545c";
+            cx.fillRect(barX, barY, (w2 * e.hp) / e.hpMax, 4);
+          }
         }
       }

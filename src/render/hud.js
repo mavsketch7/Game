@@ -7,7 +7,7 @@ import { K } from "./sprites.js";
 import { NIVEL_ULTI } from "../systems/abilities.js";
 import { statsTot, vivos } from "../systems/combat.js";
 import { ESTILO } from "../systems/juice.js";
-import { dibujarPlacaHorizontal } from "./uiTiles.js";
+import { BOSS_BAR, BOSS_BAR_INTERIOR } from "./uiTiles.js";
 import { banner } from "../ui/notifications.js";
 import { clamp, lighten } from "../utils/helpers.js";
 
@@ -331,40 +331,45 @@ export function renderHUD() {
         // jefe
         const jefe = G.enemigos.find((e) => e.jefe);
         if (jefe) {
-          // Placa ornamentada (Dark Ages UI, ver render/uiTiles.js) en vez
-          // del panel plano de siempre, con el mismo fallback que los
-          // paneles de jugador si la hoja de UI no cargó todavía.
-          if (!dibujarPlacaHorizontal(W / 2 - 178, H - 30, 356, 29)) {
+          const critico = jefe.hp / jefe.hpMax < 0.2;
+          if (BOSS_BAR.complete && BOSS_BAR.naturalWidth) {
+            // Marco real (boss-hp-ui-bar.png, ver render/uiTiles.js) en vez
+            // de la placa del tileset de antes. El hueco interior (donde
+            // va el relleno) se midió a mano sobre el PNG -- BOSS_BAR_INTERIOR.
+            // El relleno se dibuja PRIMERO y el marco ENCIMA: el interior
+            // del PNG es transparente, así que el marco solo tapa los
+            // bordes/adornos, no el relleno.
+            const escBoss = 420 / BOSS_BAR.naturalWidth;
+            const frameW = BOSS_BAR.naturalWidth * escBoss,
+              frameH = BOSS_BAR.naturalHeight * escBoss;
+            const x0 = W / 2 - frameW / 2,
+              y0 = H - frameH - 4;
+            const ix = x0 + BOSS_BAR_INTERIOR.x * escBoss,
+              iy = y0 + BOSS_BAR_INTERIOR.y * escBoss,
+              iw = BOSS_BAR_INTERIOR.w * escBoss,
+              ih = BOSS_BAR_INTERIOR.h * escBoss;
+            barra(ix, iy, iw, ih, jefe.hp / jefe.hpMax, critico ? "#c8434b" : "#c07be0", jefe.nombre);
+            cx.drawImage(BOSS_BAR, x0, y0, frameW, frameH);
+            if (critico) {
+              cx.strokeStyle = "#ff5c5c";
+              cx.globalAlpha = 0.4 + Math.sin(animGlobal * 10) * 0.3;
+              cx.lineWidth = 1.5;
+              cx.strokeRect(ix - 1, iy - 1, iw + 2, ih + 2);
+              cx.globalAlpha = 1;
+            }
+          } else {
+            // Fallback plano mientras carga la imagen (un instante, al
+            // arrancar) -- mismas medidas de siempre para no dejar un
+            // hueco vacío.
             cx.fillStyle = "rgba(10,8,16,.55)";
             cx.beginPath();
             cx.roundRect(W / 2 - 178, H - 30, 356, 29, 6);
             cx.fill();
-            cx.strokeStyle = "#6a3f8a";
+            cx.strokeStyle = critico ? "#ff5c5c" : "#6a3f8a";
             cx.lineWidth = 1;
             cx.stroke();
+            barra(W / 2 - 170, H - 18, 340, 13, jefe.hp / jefe.hpMax, critico ? "#c8434b" : "#c07be0", jefe.nombre);
           }
-          const critico = jefe.hp / jefe.hpMax < 0.2;
-          if (critico) {
-            // Trazo propio (beginPath+roundRect) en vez de reusar el path
-            // del fallback de arriba -- con la placa ornamentada dibujada
-            // por drawImage no queda ningún path activo que re-trazar.
-            cx.beginPath();
-            cx.roundRect(W / 2 - 178, H - 30, 356, 29, 6);
-            cx.strokeStyle = "#ff5c5c";
-            cx.globalAlpha = 0.4 + Math.sin(animGlobal * 10) * 0.3;
-            cx.lineWidth = 1.5;
-            cx.stroke();
-            cx.globalAlpha = 1;
-          }
-          barra(
-            W / 2 - 170,
-            H - 18,
-            340,
-            13,
-            jefe.hp / jefe.hpMax,
-            critico ? "#c8434b" : "#c07be0",
-            jefe.nombre,
-          );
         }
 
         // Rango de estilo (D/C/B/A/S/SS/SS+/SSS++/EXTREMO -- ver
