@@ -1161,10 +1161,9 @@ function tabHerreria(p) {
         golpeMartilloPendiente = false;
         const escena =
           '<div class="herreria-escena">' +
-          '<div class="herreria-martillo' +
+          '<div class="herreria-yunque' +
           (golpe ? " golpea" : "") +
           '"></div>' +
-          '<div class="herreria-yunque"></div>' +
           '<div class="fusion-slots-forja">' +
           slotsF +
           "</div>" +
