@@ -5,11 +5,22 @@ import { aplicarTexto } from "./core/settings.js";
 import { G } from "./core/state.js";
 import { NET, interpolarPosicionesRed, netEnviarEventosFx, netEnviarInputCliente, netEnviarSnapshot } from "./net/peer.js";
 import { render } from "./render/world.js";
-import { pollPads } from "./systems/input.js";
+import { M, pollPads } from "./systems/input.js";
+import { actualizarVisibilidadTactil, montarControlesTactiles, tocarActivo } from "./systems/touchInput.js";
 import { construirMenu } from "./ui/menu.js";
 import "./ui/cursor.js";
 import "./ui/guildRankings.js";
 import "./ui/intro.js";
+
+// En un dispositivo táctil, J1 juega con controles táctiles en vez de
+// teclado+ratón -- sustituye, no se "une" como un mando adicional (un
+// dispositivo táctil es la propia pantalla, no puede coexistir consigo
+// mismo). Solo cubre el slot local (host u offline); un invitado de red
+// sigue sin soporte táctil (ver systems/touchInput.js).
+if (tocarActivo()) {
+  M.slots[0].ctrl = { tipo: "touch" };
+  montarControlesTactiles();
+}
 
 let ultimo = 0;
 
@@ -39,6 +50,7 @@ function bucle(ts) {
           return;
         }
         pollPads();
+        actualizarVisibilidadTactil();
         if (G && G.activo && !G.pausa) update(dt);
         render();
         if (NET.modo === "host") {

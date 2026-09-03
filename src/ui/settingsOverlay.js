@@ -4,6 +4,7 @@ import { AJ, aplicarTexto } from "../core/settings.js";
 import { G } from "../core/state.js";
 import { aplicarMusica, initAudio, reanudarAudio, sfx } from "../systems/audio.js";
 import { M } from "../systems/input.js";
+import { tocarActivo } from "../systems/touchInput.js";
 import { toast } from "./notifications.js";
 import { mostrar, ocultar } from "./overlays.js";
 
@@ -48,6 +49,28 @@ export function abrirAjustes() {
             )
             .join("") +
           "</div></div></div>" +
+          (tocarActivo() || AJ.controlTactil !== "auto"
+            ? '<div class="ajuste-fila"><div><h4>👆 Controles táctiles</h4>' +
+              '<div class="a-desc">Joysticks y botones en pantalla. "Auto" los activa solo si detecta un dispositivo táctil. El cambio se aplica al empezar la próxima partida.</div></div>' +
+              '<div class="ajuste-ctrl"><div class="seg" id="seg-tactil">' +
+              [
+                ["Auto", "auto"],
+                ["Activado", "on"],
+                ["Desactivado", "off"],
+              ]
+                .map(
+                  ([lab, v]) =>
+                    '<button class="' +
+                    (AJ.controlTactil === v ? "on" : "") +
+                    '" onclick="setControlTactil(\'' +
+                    v +
+                    "')\">" +
+                    lab +
+                    "</button>",
+                )
+                .join("") +
+              "</div></div></div>"
+            : "") +
           '<div class="ajuste-fila"><div><h4>🔇 Silencio total</h4>' +
           '<div class="a-desc">Corta música y efectos de golpe.</div></div>' +
           '<div class="ajuste-ctrl"><button class="btn' +
@@ -141,6 +164,15 @@ function setEscala(v) {
         sfx("ui");
       }
 
+// No hace swap en caliente del ctrl.tipo de un jugador ya en juego (ver
+// systems/touchInput.js): solo guarda la preferencia para la próxima vez
+// que se evalúe tocarActivo() (arranque/recarga de página).
+function setControlTactil(v) {
+        AJ.controlTactil = v;
+        abrirAjustes();
+        sfx("ui");
+      }
+
 export function toggleSilencioRapido() {
         AJ.silencio = !AJ.silencio;
         initAudio();
@@ -161,6 +193,7 @@ document.getElementById("btn-ajustes").onclick = () => {
 // Expuestas en window: referenciadas desde onclick="..." en HTML generado dinámicamente.
 window.cerrarAjustes = cerrarAjustes;
 window.setEscala = setEscala;
+window.setControlTactil = setControlTactil;
 window.setTexto = setTexto;
 window.setVol = setVol;
 window.toggleSilencio = toggleSilencio;

@@ -1442,7 +1442,7 @@ function renderMira() {
             cx.beginPath();
             cx.arc(mx, my, 3, 0, TAU);
             cx.stroke();
-          } else if (p.ctrl.tipo === "pad") {
+          } else if (p.ctrl.tipo === "pad" || p.ctrl.tipo === "touch") {
             const d = 44;
             const ax = p.x + Math.cos(p.aim) * d,
               ay = p.y + Math.sin(p.aim) * d;

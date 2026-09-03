@@ -1938,3 +1938,138 @@ body.pantalla-completa #hint {
 *:disabled {
   cursor: none !important;
 }
+
+/* ===== Controles táctiles (móvil) =====
+   Ancla a <body> (position:fixed, no dentro de #marco): #marco solo pasa a
+   ocupar toda la pantalla real en :fullscreen -- el fallback usado por
+   Safari/iOS (body.pantalla-completa) lo deja con su tamaño de tarjeta
+   normal, así que anclar aquí garantiza que los controles siempre puedan
+   usar toda la superficie táctil disponible, sea cual sea el mecanismo de
+   pantalla completa activo. */
+#controles-tactiles {
+  position: fixed;
+  inset: 0;
+  z-index: 8;
+  pointer-events: none;
+  touch-action: none;
+}
+#controles-tactiles.oculto {
+  display: none;
+}
+.zona-tactil {
+  position: absolute;
+  top: 26%;
+  bottom: 0;
+  pointer-events: auto;
+  touch-action: none;
+}
+#zona-t-mover {
+  left: 0;
+  width: 45%;
+}
+#zona-t-apuntar {
+  right: 0;
+  width: 45%;
+}
+.stick-base {
+  position: fixed;
+  width: 104px;
+  height: 104px;
+  border-radius: 50%;
+  background: rgba(20, 16, 28, 0.35);
+  border: 1px solid var(--borde);
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.08s;
+  z-index: 9;
+}
+.stick-base.activo {
+  opacity: 1;
+}
+.stick-knob {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: rgba(233, 180, 92, 0.5);
+  border: 1px solid var(--vespero);
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+.btn-tactil {
+  position: fixed;
+  border-radius: 50%;
+  border: 1px solid var(--borde);
+  background: rgba(20, 16, 28, 0.82);
+  color: var(--hueso);
+  font-size: 1.6rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: auto;
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
+  z-index: 9;
+}
+.btn-tactil.dorado {
+  border-color: var(--vespero);
+  color: var(--vespero);
+}
+#btn-t-esquivar {
+  width: 76px;
+  height: 76px;
+  right: calc(6% + env(safe-area-inset-right));
+  bottom: calc(8% + env(safe-area-inset-bottom));
+}
+#btn-t-interactuar {
+  width: 58px;
+  height: 58px;
+  right: calc(22% + env(safe-area-inset-right));
+  bottom: calc(20% + env(safe-area-inset-bottom));
+}
+
+/* Aviso de orientación: solo aparece si hay controles táctiles activos y el
+   dispositivo está en vertical (ver systems/touchInput.js). */
+#aviso-rotar {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  background: var(--noche);
+  color: var(--hueso);
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  text-align: center;
+  padding: 20px;
+}
+body.orientacion-incorrecta #aviso-rotar {
+  display: flex;
+}
+#aviso-rotar .icono-rotar {
+  font-size: 2.6rem;
+  animation: girar-aviso 1.6s ease-in-out infinite;
+}
+#aviso-rotar p {
+  font-family: "Cinzel", serif;
+  font-size: 1.15rem;
+  color: var(--vespero);
+}
+#aviso-rotar span {
+  font-size: 0.85rem;
+  color: var(--ceniza);
+}
+@keyframes girar-aviso {
+  0%,
+  100% {
+    transform: rotate(0deg);
+  }
+  50% {
+    transform: rotate(90deg);
+  }
+}

@@ -7,6 +7,7 @@ export const AJ = {
         texto: 1,
         silencio: false,
         escala: "auto",
+        controlTactil: "auto",
       };
 
 export function aplicarTexto() {

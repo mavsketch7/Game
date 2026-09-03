@@ -103,9 +103,11 @@ export function construirMenu() {
             " · " +
             (s.ctrl.tipo === "kbm"
               ? "Teclado + Ratón"
-              : s.ctrl.tipo === "net"
-                ? "Online"
-                : "Mando " + (s.ctrl.idx + 1)) +
+              : s.ctrl.tipo === "touch"
+                ? "Táctil"
+                : s.ctrl.tipo === "net"
+                  ? "Online"
+                  : "Mando " + (s.ctrl.idx + 1)) +
             "</span>" +
             '<span class="pcolor" style="background:' +
             COLORES_J[i] +

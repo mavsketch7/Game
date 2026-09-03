@@ -13,6 +13,7 @@ import { abrirAjustes, cerrarAjustes, toggleSilencioRapido } from "../ui/setting
 import { cerrarTienda } from "../ui/shop.js";
 import { cerrarSkins } from "../ui/skins.js";
 import { cerrarYunque } from "../ui/workbench.js";
+import { leerInputTactil } from "./touchInput.js";
 
 export const keys = {};
 
@@ -34,6 +35,7 @@ function safeGetGamepads() {
       }
 
 export function leerInput(p) {
+        if (p.ctrl.tipo === "touch") return leerInputTactil(p);
         if (p.ctrl.tipo === "kbm") {
           const mx = (keys["d"] ? 1 : 0) - (keys["a"] ? 1 : 0);
           const my = (keys["s"] ? 1 : 0) - (keys["w"] ? 1 : 0);

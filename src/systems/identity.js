@@ -4,6 +4,7 @@
 function claveId(ctrl) {
   if (ctrl.tipo === "pad") return "vespero_pid_pad" + ctrl.idx;
   if (ctrl.tipo === "net") return "vespero_pid_net";
+  if (ctrl.tipo === "touch") return "vespero_pid_touch";
   return "vespero_pid_kbm";
 }
 
