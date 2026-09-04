@@ -64,6 +64,12 @@ const MAX_FLECHAS_CLAVADAS = 24;
 // usuario: "son objetos sólidos". Compartido por jugador/enemigos/jefe
 // para no repetir el número en cada sitio.
 const BARRIL_R = 7;
+// Mismo trato para los cofres (pedido expreso: "que no se puedan
+// atravesar") -- radio un poco mayor que el del barril, a ojo de su
+// sombra real (elipse 14x5, ver render/world.js) y del anillo de aviso
+// "acércate" (radio 18). Colisiona igual abierto o cerrado -- sigue
+// siendo un objeto físico en la sala, no desaparece al abrirse.
+const COFRE_R = 12;
 const FLECHA_CLAVADA_VIDA = 5;
 function agregarFlechaClavada(entry) {
   G.flechasClavadas.push(entry);
@@ -391,6 +397,17 @@ export function update(dt) {
               const a = Math.atan2(p.y - o.y, p.x - o.x) || rnd(0, TAU);
               p.x = o.x + Math.cos(a) * (BARRIL_R + p.r);
               p.y = o.y + Math.sin(a) * (BARRIL_R + p.r);
+            }
+          }
+          // Cofres: mismo empuje sólido que los barriles -- pedido expreso
+          // ("que no se puedan atravesar").
+          for (const o of G.objetos) {
+            if (o.tipo !== "cofre") continue;
+            const dCf = Math.hypot(p.x - o.x, p.y - o.y);
+            if (dCf < COFRE_R + p.r) {
+              const aCf = Math.atan2(p.y - o.y, p.x - o.x) || rnd(0, TAU);
+              p.x = o.x + Math.cos(aCf) * (COFRE_R + p.r);
+              p.y = o.y + Math.sin(aCf) * (COFRE_R + p.r);
             }
           }
           aplicarLimites(p);
@@ -1338,6 +1355,15 @@ export function update(dt) {
                   e.y = o.y + Math.sin(aB) * (BARRIL_R + e.r);
                 }
               }
+              for (const o of G.objetos) {
+                if (o.tipo !== "cofre") continue;
+                const dCfB = Math.hypot(e.x - o.x, e.y - o.y);
+                if (dCfB < COFRE_R + e.r) {
+                  const aCfB = Math.atan2(e.y - o.y, e.x - o.x) || rnd(0, TAU);
+                  e.x = o.x + Math.cos(aCfB) * (COFRE_R + e.r);
+                  e.y = o.y + Math.sin(aCfB) * (COFRE_R + e.r);
+                }
+              }
               e.x = clamp(e.x, e.r, SALA_W - e.r);
               e.y = clamp(e.y, e.r, SALA_H - e.r);
               aplicarLimites(e);
@@ -1705,6 +1731,16 @@ export function update(dt) {
               const a2 = Math.atan2(e.y - o.y, e.x - o.x) || rnd(0, TAU);
               e.x = o.x + Math.cos(a2) * (BARRIL_R + e.r);
               e.y = o.y + Math.sin(a2) * (BARRIL_R + e.r);
+            }
+          }
+          // Cofres: mismo empuje sólido (ver arriba en el bucle de jugadores).
+          for (const o of G.objetos) {
+            if (o.tipo !== "cofre") continue;
+            const dCf2 = Math.hypot(e.x - o.x, e.y - o.y);
+            if (dCf2 < COFRE_R + e.r) {
+              const aCf2 = Math.atan2(e.y - o.y, e.x - o.x) || rnd(0, TAU);
+              e.x = o.x + Math.cos(aCf2) * (COFRE_R + e.r);
+              e.y = o.y + Math.sin(aCf2) * (COFRE_R + e.r);
             }
           }
           e.x = clamp(e.x, 24, SALA_W - 24);
