@@ -6,6 +6,7 @@ import { G } from "./core/state.js";
 import { NET, interpolarPosicionesRed, netEnviarEventosFx, netEnviarInputCliente, netEnviarSnapshot } from "./net/peer.js";
 import { render } from "./render/world.js";
 import { pollPads } from "./systems/input.js";
+import { sincronizarVisibilidadTactil } from "./systems/touchControls.js";
 import { construirMenu } from "./ui/menu.js";
 import "./ui/btnMarkup.js";
 import "./ui/cursor.js";
@@ -41,6 +42,11 @@ function bucle(ts) {
           return;
         }
         pollPads();
+        // Mismo criterio que pollPads(): corre siempre, no solo con
+        // partida activa, para poder ocultar la capa táctil en cuanto
+        // termina la partida sin necesitar un hook propio en
+        // core/gameflow.js (confirmado agnóstico al tipo de control).
+        sincronizarVisibilidadTactil();
         if (G && G.activo && !G.pausa) {
           // Hit-stop (ver systems/juice.js: aplicarHitStop()): congela la
           // LÓGICA (no llama a update(), así que hp/posiciones/IA/timers no

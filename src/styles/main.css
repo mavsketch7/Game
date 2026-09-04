@@ -3018,6 +3018,114 @@ body.pantalla-completa #hint {
   animation: inicio-aparece-texto 1s ease-out 0.5s forwards;
 }
 
+/* ===== Controles táctiles (prototipo, ver systems/touchControls.js) =====
+   Capa HTML nueva sobre #lienzo -- a diferencia de los .overlay de más
+   arriba (modales, tapan el juego, ocultos por defecto), esta capa debe
+   quedar VISIBLE e interactiva durante la partida y solo ocultarse si no
+   hay táctil o no hay partida activa (ver sincronizarVisibilidadTactil()
+   en touchControls.js). z-index:5 -- no hay variables --z-* en todo el
+   proyecto (todo es entero suelto); los overlays modales usan 10-20, y 5
+   ya lo usa .popover más arriba, mismo rango libre. touch-action:none en
+   toda la capa para que el navegador no intente hacer scroll/zoom con los
+   dedos ni sintetice un mousedown fantasma ~300ms después del toque
+   (dispararía atacar() por duplicado sobre el lienzo debajo). */
+#touch-controls {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  pointer-events: none;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.tc-zona {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 50%;
+  pointer-events: auto;
+  touch-action: none;
+}
+.tc-zona-mover {
+  left: 0;
+}
+.tc-zona-apuntar {
+  right: 0;
+}
+/* El propio stick (base+nub) es decorativo -- pointer-events:none, para
+   que el dedo siga "agarrado" a la zona de debajo mientras arrastra en
+   vez de perder el touch al pasar sobre estos divs. Se posiciona con
+   left/top (JS) en el punto exacto donde nació el toque -- joystick
+   flotante, no un círculo fijo difícil de acertar. */
+.tc-stick {
+  position: absolute;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+.tc-stick-base {
+  position: absolute;
+  left: -45px;
+  top: -45px;
+  width: 90px;
+  height: 90px;
+  border-radius: 50%;
+  background: rgba(36, 27, 18, 0.45);
+  border: 2px solid var(--borde);
+}
+.tc-stick-nub {
+  position: absolute;
+  left: -22px;
+  top: -22px;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: rgba(226, 196, 137, 0.55);
+  border: 2px solid var(--vespero);
+}
+.tc-botones {
+  position: absolute;
+  right: 14px;
+  bottom: 14px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px;
+  pointer-events: none;
+}
+.tc-fila {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+  pointer-events: none;
+}
+.tc-btn {
+  pointer-events: auto;
+  touch-action: none;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: rgba(23, 17, 11, 0.75);
+  border: 2px solid var(--borde);
+  color: var(--hueso);
+  font-size: 1.15rem;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+.tc-btn:active {
+  background: rgba(226, 196, 137, 0.35);
+}
+.tc-btn-clase {
+  width: 40px;
+  height: 40px;
+  font-size: 0.9rem;
+  border-color: var(--col, var(--borde));
+}
+
 /* El guantelete (#cursor-img) sustituye al cursor nativo en toda la
          interfaz; se pone al final de la hoja para ganarle a cualquier
          "cursor: pointer/not-allowed" declarado antes. canvas#lienzo ya

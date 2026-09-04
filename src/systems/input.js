@@ -14,6 +14,7 @@ import { toggleSilencioRapido } from "../ui/settingsOverlay.js";
 import { cerrarTienda } from "../ui/shop.js";
 import { cerrarSkins } from "../ui/skins.js";
 import { cerrarYunque } from "../ui/workbench.js";
+import { esTactil, leerInputTactil } from "./touchControls.js";
 
 export const keys = {};
 
@@ -35,6 +36,7 @@ function safeGetGamepads() {
       }
 
 export function leerInput(p) {
+        if (p.ctrl.tipo === "touch") return leerInputTactil(p);
         if (p.ctrl.tipo === "kbm") {
           const mx = (keys["d"] ? 1 : 0) - (keys["a"] ? 1 : 0);
           const my = (keys["s"] ? 1 : 0) - (keys["w"] ? 1 : 0);
@@ -189,9 +191,14 @@ export function pollPads() {
         }
       }
 
+// Slot 0 arranca en táctil si el dispositivo lo es (ver esTactil() en
+// touchControls.js) -- mismo criterio que ya usa "Mando 1 toma el
+// control de J1" (menuPad() más abajo): J1 siempre existe, así que
+// necesita SU control por defecto acertado desde el arranque, no
+// esperar a que alguien lo cambie a mano.
 export const M = {
         slots: [
-          { activo: true, ctrl: { tipo: "kbm" }, rolIdx: 0, listo: false, nombre: "", gremio: null },
+          { activo: true, ctrl: { tipo: esTactil() ? "touch" : "kbm" }, rolIdx: 0, listo: false, nombre: "", gremio: null },
           { activo: false, ctrl: null, rolIdx: 1, listo: false, nombre: "", gremio: null },
           { activo: false, ctrl: null, rolIdx: 2, listo: false, nombre: "", gremio: null },
           { activo: false, ctrl: null, rolIdx: 3, listo: false, nombre: "", gremio: null },

@@ -26,6 +26,12 @@
     <div id="marco">
       <canvas id="lienzo" width="960" height="560"></canvas>
 
+      <!-- Controles táctiles (prototipo, ver systems/touchControls.js):
+           poblado dinámicamente por JS, no markup estático -- los
+           botones de habilidad varían por clase. oculto por defecto,
+           se muestra solo en dispositivos táctiles con partida activa. -->
+      <div id="touch-controls" class="oculto"></div>
+
       <div id="menu" class="overlay overlay-escena">
         <div class="overlay-inner escena-seleccion">
           <div id="luciernagas" class="luciernagas" aria-hidden="true"></div>

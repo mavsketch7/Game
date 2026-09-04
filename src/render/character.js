@@ -418,7 +418,10 @@ export function renderMira() {
             cx.beginPath();
             cx.arc(mx, my, 3, 0, TAU);
             cx.stroke();
-          } else if (p.ctrl.tipo === "pad") {
+          } else if (p.ctrl.tipo === "pad" || p.ctrl.tipo === "touch") {
+            // Táctil comparte la flecha del mando (misma naturaleza: solo
+            // ángulo, sin punto de cursor literal como el ratón) -- ver
+            // systems/touchControls.js.
             const d = 44;
             const ax = p.x + Math.cos(p.aim) * d,
               ay = p.y + Math.sin(p.aim) * d;

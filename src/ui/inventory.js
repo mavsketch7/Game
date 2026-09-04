@@ -1218,6 +1218,13 @@ function tabAjustes() {
           '" onclick="toggleFullscreen()">' +
           (esPantallaCompleta() || maximizado ? "Salir" : "Activar") +
           "</button></div></div>" +
+          '<div class="ajuste-fila"><div><h4>👆 Controles táctiles</h4>' +
+          '<div class="a-desc">Joysticks y botones en pantalla en vez de teclado+ratón (prototipo).</div></div>' +
+          '<div class="ajuste-ctrl"><button class="btn' +
+          (M.slots[0].ctrl.tipo === "touch" ? " dorado" : "") +
+          '" onclick="toggleControlTactil()">' +
+          (M.slots[0].ctrl.tipo === "touch" ? "Activados" : "Desactivados") +
+          "</button></div></div>" +
           '<div class="ajuste-fila"><div><h4>🔍 Tamaño / resolución</h4>' +
           '<div class="a-desc">Escala el juego para aprovechar tu monitor. "Auto" lo ajusta a la ventana.</div></div>' +
           '<div class="ajuste-ctrl"><div class="seg" id="seg-escala">' +
@@ -1317,6 +1324,21 @@ function setEscala(v) {
         ajustarLienzo();
         abrirInv();
         sfx("ui");
+      }
+
+// Toggle táctil↔teclado para J1 (M.slots[0], siempre el jugador local en
+// esta ventana) -- pensado sobre todo para probar los controles táctiles
+// desde escritorio con la emulación táctil de Chrome DevTools sin tener
+// que desplegar a un móvil cada vez, ver systems/touchControls.js.
+// Ajustes solo es alcanzable con partida activa (mismo guard que el
+// resto de esta pestaña), así que además de la definición del slot (para
+// la próxima partida) hay que tocar también el jugador YA en curso.
+function toggleControlTactil() {
+        const nuevoTipo = M.slots[0].ctrl.tipo === "touch" ? "kbm" : "touch";
+        M.slots[0].ctrl = { tipo: nuevoTipo };
+        if (G && G.players && G.players[0]) G.players[0].ctrl = { tipo: nuevoTipo };
+        sfx("ui");
+        abrirInv();
       }
 
 export function abrirInv() {
@@ -1553,6 +1575,7 @@ window.setTexto = setTexto;
 window.setVol = setVol;
 window.soltarEnSlot = soltarEnSlot;
 window.toggleSilencio = toggleSilencio;
+window.toggleControlTactil = toggleControlTactil;
 window.equipar = equipar;
 window.filtrarBolsa = filtrarBolsa;
 window.fusionRapida = fusionRapida;

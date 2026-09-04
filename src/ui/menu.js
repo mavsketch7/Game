@@ -356,7 +356,9 @@ export function construirMenu() {
               ? "Teclado + Ratón"
               : s.ctrl.tipo === "net"
                 ? "Online"
-                : "Mando " + (s.ctrl.idx + 1)) +
+                : s.ctrl.tipo === "touch"
+                  ? "Táctil"
+                  : "Mando " + (s.ctrl.idx + 1)) +
             "</span>" +
             // J1 con teclado: además de "unirse" como J2-4, un mando
             // conectado también puede hacerse cargo directamente de J1
