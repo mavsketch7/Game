@@ -941,7 +941,10 @@ export function update(dt) {
             const altoHielo = a.senda ? 40 : 160;
             fxParticulas(a.x, a.y - altoHielo / 2, a.senda ? 6 : 16, "#cfe4ff", 3, a.senda ? 8 : 24);
           }
-          if (a.tick <= 0) {
+          // `explosivo` (ver crearArea() en systems/abilities.js): ya
+          // aplicó todo su daño de golpe al crearse, un único estallido en
+          // vez de un goteo -- este bucle no debe volver a tocarla nunca.
+          if (a.tick <= 0 && !a.explosivo) {
             a.tick = 0.35;
             if (a.clase === "malArea") {
               for (const q of vivos())

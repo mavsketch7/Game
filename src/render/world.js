@@ -6,6 +6,7 @@ import { renderHUD } from "./hud.js";
 import { CAMPFIRE_CELDA, FIRE_COLUMN, FIREBALL_FH, FIREBALL_FRAMES, FIREBALL_FW, FIREBALL_SHEET, FIRE_EXPLOSION_FH, FIRE_EXPLOSION_FRAMES, FIRE_EXPLOSION_FW, FIRE_EXPLOSION_INICIO, FIRE_EXPLOSION_SHEET, FROST_GUARDIAN, ICE_BURST, IMPACT_VFX, KENNEY_TILE, PILAR_HIELO_FRAMES, SANGRE_ANIM, SANGRE_DUR, SHEETS, SPR, assetOK, campfireFrame, iconoDrop, remateMuroPatron, wallPatron } from "./sprites.js";
 import { drawSprite, drawSpriteBottom } from "./spriteDraw.js";
 import { renderEnemigo, renderJugador, renderMira } from "./character.js";
+import { EXPLOSION_BURST_DUR, EXPLOSION_FADE_DUR } from "../systems/abilities.js";
 import { clamp, hexRgba, ri, rnd } from "../utils/helpers.js";
 
 export let sueloPat = null,
@@ -473,19 +474,24 @@ export function render() {
           // (salta el destello/chispa inicial de la hoja de origen, que
           // ya no encaja aquí: el retardo real entre casteo y explosión,
           // ver lanzarUlti() en systems/abilities.js, hace ese papel con
-          // sonido+animación de personaje). Igual que ICE_BURST: estallido
-          // rápido (0.5s fijo) y se queda en el último frame (brasas) el
-          // resto de la vida del área. Centrada en (a.x,a.y), NO anclada
-          // por la base -- una explosión estalla en todas direcciones, no
-          // "crece desde el suelo" como la columna/rastro de fuego.
+          // sonido+animación de personaje). El área es `explosivo` (mismo
+          // archivo: ver crearArea()) y dura justo EXPLOSION_BURST_DUR +
+          // EXPLOSION_FADE_DUR en total -- antes se quedaba congelada en
+          // el último frame (brasas) el resto de un ttl pensado para un
+          // goteo (2.2s), mucho más largo que el estallido real, y eso se
+          // veía como "unos píxeles sueltos" persistiendo de más
+          // (reportado) -- ahora funde justo al terminar de jugar, sin
+          // ese sobrante. Centrada en (a.x,a.y), NO anclada por la base --
+          // una explosión estalla en todas direcciones, no "crece desde
+          // el suelo" como la columna/rastro de fuego.
           if (a.elemento === "fuego" && !a.senda && FIRE_EXPLOSION_SHEET.complete && FIRE_EXPLOSION_SHEET.naturalWidth) {
             const framesUtiles = FIRE_EXPLOSION_FRAMES - FIRE_EXPLOSION_INICIO;
             const edadExplosion = (a.ttlTotal || 1) - a.ttl;
-            const progExplosion = clamp(edadExplosion / 0.5, 0, 0.999);
+            const progExplosion = clamp(edadExplosion / EXPLOSION_BURST_DUR, 0, 0.999);
             const frExplosion = FIRE_EXPLOSION_INICIO + Math.floor(progExplosion * framesUtiles);
             const escExplosion = 220 / FIRE_EXPLOSION_FH;
             const fw = FIRE_EXPLOSION_FW * escExplosion, fh = FIRE_EXPLOSION_FH * escExplosion;
-            cx.globalAlpha = a.ttl < 0.4 ? a.ttl / 0.4 : 1;
+            cx.globalAlpha = a.ttl < EXPLOSION_FADE_DUR ? a.ttl / EXPLOSION_FADE_DUR : 1;
             cx.drawImage(FIRE_EXPLOSION_SHEET, frExplosion * FIRE_EXPLOSION_FW, 0, FIRE_EXPLOSION_FW, FIRE_EXPLOSION_FH, a.x - fw / 2, a.y - fh / 2, fw, fh);
             cx.globalAlpha = 1;
             continue;

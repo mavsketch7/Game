@@ -7,7 +7,7 @@ import { update } from "../core/loop.js";
 import { G } from "../core/state.js";
 import { fxEstocada, fxImpacto, fxOnda, fxParticulas, fxTajo, fxTexto } from "../render/effects.js";
 import { detenerSendaFuegoAudio, iniciarSendaFuegoAudio, sfx, sfxDisparoArco, sfxFuegoBolaLanzamiento, sfxFuegoUltiCast, sfxFuegoUltiExplosion, sfxGolpeAire, sfxGolpeCritico, sfxImpactoFrhor, sfxImpactoGuerrero, sfxImpactoPicaro, sfxMoneda, sfxRompeBarril, sfxRompeHielo, sfxSwingFrhor } from "./audio.js";
-import { curarP, danoAEnemigo, danoAlJugador, masCercano, statsTot, vivos } from "./combat.js";
+import { curarP, danoAEnemigo, danoAlJugador, masCercano, matarEnemigo, statsTot, vivos } from "./combat.js";
 import { posDropValida } from "./floorgen.js";
 import { JUICE } from "./juice.js";
 import { dropItem, genItem } from "./loot.js";
@@ -693,12 +693,26 @@ export function lanzarCuchillo(p) {
         sfxDisparoArco(); // mismo golpe de soltar que el arquero, ver dispararFlechaCargada
       }
 
-function crearArea(x, y, r, elemento, mult, duenio, senda) {
+// Vida total del área de una explosión (fuego, `explosivo`, ver más abajo)
+// -- EXPLOSION_BURST_DUR es cuánto tarda en jugar el sprite del estallido
+// (FIRE_EXPLOSION_SHEET, ver render/world.js, mismo valor que usa ahí para
+// repartir sus frames) y EXPLOSION_FADE_DUR el fundido que la borra justo
+// después, en vez de dejarla congelada en el último frame (brasas) hasta
+// agotar un ttl mucho más largo pensado para un goteo (DoT) -- pedido
+// expreso ("que se desvanezca antes, quedan como unos píxeles sueltos").
+// Exportadas para que render/world.js use las MISMAS constantes al elegir
+// cuándo empezar a bajar el alpha, así no pueden desincronizarse.
+export const EXPLOSION_BURST_DUR = 0.5;
+export const EXPLOSION_FADE_DUR = 0.2;
+const TTL_EXPLOSIVO = EXPLOSION_BURST_DUR + EXPLOSION_FADE_DUR;
+
+function crearArea(x, y, r, elemento, mult, duenio, senda, explosivo) {
         const el = ELEMENTOS[elemento];
         const rFinal =
           r * (duenio && duenio._areaRadMult ? duenio._areaRadMult : 1);
-        const ttlFinal =
-          el.ttl * (duenio && duenio._areaDurMult ? duenio._areaDurMult : 1);
+        const ttlFinal = explosivo
+          ? TTL_EXPLOSIVO
+          : el.ttl * (duenio && duenio._areaDurMult ? duenio._areaDurMult : 1);
         G.areas.push({
           clase: "elem",
           x,
@@ -717,6 +731,10 @@ function crearArea(x, y, r, elemento, mult, duenio, senda) {
           // círculo genérico -- las zonas de la ulti (sin este flag) siguen
           // con el círculo de siempre.
           ...(senda ? { senda: true } : {}),
+          // Explosión de un solo golpe (ver más abajo) -- core/loop.js
+          // respeta este flag y NUNCA le aplica el tick de daño periódico
+          // (DoT) que sí usan las demás áreas "elem".
+          ...(explosivo ? { explosivo: true } : {}),
         });
         // La Senda crea un parche cada 0.06s (ver SENDA_INTERVALO) -- un
         // pulso expansivo por parche se leía como "ruido visual" alrededor
@@ -725,6 +743,43 @@ function crearArea(x, y, r, elemento, mult, duenio, senda) {
         // Senda se señaliza con el aura fija del sprite (ver p.sendaT en
         // render/character.js) en vez de esto.
         if (!senda) fxOnda(x, y, rFinal, el.color);
+        // Daño explosivo: UN solo golpe instantáneo a todo lo que esté en
+        // el radio en el mismo momento en que aparece el área, en vez de
+        // un goteo (DoT) que siga tocando vida bastante después de que el
+        // sprite de la explosión ya haya terminado de jugar -- pedido
+        // expreso ("no debe dejar daño en área, es daño explosivo").
+        // dmgTotal iguala el total que habría hecho el goteo de siempre a
+        // lo largo de su ttl ORIGINAL (dps * ttl): esto no es un cambio de
+        // balance, solo cambia CUÁNDO se aplica todo ese daño.
+        if (explosivo && el.dps > 0) {
+          const dpsMult = statsTot(duenio || G.players[0]).atk / 12;
+          const dmgTotal = Math.max(1, Math.round(el.dps * el.ttl * (mult || 1) * dpsMult));
+          const duenioReal = duenio || G.players[0];
+          for (const e of G.enemigos) {
+            if (e.hp <= 0 && !e.dummy) continue;
+            if (Math.hypot(e.x - x, e.y - y) >= rFinal + e.r * 0.5) continue;
+            if (e.dummy) {
+              e.hp = Math.max(1, e.hp - dmgTotal);
+              e.dmgLog.push({ t: G.stats.tiempo, d: dmgTotal });
+            } else {
+              e.hp -= dmgTotal;
+              G.stats.dano += dmgTotal;
+              duenioReal.statDano = (duenioReal.statDano || 0) + dmgTotal;
+            }
+            fxTexto(e.x, e.y - e.r - 6, dmgTotal, el.color);
+            if (!e.dummy && e.hp <= 0) matarEnemigo(e, duenioReal);
+          }
+          // fuego amigo: un único golpe también para aliados cercanos (no
+          // el dueño), mismo criterio que ya usaba el goteo de esta área.
+          if ((G.ff || G.escena === "pvp") && elemento !== "sagrado") {
+            const multFF2 = G.escena === "pvp" ? 1 : 0.5;
+            for (const q of vivos()) {
+              if (q === duenio) continue;
+              if (Math.hypot(q.x - x, q.y - y) < rFinal + q.r * 0.5)
+                danoAlJugador(q, dmgTotal * multFF2, { ff: duenio });
+            }
+          }
+        }
       }
 
 // Senda Elemental (mago, tecla C -- ver SENDA_ELEMENTAL en
@@ -863,7 +918,7 @@ export function habilidad(p) {
               setTimeout(() => {
                 controlCast.stop();
                 if (!G || !G.activo) return;
-                crearArea(gx, gy, 95, "fuego", 2, p);
+                crearArea(gx, gy, 95, "fuego", 2, p, false, true);
                 fxOnda(gx, gy, 95, "#ff7d4d");
                 sfxFuegoUltiExplosion();
               }, 500);
