@@ -151,13 +151,17 @@ const GRUPOS_SONIDO = {
   // mudo (impactoProyectil solo cubría flecha/cuchillo, ver core/loop.js).
   fuegoBolaImpacto: [{ nombre: "fuego_bola_impacto", ext: "wav", offset: 0.797 }],
   // Lanzamiento del ataque básico de fuego (bola): antes un tono
-  // sintetizado (sfx("fuego"), sawtooth 220→110Hz) -- pedido expreso de
-  // sustituirlo por un recorte de un archivo YA existente en vez de
-  // encargar uno nuevo. Es un recorte de fuego_ulti_explosion.wav (los
-  // primeros 140ms, el golpe inicial punzante antes de la cola larga de
-  // la explosión, con 15ms de fade-out final para no dejar un click al
-  // cortar en pleno transitorio) -- no un archivo con silencio de
-  // arranque propio, así que offset=0.
+  // sintetizado (sfx("fuego"), sawtooth 220→110Hz), luego un recorte de
+  // fuego_ulti_explosion.wav (el "boom" inicial) que el usuario reportó
+  // que "no convence" -- sonaba a mini-explosión, demasiado parecido al
+  // impacto (fuegoBolaImpacto, también salido de un archivo de
+  // explosión). Sustituido por un recorte de fuego_senda_loop.wav (los
+  // primeros 150ms del crepitar/whoosh de la muestra "fireball loaded
+  // burning", con fade-in de 6ms y fade-out de 20ms) -- un timbre
+  // texturizado y distinto al de un golpe seco, más apropiado para un
+  // lanzamiento repetible. Ganancia x2.6 ya aplicada AL ARCHIVO (el pico
+  // global de fuego_senda_loop es bajo, 0.227) -- no un archivo con
+  // silencio de arranque propio, así que offset=0.
   fuegoBolaLanzamiento: [{ nombre: "fuego_bola_lanzamiento", ext: "wav", offset: 0 }],
   // Moneda recogida (ver core/loop.js: bucle de G.drops) -- sustituye al
   // tono sintetizado de siempre (sfx("moneda")).
