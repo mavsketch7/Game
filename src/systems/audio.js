@@ -126,6 +126,19 @@ const GRUPOS_SONIDO = {
   // cubre el hueco de los proyectiles, que antes no sonaban nada al
   // conectar.
   impactoProyectil: [{ nombre: "impacto_flecha", ext: "m4a", offset: 0.016 }],
+  // Parry exitoso (ver parryExitoso en systems/combat.js) -- sustituye al
+  // tono sintetizado de siempre (sfx("parry"), onda cuadrada 1400→700Hz).
+  // 5 variantes que rotan al azar, mismo mecanismo que impactoGuerrero.
+  // Offsets medidos decodificando cada muestra (RMS por ventanas de 5ms
+  // contra el pico global), no a ojo -- mismo criterio que el resto del
+  // grupo (ver comentario de GRUPOS_SONIDO más arriba).
+  parry: [
+    { nombre: "parry_1", ext: "m4a", offset: 0.145 },
+    { nombre: "parry_2", ext: "m4a", offset: 0.11 },
+    { nombre: "parry_3", ext: "m4a", offset: 0.135 },
+    { nombre: "parry_4", ext: "m4a", offset: 0.135 },
+    { nombre: "parry_5", ext: "m4a", offset: 0.105 },
+  ],
 };
 const bufferesReales = {};
 const cargaReales = {};
@@ -247,6 +260,12 @@ export function sfxGolpeAire() {
 export function sfxGolpeCritico() {
   reproducirSonidoReal("golpeCritico", 0.9);
 }
+// Parry exitoso -- ver parryExitoso() en systems/combat.js (el "clang" al
+// bloquear) y la predicción del cliente en net/peer.js (feedback
+// inmediato al pulsar, antes de que el host confirme).
+export function sfxParry() {
+  reproducirSonidoReal("parry", 0.85);
+}
 // Paso al caminar/correr -- "levemente": volumen bajo a propósito, más un
 // pequeño jitter de tono para que no se note la repetición de la muestra.
 export function sfxPaso() {
@@ -313,7 +332,6 @@ export function sfx(tipo) {
           legendario: { f: 300, f2: 1500, tipo: "sine", dur: 0.6, v: 0.4 },
           carta: { f: 660, f2: 990, tipo: "sine", dur: 0.22, v: 0.34 },
           portal: { f: 300, f2: 900, tipo: "sine", dur: 0.5, v: 0.36 },
-          parry: { f: 1400, f2: 700, tipo: "square", dur: 0.12, v: 0.4 },
           ui: { f: 520, f2: 520, tipo: "sine", dur: 0.05, v: 0.22 },
           jefe: { f: 80, f2: 200, tipo: "sawtooth", dur: 0.7, v: 0.5 },
         };

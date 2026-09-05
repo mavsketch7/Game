@@ -8,7 +8,7 @@ import { META, guardarMeta } from "../core/save.js";
 import { G } from "../core/state.js";
 import { fxDesintegrarEnemigo, fxOnda, fxParticulas, fxSangre, fxTexto } from "../render/effects.js";
 import { NIVEL_ULTI, danoPilar, golpeObjeto } from "./abilities.js";
-import { sfx } from "./audio.js";
+import { sfx, sfxParry } from "./audio.js";
 import { NOMBRES_MINI, arquetipoJefe, escalaEnemigo, nombreJefe } from "./bosses.js";
 import { JUICE, aplicarEstilo, aplicarFlash, aplicarHitStop, aplicarShakeGolpe } from "./juice.js";
 import { posDropValida, puntoValido } from "./floorgen.js";
@@ -628,7 +628,7 @@ export function danoAlJugador(p, raw, fuente) {
 function parryExitoso(p, fuente) {
         p.parryT = 0;
         p.parryCd = 0.45;
-        sfx("parry");
+        sfxParry();
         G.stats.parries++;
         p.statParries = (p.statParries || 0) + 1;
         // cadena de parries: cada parry consecutivo (sin dejar pasar más de

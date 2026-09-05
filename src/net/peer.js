@@ -8,7 +8,7 @@ import { render } from "../render/world.js";
 import { activarParry, castSup, disparoSecundario, esquivar, habilidad, interactuar, transformar } from "../systems/abilities.js";
 import { statsTot } from "../systems/combat.js";
 import { M, keys, mouse } from "../systems/input.js";
-import { ajustarVolumenAmbienteEnPartida, aplicarMusica, initAudio, reanudarAudio, sfx } from "../systems/audio.js";
+import { ajustarVolumenAmbienteEnPartida, aplicarMusica, initAudio, reanudarAudio, sfx, sfxParry } from "../systems/audio.js";
 import { invSel } from "../ui/inventory.js";
 import { construirMenu, mostrarLobbySincronizado } from "../ui/menu.js";
 import { banner, toast } from "../ui/notifications.js";
@@ -895,7 +895,7 @@ function predecirAccionLocal(gp, dt) {
         if (parryAhora && !NET.predPrev.parry && NET.predCd.parry <= 0) {
           gp.parryT = 0.18;
           NET.predCd.parry = 0.9;
-          sfx("parry");
+          sfxParry();
         }
         NET.predPrev.parry = parryAhora;
 
