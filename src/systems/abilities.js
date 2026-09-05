@@ -6,7 +6,7 @@ import { ELEMENTOS, ELEM_MAGO, FORMAS_DRUIDA, FORMAS_INFO, PILAR_ROTO_DUR, RAREZ
 import { update } from "../core/loop.js";
 import { G } from "../core/state.js";
 import { fxEstocada, fxImpacto, fxOnda, fxParticulas, fxTajo, fxTexto } from "../render/effects.js";
-import { detenerSendaFuegoAudio, iniciarSendaFuegoAudio, sfx, sfxDisparoArco, sfxFuegoBolaLanzamiento, sfxFuegoUltiCast, sfxFuegoUltiExplosion, sfxGolpeAire, sfxGolpeCritico, sfxImpactoFrhor, sfxImpactoGuerrero, sfxImpactoPicaro, sfxRompeBarril, sfxRompeHielo, sfxSwingFrhor } from "./audio.js";
+import { detenerSendaFuegoAudio, iniciarSendaFuegoAudio, sfx, sfxDisparoArco, sfxFuegoBolaLanzamiento, sfxFuegoUltiCast, sfxFuegoUltiExplosion, sfxGolpeAire, sfxGolpeCritico, sfxImpactoFrhor, sfxImpactoGuerrero, sfxImpactoPicaro, sfxMoneda, sfxRompeBarril, sfxRompeHielo, sfxSwingFrhor } from "./audio.js";
 import { curarP, danoAEnemigo, danoAlJugador, masCercano, statsTot, vivos } from "./combat.js";
 import { posDropValida } from "./floorgen.js";
 import { JUICE } from "./juice.js";
@@ -475,7 +475,7 @@ export function interactuar(p) {
           G.drops.splice(idx, 1);
           p.dropObj = null;
           p.bolsa.push(dr.item);
-          sfx("moneda");
+          sfxMoneda();
           toast(
             p.nombre +
               " recoge " +
@@ -1156,7 +1156,18 @@ export function transformar(p, idx) {
         p.hp = clamp(p.hp, 1, statsTot(p).hpMax);
       }
 
+// Corta el sonido de carga del arcano en curso (ver p._cargaArcanoSrc en
+// core/loop.js) -- mismo patrón que cortarTensado() del arquero de más
+// arriba, mismo umbral mínimo audible.
+function cortarCargaArcano(p) {
+  if (!p._cargaArcanoSrc) return;
+  const llevaMs = performance.now() - (p._cargaArcanoSrcT0 || 0);
+  if (llevaMs >= TENSADO_MIN_AUDIBLE_MS) p._cargaArcanoSrc.stop();
+  p._cargaArcanoSrc = null;
+}
+
 export function dispararArcano(p) {
+        cortarCargaArcano(p);
         const t = statsTot(p);
         const c = clamp(p.cargaT / 1.1, 0, 1);
         p.cargaT = 0;

@@ -7,7 +7,7 @@ import { G } from "./state.js";
 import { NET, netAplicarInputs } from "../net/peer.js";
 import { fxOnda, fxParticulas, fxTexto } from "../render/effects.js";
 import { CARGA_ARQ_MAX, CARGA_ARQ_ZONA, CARGA_CUCH_MAX, CARGA_CUCH_ZONA, actualizarSendaElemental, aplicarImbuido, atacar, danoPilar, dispararArcano, dispararFlechaCargada, golpeObjeto, lanzarCuchillo } from "../systems/abilities.js";
-import { sfx, sfxAterrizaje, sfxCargaCuchillo, sfxCargaLista, sfxFuegoBolaImpacto, sfxGolpeAire, sfxGolpeCritico, sfxImpactoGuerrero, sfxImpactoProyectil, sfxPaso, sfxTensarArco } from "../systems/audio.js";
+import { sfx, sfxAterrizaje, sfxCargaArcano, sfxCargaCuchillo, sfxCargaLista, sfxFuegoBolaImpacto, sfxGolpeAire, sfxGolpeCritico, sfxImpactoGuerrero, sfxImpactoProyectil, sfxMoneda, sfxPaso, sfxTensarArco } from "../systems/audio.js";
 import { esJefe, escalaEnemigo } from "../systems/bosses.js";
 import { curarP, danoAEnemigo, danoAlJugador, explotarBomber, ganarXP, masCercano, matarEnemigo, spawnClon, spawnEnemigo, statsTot, tipoAleatorio, vivos } from "../systems/combat.js";
 import { JUICE, actualizarEstilo } from "../systems/juice.js";
@@ -660,7 +660,21 @@ export function update(dt) {
               p.cargaT = 0;
               if (p.inp.atkHeld) atacar(p);
             } else if (p.inp.atkHeld && p.castCd <= 0 && p.res >= 12) {
-              p.cargaT = Math.min(p.cargaT + dt, 1.1);
+              // mismo patrón que el tensado del arquero de abajo:
+              // arranca el sonido de carga (controlable, ver
+              // cortarCargaArcano en abilities.js) solo en el frame en
+              // que empieza a mantenerse, y el aviso "leve" de carga
+              // plena (mismo cue que sfxCargaLista del arquero, ver
+              // GRUPOS_SONIDO.cargaLista en systems/audio.js) solo en el
+              // frame en que se alcanza el tope de 1.1 -- no en cada
+              // frame mientras se sigue manteniendo.
+              const antes = p.cargaT || 0;
+              if (antes <= 0) {
+                p._cargaArcanoSrc = sfxCargaArcano();
+                p._cargaArcanoSrcT0 = performance.now();
+              }
+              p.cargaT = Math.min(antes + dt, 1.1);
+              if (antes < 1.1 && p.cargaT >= 1.1) sfxCargaLista();
             } else if (!p.inp.atkHeld && p.cargaT > 0) {
               dispararArcano(p);
             }
@@ -1861,7 +1875,7 @@ export function update(dt) {
                 Math.round(dr.val * (1 + 0.1 * META.mejoras.fortuna)),
               );
               G.oroRun += gan;
-              sfx("moneda");
+              sfxMoneda();
               fxTexto(p.x, p.y - 30, "+" + gan + " 🪙", "#ffd27f");
             }
             G.drops.splice(i, 1);

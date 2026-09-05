@@ -503,6 +503,56 @@ function dibujarCargaMago(p, tx, ty) {
           cx.beginPath();
           cx.arc(0, 0, (3 + c * 8) * 0.45, 0, TAU);
           cx.fill();
+          // Vórtice: chispas en pixel art que giran describiendo un radio
+          // DECRECIENTE en bucle (nacen fuera, brillantes, y se apagan al
+          // acercarse al núcleo -- "absorbidas"), para que se lea como que
+          // el ataque está arrastrando energía hacia el centro en vez de
+          // solo brillar más fuerte -- pedido expreso ("partícula que
+          // imite... vórtice"). Radio bastante mayor que el núcleo de
+          // arriba para que se vean claramente fuera de él antes de
+          // empezar a girar hacia dentro. Más partículas y giro más rápido
+          // cuanto más carga.
+          const radioVortice = 10 + c * 16;
+          const nVortice = 1 + Math.round(c * 5);
+          for (let i = 0; i < nVortice; i++) {
+            const fase = (animGlobal * (1.3 + c * 1.7) + i / nVortice) % 1;
+            const ang = i * ((TAU * 2.4) / nVortice) + animGlobal * (2 + c * 3);
+            const r = radioVortice * (1 - fase);
+            const vx = Math.cos(ang) * r;
+            const vy = Math.sin(ang) * r * 0.6;
+            cx.globalAlpha = (1 - fase) * 0.9;
+            cx.fillStyle = i % 2 === 0 ? "#e8d5ff" : "#c084f0";
+            cx.fillRect(vx - 1, vy - 1, 2, 2);
+          }
+          cx.globalAlpha = 1;
+          // Rayos: filamento quebrado que parpadea al azar -- cada vez más
+          // frecuente cerca del tope de carga, para acompañar visualmente
+          // el aviso sonoro de carga plena (sfxCargaLista, ver
+          // core/loop.js) -- pedido expreso ("partícula que imite
+          // rayos..."). c*c en vez de c: casi no aparece a media carga,
+          // se vuelve llamativo solo cerca del final.
+          if (Math.random() < 0.04 + c * c * 0.4) {
+            // Arranca justo fuera del núcleo brillante (no en el propio
+            // centro): un filamento que nace DENTRO del núcleo blanco
+            // queda invisible contra su propio brillo.
+            let ang = rnd(0, TAU);
+            const rNucleo = (3 + c * 8) * 0.55;
+            let ax = Math.cos(ang) * rNucleo, ay = Math.sin(ang) * rNucleo * 0.6;
+            const largo = (4 + c * 11) / 2.2;
+            cx.strokeStyle = "#f0e4ff";
+            cx.lineWidth = 1.5;
+            for (let s = 0; s < 3; s++) {
+              ang += rnd(-0.7, 0.7);
+              const bx = ax + Math.cos(ang) * largo;
+              const by = ay + Math.sin(ang) * largo * 0.6;
+              cx.beginPath();
+              cx.moveTo(ax, ay);
+              cx.lineTo(bx, by);
+              cx.stroke();
+              ax = bx;
+              ay = by;
+            }
+          }
           if (c >= 1) {
             cx.strokeStyle = "#fff";
             cx.globalAlpha = 0.5 + Math.sin(animGlobal * 22) * 0.4;

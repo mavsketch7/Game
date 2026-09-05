@@ -67,6 +67,8 @@ export function nuevaPartida() {
             _dashAtkVictims: null,
             _cargaSrc: null, // control del sonido de tensar en curso (arquero), ver core/loop.js
             _cargaSrcT0: null, // instante en que empezó, ver TENSADO_MIN_AUDIBLE_MS en systems/abilities.js
+            _cargaArcanoSrc: null, // mismo patrón que _cargaSrc, para el arcano del mago
+            _cargaArcanoSrcT0: null,
             pasoT: 0, // cadencia del sonido de paso, ver core/loop.js
             disparoCd: 0,
             invulT: 0,

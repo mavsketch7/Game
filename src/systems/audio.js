@@ -159,6 +159,21 @@ const GRUPOS_SONIDO = {
   // cortar en pleno transitorio) -- no un archivo con silencio de
   // arranque propio, así que offset=0.
   fuegoBolaLanzamiento: [{ nombre: "fuego_bola_lanzamiento", ext: "wav", offset: 0 }],
+  // Moneda recogida (ver core/loop.js: bucle de G.drops) -- sustituye al
+  // tono sintetizado de siempre (sfx("moneda")).
+  moneda: [{ nombre: "moneda_recogida", ext: "wav", offset: 0.03 }],
+  // Barril roto (ver golpeObjeto() en abilities.js) -- sustituye a la capa
+  // sintetizada de siempre (golpe grave + traqueteo de astillas).
+  rompeBarril: [{ nombre: "barril_roto", ext: "wav", offset: 0.055 }],
+  // Carga del ataque básico arcano del mago (mantener el ataque, ver
+  // p.cargaT en core/loop.js: update() y dispararArcano() en este mismo
+  // archivo, mismo patrón que cargaArco del arquero de arriba) --
+  // CONTROLABLE porque el archivo (1.78s) dura más que el máximo de carga
+  // del juego (1.1s) -- se corta a mano al soltar/disparar, igual que
+  // cargaArco. offset=0.46: los primeros ~460ms del archivo son
+  // prácticamente silencio de arranque, medido igual que el resto del
+  // grupo (RMS por ventanas de 20ms contra el 15% del pico global).
+  cargaArcano: [{ nombre: "carga_arcano", ext: "mp3", offset: 0.46 }],
 };
 const bufferesReales = {};
 const cargaReales = {};
@@ -305,6 +320,12 @@ export function sfxFuegoBolaImpacto() {
 export function sfxFuegoBolaLanzamiento() {
   reproducirSonidoReal("fuegoBolaLanzamiento", 0.8);
 }
+// Moneda recogida (ver core/loop.js). picoGlobal real de la muestra es
+// bajo (0.125) -- volMul alto a propósito para que se oiga a la par del
+// resto de sfx reales, que rondan el pico 1.
+export function sfxMoneda() {
+  reproducirSonidoReal("moneda", 1.8);
+}
 // Paso al caminar/correr -- "levemente": volumen bajo a propósito, más un
 // pequeño jitter de tono para que no se note la repetición de la muestra.
 export function sfxPaso() {
@@ -315,6 +336,12 @@ export function sfxPaso() {
 // core/loop.js): la muestra real dura más que la carga máxima del juego.
 export function sfxTensarArco() {
   return reproducirSonidoControlable("cargaArco", 0.7);
+}
+// Mago: empieza a cargar el ataque básico arcano -- mismo patrón que
+// sfxTensarArco de arriba (controlable, se corta al soltar/disparar, ver
+// p._cargaArcanoSrc en core/loop.js).
+export function sfxCargaArcano() {
+  return reproducirSonidoControlable("cargaArcano", 0.7);
 }
 // Pícaro: empieza a cargar el cuchillo -- sintetizado y a propósito
 // distinto del tensado real del arquero (ver el preset "cargaCuchillo"
@@ -366,7 +393,6 @@ export function sfx(tipo) {
           daño: { f: 120, f2: 60, tipo: "square", dur: 0.16, v: 0.45 },
           muerte: { f: 300, f2: 40, tipo: "sawtooth", dur: 0.35, v: 0.4 },
           nivel: { f: 520, f2: 1040, tipo: "triangle", dur: 0.5, v: 0.4 },
-          moneda: { f: 1200, f2: 1800, tipo: "triangle", dur: 0.1, v: 0.3 },
           legendario: { f: 300, f2: 1500, tipo: "sine", dur: 0.6, v: 0.4 },
           carta: { f: 660, f2: 990, tipo: "sine", dur: 0.22, v: 0.34 },
           portal: { f: 300, f2: 900, tipo: "sine", dur: 0.5, v: 0.36 },
@@ -460,40 +486,12 @@ export function sfxAterrizaje(rareza) {
         oscBrillo.stop(now + 0.16);
       }
 
-// Barril roto: golpe grave de madera + un "traqueteo" de astillas encima
-// (varios pulsos cortos y decrecientes en vez de un solo tono, para que
-// se lea como algo que se hace pedazos, no un golpe limpio). Sin archivo
-// real -- mismo criterio en capas que sfxDropEpico/sfxAterrizaje.
+// Barril roto -- antes sintetizado (golpe grave + traqueteo de astillas
+// en capas), sustituido por una muestra real (ver rompeBarril en
+// GRUPOS_SONIDO más arriba).
 export function sfxRompeBarril() {
-        if (AJ.silencio || !audioCtx) return;
-        reanudarAudio();
-        const now = audioCtx.currentTime;
-        const vol = AJ.volMaster * AJ.volSfx;
-        const oscGrave = audioCtx.createOscillator();
-        const gGrave = audioCtx.createGain();
-        oscGrave.type = "square";
-        oscGrave.frequency.setValueAtTime(180, now);
-        oscGrave.frequency.exponentialRampToValueAtTime(55, now + 0.14);
-        gGrave.gain.setValueAtTime(0.5 * vol, now);
-        gGrave.gain.exponentialRampToValueAtTime(0.0001, now + 0.15);
-        oscGrave.connect(gGrave);
-        gGrave.connect(audioCtx.destination);
-        oscGrave.start(now);
-        oscGrave.stop(now + 0.17);
-        for (let i = 0; i < 4; i++) {
-          const t0 = now + 0.02 + i * 0.035 + Math.random() * 0.015;
-          const o = audioCtx.createOscillator();
-          const g = audioCtx.createGain();
-          o.type = "square";
-          o.frequency.value = 300 + Math.random() * 500;
-          g.gain.setValueAtTime(0.16 * vol * (1 - i * 0.18), t0);
-          g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.05);
-          o.connect(g);
-          g.connect(audioCtx.destination);
-          o.start(t0);
-          o.stop(t0 + 0.06);
-        }
-      }
+  reproducirSonidoReal("rompeBarril", 0.8);
+}
 
 // Pilar de hielo roto: estallido de cristal -- un barrido agudo
 // descendente-luego-ascendente ("crac") más un puñado de tintineos altos
