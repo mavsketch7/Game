@@ -6,7 +6,7 @@ import { ELEMENTOS, ELEM_MAGO, FORMAS_DRUIDA, FORMAS_INFO, PILAR_ROTO_DUR, RAREZ
 import { update } from "../core/loop.js";
 import { G } from "../core/state.js";
 import { fxEstocada, fxImpacto, fxOnda, fxParticulas, fxTajo, fxTexto } from "../render/effects.js";
-import { detenerSendaFuegoAudio, iniciarSendaFuegoAudio, sfx, sfxDisparoArco, sfxFuegoUltiCast, sfxFuegoUltiExplosion, sfxGolpeAire, sfxGolpeCritico, sfxImpactoFrhor, sfxImpactoGuerrero, sfxImpactoPicaro, sfxRompeBarril, sfxRompeHielo, sfxSwingFrhor } from "./audio.js";
+import { detenerSendaFuegoAudio, iniciarSendaFuegoAudio, sfx, sfxDisparoArco, sfxFuegoBolaLanzamiento, sfxFuegoUltiCast, sfxFuegoUltiExplosion, sfxGolpeAire, sfxGolpeCritico, sfxImpactoFrhor, sfxImpactoGuerrero, sfxImpactoPicaro, sfxRompeBarril, sfxRompeHielo, sfxSwingFrhor } from "./audio.js";
 import { curarP, danoAEnemigo, danoAlJugador, masCercano, statsTot, vivos } from "./combat.js";
 import { posDropValida } from "./floorgen.js";
 import { JUICE } from "./juice.js";
@@ -569,7 +569,7 @@ function dispararProy(p, dir, dmg, tipo, color, v, silencioso) {
         if (silencioso) {
           // nada -- el llamador decide su propio sonido
         } else if (tipo === "flecha") sfx("flecha");
-        else if (tipo === "bola") sfx("fuego");
+        else if (tipo === "bola") sfxFuegoBolaLanzamiento();
         else if (tipo === "carambano") sfx("hielo");
         else if (tipo === "orbeArc") sfx("magia");
         else if (tipo === "rama") sfx("flecha");

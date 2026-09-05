@@ -150,6 +150,15 @@ const GRUPOS_SONIDO = {
   // Impacto del ataque básico de fuego (bola) contra un enemigo -- antes
   // mudo (impactoProyectil solo cubría flecha/cuchillo, ver core/loop.js).
   fuegoBolaImpacto: [{ nombre: "fuego_bola_impacto", ext: "wav", offset: 0.797 }],
+  // Lanzamiento del ataque básico de fuego (bola): antes un tono
+  // sintetizado (sfx("fuego"), sawtooth 220→110Hz) -- pedido expreso de
+  // sustituirlo por un recorte de un archivo YA existente en vez de
+  // encargar uno nuevo. Es un recorte de fuego_ulti_explosion.wav (los
+  // primeros 140ms, el golpe inicial punzante antes de la cola larga de
+  // la explosión, con 15ms de fade-out final para no dejar un click al
+  // cortar en pleno transitorio) -- no un archivo con silencio de
+  // arranque propio, así que offset=0.
+  fuegoBolaLanzamiento: [{ nombre: "fuego_bola_lanzamiento", ext: "wav", offset: 0 }],
 };
 const bufferesReales = {};
 const cargaReales = {};
@@ -292,6 +301,10 @@ export function sfxFuegoUltiExplosion() {
 export function sfxFuegoBolaImpacto() {
   reproducirSonidoReal("fuegoBolaImpacto", 0.8);
 }
+// Ataque básico de fuego (bola) al lanzarse.
+export function sfxFuegoBolaLanzamiento() {
+  reproducirSonidoReal("fuegoBolaLanzamiento", 0.8);
+}
 // Paso al caminar/correr -- "levemente": volumen bajo a propósito, más un
 // pequeño jitter de tono para que no se note la repetición de la muestra.
 export function sfxPaso() {
@@ -349,7 +362,6 @@ export function sfx(tipo) {
           cargaCuchillo: { f: 260, f2: 720, tipo: "sawtooth", dur: 0.22, v: 0.22 },
           magia: { f: 420, f2: 760, tipo: "sine", dur: 0.16, v: 0.34 },
           hielo: { f: 900, f2: 1400, tipo: "sine", dur: 0.14, v: 0.3 },
-          fuego: { f: 220, f2: 110, tipo: "sawtooth", dur: 0.18, v: 0.34 },
           ulti: { f: 160, f2: 520, tipo: "sawtooth", dur: 0.4, v: 0.4 },
           daño: { f: 120, f2: 60, tipo: "square", dur: 0.16, v: 0.45 },
           muerte: { f: 300, f2: 40, tipo: "sawtooth", dur: 0.35, v: 0.4 },
