@@ -1254,47 +1254,47 @@ export function renderJugador(p) {
         // para que no salte de sitio al activarse/desactivarse esa capa.
         if (!formaAnimal && p.rol === "mago") {
           cx.save();
-          if (poseHeroe?.dir === "up") {
-            // De espaldas no hay ancla de mano real (brazo/báculo quedan
-            // ocultos tras el cuerpo, ver el redibujado de más abajo) y el
-            // pivote de alcance normal (p.x, p.y+3 + 20px en la dirección
-            // de puntería) cae DENTRO de la silueta del personaje mirando
-            // hacia arriba -- comprobado a base de capturas: con esa cuenta
-            // el orbe queda tapado por completo y el tinte del elemento
-            // (fuego/hielo/arcano) desaparece mirando hacia arriba
-            // (reportado). Se ancla en su lugar cerca de la cabeza, fuera
-            // de la silueta, para que el color del elemento siga siendo
-            // visible en esta dirección igual que en el resto.
-            cx.translate(p.x, p.y - 30);
-            dibujarCargaMago(p, 0, 0);
+          // Mismo pivote que el dibujo real del arma más arriba (ancla
+          // real de mano si hay, si no el pivote fijo + GRIP) -- antes
+          // SIEMPRE usaba el pivote fijo aunque la hoja actual tuviera
+          // ancla real, así que el orbe y la vara podían caer en sitios
+          // distintos ("la bola flota", reportado). gripDibujoOrbe
+          // reproduce el mismo `gripDibujo` que usa esa rama para que la
+          // cuenta de abajo encaje en los dos casos.
+          let gripDibujoOrbe;
+          if (anclaMano) {
+            cx.translate(anclaMano.x, anclaMano.y);
+            gripDibujoOrbe = 0;
           } else {
-            // Mismo pivote que el dibujo real del arma más arriba (ancla
-            // real de mano si hay, si no el pivote fijo + GRIP) -- antes
-            // SIEMPRE usaba el pivote fijo aunque la hoja actual tuviera
-            // ancla real, así que el orbe y la vara podían caer en sitios
-            // distintos ("la bola flota", reportado). gripDibujoOrbe
-            // reproduce el mismo `gripDibujo` que usa esa rama para que la
-            // cuenta de abajo encaje en los dos casos.
-            let gripDibujoOrbe;
-            if (anclaMano) {
-              cx.translate(anclaMano.x, anclaMano.y);
-              gripDibujoOrbe = 0;
-            } else {
-              cx.translate(p.x, p.y + 3);
-              gripDibujoOrbe = CONFIG_ARMA.grip;
-            }
-            cx.rotate(p.aim);
-            cx.scale(CONFIG_ARMA.escala, CONFIG_ARMA.escala);
-            // Punta real de la vara: (25,5) en el PNG nativo de magic-wood.png
-            // (29x10, horizontal -- ver WEAPON_SRC en sprites.js), medido a
-            // mano por el usuario. Misma fórmula de escala que usa la rama
-            // horizontal del dibujo de armas de abajo (s = (REACH-GRIP)/
-            // max(ancho,alto)) para caer exactamente donde se dibuja la
-            // punta; y=5 es el centro vertical del PNG (10px de alto), por
-            // eso da 0 en el eje local.
-            const sVara = (CONFIG_ARMA.reach - CONFIG_ARMA.grip) / 29;
-            dibujarCargaMago(p, gripDibujoOrbe + 25 * sVara, (5 - 5) * sVara);
+            cx.translate(p.x, p.y + 3);
+            gripDibujoOrbe = CONFIG_ARMA.grip;
           }
+          // rotate(p.aim) SIEMPRE, de espaldas también: el báculo esquemático
+          // de arriba gira de forma continua con la puntería exacta (no por
+          // el bucket up/down/side de la pose), así que si el orbe dejara de
+          // rotar aquí se quedaría quieto mientras el báculo sigue girando
+          // dentro del rango de "arriba" (reportado: "no sigue al báculo").
+          cx.rotate(p.aim);
+          cx.scale(CONFIG_ARMA.escala, CONFIG_ARMA.escala);
+          // Punta real de la vara: (25,5) en el PNG nativo de magic-wood.png
+          // (29x10, horizontal -- ver WEAPON_SRC en sprites.js), medido a
+          // mano por el usuario. Misma fórmula de escala que usa la rama
+          // horizontal del dibujo de armas de abajo (s = (REACH-GRIP)/
+          // max(ancho,alto)) para caer exactamente donde se dibuja la
+          // punta; y=5 es el centro vertical del PNG (10px de alto), por
+          // eso da 0 en el eje local.
+          const sVara = (CONFIG_ARMA.reach - CONFIG_ARMA.grip) / 29;
+          // De espaldas ("up") no hay ancla de mano real (brazo/báculo
+          // quedan ocultos tras el cuerpo, que se redibuja encima más
+          // abajo) y el alcance normal cae DENTRO de la silueta mirando
+          // hacia arriba -- comprobado a base de capturas: el tinte del
+          // elemento (fuego/hielo/arcano) desaparecía tapado por el propio
+          // cuerpo. reachExtra alarga el alcance SOLO en esta dirección
+          // (sigue girando con p.aim igual que el resto, simplemente
+          // llega más lejos) para que asome por encima de la silueta en
+          // vez de perderse dentro.
+          const reachExtra = poseHeroe?.dir === "up" ? 17.5 : 0;
+          dibujarCargaMago(p, gripDibujoOrbe + 25 * sVara + reachExtra, (5 - 5) * sVara);
           cx.restore();
         }
         // De espaldas el cuerpo se dibuja aquí, DESPUÉS del arma Y del orbe
