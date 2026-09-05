@@ -157,11 +157,13 @@ const GRUPOS_SONIDO = {
   // impacto (fuegoBolaImpacto, también salido de un archivo de
   // explosión). Sustituido por un recorte de fuego_senda_loop.wav (los
   // primeros 150ms del crepitar/whoosh de la muestra "fireball loaded
-  // burning", con fade-in de 6ms y fade-out de 20ms) -- un timbre
-  // texturizado y distinto al de un golpe seco, más apropiado para un
-  // lanzamiento repetible. Ganancia x2.6 ya aplicada AL ARCHIVO (el pico
-  // global de fuego_senda_loop es bajo, 0.227) -- no un archivo con
-  // silencio de arranque propio, así que offset=0.
+  // burning", con fade-in/fade-out con easing seno -- pedido expreso de
+  // suavizarlo más: 30ms de entrada y 50ms de salida, un tercio del clip,
+  // para que se note como un swell suave y no como un corte con click)
+  // -- un timbre texturizado y distinto al de un golpe seco, más
+  // apropiado para un lanzamiento repetible. Ganancia x2.6 ya aplicada AL
+  // ARCHIVO (el pico global de fuego_senda_loop es bajo, 0.227) -- no un
+  // archivo con silencio de arranque propio, así que offset=0.
   fuegoBolaLanzamiento: [{ nombre: "fuego_bola_lanzamiento", ext: "wav", offset: 0 }],
   // Moneda recogida (ver core/loop.js: bucle de G.drops) -- sustituye al
   // tono sintetizado de siempre (sfx("moneda")).
