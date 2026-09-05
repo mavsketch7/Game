@@ -7,7 +7,7 @@ import { G } from "./state.js";
 import { NET, netAplicarInputs } from "../net/peer.js";
 import { fxOnda, fxParticulas, fxTexto } from "../render/effects.js";
 import { CARGA_ARQ_MAX, CARGA_ARQ_ZONA, CARGA_CUCH_MAX, CARGA_CUCH_ZONA, actualizarSendaElemental, aplicarImbuido, atacar, danoPilar, dispararArcano, dispararFlechaCargada, golpeObjeto, lanzarCuchillo } from "../systems/abilities.js";
-import { sfx, sfxAterrizaje, sfxCargaCuchillo, sfxCargaLista, sfxGolpeAire, sfxGolpeCritico, sfxImpactoGuerrero, sfxImpactoProyectil, sfxPaso, sfxTensarArco } from "../systems/audio.js";
+import { sfx, sfxAterrizaje, sfxCargaCuchillo, sfxCargaLista, sfxFuegoBolaImpacto, sfxGolpeAire, sfxGolpeCritico, sfxImpactoGuerrero, sfxImpactoProyectil, sfxPaso, sfxTensarArco } from "../systems/audio.js";
 import { esJefe, escalaEnemigo } from "../systems/bosses.js";
 import { curarP, danoAEnemigo, danoAlJugador, explotarBomber, ganarXP, masCercano, matarEnemigo, spawnClon, spawnEnemigo, statsTot, tipoAleatorio, vivos } from "../systems/combat.js";
 import { JUICE, actualizarEstilo } from "../systems/juice.js";
@@ -790,6 +790,10 @@ export function update(dt) {
                 // sonido); flecha/cuchillo se quedaban mudos.
                 if (pr.tipo === "flecha" || pr.tipo === "cuchillo")
                   sfxImpactoProyectil();
+                // Ataque básico de fuego del mago -- también mudo hasta
+                // ahora (distinto del "impactoProyectil" genérico de
+                // arriba, sonido propio pedido expreso).
+                if (pr.tipo === "bola") sfxFuegoBolaImpacto();
                 if (
                   pr.duenio &&
                   pr.duenio._poison &&

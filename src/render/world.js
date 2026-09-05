@@ -3,7 +3,7 @@ import { H, TAU, W, animGlobal, avanzarAnimGlobal, cx } from "../core/canvas.js"
 import { ELEMENTOS, MAX_PLANTA, PILAR_ROTO_DUR, RAREZAS, SALA_H, SALA_W, SUPS } from "../core/constants.js";
 import { G } from "../core/state.js";
 import { renderHUD } from "./hud.js";
-import { CAMPFIRE_CELDA, FIRE_COLUMN, FIREBALL_FH, FIREBALL_FRAMES, FIREBALL_FW, FIREBALL_SHEET, FROST_GUARDIAN, ICE_BURST, IMPACT_VFX, KENNEY_TILE, PILAR_HIELO_FRAMES, SANGRE_ANIM, SANGRE_DUR, SHEETS, SPR, assetOK, campfireFrame, iconoDrop, remateMuroPatron, wallPatron } from "./sprites.js";
+import { CAMPFIRE_CELDA, FIRE_COLUMN, FIREBALL_FH, FIREBALL_FRAMES, FIREBALL_FW, FIREBALL_SHEET, FIRE_EXPLOSION_FH, FIRE_EXPLOSION_FRAMES, FIRE_EXPLOSION_FW, FIRE_EXPLOSION_INICIO, FIRE_EXPLOSION_SHEET, FROST_GUARDIAN, ICE_BURST, IMPACT_VFX, KENNEY_TILE, PILAR_HIELO_FRAMES, SANGRE_ANIM, SANGRE_DUR, SHEETS, SPR, assetOK, campfireFrame, iconoDrop, remateMuroPatron, wallPatron } from "./sprites.js";
 import { drawSprite, drawSpriteBottom } from "./spriteDraw.js";
 import { renderEnemigo, renderJugador, renderMira } from "./character.js";
 import { clamp, hexRgba, ri, rnd } from "../utils/helpers.js";
@@ -465,6 +465,28 @@ export function render() {
             const fw = frFuego.width * escFuego, fh = frFuego.height * escFuego;
             cx.globalAlpha = a.ttl < 0.4 ? a.ttl / 0.4 : 1;
             cx.drawImage(frFuego, a.x - fw / 2, a.y - fh, fw, fh);
+            cx.globalAlpha = 1;
+            continue;
+          }
+          // Explosión de la ulti de fuego (FIRE_EXPLOSION_SHEET, ver
+          // sprites.js) -- arranca en el frame FIRE_EXPLOSION_INICIO
+          // (salta el destello/chispa inicial de la hoja de origen, que
+          // ya no encaja aquí: el retardo real entre casteo y explosión,
+          // ver lanzarUlti() en systems/abilities.js, hace ese papel con
+          // sonido+animación de personaje). Igual que ICE_BURST: estallido
+          // rápido (0.5s fijo) y se queda en el último frame (brasas) el
+          // resto de la vida del área. Centrada en (a.x,a.y), NO anclada
+          // por la base -- una explosión estalla en todas direcciones, no
+          // "crece desde el suelo" como la columna/rastro de fuego.
+          if (a.elemento === "fuego" && !a.senda && FIRE_EXPLOSION_SHEET.complete && FIRE_EXPLOSION_SHEET.naturalWidth) {
+            const framesUtiles = FIRE_EXPLOSION_FRAMES - FIRE_EXPLOSION_INICIO;
+            const edadExplosion = (a.ttlTotal || 1) - a.ttl;
+            const progExplosion = clamp(edadExplosion / 0.5, 0, 0.999);
+            const frExplosion = FIRE_EXPLOSION_INICIO + Math.floor(progExplosion * framesUtiles);
+            const escExplosion = 220 / FIRE_EXPLOSION_FH;
+            const fw = FIRE_EXPLOSION_FW * escExplosion, fh = FIRE_EXPLOSION_FH * escExplosion;
+            cx.globalAlpha = a.ttl < 0.4 ? a.ttl / 0.4 : 1;
+            cx.drawImage(FIRE_EXPLOSION_SHEET, frExplosion * FIRE_EXPLOSION_FW, 0, FIRE_EXPLOSION_FW, FIRE_EXPLOSION_FH, a.x - fw / 2, a.y - fh / 2, fw, fh);
             cx.globalAlpha = 1;
             continue;
           }
@@ -1436,7 +1458,9 @@ export function render() {
             // progreso del vuelo -- es un flicker de llama, no una carga).
             if (FIREBALL_SHEET.complete && FIREBALL_SHEET.naturalWidth) {
               const frBola = Math.floor(animGlobal * 24) % FIREBALL_FRAMES;
-              const escBola = 0.45;
+              // 0.45 -> 0.58: pedido expreso, se notaba pequeña para un
+              // ataque básico.
+              const escBola = 0.58;
               const fwBola = FIREBALL_FW * escBola, fhBola = FIREBALL_FH * escBola;
               cx.save();
               cx.translate(pr.x, pr.y);

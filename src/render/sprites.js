@@ -1911,6 +1911,19 @@ export const FIREBALL_FRAMES = 15;
 export const FIREBALL_FW = 64;
 export const FIREBALL_FH = 16;
 
+// Explosión de la ulti de fuego del mago (Cataclismo, ver lanzarUlti() en
+// systems/abilities.js y render/world.js): hoja única de 18 frames de
+// 48x48 -- frames 0-5 son un destello/chispa que ya no se usa aquí (el
+// retardo real entre casteo y explosión, ver abilities.js, hace ese papel
+// con sonido+animación de personaje en vez de este sprite); world.js
+// arranca la animación en el frame 6 (el flash real del estallido).
+export const FIRE_EXPLOSION_SHEET = new Image();
+FIRE_EXPLOSION_SHEET.src = assetUrl("fx/fire_explosion/sheet");
+export const FIRE_EXPLOSION_FRAMES = 18;
+export const FIRE_EXPLOSION_FW = 48;
+export const FIRE_EXPLOSION_FH = 48;
+export const FIRE_EXPLOSION_INICIO = 6;
+
 // Fases de rotura del pilar de hielo del Guardián (ver render/world.js,
 // bucle de G.pilares, rama pl.hielo): hoja en rejilla 4x2 -- fila 1 intacto
 // -> grietas, fila 2 se parte -> escombro en el suelo (8 fases en total).

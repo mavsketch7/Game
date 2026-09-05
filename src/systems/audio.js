@@ -139,6 +139,17 @@ const GRUPOS_SONIDO = {
     { nombre: "parry_4", ext: "m4a", offset: 0.135 },
     { nombre: "parry_5", ext: "m4a", offset: 0.105 },
   ],
+  // Ulti de fuego del mago (Cataclismo, ver lanzarUlti() en
+  // systems/abilities.js): "casteo" al lanzar la ulti (controlable --
+  // dura 6.4s de origen, mucho más que el retardo hasta la explosión, así
+  // que se corta a mano justo cuando esta empieza, ver sfxFuegoUltiCast())
+  // y "explosión" cuando de verdad aparece el sprite (FIRE_EXPLOSION_SHEET
+  // en render/sprites.js), no en el instante de pulsar la tecla.
+  fuegoUltiCast: [{ nombre: "fuego_ulti_cast", ext: "wav", offset: 0 }],
+  fuegoUltiExplosion: [{ nombre: "fuego_ulti_explosion", ext: "wav", offset: 0 }],
+  // Impacto del ataque básico de fuego (bola) contra un enemigo -- antes
+  // mudo (impactoProyectil solo cubría flecha/cuchillo, ver core/loop.js).
+  fuegoBolaImpacto: [{ nombre: "fuego_bola_impacto", ext: "wav", offset: 0.797 }],
 };
 const bufferesReales = {};
 const cargaReales = {};
@@ -265,6 +276,21 @@ export function sfxGolpeCritico() {
 // inmediato al pulsar, antes de que el host confirme).
 export function sfxParry() {
   reproducirSonidoReal("parry", 0.85);
+}
+// Ulti de fuego del mago: "casteo" al lanzar (controlable -- se corta a
+// mano en cuanto empieza a sonar la explosión, ver lanzarUlti() en
+// systems/abilities.js, la muestra de origen dura 6.4s) y "explosión"
+// cuando de verdad sale el sprite (retardado respecto al casteo, no en
+// el instante de pulsar la tecla).
+export function sfxFuegoUltiCast() {
+  return reproducirSonidoControlable("fuegoUltiCast", 0.8);
+}
+export function sfxFuegoUltiExplosion() {
+  reproducirSonidoReal("fuegoUltiExplosion", 0.9);
+}
+// Ataque básico de fuego (bola) al impactar contra un enemigo.
+export function sfxFuegoBolaImpacto() {
+  reproducirSonidoReal("fuegoBolaImpacto", 0.8);
 }
 // Paso al caminar/correr -- "levemente": volumen bajo a propósito, más un
 // pequeño jitter de tono para que no se note la repetición de la muestra.
@@ -681,4 +707,37 @@ export function detenerMusicaJefe() {
   if (audioJefe && !audioJefe.paused) fundirAudio(audioJefe, 0, 1.5, () => audioJefe.pause());
   if (audioAmbiente && ambienteActivo && !AJ.silencio)
     fundirAudio(audioAmbiente, volObjetivoAmbiente(), 1.5);
+}
+
+// Bucle del fuego de la Senda Elemental (tecla C, mago, elemento fuego --
+// ver actualizarSendaElemental() en systems/abilities.js) mientras dura
+// el rastro. Fade in/out (pedido expreso: "que no haya cambios
+// bruscos"), mismo mecanismo de HTMLAudioElement + fundirAudio() que la
+// ambiental/pista de jefe de arriba. Un Audio POR JUGADOR (indexado por
+// p.idx, no uno global) porque en cooperativo puede haber más de un mago
+// con la Senda de fuego activa a la vez.
+const VOL_SENDA_FUEGO = 0.55;
+const audiosSendaFuego = {};
+
+function crearAudioSendaFuego(idx) {
+  if (audiosSendaFuego[idx]) return audiosSendaFuego[idx];
+  const a = new Audio(`${import.meta.env.BASE_URL}assets/audio/fuego_senda_loop.wav`);
+  a.loop = true;
+  a.volume = 0;
+  document.body.appendChild(a);
+  audiosSendaFuego[idx] = a;
+  return a;
+}
+
+export function iniciarSendaFuegoAudio(idx) {
+  if (AJ.silencio) return;
+  const a = crearAudioSendaFuego(idx);
+  a.play().catch(() => {});
+  fundirAudio(a, AJ.volMaster * AJ.volSfx * VOL_SENDA_FUEGO, 0.6);
+}
+
+export function detenerSendaFuegoAudio(idx) {
+  const a = audiosSendaFuego[idx];
+  if (!a || a.paused) return;
+  fundirAudio(a, 0, 0.6, () => a.pause());
 }

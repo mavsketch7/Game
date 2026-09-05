@@ -94,6 +94,11 @@ export function nuevaPartida() {
             sendaT: 0,
             sendaCd: 0,
             _sendaTick: 0,
+            // true mientras suena el bucle de fuego de la Senda para
+            // ESTE jugador (ver actualizarSendaElemental() en
+            // systems/abilities.js) -- marca la transición para no
+            // reiniciar el fade in/out en cada frame mientras está activo.
+            _sendaFuegoAudio: false,
             // Cooldown propio del aviso "detente para lanzar" (mago, ver
             // atacar() en systems/abilities.js) -- sin esto salía cada vez
             // que intentabas atacar en movimiento, y con el ataque

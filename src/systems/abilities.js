@@ -6,7 +6,7 @@ import { ELEMENTOS, ELEM_MAGO, FORMAS_DRUIDA, FORMAS_INFO, PILAR_ROTO_DUR, RAREZ
 import { update } from "../core/loop.js";
 import { G } from "../core/state.js";
 import { fxEstocada, fxImpacto, fxOnda, fxParticulas, fxTajo, fxTexto } from "../render/effects.js";
-import { sfx, sfxDisparoArco, sfxGolpeAire, sfxGolpeCritico, sfxImpactoFrhor, sfxImpactoGuerrero, sfxImpactoPicaro, sfxRompeBarril, sfxRompeHielo, sfxSwingFrhor } from "./audio.js";
+import { detenerSendaFuegoAudio, iniciarSendaFuegoAudio, sfx, sfxDisparoArco, sfxFuegoUltiCast, sfxFuegoUltiExplosion, sfxGolpeAire, sfxGolpeCritico, sfxImpactoFrhor, sfxImpactoGuerrero, sfxImpactoPicaro, sfxRompeBarril, sfxRompeHielo, sfxSwingFrhor } from "./audio.js";
 import { curarP, danoAEnemigo, danoAlJugador, masCercano, statsTot, vivos } from "./combat.js";
 import { posDropValida } from "./floorgen.js";
 import { JUICE } from "./juice.js";
@@ -766,6 +766,21 @@ const SENDA_INTERVALO = { fuego: 0.06, hielo: 0.12, arcano: 0.06 };
 const SENDA_MULT = 0.9;
 const SENDA_RADIO = 32;
 export function actualizarSendaElemental(p, dt) {
+        // Bucle de fuego con fade in/out (pedido expreso: "que no haya
+        // cambios bruscos") -- arranca/para en la TRANSICIÓN, no cada
+        // frame mientras esté activo. Comprobado antes del return de
+        // abajo porque también hay que detectar "se acaba de apagar"
+        // (sendaT llega a 0, o se cambia de elemento a mitad de Senda:
+        // actualizarSendaElemental() ya lee p.elemento en vivo cada
+        // tick para el rastro, así que el audio debe seguirle el paso).
+        const fuegoActivo = p.sendaT > 0 && p.elemento === "fuego";
+        if (fuegoActivo && !p._sendaFuegoAudio) {
+          p._sendaFuegoAudio = true;
+          iniciarSendaFuegoAudio(p.idx);
+        } else if (!fuegoActivo && p._sendaFuegoAudio) {
+          p._sendaFuegoAudio = false;
+          detenerSendaFuegoAudio(p.idx);
+        }
         if (p.sendaT <= 0) return;
         p._sendaTick -= dt;
         if (p._sendaTick <= 0) {
@@ -832,9 +847,26 @@ export function habilidad(p) {
             p.castUltT = 0.6;
             const g = groundTarget(p, 300);
             if (p.elemento === "fuego") {
-              // zona que quema durante un tiempo breve
-              crearArea(g.x, g.y, 95, "fuego", 2, p);
-              fxOnda(g.x, g.y, 95, "#ff7d4d");
+              // Retardo real entre el casteo y la explosión (pedido
+              // expreso: "encajar los sonidos a los sprites
+              // correctamente") -- antes la zona/daño aparecían en el
+              // MISMO frame que se pulsaba la tecla, solo la animación
+              // del personaje (castUltT) daba la sensación de canalizar.
+              // Ahora el sonido de casteo suena al momento (controlable,
+              // dura 6.4s de origen) y la explosión de verdad (zona +
+              // daño + sprite, ver FIRE_EXPLOSION_SHEET en
+              // render/sprites.js/world.js) llega ~0.5s después, casi al
+              // final del casteo -- el casteo se corta justo ahí para no
+              // solaparse con la explosión.
+              const controlCast = sfxFuegoUltiCast();
+              const gx = g.x, gy = g.y;
+              setTimeout(() => {
+                controlCast.stop();
+                if (!G || !G.activo) return;
+                crearArea(gx, gy, 95, "fuego", 2, p);
+                fxOnda(gx, gy, 95, "#ff7d4d");
+                sfxFuegoUltiExplosion();
+              }, 500);
             } else if (p.elemento === "hielo") {
               // ralentización masiva en área
               crearArea(g.x, g.y, 110, "hielo", 1.5, p);
