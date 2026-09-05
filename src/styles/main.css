@@ -3038,6 +3038,19 @@ body.pantalla-completa #hint {
   user-select: none;
   -webkit-user-select: none;
 }
+/* No existe una regla ".oculto" genérica en todo el proyecto -- cada
+   elemento la define a su medida (.overlay.oculto, #cursor-wrap.oculto,
+   .popover.oculto...). Sin esta línea el contenedor nunca llegaba a
+   display:none de verdad (aunque la clase SÍ se aplicase bien por JS) y
+   sus .tc-zona (pointer-events:auto, cubren media pantalla cada una)
+   seguían interceptando el ratón incluso en escritorio -- bug reportado:
+   "el apuntado se ha bugeado" con teclado+ratón. pointer-events:none de
+   la regla de arriba no basta por sí solo: un hijo con pointer-events:
+   auto explícito (como .tc-zona) vuelve a ser objetivo de hit-testing
+   pase lo que pase el padre. */
+#touch-controls.oculto {
+  display: none;
+}
 .tc-zona {
   position: absolute;
   top: 0;

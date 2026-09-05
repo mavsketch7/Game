@@ -16,14 +16,30 @@ import { activarParry, castSup, dashAtaque, disparoSecundario, esquivar, habilid
 
 // Detección de dispositivo táctil -- no existía nada de esto en el
 // proyecto, ver informe de exploración: cero uso de maxTouchPoints/
-// matchMedia/ontouchstart en todo src/. Envuelto en try/catch porque
-// matchMedia puede no existir en entornos de test/SSR raros.
+// matchMedia/ontouchstart en todo src/.
+//
+// La primera versión usaba matchMedia("pointer: coarse")/maxTouchPoints,
+// que dan falso positivo en cualquier portátil/monitor de escritorio con
+// pantalla táctil (bastante común) aunque se juegue con teclado+ratón --
+// bug reportado: el apuntado se quedaba "pegado" porque leerInput()
+// enrutaba a la rama táctil (que solo actualiza el ángulo si se arrastra
+// el stick de apuntar en pantalla) en vez de a la de ratón. Ahora exige
+// que el propio dispositivo se declare móvil (no solo "tiene touch"):
+// navigator.userAgentData.mobile (Chrome/Edge modernos, fuente fiable) o,
+// si no existe esa API (Safari/Firefox), el user-agent clásico + que la
+// resolución sea evidentemente de móvil -- pedido expreso del usuario:
+// "solo deben ejecutarse si se juega desde un dispositivo móvil, o a
+// partir de una resolución que es evidente que es móvil". El toggle
+// manual en Ajustes (ui/inventory.js) sigue como vía de escape para
+// probar desde escritorio o para el caso raro que esto no acierte.
 export function esTactil() {
   try {
-    return (
-      (window.matchMedia && matchMedia("(pointer: coarse)").matches) ||
-      (navigator.maxTouchPoints || 0) > 0
-    );
+    if (navigator.userAgentData && typeof navigator.userAgentData.mobile === "boolean") {
+      return navigator.userAgentData.mobile;
+    }
+    const uaMovil = /android|iphone|ipad|ipod|mobile/i.test(navigator.userAgent);
+    const pantallaMovil = Math.min(window.innerWidth, window.innerHeight) <= 780;
+    return uaMovil || pantallaMovil;
   } catch (e) {
     return false;
   }
