@@ -9,9 +9,9 @@ import { ELEMENTOS, RAREZAS, SUPS } from "../core/constants.js";
 import { G } from "../core/state.js";
 import { fxParticulas } from "./effects.js";
 import { drawSprite, drawSpriteBottom } from "./spriteDraw.js";
-import { ARQUERO_BOW, ARQUERO_BOW_DUR, ATTACK_DUR, CASCO_ATTACK, CASCO_HURT, CASCO_IDLE, CASCO_RUN, CONFIG_ARMA, DASH_ATTACK_DUR, DUMMY_HIT, ESC_FORMA, FROST_GUARDIAN, MARTILLO_FRHOR_IMG, MIRA_IZQUIERDA_POR_DEFECTO, MOB_RUN, MUERTE_DUR, OFFHAND_IMG, OFFHAND_IMG_RAREZA, PETO_ATTACK, PETO_HURT, PETO_IDLE, PETO_RUN, PIERNAS_ATTACK, PIERNAS_HURT, PIERNAS_IDLE, PIERNAS_RUN, REAL_ATTACK, REAL_ATTACK_ANCLA, REAL_DASH, REAL_DASH_ANCLA, REAL_HURT, REAL_IDLE, REAL_IDLE_ANCLA, REAL_MUERTE, REAL_RUN, REAL_RUN_ANCLA, REAL_SPECIAL, REAL_SPECIAL_ANCLA, REAL_SPRITE_SCALE, SHEETS, SPECIAL_ATTACK_DUR, SPR, SPR_FORMAS, TAM_HEROE, WEAPON_ART_POOL, WEAPON_IMG, WEAPON_IMG_RAREZA, armaHiltTip, assetOK, seleccionarImgEnemigo, spriteJugador } from "./sprites.js";
+import { ARQUERO_BOW, ARQUERO_BOW_DUR, ATTACK_DUR, CASCO_ATTACK, CASCO_HURT, CASCO_IDLE, CASCO_RUN, CONFIG_ARMA, DASH_ATTACK_DUR, DUMMY_HIT, ESC_FORMA, FROST_GUARDIAN, MARTILLO_FRHOR_IMG, MIRA_IZQUIERDA_POR_DEFECTO, MOB_RUN, MUERTE_DUR, OFFHAND_IMG, OFFHAND_IMG_RAREZA, PARRY_FX_FH, PARRY_FX_FRAMES, PARRY_FX_FW, PARRY_FX_SHEET, PETO_ATTACK, PETO_HURT, PETO_IDLE, PETO_RUN, PIERNAS_ATTACK, PIERNAS_HURT, PIERNAS_IDLE, PIERNAS_RUN, REAL_ATTACK, REAL_ATTACK_ANCLA, REAL_DASH, REAL_DASH_ANCLA, REAL_HURT, REAL_IDLE, REAL_IDLE_ANCLA, REAL_MUERTE, REAL_RUN, REAL_RUN_ANCLA, REAL_SPECIAL, REAL_SPECIAL_ANCLA, REAL_SPRITE_SCALE, SHEETS, SPECIAL_ATTACK_DUR, SPR, SPR_FORMAS, TAM_HEROE, WEAPON_ART_POOL, WEAPON_IMG, WEAPON_IMG_RAREZA, armaHiltTip, assetOK, seleccionarImgEnemigo, spriteJugador } from "./sprites.js";
 import { CARGA_ARQ_MAX, CARGA_ARQ_ZONA, CARGA_CUCH_MAX, CARGA_CUCH_ZONA, groundTarget } from "../systems/abilities.js";
-import { masCercano } from "../systems/combat.js";
+import { masCercano, PARRY_FX_DUR } from "../systems/combat.js";
 import { mouse } from "../systems/input.js";
 import { JUICE } from "../systems/juice.js";
 import { ENEMY_BAR, ENEMY_BAR_INTERIOR } from "./uiTiles.js";
@@ -1354,6 +1354,41 @@ export function renderJugador(p) {
           cx.arc(p.x, p.y - 4, 24, p.aim - 1.1, p.aim + 1.1);
           cx.stroke();
           cx.globalAlpha = 1;
+          // Motas repartidas a lo largo del arco, con "respiración" propia
+          // (radio+brillo oscilando, fase distinta por partícula) -- para
+          // que se lea como un campo de energía vivo en vez de solo dos
+          // trazos estáticos -- pedido expreso ("añadirle alguna
+          // partícula y mejorarlo").
+          const nMotas = 5;
+          for (let i = 0; i < nMotas; i++) {
+            const ang = p.aim - 1.1 + (i / (nMotas - 1)) * 2.2;
+            const fase = animGlobal * 5 + i * 1.7;
+            const rr = 24 + Math.sin(fase) * 2;
+            const mx = p.x + Math.cos(ang) * rr;
+            const my = p.y - 4 + Math.sin(ang) * rr;
+            cx.globalAlpha = 0.5 + Math.sin(fase * 1.3) * 0.5;
+            cx.fillStyle = i % 2 === 0 ? "#fff0c8" : "#e9b45c";
+            cx.fillRect(mx - 1, my - 1, 2, 2);
+          }
+          cx.globalAlpha = 1;
+        }
+
+        // Destello de parry EXITOSO (distinto del arco de arriba, que
+        // marca la ventana de guardia mientras está activa): estallido de
+        // estrella de PARRY_FX_SHEET (9 frames, ver render/sprites.js),
+        // centrado en el mismo punto que el arco. PARRY_FX_DUR (importado
+        // de systems/combat.js, misma constante que fija p.parryFxT al
+        // conectar el parry) es la única fuente de verdad de la duración,
+        // para que no se puedan desincronizar.
+        if (p.parryFxT > 0 && PARRY_FX_SHEET.complete && PARRY_FX_SHEET.naturalWidth) {
+          const progreso = clamp(1 - p.parryFxT / PARRY_FX_DUR, 0, 0.999);
+          const frame = Math.min(PARRY_FX_FRAMES - 1, Math.floor(progreso * PARRY_FX_FRAMES));
+          const tamFx = 64;
+          cx.drawImage(
+            PARRY_FX_SHEET,
+            frame * PARRY_FX_FW, 0, PARRY_FX_FW, PARRY_FX_FH,
+            p.x - tamFx / 2, p.y - 4 - tamFx / 2, tamFx, tamFx,
+          );
         }
 
         // retícula de suelo (ulti del mago / sanación del clérigo / zarzas del druida humano)

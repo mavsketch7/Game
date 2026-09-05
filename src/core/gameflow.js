@@ -76,6 +76,7 @@ export function nuevaPartida() {
             parryCd: 0,
             parryCombo: 0,
             parryComboT: 0,
+            parryFxT: 0, // destello de parry exitoso, ver render/character.js
             golpeT: 0,
             swingT: 0,
             // Casteo de la ulti (Cataclismo del mago, ver habilidad() en

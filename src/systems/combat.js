@@ -625,9 +625,16 @@ export function danoAlJugador(p, raw, fuente) {
         }
       }
 
+// Duración del destello de estrella del parry exitoso (ver p.parryFxT
+// en render/character.js: PARRY_FX_SHEET, 9 frames) -- bastante más
+// rápido que los 100ms/frame de origen del .aseprite, pedido expreso
+// ("la animación deberá ser rápida").
+export const PARRY_FX_DUR = 0.32;
+
 function parryExitoso(p, fuente) {
         p.parryT = 0;
         p.parryCd = 0.45;
+        p.parryFxT = PARRY_FX_DUR;
         sfxParry();
         G.stats.parries++;
         p.statParries = (p.statParries || 0) + 1;

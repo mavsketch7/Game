@@ -37,6 +37,7 @@ const CDS_LINEALES = [
   "invulT",
   "parryT",
   "parryCd",
+  "parryFxT",
   "golpeT",
   "swingT",
   "hasteT",

@@ -1924,6 +1924,16 @@ export const FIRE_EXPLOSION_FW = 48;
 export const FIRE_EXPLOSION_FH = 48;
 export const FIRE_EXPLOSION_INICIO = 6;
 
+// Destello de parry exitoso (ver parryExitoso() en systems/combat.js y
+// p.parryFxT en render/character.js): hoja única de 9 frames de 48x48 --
+// un estallido de estrella que crece y se apaga. Se reproduce RÁPIDO
+// (pedido expreso), bastante más rápido que los 100ms/frame de origen.
+export const PARRY_FX_SHEET = new Image();
+PARRY_FX_SHEET.src = assetUrl("fx/parry/sheet");
+export const PARRY_FX_FRAMES = 9;
+export const PARRY_FX_FW = 48;
+export const PARRY_FX_FH = 48;
+
 // Fases de rotura del pilar de hielo del Guardián (ver render/world.js,
 // bucle de G.pilares, rama pl.hielo): hoja en rejilla 4x2 -- fila 1 intacto
 // -> grietas, fila 2 se parte -> escombro en el suelo (8 fases en total).
