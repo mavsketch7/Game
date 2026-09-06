@@ -455,6 +455,55 @@ export function renderMira() {
         }
       }
 
+// Alfa de un punto de un sprite YA cargado (canvas, no Image -- ver
+// REAL_IDLE/REAL_RUN en sprites.js, hojas de frame cacheadas de forma
+// estable) en su espacio de píxel LOCAL (no mundo). Cachea el
+// getImageData por canvas (WeakMap, se calcula una sola vez por hoja,
+// no por frame de juego) -- lo usa orbeTapadoPorCuerpo() para saber si
+// el cuerpo/armadura ya dibujados tapan de verdad un punto dado, en vez
+// de asumir que sí o que no.
+const cacheAlfaCanvas = new WeakMap();
+function alfaEnCanvas(canvasImg, sx, sy) {
+  if (!canvasImg || sx < 0 || sy < 0 || sx >= canvasImg.width || sy >= canvasImg.height) return 0;
+  let datos = cacheAlfaCanvas.get(canvasImg);
+  if (!datos) {
+    datos = canvasImg.getContext("2d").getImageData(0, 0, canvasImg.width, canvasImg.height).data;
+    cacheAlfaCanvas.set(canvasImg, datos);
+  }
+  return datos[((sy | 0) * canvasImg.width + (sx | 0)) * 4 + 3];
+}
+
+// Oclusión real del orbe de carga del mago (ver el bloque que lo llama,
+// más abajo): antes se dibujaba siempre encima de todo para que no
+// desapareciera mirando hacia arriba, pero eso hacía que el cuerpo/
+// armadura NUNCA lo taparan aunque geométricamente debieran (reportado:
+// "el cuerpo o las armaduras evidentemente lo taparán"). `pose` es el
+// mismo objeto que devuelve calcularPoseHeroe() (expone
+// img/imgPiernas/imgPeto/imgCasco/flip), dibujado con
+// drawSpriteBottom(capa, p.x, p.y+bob, flip, esc) -- esc siempre 1
+// (REAL_SPRITE_SCALE está vacío para todos los roles, cae al fallback
+// `|| 1` en cada sitio que lo usa). (worldX, worldY) es el punto mundo
+// donde caería el orbe -- se invierte la fórmula de drawSpriteBottom
+// para cada capa REALMENTE dibujada ese frame (piernas/peto/casco solo
+// si están equipados, mismo criterio que dibujarCuerpoHeroe) y se
+// pregunta su alfa ahí.
+function orbeTapadoPorCuerpo(pose, p, bob, worldX, worldY) {
+  if (!pose) return false;
+  const eq = p.equipo;
+  const x = p.x, yPies = p.y + bob, flip = pose.flip;
+  const capas = [pose.img];
+  if (eq.piernas && pose.imgPiernas) capas.push(pose.imgPiernas);
+  if (eq.peto && pose.imgPeto) capas.push(pose.imgPeto);
+  if (eq.casco && pose.imgCasco) capas.push(pose.imgCasco);
+  for (const capa of capas) {
+    if (!capa) continue;
+    const sx = flip ? capa.width / 2 - (worldX - x) : capa.width / 2 + (worldX - x);
+    const sy = worldY - yPies + capa.height;
+    if (alfaEnCanvas(capa, sx, sy) > 40) return true;
+  }
+  return false;
+}
+
 function dibujarCargaMago(p, tx, ty) {
         const col = ELEMENTOS[p.elemento].color;
         // Orbe en bloques de pixel art (no un arco liso, pedido expreso:
@@ -1264,10 +1313,13 @@ export function renderJugador(p) {
         // anterior alargaba el alcance solo mirando hacia arriba para que
         // asomara por encima del cuerpo, pero eso lo desplazaba respecto a
         // donde cae la vara real -- reportado: "se desplaza un centímetro,
-        // orbitando en la varita"). En vez de eso, este bloque va DESPUÉS
-        // del redibujado de cuerpo de arriba (para todas las direcciones,
-        // aunque solo importa para "up") para no arriesgarse a quedar
-        // tapado sin tener que tocar su posición.
+        // orbitando en la varita"). Este bloque va DESPUÉS del redibujado
+        // de cuerpo de arriba (para todas las direcciones, aunque solo
+        // importa para "up"), pero eso por sí solo haría que el cuerpo/
+        // armadura NUNCA lo taparan aunque debieran -- por eso además se
+        // comprueba oclusión real contra lo ya dibujado (orbeTapadoPorCuerpo,
+        // justo arriba de dibujarCargaMago) y se salta el dibujado si el
+        // punto cae sobre un píxel opaco.
         if (!formaAnimal && p.rol === "mago") {
           cx.save();
           // Mismo pivote que el dibujo real del arma más arriba (ancla
@@ -1300,7 +1352,16 @@ export function renderJugador(p) {
           // punta; y=5 es el centro vertical del PNG (10px de alto), por
           // eso da 0 en el eje local.
           const sVara = (CONFIG_ARMA.reach - CONFIG_ARMA.grip) / 29;
-          dibujarCargaMago(p, gripDibujoOrbe + 25 * sVara, (5 - 5) * sVara);
+          const txOrbe = gripDibujoOrbe + 25 * sVara, tyOrbe = (5 - 5) * sVara;
+          // Punto MUNDO donde cae el orbe con las transformadas ya
+          // aplicadas arriba (translate del pivote + rotate(aim) +
+          // scale(escala)) -- se usa la matriz real del canvas en vez de
+          // repetir la trigonometría a mano, así no se puede desincronizar
+          // si se recalibra CONFIG_ARMA más adelante.
+          const puntoOrbe = cx.getTransform().transformPoint(new DOMPoint(txOrbe, tyOrbe));
+          if (!orbeTapadoPorCuerpo(poseHeroe, p, bob, puntoOrbe.x, puntoOrbe.y)) {
+            dibujarCargaMago(p, txOrbe, tyOrbe);
+          }
           cx.restore();
         }
         // Barra de carga (arquero/pícaro): a diferencia del orbe del mago
