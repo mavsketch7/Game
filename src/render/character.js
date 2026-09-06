@@ -1246,12 +1246,28 @@ export function renderJugador(p) {
           }
           cx.restore();
         }
+        // De espaldas el cuerpo se dibuja aquí, DESPUÉS del arma (en vez
+        // de junto al resto del cuerpo) para que la silueta tape la parte
+        // de ella que quedaría oculta -- ver el comentario en
+        // calcularPoseHeroe()/la asignación de anclaMano más arriba.
+        if (poseHeroe && poseHeroe.dir === "up") {
+          dibujarCuerpoHeroe(p, poseHeroe, p.x, p.y + bob);
+        }
         // Orbe de carga del mago: efecto de gameplay (no una hoja física),
         // independiente de si la capa esquemática de arriba está activa --
         // tiene que seguir viéndose durante el golpe (cuando esa capa se
         // apaga porque el báculo ya viene en el frame de REAL_ATTACK) igual
         // que en reposo. Mismo pivote/escala que usaba la capa esquemática
         // para que no salte de sitio al activarse/desactivarse esa capa.
+        // Se dibuja SIEMPRE con la MISMA fórmula de alcance que la vara
+        // esquemática (nada de un alcance distinto para "up": un intento
+        // anterior alargaba el alcance solo mirando hacia arriba para que
+        // asomara por encima del cuerpo, pero eso lo desplazaba respecto a
+        // donde cae la vara real -- reportado: "se desplaza un centímetro,
+        // orbitando en la varita"). En vez de eso, este bloque va DESPUÉS
+        // del redibujado de cuerpo de arriba (para todas las direcciones,
+        // aunque solo importa para "up") para no arriesgarse a quedar
+        // tapado sin tener que tocar su posición.
         if (!formaAnimal && p.rol === "mago") {
           cx.save();
           // Mismo pivote que el dibujo real del arma más arriba (ancla
@@ -1284,26 +1300,8 @@ export function renderJugador(p) {
           // punta; y=5 es el centro vertical del PNG (10px de alto), por
           // eso da 0 en el eje local.
           const sVara = (CONFIG_ARMA.reach - CONFIG_ARMA.grip) / 29;
-          // De espaldas ("up") no hay ancla de mano real (brazo/báculo
-          // quedan ocultos tras el cuerpo, que se redibuja encima más
-          // abajo) y el alcance normal cae DENTRO de la silueta mirando
-          // hacia arriba -- comprobado a base de capturas: el tinte del
-          // elemento (fuego/hielo/arcano) desaparecía tapado por el propio
-          // cuerpo. reachExtra alarga el alcance SOLO en esta dirección
-          // (sigue girando con p.aim igual que el resto, simplemente
-          // llega más lejos) para que asome por encima de la silueta en
-          // vez de perderse dentro.
-          const reachExtra = poseHeroe?.dir === "up" ? 17.5 : 0;
-          dibujarCargaMago(p, gripDibujoOrbe + 25 * sVara + reachExtra, (5 - 5) * sVara);
+          dibujarCargaMago(p, gripDibujoOrbe + 25 * sVara, (5 - 5) * sVara);
           cx.restore();
-        }
-        // De espaldas el cuerpo se dibuja aquí, DESPUÉS del arma Y del orbe
-        // de arriba (en vez de junto al resto del cuerpo) para que la
-        // silueta tape la parte de ambos que quedaría oculta -- ver el
-        // comentario en calcularPoseHeroe()/la asignación de anclaMano más
-        // arriba, y el comentario del orbe justo encima.
-        if (poseHeroe && poseHeroe.dir === "up") {
-          dibujarCuerpoHeroe(p, poseHeroe, p.x, p.y + bob);
         }
         // Barra de carga (arquero/pícaro): a diferencia del orbe del mago
         // de arriba, NO va dentro del cx.rotate(p.aim) -- una barra
