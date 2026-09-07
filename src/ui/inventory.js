@@ -1,6 +1,6 @@
 // Auto-generated during the modularization refactor (2026-07-23).
 import { ajustarLienzo, esPantallaCompleta, maximizado, toggleFullscreen } from "../core/canvas.js";
-import { ETQ, FORMAS_INFO, MAX_NIV_PJ, PRECIO_VENTA, RAREZAS, ROLES, SLOTS, SLOT_LABEL } from "../core/constants.js";
+import { ETQ, FORMAS_DRUIDA, FORMAS_INFO, MAX_NIV_PJ, PRECIO_VENTA, RAREZAS, ROLES, SENDA_ELEMENTAL, SLOTS, SLOT_LABEL, SUPS } from "../core/constants.js";
 import { abandonarPartida } from "../core/gameflow.js";
 import { META } from "../core/save.js";
 import { AJ, aplicarTexto } from "../core/settings.js";
@@ -759,6 +759,64 @@ function banderinesLibro() {
           .join("");
       }
 
+// Lista de habilidades para la columna derecha de .hoja-stats -- combina
+// las universales (mismo mapeo de teclas que systems/input.js:
+// Espacio=esquivar, clic derecho=parry, E=interactuar, R=disparoSecundario,
+// Q=habilidad con el nombre real de ROLES[rol].skill) con el extra propio
+// de cada clase (Estocada del guerrero, elemento+Senda del mago, apoyos
+// del clérigo, formas del druida -- arquero/pícaro no tienen extra: su
+// carga se hace manteniendo el propio ataque básico).
+function habilidadesLibro(p, b) {
+        const lista = [
+          { tecla: "Clic", txt: "Ataque básico" },
+          { tecla: "␣", txt: "Esquivar" },
+          { tecla: "Clic-D", txt: "Parry" },
+          { tecla: "E", txt: "Interactuar" },
+          { tecla: "R", txt: "Disparo secundario" },
+          { tecla: "Q", txt: b.skill.nombre },
+        ];
+        if (p.rol === "guerrero") {
+          lista.push({ tecla: "⇧", txt: "Estocada" });
+        } else if (p.rol === "mago") {
+          lista.push({ tecla: "1-3", txt: "Elemento" });
+          lista.push({ tecla: "C", txt: SENDA_ELEMENTAL.nombre });
+        } else if (p.rol === "clerigo") {
+          lista.push({ tecla: "1-3", txt: "Apoyos: " + SUPS.map((s) => s.corto).join("/") });
+        } else if (p.rol === "druida") {
+          lista.push({ tecla: "1-3", txt: "Formas: " + FORMAS_DRUIDA.map((f) => FORMAS_INFO[f].nombre).join("/") });
+        }
+        return lista
+          .map(
+            (h) =>
+              '<div class="hoja-hab"><b>' + escHtml(h.tecla) + "</b>" + escHtml(h.txt) + "</div>",
+          )
+          .join("");
+      }
+
+// Filtro de la bolsa, versión compacta para dentro del libro (misma
+// lógica/acción que filtroCtrlHtml() -- onclick="filtrarBolsa(...)" -- solo
+// más pequeño para caber en la franja bajo la rejilla de la página
+// derecha).
+function filtroLibroHtml(p) {
+        const filtro = p.filtroBolsa || "todos";
+        return (
+          '<div class="hoja-pieza hoja-filtro">' +
+          [["Todo", "todos"], ...SLOTS.map((s) => [SLOT_LABEL[s] || s, s])]
+            .map(
+              ([lab, v]) =>
+                '<button class="' +
+                (filtro === v ? "on" : "") +
+                '" onclick="filtrarBolsa(\'' +
+                v +
+                "')\">" +
+                lab +
+                "</button>",
+            )
+            .join("") +
+          "</div>"
+        );
+      }
+
 function tabPersonaje(p, t, b) {
         const xpPct =
           p.nivel >= MAX_NIV_PJ ? 100 : Math.round((p.xp / p.xpSig) * 100);
@@ -787,12 +845,15 @@ function tabPersonaje(p, t, b) {
               .join("")
           : '<span style="color:var(--ceniza);font-size:.72rem">Ninguna todavía — sube de nivel</span>';
         const statsHtml =
+          '<div class="hoja-stats-col">' +
           '<div class="hoja-stat" title="Daño">⚔<b>' + t.atk + "</b></div>" +
           '<div class="hoja-stat" title="Vida">❤<b>' + Math.ceil(p.hp) + "/" + t.hpMax + "</b></div>" +
           '<div class="hoja-stat" title="Armadura">🛡<b>' + t.armor + "</b></div>" +
           '<div class="hoja-stat" title="Crítico">🎯<b>' + t.crit + "%</b></div>" +
           '<div class="hoja-stat" title="Velocidad">💨<b>' + t.vel + "</b></div>" +
-          '<div class="hoja-stat" title="Reducción de cooldown">⏱<b>' + t.cdr + "%</b></div>";
+          '<div class="hoja-stat" title="Reducción de cooldown">⏱<b>' + t.cdr + "%</b></div>" +
+          "</div>" +
+          '<div class="hoja-stats-col hoja-hab-col">' + habilidadesLibro(p, b) + "</div>";
         const insignias =
           (p.rol === "druida"
             ? '<span style="color:' + FORMAS_INFO[p.forma].color + '">' + FORMAS_INFO[p.forma].ico + " " + FORMAS_INFO[p.forma].nombre + "</span>"
@@ -804,11 +865,11 @@ function tabPersonaje(p, t, b) {
           '<div class="hoja-libro">' +
           '<img class="hoja-fondo" src="' + libroSrc("fondo") + '" alt="" />' +
           '<div class="hoja-pieza hoja-banner" style="background-image:url(\'' + libroSrc("banner") + "')\">" +
-          '<span class="hoja-banner-texto">' + escHtml(p.nombre) + "</span>" +
+          '<span class="hoja-banner-texto">Hoja de Personaje</span>' +
           "</div>" +
-          '<div class="hoja-pieza hoja-nivel">Nv. ' + p.nivel + "/" + MAX_NIV_PJ + "</div>" +
           '<div class="hoja-pieza hoja-xp" style="background-image:url(\'' + libroSrc("xp-fondo") + "')\">" +
           '<div class="hoja-xp-relleno" style="width:' + xpPct + '%"></div>' +
+          '<span class="hoja-xp-texto">' + escHtml(p.nombre) + " · Nv. " + p.nivel + "/" + MAX_NIV_PJ + "</span>" +
           "</div>" +
           '<img class="hoja-pieza hoja-xp-marco" src="' + libroSrc("xp-marco") + '" alt="" />' +
           '<img class="hoja-pieza hoja-cuadro-equipo" src="' + libroSrc("cuadro-equipo") + '" alt="" />' +
@@ -819,7 +880,9 @@ function tabPersonaje(p, t, b) {
           "</div>" +
           banderinesLibro() +
           '<img class="hoja-pieza hoja-marco-inv" src="' + libroSrc("marco-inventario") + '" alt="" />' +
+          '<div class="hoja-pieza hoja-inv-titulo">Inventario</div>' +
           '<div class="hoja-pieza hoja-grid-inv-wrap">' + gridBolsaLibro(p) + "</div>" +
+          filtroLibroHtml(p) +
           '<button class="hoja-pieza hoja-cerrar" style="background-image:url(\'' + libroSrc("boton-cerrar") + "')\" onclick=\"cerrarInv()\" aria-label=\"Cerrar\"></button>" +
           "</div>" +
           (insignias ? '<div class="libro-insignias">' + insignias + "</div>" : "") +
@@ -829,8 +892,7 @@ function tabPersonaje(p, t, b) {
           '<div class="chips-mejoras">' +
           chips +
           "</div>" +
-          '<h3 class="libro-subtitulo">Filtrar / ordenar la bolsa</h3>' +
-          filtroCtrlHtml(p) +
+          '<h3 class="libro-subtitulo">Ordenar la bolsa</h3>' +
           ordCtrlHtml(p) +
           panelAccionItem(p) +
           rankingSesion()

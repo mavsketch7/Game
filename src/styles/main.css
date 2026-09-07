@@ -1972,22 +1972,12 @@ img.hoja-pieza {
   text-overflow: ellipsis;
   max-width: 84%;
 }
-.hoja-nivel {
-  left: 24%;
-  top: 20.6%;
-  width: 20%;
-  height: 3.2%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: #2a1e10;
-  border: 1px solid #8a6a34;
-  border-radius: 3px;
-  font-size: clamp(0.55rem, 1.7cqw, 0.78rem);
-  color: #f4e6c4;
-  font-weight: 800;
-  text-align: center;
-}
+/* Nombre + nivel + barra de XP juntos en esta única pieza (pedido
+   expreso: "en este div debería de aparecer la barra de experiencia,
+   nombre de personaje y nivel") -- el texto va superpuesto encima de la
+   barra en vez de en una casilla aparte, ahora que el banner de arriba
+   pasó a ser un título fijo ("Hoja de Personaje") y ya no muestra el
+   nombre. */
 .hoja-xp {
   left: 14.2%;
   top: 23.6%;
@@ -1995,10 +1985,29 @@ img.hoja-pieza {
   height: 6%;
   border-radius: 2px;
   overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 .hoja-xp-relleno {
+  position: absolute;
+  left: 0;
+  top: 0;
   height: 100%;
   background: linear-gradient(90deg, #7a5a3a, #e2c489);
+}
+.hoja-xp-texto {
+  position: relative;
+  font-size: clamp(0.42rem, 1.3cqw, 0.62rem);
+  font-weight: 800;
+  color: #fff3d6;
+  text-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.9),
+    0 0 3px rgba(0, 0, 0, 0.7);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 92%;
 }
 .hoja-xp-marco {
   left: 12.6%;
@@ -2052,19 +2061,30 @@ img.hoja-pieza {
   height: 29%;
   background: radial-gradient(ellipse 70% 60% at center, #241b12 0%, transparent 75%);
 }
+/* Dos columnas EXPLÍCITAS (no una rejilla que reparte los items en zigzag
+   entre columnas) -- pedido expreso: izquierda todas las estadísticas en
+   lista, derecha todas las habilidades. Cada .hoja-stats-col es su propia
+   columna flex, así ninguna de las dos listas se entrelaza con la otra
+   pase lo que pase con la cantidad de items de cada una (las habilidades
+   varían por clase, ver habilidadesLibro() en inventory.js). */
 .hoja-stats {
   left: 15.4%;
   top: 64.8%;
   width: 34.5%;
   height: 22.1%;
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  align-content: center;
-  justify-items: center;
-  gap: 2px 4px;
+  display: flex;
+  align-items: center;
+  gap: 4%;
   padding: 0 6%;
-  font-size: clamp(0.4rem, 1.3cqw, 0.6rem);
+  font-size: clamp(0.38rem, 1.15cqw, 0.56rem);
   color: var(--piedra);
+}
+.hoja-stats-col {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
 }
 .hoja-stat {
   display: flex;
@@ -2072,6 +2092,24 @@ img.hoja-pieza {
   gap: 3px;
   overflow: hidden;
   white-space: nowrap;
+}
+.hoja-hab {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.hoja-hab b {
+  flex-shrink: 0;
+  min-width: 1.6em;
+  text-align: center;
+  padding: 0 2px;
+  border-radius: 2px;
+  background: rgba(36, 27, 18, 0.16);
+  font-size: 0.85em;
+  font-weight: 800;
 }
 .hoja-stat b {
   font-weight: 800;
@@ -2082,6 +2120,10 @@ img.hoja-pieza {
   width: 5.2%;
   height: 9.5%;
   border: none;
+  /* Los <button> traen su propio background-color de sistema (gris) --
+     sin esto se veía asomando por las esquinas del PNG, que no es un
+     rectángulo opaco del todo (bordes con alfa parcial). */
+  background-color: transparent;
   padding: 0;
   cursor: pointer;
   background-repeat: no-repeat;
@@ -2111,13 +2153,52 @@ img.hoja-pieza {
   width: 33.7%;
   height: 53.3%;
 }
+.hoja-inv-titulo {
+  left: 56.6%;
+  top: 23.3%;
+  width: 25.8%;
+  font-family: "Dungeon Font", "Cinzel", serif;
+  font-weight: 800;
+  font-size: clamp(0.42rem, 1.3cqw, 0.62rem);
+  color: var(--piedra);
+  text-align: center;
+}
+/* Deja una franja arriba (título) y otra abajo (filtro, ver .hoja-filtro)
+   dentro del propio marco de inventario -- antes ocupaba casi todo el
+   alto del marco, pedido expreso de hacerle hueco a las dos. */
 .hoja-grid-inv-wrap {
   left: 56.6%;
-  top: 24.1%;
+  top: 27%;
   width: 25.8%;
-  height: 38.7%;
+  height: 31%;
   overflow-y: auto;
   padding: 1.5%;
+}
+.hoja-filtro {
+  left: 56.6%;
+  top: 59%;
+  width: 25.8%;
+  height: 15.5%;
+  overflow-y: auto;
+  display: flex;
+  flex-wrap: wrap;
+  align-content: flex-start;
+  gap: 3%;
+}
+.hoja-filtro button {
+  border: 1px solid var(--borde);
+  background: var(--piedra2);
+  color: var(--hueso);
+  border-radius: 4px;
+  padding: 2% 4%;
+  font-size: clamp(0.36rem, 1.05cqw, 0.5rem);
+  font-weight: 700;
+  cursor: pointer;
+}
+.hoja-filtro button.on {
+  border-color: var(--vespero);
+  background: #2e2416;
+  color: var(--vespero);
 }
 .grid-inv-libro {
   display: grid;
@@ -2159,6 +2240,7 @@ img.hoja-pieza {
   width: 7.1%;
   height: 9%;
   border: none;
+  background-color: transparent;
   padding: 0;
   cursor: pointer;
   background-repeat: no-repeat;
