@@ -50,6 +50,33 @@ const PESTANAS_INV = [
         { id: "ajustes", ico: "⚙", nombre: "Ajustes" },
       ];
 let invTab = "personaje";
+
+// ---- Ficha de personaje "libro real" (arte "libro inventario-menu",
+// torre-vespero-assets/UI, ver public/assets/ui/libro/) -- ver
+// tabPersonaje() más abajo. Coordenadas en % calculadas contra el
+// lienzo nativo del arte (267x199 -- ver el .aseprite de origen), así
+// el contenedor solo necesita aspect-ratio para que todo escale junto
+// sin recalcular nada al cambiar el tamaño de ventana.
+const libroSrc = (nombre) => `${import.meta.env.BASE_URL}assets/ui/libro/${nombre}.png`;
+// 7 casillas reales detectadas en la capa "cuadro-equipo" (no 6 como
+// parecía a ojo -- la caja inferior izquierda son en realidad DOS
+// casillas con un borde compartido, confirmado muestreando los píxeles).
+// Agrupadas por intención: columna izquierda = arma/escudo/joyas,
+// columna derecha (junto al retrato) = armadura de pies a cabeza.
+const LIBRO_SLOT_POS = {
+  arma: { l: 15.4, t: 33.7, w: 6.7, h: 9.0 },
+  escudo: { l: 15.4, t: 44.2, w: 6.7, h: 9.0 },
+  collar: { l: 15.4, t: 54.8, w: 6.4, h: 9.0 },
+  anillo: { l: 22.1, t: 54.8, w: 6.4, h: 9.0 },
+  casco: { l: 41.6, t: 33.7, w: 6.7, h: 9.0 },
+  peto: { l: 41.6, t: 44.2, w: 6.7, h: 9.0 },
+  piernas: { l: 41.6, t: 54.8, w: 6.7, h: 9.0 },
+};
+// Alto de cada banderín + hueco hasta el siguiente, medido en la capa
+// "banderines" del .aseprite (4 pestañas de 19px cada 23px, /199 de
+// alto total * 100).
+const LIBRO_BANDERIN_PASO = 11.56;
+const LIBRO_BANDERIN_TOP0 = 24.1;
 // objeto de la bolsa seleccionado en la pestaña Equipamiento (-1 = ninguno)
 let idxSel = -1;
 // uid del fragmento de la bolsa de Alma elegido para colocar (null = ninguno)
@@ -165,31 +192,6 @@ function rankingSesion() {
           '<div class="ranking-sesion"><h3 style="margin-top:14px;font-size:.85rem;color:var(--vespero)">🏆 Ranking de la sesión</h3>' +
           header +
           filas +
-          "</div>"
-        );
-      }
-
-// Estadística de la ficha de personaje con icono y, cuando el stat tiene un
-// techo natural (vida actual/máxima, % de crítico, % de CDR), una barrita
-// de progreso -- daño/armadura/velocidad no tienen techo fijo (crecen sin
-// límite con equipo) así que se quedan solo en número para no dar una
-// lectura visual engañosa.
-function fichaStat(ico, etq, valor, pct) {
-        const barra =
-          pct == null
-            ? ""
-            : '<div class="ficha-stat-bar"><div style="width:' +
-              clamp(pct, 0, 100) +
-              '%"></div></div>';
-        return (
-          '<div class="ficha-stat">' +
-          ico +
-          " " +
-          etq +
-          "<b>" +
-          valor +
-          "</b>" +
-          barra +
           "</div>"
         );
       }
@@ -664,6 +666,99 @@ function ordCtrlHtml(p) {
         );
       }
 
+// Casilla de equipo dentro del libro: mismo `.eq-slot` de siempre (hereda
+// drag&drop + tooltip ya existentes) más `.hoja-slot`, que lo reposiciona
+// como icono suelto absolutamente colocado en vez de la fila con
+// icono+nombre en línea que usa celdaSlotEquipo() -- no cabe texto en una
+// casilla de ~18px nativos. El nombre/rareza siguen disponibles en el
+// tooltip al pasar el cursor, igual que antes.
+function celdaSlotLibro(slot, p) {
+        const it = p.equipo[slot];
+        const label = SLOT_LABEL[slot] || slot;
+        const pos = LIBRO_SLOT_POS[slot];
+        const style =
+          "left:" + pos.l + "%;top:" + pos.t + "%;width:" + pos.w + "%;height:" + pos.h + "%" +
+          (it ? ";border-color:" + RAREZAS[it.rareza].col : "");
+        const dropAttrs =
+          ' ondragover="permitirSoltar(event)" ondragleave="quitarResaltadoSlot(event)" ondrop="soltarEnSlot(event,\'' +
+          slot +
+          '\')"';
+        if (!it) {
+          return (
+            '<div class="eq-slot hoja-slot vacio" style="' + style + '"' + dropAttrs + ">" +
+            '<div class="item-tooltip"><div class="tt-nombre" style="color:var(--ceniza)">' +
+            label +
+            '</div><div class="tt-slot">Vacío</div></div>' +
+            "</div>"
+          );
+        }
+        const rar = RAREZAS[it.rareza];
+        return (
+          '<div class="eq-slot hoja-slot" style="' + style + '"' + dropAttrs + ">" +
+          '<img class="eq-slot-ico" src="' + iconoUrl(it) + '" alt="" />' +
+          '<div class="item-tooltip">' +
+          '<div class="tt-nombre ' + rar.cls + '">' + escHtml(it.nombre) + "</div>" +
+          '<div class="tt-slot">' + label + ' · <span class="' + rar.cls + '">' + rar.n + "</span></div>" +
+          (it.efectoDesc ? '<div class="tt-efecto">✦ ' + escHtml(it.efectoDesc) + "</div>" : "") +
+          (typeof it.kills === "number" ? '<div class="tt-efecto">🗡 ' + it.kills + " kills con esta arma</div>" : "") +
+          '<div class="tt-stat-linea">' + fmtStats(it.stats) + "</div>" +
+          "</div>" +
+          "</div>"
+        );
+      }
+
+// Celda de la bolsa dentro del libro: icono suelto (sin nombre/tipo/
+// impacto en línea, a diferencia de celdaItem() de la rejilla grande de
+// siempre) -- la página derecha del libro es demasiado pequeña para esa
+// densidad de texto. Mismo tooltip resumido que celdaSlotLibro.
+function celdaItemLibro(it, idx, p) {
+        const rar = RAREZAS[it.rareza];
+        const seleccionada = idx === idxSel;
+        return (
+          '<div class="item-cell-libro' + (seleccionada ? " seleccionada" : "") + '" style="border-color:' + rar.col + '"' +
+          ' draggable="true" ondragstart="arrastrarItemInicio(event,' + idx + ')" ondragend="arrastrarItemFin(event)" onclick="selItemInv(' + idx + ')">' +
+          '<img src="' + iconoUrl(it) + '" alt="" />' +
+          '<div class="item-tooltip">' +
+          '<div class="tt-nombre ' + rar.cls + '">' + escHtml(it.nombre) + "</div>" +
+          '<div class="tt-slot">' + (SLOT_LABEL[it.slot] || it.slot) + ' · <span class="' + rar.cls + '">' + rar.n + "</span></div>" +
+          "</div>" +
+          "</div>"
+        );
+      }
+
+function gridBolsaLibro(p) {
+        const filtro = p.filtroBolsa || "todos";
+        const bolsaFiltrada = p.bolsa
+          .map((it, i) => ({ it, i }))
+          .filter(({ it }) => filtro === "todos" || it.slot === filtro);
+        if (!p.bolsa.length)
+          return '<p class="hoja-bolsa-vacia">Bolsa vacía.</p>';
+        if (!bolsaFiltrada.length)
+          return '<p class="hoja-bolsa-vacia">Nada de ese tipo.</p>';
+        return (
+          '<div class="grid-inv-libro">' +
+          bolsaFiltrada.map(({ it, i }) => celdaItemLibro(it, i, p)).join("") +
+          "</div>"
+        );
+      }
+
+// Banderines del lomo del libro: sustituyen a la fila .tabs-jug de
+// siempre SOLO en esta pestaña (ver el condicional en abrirInv()) --
+// mismo onclick="invSel(i)" que ya usaba esa fila, el punto de color por
+// jugador reemplaza el border-left que usaba la versión plana.
+function banderinesLibro() {
+        return G.players
+          .map((q, i) => {
+            const top = LIBRO_BANDERIN_TOP0 + i * LIBRO_BANDERIN_PASO;
+            return (
+              '<button class="hoja-banderin' + (i === G.invSel ? " activa" : "") + '" style="top:' + top + '%;background-image:url(\'' + libroSrc("banderin") + "')\" onclick=\"invSel(" + i + ')" title="' + escHtml(q.nombre) + '">' +
+              '<span class="hoja-banderin-punto" style="background:' + q.color + '"></span>' +
+              "</button>"
+            );
+          })
+          .join("");
+      }
+
 function tabPersonaje(p, t, b) {
         const xpPct =
           p.nivel >= MAX_NIV_PJ ? 100 : Math.round((p.xp / p.xpSig) * 100);
@@ -691,81 +786,52 @@ function tabPersonaje(p, t, b) {
               })
               .join("")
           : '<span style="color:var(--ceniza);font-size:.72rem">Ninguna todavía — sube de nivel</span>';
-        const slotsHtml = SLOTS.map((s) => celdaSlotEquipo(s, p)).join("");
         const statsHtml =
-          fichaStat("⚔", "Daño", t.atk, null) +
-          fichaStat(
-            "❤",
-            "Vida",
-            Math.ceil(p.hp) + " / " + t.hpMax,
-            (p.hp / t.hpMax) * 100,
-          ) +
-          fichaStat("🛡", "Armadura", t.armor, null) +
-          fichaStat("🎯", "Crítico", t.crit + "%", (t.crit / 85) * 100) +
-          fichaStat("💨", "Velocidad", t.vel, null) +
-          fichaStat("⏱", "Red. CD", t.cdr + "%", (t.cdr / 55) * 100);
-        return (
-          '<div class="ficha-cab">' +
-          '<div class="ficha-datos">' +
-          '<h3 style="color:' +
-          p.color +
-          '">' +
-          escHtml(p.nombre) +
-          ' <span style="color:var(--ceniza);font-weight:400;font-size:.85rem">' +
-          b.nombre +
-          "</span></h3>" +
-          '<div class="ficha-nivel">Nivel ' +
-          p.nivel +
-          " / " +
-          MAX_NIV_PJ +
+          '<div class="hoja-stat" title="Daño">⚔<b>' + t.atk + "</b></div>" +
+          '<div class="hoja-stat" title="Vida">❤<b>' + Math.ceil(p.hp) + "/" + t.hpMax + "</b></div>" +
+          '<div class="hoja-stat" title="Armadura">🛡<b>' + t.armor + "</b></div>" +
+          '<div class="hoja-stat" title="Crítico">🎯<b>' + t.crit + "%</b></div>" +
+          '<div class="hoja-stat" title="Velocidad">💨<b>' + t.vel + "</b></div>" +
+          '<div class="hoja-stat" title="Reducción de cooldown">⏱<b>' + t.cdr + "%</b></div>";
+        const insignias =
           (p.rol === "druida"
-            ? ' · <span style="color:' +
-              FORMAS_INFO[p.forma].color +
-              '">' +
-              FORMAS_INFO[p.forma].ico +
-              " " +
-              FORMAS_INFO[p.forma].nombre +
-              "</span>"
+            ? '<span style="color:' + FORMAS_INFO[p.forma].color + '">' + FORMAS_INFO[p.forma].ico + " " + FORMAS_INFO[p.forma].nombre + "</span>"
             : "") +
           (p.cartasPendientes > 0
-            ? ' · <span style="color:#ffd27f">★ ' +
-              p.cartasPendientes +
-              " tarjeta(s) pendiente(s)</span>"
-            : "") +
+            ? ' <span style="color:#ffd27f">★ ' + p.cartasPendientes + " tarjeta(s) pendiente(s)</span>"
+            : "");
+        return (
+          '<div class="hoja-libro">' +
+          '<img class="hoja-fondo" src="' + libroSrc("fondo") + '" alt="" />' +
+          '<div class="hoja-pieza hoja-banner" style="background-image:url(\'' + libroSrc("banner") + "')\">" +
+          '<span class="hoja-banner-texto">' + escHtml(p.nombre) + "</span>" +
           "</div>" +
-          '<div class="ficha-xpbar"><div style="width:' +
-          xpPct +
-          '%"></div></div>' +
-          '<div style="font-size:.68rem;color:var(--ceniza);margin-top:2px">' +
-          (p.nivel >= MAX_NIV_PJ
-            ? "NIVEL MÁXIMO"
-            : p.xp + " / " + p.xpSig + " XP") +
+          '<div class="hoja-pieza hoja-nivel">Nv. ' + p.nivel + "/" + MAX_NIV_PJ + "</div>" +
+          '<div class="hoja-pieza hoja-xp" style="background-image:url(\'' + libroSrc("xp-fondo") + "')\">" +
+          '<div class="hoja-xp-relleno" style="width:' + xpPct + '%"></div>' +
           "</div>" +
-          "</div>" +
-          "</div>" +
-          '<div class="ficha-libro-top">' +
-          '<div class="ficha-libro-slots">' +
-          slotsHtml +
-          "</div>" +
-          '<div class="ficha-libro-preview"><canvas id="ficha-retrato" width="160" height="180"></canvas></div>' +
-          '<div class="ficha-libro-stats">' +
+          '<img class="hoja-pieza hoja-xp-marco" src="' + libroSrc("xp-marco") + '" alt="" />' +
+          '<img class="hoja-pieza hoja-cuadro-equipo" src="' + libroSrc("cuadro-equipo") + '" alt="" />' +
+          SLOTS.map((s) => celdaSlotLibro(s, p)).join("") +
+          '<canvas id="ficha-retrato" class="hoja-pieza hoja-retrato" width="160" height="180"></canvas>' +
+          '<div class="hoja-pieza hoja-stats" style="background-image:url(\'' + libroSrc("panel-stats") + "')\">" +
           statsHtml +
           "</div>" +
+          banderinesLibro() +
+          '<img class="hoja-pieza hoja-marco-inv" src="' + libroSrc("marco-inventario") + '" alt="" />' +
+          '<div class="hoja-pieza hoja-grid-inv-wrap">' + gridBolsaLibro(p) + "</div>" +
+          '<button class="hoja-pieza hoja-cerrar" style="background-image:url(\'' + libroSrc("boton-cerrar") + "')\" onclick=\"cerrarInv()\" aria-label=\"Cerrar\"></button>" +
           "</div>" +
-          '<h3 style="margin-top:14px;font-size:.85rem;color:var(--vespero)">Mejoras de nivel (' +
+          (insignias ? '<div class="libro-insignias">' + insignias + "</div>" : "") +
+          '<h3 class="libro-subtitulo">Mejoras de nivel (' +
           p.cartasElegidas.length +
           ")</h3>" +
           '<div class="chips-mejoras">' +
           chips +
           "</div>" +
-          '<h3 style="margin-top:14px;font-size:.85rem;color:var(--vespero)">Bolsa de ' +
-          escHtml(p.nombre) +
-          " (" +
-          p.bolsa.length +
-          ")</h3>" +
+          '<h3 class="libro-subtitulo">Filtrar / ordenar la bolsa</h3>' +
           filtroCtrlHtml(p) +
           ordCtrlHtml(p) +
-          gridBolsa(p) +
           panelAccionItem(p) +
           rankingSesion()
         );
@@ -1397,9 +1463,11 @@ export function abrirInv() {
               "</button>"
             : "") +
           '<button class="btn dorado" onclick="cerrarInv()">Volver (Tab / Start)</button></div></div>' +
-          '<div class="tabs-jug">' +
-          tabsJug +
-          "</div>" +
+          // En "personaje" el libro ya trae sus propios banderines de
+          // jugador en el lomo (ver banderinesLibro(), dentro de
+          // tabPersonaje()) -- la fila plana de siempre solo hace falta en
+          // el resto de pestañas, que no tienen ese fondo.
+          (invTab === "personaje" ? "" : '<div class="tabs-jug">' + tabsJug + "</div>") +
           '<div class="inv-contenido">' +
           contenido +
           "</div>" +

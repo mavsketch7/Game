@@ -1835,77 +1835,6 @@ body.pantalla-completa #hint {
   color: #1a1206;
   font-weight: 800;
 }
-.ficha-cab {
-  display: flex;
-  gap: 14px;
-  align-items: center;
-  background: var(--piedra);
-  border: 1px solid var(--borde);
-  border-radius: 12px;
-  padding: 12px 14px;
-  margin-top: 10px;
-  flex-wrap: wrap;
-}
-.ficha-cab canvas {
-  image-rendering: pixelated;
-  background: #120d08;
-  border-radius: 8px;
-  border: 1px solid var(--borde);
-}
-.ficha-datos {
-  flex: 1;
-  min-width: 200px;
-}
-.ficha-datos h3 {
-  font-size: 1.05rem;
-}
-.ficha-nivel {
-  font-size: 0.78rem;
-  color: var(--vespero);
-  font-weight: 800;
-}
-.ficha-xpbar {
-  height: 8px;
-  background: #120d08;
-  border: 1px solid var(--borde);
-  border-radius: 5px;
-  overflow: hidden;
-  margin-top: 5px;
-}
-.ficha-xpbar div {
-  height: 100%;
-  background: linear-gradient(90deg, #3a7a4a, #5aba6a);
-}
-.ficha-stats {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(105px, 1fr));
-  gap: 5px;
-  margin-top: 8px;
-}
-.ficha-stat {
-  background: var(--piedra2);
-  border: 1px solid var(--borde);
-  border-radius: 6px;
-  padding: 4px 8px;
-  font-size: 0.72rem;
-  color: var(--ceniza);
-}
-.ficha-stat b {
-  color: var(--hueso);
-  display: block;
-  font-size: 0.88rem;
-}
-.ficha-stat-bar {
-  height: 4px;
-  background: #120d08;
-  border-radius: 3px;
-  overflow: hidden;
-  margin-top: 3px;
-}
-.ficha-stat-bar div {
-  height: 100%;
-  background: linear-gradient(90deg, #7a5a3a, #e2c489);
-}
 .chips-mejoras {
   display: flex;
   flex-wrap: wrap;
@@ -1937,40 +1866,6 @@ body.pantalla-completa #hint {
   color: var(--alba);
 }
 
-/* ===== Página "Ficha de Personaje": preview animado + slots de equipo +
-   stats (ver ui/inventory.js: tabPersonaje()). Columna de slots a la
-   izquierda, preview centrado, stats a la derecha; inventario/filtros
-   debajo a todo lo ancho (reutiliza .grid-inv ya existente). */
-.ficha-libro-top {
-  display: grid;
-  grid-template-columns: 150px 1fr 220px;
-  gap: 16px;
-  align-items: stretch;
-}
-.ficha-libro-slots {
-  display: flex;
-  flex-direction: column;
-  gap: 7px;
-}
-.ficha-libro-preview {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
-  text-align: center;
-}
-.ficha-libro-preview canvas {
-  image-rendering: pixelated;
-  background: radial-gradient(ellipse 70% 60% at center, #241b12 0%, transparent 75%);
-}
-.ficha-libro-stats {
-  background: var(--piedra2);
-  border: 1px solid var(--borde);
-  border-radius: 8px;
-  padding: 10px 12px;
-  align-self: start;
-}
 .eq-slot {
   position: relative;
   display: flex;
@@ -2015,6 +1910,266 @@ body.pantalla-completa #hint {
   overflow: hidden;
   text-overflow: ellipsis;
 }
+
+/* ===== Ficha de personaje: libro real (arte "libro inventario-menu",
+   torre-vespero-assets/UI/, ver public/assets/ui/libro/ y tabPersonaje()
+   en ui/inventory.js). Todas las posiciones son % contra el lienzo
+   nativo del arte (267x199) -- el contenedor solo necesita
+   aspect-ratio para que todo escale junto sin recalcular nada al
+   cambiar el tamaño de ventana. */
+.hoja-libro {
+  position: relative;
+  width: 100%;
+  max-width: 860px;
+  margin: 0 auto;
+  aspect-ratio: 267 / 199;
+  container-type: inline-size;
+}
+.hoja-fondo {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  image-rendering: pixelated;
+  pointer-events: none;
+}
+.hoja-pieza {
+  position: absolute;
+  image-rendering: pixelated;
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
+}
+img.hoja-pieza {
+  pointer-events: none;
+}
+.hoja-banner {
+  left: 3%;
+  top: 12.6%;
+  width: 44.2%;
+  height: 9.5%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.hoja-banner-texto {
+  font-family: "Dungeon Font", "Cinzel", serif;
+  font-weight: 800;
+  font-size: clamp(0.55rem, 1.7cqw, 0.95rem);
+  color: #f4e6c4;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 84%;
+}
+.hoja-nivel {
+  left: 24%;
+  top: 20.6%;
+  width: 20%;
+  height: 3.2%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #2a1e10;
+  border: 1px solid #8a6a34;
+  border-radius: 3px;
+  font-size: clamp(0.55rem, 1.7cqw, 0.78rem);
+  color: #f4e6c4;
+  font-weight: 800;
+  text-align: center;
+}
+.hoja-xp {
+  left: 14.2%;
+  top: 23.6%;
+  width: 36.7%;
+  height: 6%;
+  border-radius: 2px;
+  overflow: hidden;
+}
+.hoja-xp-relleno {
+  height: 100%;
+  background: linear-gradient(90deg, #7a5a3a, #e2c489);
+}
+.hoja-xp-marco {
+  left: 12.6%;
+  top: 22.6%;
+  width: 39.3%;
+  height: 9%;
+}
+.hoja-cuadro-equipo {
+  left: 15.4%;
+  top: 33.7%;
+  width: 33%;
+  height: 30.2%;
+}
+.hoja-slot {
+  position: absolute;
+  /* Transparente por defecto -- el estilo inline de celdaSlotLibro() le
+     pone el color de rareza SOLO si hay objeto equipado, así se ve como
+     un halo alrededor del icono en vez de un marco visible sobre la
+     casilla vacía (que ya dibuja su propio contorno el arte de fondo). */
+  border: 2px solid transparent;
+  background: transparent;
+  border-radius: 3px;
+  /* Nada de padding en % aquí -- un % de padding se calcula SIEMPRE
+     contra el ancho del CONTENEDOR (.hoja-libro, ~860px), no contra el
+     tamaño propio de esta casilla (~6% de eso) -- con box-sizing:border-
+     box eso fuerza la casilla a expandirse para caber el padding,
+     duplicando su tamaño real (bug detectado: casillas de 6.7%/9%
+     renderizando a 12.5%/16.7%). El margen visual del icono se consigue
+     centrando un hijo más pequeño que la propia casilla (ver
+     .hoja-slot .eq-slot-ico), no con padding.
+  */
+  padding: 0;
+  min-height: 0;
+  gap: 0;
+  justify-content: center;
+}
+.hoja-slot .eq-slot-ico {
+  width: 78%;
+  height: 78%;
+}
+/* Anula el opacity que .eq-slot.vacio aplica normalmente (pensado para
+   la fila plana de siempre) -- aquí la propia ilustración del
+   cuadro-equipo.png ya dibuja la casilla vacía, no hace falta atenuarla. */
+.hoja-slot.vacio {
+  opacity: 1;
+}
+.hoja-retrato {
+  left: 29%;
+  top: 34.2%;
+  width: 12.5%;
+  height: 29%;
+  background: radial-gradient(ellipse 70% 60% at center, #241b12 0%, transparent 75%);
+}
+.hoja-stats {
+  left: 15.4%;
+  top: 64.8%;
+  width: 34.5%;
+  height: 22.1%;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  align-content: center;
+  justify-items: center;
+  gap: 2px 4px;
+  padding: 0 6%;
+  font-size: clamp(0.4rem, 1.3cqw, 0.6rem);
+  color: var(--piedra);
+}
+.hoja-stat {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  overflow: hidden;
+  white-space: nowrap;
+}
+.hoja-stat b {
+  font-weight: 800;
+}
+.hoja-banderin {
+  position: absolute;
+  left: 6.7%;
+  width: 5.2%;
+  height: 9.5%;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
+  image-rendering: pixelated;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  filter: brightness(0.7);
+  transition: filter 0.15s;
+}
+.hoja-banderin:hover {
+  filter: brightness(0.9);
+}
+.hoja-banderin.activa {
+  filter: brightness(1.15);
+}
+.hoja-banderin-punto {
+  width: 34%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.5);
+}
+.hoja-marco-inv {
+  left: 54.7%;
+  top: 22.6%;
+  width: 33.7%;
+  height: 53.3%;
+}
+.hoja-grid-inv-wrap {
+  left: 56.6%;
+  top: 24.1%;
+  width: 25.8%;
+  height: 38.7%;
+  overflow-y: auto;
+  padding: 1.5%;
+}
+.grid-inv-libro {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(17%, 1fr));
+  gap: 6%;
+}
+.item-cell-libro {
+  position: relative;
+  aspect-ratio: 1;
+  border: 1px solid;
+  border-radius: 2px;
+  background: rgba(30, 22, 12, 0.3);
+  cursor: pointer;
+  padding: 6%;
+}
+.item-cell-libro img {
+  width: 100%;
+  height: 100%;
+  image-rendering: pixelated;
+}
+.item-cell-libro.seleccionada {
+  outline: 2px solid var(--vespero);
+  outline-offset: 1px;
+}
+.hoja-bolsa-vacia {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 10%;
+  text-align: center;
+  font-size: clamp(0.42rem, 1.2cqw, 0.62rem);
+  color: var(--piedra);
+  opacity: 0.75;
+  padding: 0 6%;
+}
+.hoja-cerrar {
+  left: 89.5%;
+  top: 3%;
+  width: 7.1%;
+  height: 9%;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
+  image-rendering: pixelated;
+  transition: filter 0.15s;
+}
+.hoja-cerrar:hover {
+  filter: brightness(1.25);
+}
+.libro-insignias {
+  margin-top: 8px;
+  font-size: 0.72rem;
+  text-align: center;
+}
+.libro-subtitulo {
+  margin-top: 14px;
+  font-size: 0.85rem;
+  color: var(--vespero);
+}
+
 /* Celda de bolsa arrastrable -- ver arrastrarItemInicio() en inventory.js. */
 .item-cell[draggable="true"] {
   cursor: grab;
