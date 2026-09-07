@@ -899,11 +899,36 @@ function tabPersonaje(p, t, b) {
         );
       }
 
+// Envuelve el contenido de una pestaña que NO es "personaje" (Mapa/Alma/
+// Herrería/Ajustes) en el mismo libro de fondo (fondo.png, las 2 páginas
+// en blanco + bordes/esquinas, sin las piezas de equipo/inventario que
+// eran solo para la ficha) -- pedido expreso: "abandonar ya el sistema
+// actual y que todo se base en el libro, usándolo de fondo". No hay arte
+// específico por pestaña (a diferencia de personaje), así que cada
+// página es una tarjeta oscura semitransparente sobre el papel -- el
+// contenido de cada pestaña sigue exactamente igual (mismo HTML/CSS/
+// colores de siempre, ya probados), solo cambia el marco que lo rodea.
+// `der` es opcional: si se omite, `izq` ocupa una única página centrada
+// (pensado para contenido pequeño como el minimapa); si se pasa, cada
+// argumento va en su propia página.
+function envolverEnLibroBlanco(izq, der) {
+        const paginas =
+          der != null
+            ? '<div class="hoja-libro-blanco-pagina">' + izq + "</div>" +
+              '<div class="hoja-libro-blanco-pagina">' + der + "</div>"
+            : '<div class="hoja-libro-blanco-pagina hoja-libro-blanco-sola">' + izq + "</div>";
+        return (
+          '<div class="hoja-libro-blanco" style="background-image:url(\'' + libroSrc("fondo") + "')\">" +
+          '<div class="hoja-libro-blanco-paginas">' + paginas + "</div>" +
+          "</div>"
+        );
+      }
+
 function tabMapa() {
         const mm = minimapaPlanta();
-        return (
+        return envolverEnLibroBlanco(
           mm ||
-          '<p style="color:var(--ceniza)">Sin mapa en esta sala (las plantas de jefe son una única sala).</p>'
+            '<p style="color:var(--ceniza)">Sin mapa en esta sala (las plantas de jefe son una única sala).</p>',
         );
       }
 
@@ -1055,7 +1080,7 @@ function tabAlma() {
         const bolsaFrag = a.inventario.length
           ? a.inventario.map(fragEnBolsaLinea).join("")
           : '<p style="color:var(--ceniza);font-size:.8rem">Sin fragmentos sueltos. Desmantela armas en la Mesa de Trabajo del vestíbulo.</p>';
-        return (
+        const paginaIzq =
           '<div class="alma-cab">' +
           '<b style="color:var(--vespero)">🔮 Rejilla del Alma</b>' +
           '<div style="font-size:.75rem;color:var(--ceniza);margin-top:2px">Progreso de cuenta, compartido por todo el grupo. Rompe casillas con oro + puntos (uno por cada nivel que alcance cualquier personaje) y encaja fragmentos: si la salida de uno conecta con la entrada de otro, se activa su bonificación extra.</div>' +
@@ -1075,8 +1100,9 @@ function tabAlma() {
           ALMA_COLS +
           ',1fr)">' +
           celdas +
-          "</div>" +
-          '<h3 style="margin-top:14px;font-size:.85rem;color:var(--vespero)">Fragmentos sueltos (' +
+          "</div>";
+        const paginaDer =
+          '<h3 style="margin-top:0;font-size:.85rem;color:var(--vespero)">Fragmentos sueltos (' +
           a.inventario.length +
           ")</h3>" +
           (fragSel
@@ -1084,8 +1110,8 @@ function tabAlma() {
             : "") +
           '<div class="frag-bolsa">' +
           bolsaFrag +
-          "</div>"
-        );
+          "</div>";
+        return envolverEnLibroBlanco(paginaIzq, paginaDer);
       }
 
 function seleccionarFragAlma(uid) {
@@ -1309,10 +1335,8 @@ function tabHerreria(p) {
           ' <span style="font-size:.7rem;color:var(--ceniza)">coge 3 iguales automáticamente (prioriza la rareza más alta)</span></div>' +
           avisoF +
           "</div>";
-        return (
-          escena +
-          fusion +
-          '<h3 style="margin-top:14px;font-size:.85rem;color:var(--vespero)">Bolsa de ' +
+        const paginaDer =
+          '<h3 style="margin-top:0;font-size:.85rem;color:var(--vespero)">Bolsa de ' +
           escHtml(p.nombre) +
           " (" +
           p.bolsa.length +
@@ -1320,8 +1344,8 @@ function tabHerreria(p) {
           filtroCtrlHtml(p) +
           ordCtrlHtml(p) +
           gridBolsa(p) +
-          panelAccionItem(p)
-        );
+          panelAccionItem(p);
+        return envolverEnLibroBlanco(escena + fusion, paginaDer);
       }
 
 // Ajustes: antes overlay aparte (#ajustes, accesible con el botón ⚙ incluso
@@ -1338,87 +1362,95 @@ function tabAjustes() {
           ["L", 1.2],
           ["XL", 1.45],
         ];
-        return (
+        // Array de filas (en vez de una única cadena) para poder repartirlas
+        // en las dos páginas del libro -- ver envolverEnLibroBlanco() más
+        // arriba, mismo criterio que tabAlma()/tabHerreria().
+        const filas = [
           '<div class="ajuste-fila"><div><h4>🖥 Pantalla completa</h4>' +
-          '<div class="a-desc">Ocupa toda la pantalla (también con F11 o la tecla F).</div></div>' +
-          '<div class="ajuste-ctrl"><button class="btn' +
-          (esPantallaCompleta() || maximizado ? " dorado" : "") +
-          '" onclick="toggleFullscreen()">' +
-          (esPantallaCompleta() || maximizado ? "Salir" : "Activar") +
-          "</button></div></div>" +
+            '<div class="a-desc">Ocupa toda la pantalla (también con F11 o la tecla F).</div></div>' +
+            '<div class="ajuste-ctrl"><button class="btn' +
+            (esPantallaCompleta() || maximizado ? " dorado" : "") +
+            '" onclick="toggleFullscreen()">' +
+            (esPantallaCompleta() || maximizado ? "Salir" : "Activar") +
+            "</button></div></div>",
           '<div class="ajuste-fila"><div><h4>👆 Controles táctiles</h4>' +
-          '<div class="a-desc">Joysticks y botones en pantalla en vez de teclado+ratón (prototipo).</div></div>' +
-          '<div class="ajuste-ctrl"><button class="btn' +
-          (M.slots[0].ctrl.tipo === "touch" ? " dorado" : "") +
-          '" onclick="toggleControlTactil()">' +
-          (M.slots[0].ctrl.tipo === "touch" ? "Activados" : "Desactivados") +
-          "</button></div></div>" +
+            '<div class="a-desc">Joysticks y botones en pantalla en vez de teclado+ratón (prototipo).</div></div>' +
+            '<div class="ajuste-ctrl"><button class="btn' +
+            (M.slots[0].ctrl.tipo === "touch" ? " dorado" : "") +
+            '" onclick="toggleControlTactil()">' +
+            (M.slots[0].ctrl.tipo === "touch" ? "Activados" : "Desactivados") +
+            "</button></div></div>",
           '<div class="ajuste-fila"><div><h4>🔍 Tamaño / resolución</h4>' +
-          '<div class="a-desc">Escala el juego para aprovechar tu monitor. "Auto" lo ajusta a la ventana.</div></div>' +
-          '<div class="ajuste-ctrl"><div class="seg" id="seg-escala">' +
-          [
-            ["Auto", "auto"],
-            ["×1", "1"],
-            ["×2", "2"],
-            ["×3", "3"],
-            ["×4", "4"],
-          ]
-            .map(
-              ([lab, v]) =>
-                '<button class="' +
-                (AJ.escala === v ? "on" : "") +
-                '" onclick="setEscala(\'' +
-                v +
-                "')\">" +
-                lab +
-                "</button>",
-            )
-            .join("") +
-          "</div></div></div>" +
+            '<div class="a-desc">Escala el juego para aprovechar tu monitor. "Auto" lo ajusta a la ventana.</div></div>' +
+            '<div class="ajuste-ctrl"><div class="seg" id="seg-escala">' +
+            [
+              ["Auto", "auto"],
+              ["×1", "1"],
+              ["×2", "2"],
+              ["×3", "3"],
+              ["×4", "4"],
+            ]
+              .map(
+                ([lab, v]) =>
+                  '<button class="' +
+                  (AJ.escala === v ? "on" : "") +
+                  '" onclick="setEscala(\'' +
+                  v +
+                  "')\">" +
+                  lab +
+                  "</button>",
+              )
+              .join("") +
+            "</div></div></div>",
           '<div class="ajuste-fila"><div><h4>🔇 Silencio total</h4>' +
-          '<div class="a-desc">Corta música y efectos de golpe.</div></div>' +
-          '<div class="ajuste-ctrl"><button class="btn' +
-          (AJ.silencio ? " dorado" : "") +
-          '" onclick="toggleSilencio()">' +
-          (AJ.silencio ? "Silenciado" : "Con sonido") +
-          "</button></div></div>" +
+            '<div class="a-desc">Corta música y efectos de golpe.</div></div>' +
+            '<div class="ajuste-ctrl"><button class="btn' +
+            (AJ.silencio ? " dorado" : "") +
+            '" onclick="toggleSilencio()">' +
+            (AJ.silencio ? "Silenciado" : "Con sonido") +
+            "</button></div></div>",
           '<div class="ajuste-fila"><div><h4>🔊 Volumen general</h4>' +
-          '<div class="a-desc">Nivel maestro de todo el audio.</div></div>' +
-          '<div class="ajuste-ctrl"><input type="range" min="0" max="100" value="' +
-          pct(AJ.volMaster) +
-          '" oninput="setVol(\'volMaster\',this.value)"><span class="val-num" id="v-master">' +
-          pct(AJ.volMaster) +
-          "%</span></div></div>" +
+            '<div class="a-desc">Nivel maestro de todo el audio.</div></div>' +
+            '<div class="ajuste-ctrl"><input type="range" min="0" max="100" value="' +
+            pct(AJ.volMaster) +
+            '" oninput="setVol(\'volMaster\',this.value)"><span class="val-num" id="v-master">' +
+            pct(AJ.volMaster) +
+            "%</span></div></div>",
           '<div class="ajuste-fila"><div><h4>💥 Efectos</h4>' +
-          '<div class="a-desc">Golpes, magia, monedas, subidas de nivel.</div></div>' +
-          '<div class="ajuste-ctrl"><input type="range" min="0" max="100" value="' +
-          pct(AJ.volSfx) +
-          '" oninput="setVol(\'volSfx\',this.value)"><span class="val-num" id="v-sfx">' +
-          pct(AJ.volSfx) +
-          "%</span></div></div>" +
+            '<div class="a-desc">Golpes, magia, monedas, subidas de nivel.</div></div>' +
+            '<div class="ajuste-ctrl"><input type="range" min="0" max="100" value="' +
+            pct(AJ.volSfx) +
+            '" oninput="setVol(\'volSfx\',this.value)"><span class="val-num" id="v-sfx">' +
+            pct(AJ.volSfx) +
+            "%</span></div></div>",
           '<div class="ajuste-fila"><div><h4>🎵 Música</h4>' +
-          '<div class="a-desc">Melodía ambiental de la Torre.</div></div>' +
-          '<div class="ajuste-ctrl"><input type="range" min="0" max="100" value="' +
-          pct(AJ.volMus) +
-          '" oninput="setVol(\'volMus\',this.value)"><span class="val-num" id="v-mus">' +
-          pct(AJ.volMus) +
-          "%</span></div></div>" +
+            '<div class="a-desc">Melodía ambiental de la Torre.</div></div>' +
+            '<div class="ajuste-ctrl"><input type="range" min="0" max="100" value="' +
+            pct(AJ.volMus) +
+            '" oninput="setVol(\'volMus\',this.value)"><span class="val-num" id="v-mus">' +
+            pct(AJ.volMus) +
+            "%</span></div></div>",
           '<div class="ajuste-fila"><div><h4>🔤 Tamaño del texto</h4>' +
-          '<div class="a-desc">Escala los textos de menús, ficha y ayudas.</div></div>' +
-          '<div class="ajuste-ctrl"><div class="seg" id="seg-texto">' +
-          segTexto
-            .map(
-              ([lab, v]) =>
-                '<button class="' +
-                (Math.abs(AJ.texto - v) < 0.01 ? "on" : "") +
-                '" onclick="setTexto(' +
-                v +
-                ')">' +
-                lab +
-                "</button>",
-            )
-            .join("") +
-          "</div></div></div>"
+            '<div class="a-desc">Escala los textos de menús, ficha y ayudas.</div></div>' +
+            '<div class="ajuste-ctrl"><div class="seg" id="seg-texto">' +
+            segTexto
+              .map(
+                ([lab, v]) =>
+                  '<button class="' +
+                  (Math.abs(AJ.texto - v) < 0.01 ? "on" : "") +
+                  '" onclick="setTexto(' +
+                  v +
+                  ')">' +
+                  lab +
+                  "</button>",
+              )
+              .join("") +
+            "</div></div></div>",
+        ];
+        const mitad = Math.ceil(filas.length / 2);
+        return envolverEnLibroBlanco(
+          filas.slice(0, mitad).join(""),
+          filas.slice(mitad).join(""),
         );
       }
 

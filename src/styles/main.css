@@ -2262,6 +2262,57 @@ img.hoja-pieza {
   color: var(--vespero);
 }
 
+/* ===== Libro en blanco: mismo fondo.png que usa la ficha de personaje
+   (ver .hoja-libro más arriba), reutilizado como marco para el resto de
+   pestañas (Mapa/Alma/Herrería/Ajustes -- ver envolverEnLibroBlanco() en
+   ui/inventory.js) -- pedido expreso: "abandonar ya el sistema actual y
+   que todo se base en el libro, usándolo de fondo". Sin arte específico
+   por pestaña (a diferencia de personaje, que sí lo tiene), así que cada
+   página es una tarjeta oscura semitransparente sobre el papel en vez de
+   piezas recortadas -- el contenido de cada pestaña conserva exactamente
+   su HTML/CSS/colores de siempre (ya probados), solo cambia el marco. */
+.hoja-libro-blanco {
+  position: relative;
+  width: auto;
+  height: 100%;
+  max-width: 100%;
+  margin: 0 auto;
+  aspect-ratio: 267 / 199;
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
+  image-rendering: pixelated;
+}
+.hoja-libro-blanco-paginas {
+  position: absolute;
+  left: 13%;
+  right: 13%;
+  top: 9%;
+  bottom: 9%;
+  display: flex;
+  gap: 5%;
+}
+.hoja-libro-blanco-pagina {
+  flex: 1;
+  min-width: 0;
+  overflow-y: auto;
+  background: rgba(20, 14, 8, 0.85);
+  border: 1px solid var(--borde);
+  border-radius: 8px;
+  padding: 12px 14px;
+}
+/* Página única centrada (Mapa, sin contenido para repartir en dos) --
+   se limita a un ancho legible en vez de estirarse a las dos páginas. */
+.hoja-libro-blanco-sola {
+  flex: none;
+  width: min(100%, 380px);
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
 /* Celda de bolsa arrastrable -- ver arrastrarItemInicio() en inventory.js. */
 .item-cell[draggable="true"] {
   cursor: grab;
@@ -2670,13 +2721,20 @@ img.hoja-pieza {
 /* El popover de la hoguera es angosto (min(320px,92%), ver .popover) --
    .ajuste-fila está pensada para el ancho del libro, aquí se apila en
    columna en vez de lado a lado para que no se rompa el texto. */
-#popover-fogata-ajustes .ajuste-fila {
+#popover-fogata-ajustes .ajuste-fila,
+/* Misma adaptación para las páginas del libro (ver .hoja-libro-blanco-
+   pagina en la sección "Libro en blanco" más abajo): son mucho más
+   angostas que el .libro-pagina de siempre, así que .ajuste-ctrl
+   (flex-shrink:0) desbordaba en vez de encoger -- apilar en columna
+   evita el desborde sin tocar el resto de usos de .ajuste-fila. */
+.hoja-libro-blanco-pagina .ajuste-fila {
   flex-direction: column;
   align-items: flex-start;
   gap: 8px;
   padding: 10px 12px;
 }
-#popover-fogata-ajustes .ajuste-ctrl {
+#popover-fogata-ajustes .ajuste-ctrl,
+.hoja-libro-blanco-pagina .ajuste-ctrl {
   width: 100%;
 }
 .ajuste-fila input[type="range"] {
@@ -2685,6 +2743,7 @@ img.hoja-pieza {
 }
 .seg {
   display: flex;
+  flex-wrap: wrap;
   gap: 4px;
 }
 .val-num {
