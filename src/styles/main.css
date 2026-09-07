@@ -1919,8 +1919,18 @@ body.pantalla-completa #hint {
    cambiar el tamaño de ventana. */
 .hoja-libro {
   position: relative;
-  width: 100%;
-  max-width: 860px;
+  /* Ahora que Tab/Start abre la ficha DIRECTAMENTE (ver toggleMenuPausa()
+     en ui/pauseMenu.js, "el libro sustituye el menú") tiene que leerse
+     como la pantalla principal, no como un panel de tamaño fijo dentro
+     de ella -- crece hasta llenar TODO el alto disponible de
+     .inv-contenido y solo se limita por el ancho si la ventana es más
+     estrecha que alta (max-width:100% evita desbordar hacia los lados
+     en ese caso). width:auto + aspect-ratio deriva el ancho del alto
+     automáticamente, al revés que el cálculo anterior (ancho fijo).
+  */
+  width: auto;
+  height: 100%;
+  max-width: 100%;
   margin: 0 auto;
   aspect-ratio: 267 / 199;
   container-type: inline-size;
