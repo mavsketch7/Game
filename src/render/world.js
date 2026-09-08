@@ -9,6 +9,93 @@ import { renderEnemigo, renderJugador, renderMira } from "./character.js";
 import { EXPLOSION_BURST_DUR, EXPLOSION_FADE_DUR } from "../systems/abilities.js";
 import { clamp, hexRgba, ri, rnd } from "../utils/helpers.js";
 
+// Icono estático (frame 0, reposo) del mismo sprite del yunque animado
+// que usa ui/forjaFusion.js (ver .herreria-yunque en styles/main.css --
+// tira horizontal de 17 fotogramas NATIVOS de 32x32 -- 544x32 en total;
+// el CSS lo escala x3.75 con background-size:2040px, pero el archivo en
+// sí sigue siendo 32x32 por frame, 0,0 es el fotograma de reposo) --
+// pedido expreso: el marcador de Mesa de Trabajo debe mostrar el yunque
+// de verdad, no el emoji ⚒.
+const imYunqueIco = new Image();
+let yunqueIcoListo = false;
+imYunqueIco.onload = () => {
+  yunqueIcoListo = true;
+};
+imYunqueIco.src = `${import.meta.env.BASE_URL}assets/ui/ui-ingame/anvil-forja-strip.png`;
+
+// Marcador de estación con menú propio (Mesa de Trabajo, Fragua, Arena
+// PvP...): banderín de dos puntas (en vez del anillo pulsante genérico
+// de antes) con el icono de la estación dentro -- pedido expreso, "para
+// facilitar saber qué menú estamos abriendo". Common a las 3 (mercader/
+// sastre YA tienen su propio sprite de personaje distintivo, se quedan
+// como estaban). `icono` es un emoji de reserva si `sprite` (imagen +
+// recorte) no está listo o no se pasa.
+function dibujarMarcadorBanderin(m, { color, colorClaro, icono, etiqueta, sprite }) {
+  const bob = Math.sin(animGlobal * 2.2) * 3;
+  const bx = m.x,
+    by = m.y - 40 + bob;
+  const w = 32,
+    h = 24;
+  // resplandor suave detrás, sustituye a los 3 anillos concéntricos de antes
+  const pulso = 0.35 + 0.25 * (0.5 + 0.5 * Math.sin(animGlobal * 3));
+  const grad = cx.createRadialGradient(bx, by, 2, bx, by, 26);
+  grad.addColorStop(0, hexRgba(color, pulso));
+  grad.addColorStop(1, hexRgba(color, 0));
+  cx.fillStyle = grad;
+  cx.beginPath();
+  cx.arc(bx, by, 26, 0, TAU);
+  cx.fill();
+  // sombra en el suelo, en el punto real de interacción
+  cx.fillStyle = "rgba(0,0,0,.32)";
+  cx.beginPath();
+  cx.ellipse(m.x, m.y + 16, 12, 4, 0, 0, TAU);
+  cx.fill();
+  // cuerpo del banderín: techo redondeado, dos puntas abajo (una V hacia
+  // dentro en el centro reparte el borde inferior en dos picos)
+  cx.save();
+  cx.translate(bx, by);
+  cx.beginPath();
+  cx.moveTo(-w / 2, -h / 2 + 6);
+  cx.quadraticCurveTo(-w / 2, -h / 2, -w / 2 + 6, -h / 2);
+  cx.lineTo(w / 2 - 6, -h / 2);
+  cx.quadraticCurveTo(w / 2, -h / 2, w / 2, -h / 2 + 6);
+  cx.lineTo(w / 2, h / 2 - 6);
+  cx.lineTo(2, h / 2 - 3);
+  cx.lineTo(0, h / 2 + 5);
+  cx.lineTo(-2, h / 2 - 3);
+  cx.lineTo(-w / 2, h / 2 - 6);
+  cx.closePath();
+  cx.fillStyle = "rgba(18,13,8,.88)";
+  cx.fill();
+  cx.strokeStyle = color;
+  cx.lineWidth = 2;
+  cx.stroke();
+  if (sprite && sprite.img && sprite.ready) {
+    const s = 18;
+    cx.drawImage(
+      sprite.img,
+      sprite.sx,
+      sprite.sy,
+      sprite.sw,
+      sprite.sh,
+      -s / 2,
+      -h / 2 + 3,
+      s,
+      s,
+    );
+  } else {
+    cx.fillStyle = colorClaro || color;
+    cx.font = "700 13px Alegreya Sans";
+    cx.textAlign = "center";
+    cx.fillText(icono, 0, -1);
+  }
+  cx.restore();
+  cx.fillStyle = colorClaro || color;
+  cx.font = "700 10px Alegreya Sans";
+  cx.textAlign = "center";
+  cx.fillText(etiqueta, m.x, m.y + 34);
+}
+
 export let sueloPat = null,
         sueloClave = "";
 
@@ -1090,78 +1177,41 @@ export function render() {
         }
         // portal de la Arena PvP (lobby)
         if (G.arenaNpc) {
-          const m = G.arenaNpc;
-          for (let k = 0; k < 3; k++) {
-            cx.strokeStyle = "rgba(209,84,92," + (0.9 - k * 0.28) + ")";
-            cx.lineWidth = 3;
-            cx.beginPath();
-            cx.arc(
-              m.x,
-              m.y,
-              22 - k * 6 + Math.sin(animGlobal * 3 + k) * 2,
-              0,
-              TAU,
-            );
-            cx.stroke();
-          }
-          cx.fillStyle = "#ff5c5c";
-          cx.font = "700 13px Alegreya Sans";
-          cx.textAlign = "center";
-          cx.fillText("⚔", m.x, m.y + 5);
-          cx.fillStyle = "#d1545c";
-          cx.font = "700 10px Alegreya Sans";
-          cx.fillText("ARENA PvP — acércate", m.x, m.y + 34);
+          dibujarMarcadorBanderin(G.arenaNpc, {
+            color: "#d1545c",
+            colorClaro: "#ff5c5c",
+            icono: "⚔",
+            etiqueta: "ARENA PvP — acércate",
+          });
         }
         // Mesa de Trabajo / Yunque (lobby): desmantelar armas en Fragmentos
         // de Alma -- ver ui/workbench.js.
         if (G.yunqueNpc) {
-          const m = G.yunqueNpc;
-          for (let k = 0; k < 3; k++) {
-            cx.strokeStyle = "rgba(201,163,90," + (0.9 - k * 0.28) + ")";
-            cx.lineWidth = 3;
-            cx.beginPath();
-            cx.arc(
-              m.x,
-              m.y,
-              22 - k * 6 + Math.sin(animGlobal * 3 + k) * 2,
-              0,
-              TAU,
-            );
-            cx.stroke();
-          }
-          cx.fillStyle = "#e9c98a";
-          cx.font = "700 13px Alegreya Sans";
-          cx.textAlign = "center";
-          cx.fillText("⚒", m.x, m.y + 5);
-          cx.fillStyle = "#c9a35a";
-          cx.font = "700 10px Alegreya Sans";
-          cx.fillText("MESA DE TRABAJO — acércate", m.x, m.y + 34);
+          dibujarMarcadorBanderin(G.yunqueNpc, {
+            color: "#c9a35a",
+            colorClaro: "#e9c98a",
+            icono: "⚒",
+            etiqueta: "MESA DE TRABAJO — acércate",
+            sprite: yunqueIcoListo && {
+              img: imYunqueIco,
+              sx: 0,
+              sy: 0,
+              sw: 32,
+              sh: 32,
+              ready: true,
+            },
+          });
         }
         // Fragua de fusión: aparece por sorpresa en una sala normal de la
         // planta (ver systems/floorgen.js, sala.fraguaNpc/poblarSala) --
-        // mismo marcador pulsante que el resto de estaciones interactuables.
+        // mismo marcador de banderín que el resto de estaciones.
         if (G.fraguaNpc) {
-          const m = G.fraguaNpc;
-          for (let k = 0; k < 3; k++) {
-            cx.strokeStyle = "rgba(224,112,58," + (0.9 - k * 0.28) + ")";
-            cx.lineWidth = 3;
-            cx.beginPath();
-            cx.arc(
-              m.x,
-              m.y,
-              22 - k * 6 + Math.sin(animGlobal * 3 + k) * 2,
-              0,
-              TAU,
-            );
-            cx.stroke();
-          }
-          cx.fillStyle = "#ffb27f";
-          cx.font = "700 13px Alegreya Sans";
-          cx.textAlign = "center";
-          cx.fillText("⚗", m.x, m.y + 5);
-          cx.fillStyle = "#e0703a";
-          cx.font = "700 10px Alegreya Sans";
-          cx.fillText("FRAGUA — acércate", m.x, m.y + 34);
+          dibujarMarcadorBanderin(G.fraguaNpc, {
+            color: "#e0703a",
+            colorClaro: "#ffb27f",
+            icono: "⚗",
+            etiqueta: "FRAGUA — acércate",
+          });
         }
         // NPC de pruebas (QA, ?qa=1): sube de nivel al grupo por proximidad
         if (G.nivelNpc) {

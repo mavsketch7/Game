@@ -2506,6 +2506,31 @@ img.hoja-pieza {
   justify-content: center;
 }
 
+/* Mesa de Trabajo (yunque) y Fragua (fusión): pedido expreso -- popup
+   centrado a media pantalla con marco dorado, no la pantalla entera
+   como el resto de overlays. Reutiliza --ux-panel (mismo marco ya
+   usado en #hero-titulo/.grupo-sel) en vez de un asset nuevo. */
+#yunque.overlay,
+#fusion.overlay {
+  justify-content: center;
+}
+#yunque .overlay-inner,
+#fusion .overlay-inner {
+  width: min(50vw, 640px);
+  max-width: 92%;
+  max-height: 82vh;
+  overflow-y: auto;
+  background: rgba(20, 14, 8, 0.94);
+  border-style: solid;
+  border-width: 24px;
+  border-image-source: var(--ux-panel);
+  border-image-slice: 24;
+  border-image-width: 24px;
+  border-image-repeat: stretch;
+  image-rendering: pixelated;
+  padding: 4px 10px 14px;
+}
+
 /* Celda de bolsa arrastrable -- ver arrastrarItemInicio() en inventory.js. */
 .item-cell[draggable="true"] {
   cursor: grab;
