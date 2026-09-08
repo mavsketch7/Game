@@ -1185,22 +1185,29 @@ export function render() {
           });
         }
         // Mesa de Trabajo / Yunque (lobby): desmantelar armas en Fragmentos
-        // de Alma -- ver ui/workbench.js.
+        // de Alma -- ver ui/workbench.js. Pedido expreso: sin el banderín
+        // flotante (bocadillo) que usan Arena/Fragua -- el yunque de
+        // verdad, plantado en el suelo, a tamaño bien visible.
         if (G.yunqueNpc) {
-          dibujarMarcadorBanderin(G.yunqueNpc, {
-            color: "#c9a35a",
-            colorClaro: "#e9c98a",
-            icono: "⚒",
-            etiqueta: "MESA DE TRABAJO — acércate",
-            sprite: yunqueIcoListo && {
-              img: imYunqueIco,
-              sx: 0,
-              sy: 0,
-              sw: 32,
-              sh: 32,
-              ready: true,
-            },
-          });
+          const m = G.yunqueNpc;
+          const bob = Math.sin(animGlobal * 1.6) * 1.5;
+          const s = 52;
+          cx.fillStyle = "rgba(0,0,0,.35)";
+          cx.beginPath();
+          cx.ellipse(m.x, m.y + 18, 20, 6, 0, 0, TAU);
+          cx.fill();
+          if (yunqueIcoListo) {
+            cx.drawImage(imYunqueIco, 0, 0, 32, 32, m.x - s / 2, m.y + 18 - s + bob, s, s);
+          } else {
+            cx.fillStyle = "#e9c98a";
+            cx.font = "700 26px Alegreya Sans";
+            cx.textAlign = "center";
+            cx.fillText("⚒", m.x, m.y + 5 + bob);
+          }
+          cx.fillStyle = "#e9c98a";
+          cx.font = "700 10px Alegreya Sans";
+          cx.textAlign = "center";
+          cx.fillText("MESA DE TRABAJO — acércate", m.x, m.y + 34);
         }
         // Fragua de fusión: aparece por sorpresa en una sala normal de la
         // planta (ver systems/floorgen.js, sala.fraguaNpc/poblarSala) --
