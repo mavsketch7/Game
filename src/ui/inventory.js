@@ -89,16 +89,17 @@ const LIBRO_SLOT_POS = {
 // -- pedido expreso, mensaje aparte: "van en los cuadrados de equipo
 // para indicar qué pieza de equipo va, también se puede poner un texto
 // pequeño debajo". Mapeo por forma reconocible en el recorte (espada,
-// anillo, collar, torso/peto, escudo, casco, piernas) -- si alguno sale
-// cambiado es un cambio de una palabra aquí, no hay lógica que dependa
-// del orden.
+// anillo, collar, torso/peto, escudo, casco, piernas) -- collar/peto
+// salieron cambiados en el recorte original (confirmado por el
+// usuario), de ahí que aquí NO sean identidad: "peto" usa el archivo
+// ico-slot-collar.png y viceversa.
 const LIBRO_SLOT_ICO = {
   arma: "arma",
   escudo: "escudo",
   casco: "casco",
-  peto: "peto",
+  peto: "collar",
   piernas: "piernas",
-  collar: "collar",
+  collar: "peto",
   anillo: "anillo",
 };
 // Posiciones de los 3 marcapáginas INACTIVOS (guía "botones-cambiomenu-
@@ -181,7 +182,7 @@ function minimapaPlanta() {
             );
           }
         return (
-          '<h3 style="margin-top:0;font-size:.85rem;color:#4a3418">🗺 Mapa de la planta</h3>' +
+          '<h3 style="margin-top:0;font-size:.85rem;color:var(--vespero)">🗺 Mapa de la planta</h3>' +
           '<div class="minimapa">' +
           celdas.join("") +
           "</div>" +
@@ -728,8 +729,15 @@ function celdaSlotLibro(slot, p) {
           );
         }
         const rar = RAREZAS[it.rareza];
+        // Arrastrable hacia fuera para desequipar -- pedido expreso, no
+        // había forma de quitar un objeto ya puesto (ver soltarEnBolsa()
+        // más abajo, activo sobre .hoja-grid-inv-wrap).
+        const dragAttrs =
+          ' draggable="true" ondragstart="arrastrarEquipoInicio(event,\'' +
+          slot +
+          '\')" ondragend="arrastrarEquipoFin(event)"';
         return (
-          '<div class="eq-slot hoja-slot" style="' + style + '"' + dropAttrs + ">" +
+          '<div class="eq-slot hoja-slot" style="' + style + '"' + dropAttrs + dragAttrs + ">" +
           '<img class="eq-slot-ico" src="' + iconoUrl(it) + '" alt="" />' +
           '<div class="item-tooltip">' +
           '<div class="tt-nombre ' + rar.cls + '">' + escHtml(it.nombre) + "</div>" +
@@ -1017,7 +1025,7 @@ function tabPersonaje(p, t, b) {
           "</div>" +
           '<img class="hoja-pieza hoja-marco-inv" src="' + libroSrc("marco-inventario") + '" alt="" />' +
           '<div class="hoja-pieza hoja-inv-titulo">Inventario</div>' +
-          '<div class="hoja-pieza hoja-grid-inv-wrap">' + gridBolsaLibro(p) + "</div>" +
+          '<div class="hoja-pieza hoja-grid-inv-wrap" ondragover="permitirSoltar(event)" ondragleave="quitarResaltadoSlot(event)" ondrop="soltarEnBolsa(event)">' + gridBolsaLibro(p) + "</div>" +
           filtroLibroHtml(p);
         return (
           marcoLibroChrome(contenido) +
@@ -1057,12 +1065,19 @@ function envolverEnLibroBlanco(izq, der) {
         return marcoLibroChrome('<div class="hoja-libro-blanco-paginas">' + paginas + "</div>");
       }
 
+// Pedido expreso: sin la tarjeta oscura general de las páginas en
+// blanco, el mapa (pensado con colores claros sobre fondo oscuro, ver
+// .mini-celda) no se leía nada sobre el papel -- se le da su propia
+// tarjeta oscura, fija en la hoja izquierda (antes centrada en las dos
+// páginas). La hoja derecha queda libre por ahora.
 function tabMapa() {
         const mm = minimapaPlanta();
-        return envolverEnLibroBlanco(
-          mm ||
-            '<p style="color:var(--ceniza)">Sin mapa en esta sala (las plantas de jefe son una única sala).</p>',
-        );
+        const contenido =
+          '<div class="mapa-marco">' +
+          (mm ||
+            '<p style="color:var(--ceniza)">Sin mapa en esta sala (las plantas de jefe son una única sala).</p>') +
+          "</div>";
+        return envolverEnLibroBlanco(contenido, "");
       }
 
 // ---- Pestaña Alma (Fragmentos, ver systems/soul.js) ----
@@ -1726,6 +1741,11 @@ function iniciarRetratoAnimado(p) {
 
 // ---- Arrastrar y soltar: bolsa -> slot de equipo (ver celdaSlotEquipo) ----
 let arrastreIdx = null;
+// uid del fragmento no aplica aquí -- este es el slot de equipo (arma,
+// escudo...) que se está arrastrando FUERA para desequiparlo (ver
+// arrastrarEquipoInicio/soltarEnBolsa) -- pedido expreso: "debe dejar
+// arrastrarlos y soltarlos de nuevo en el inventario".
+let arrastreEquipoSlot = null;
 
 function arrastrarItemInicio(ev, idx) {
         arrastreIdx = idx;
@@ -1737,6 +1757,41 @@ function arrastrarItemInicio(ev, idx) {
 function arrastrarItemFin(ev) {
         ev.currentTarget.classList.remove("arrastrando");
         arrastreIdx = null;
+      }
+
+function arrastrarEquipoInicio(ev, slot) {
+        arrastreEquipoSlot = slot;
+        ev.dataTransfer.effectAllowed = "move";
+        ev.dataTransfer.setData("text/plain", "eq:" + slot);
+        ev.currentTarget.classList.add("arrastrando");
+      }
+
+function arrastrarEquipoFin(ev) {
+        ev.currentTarget.classList.remove("arrastrando");
+        arrastreEquipoSlot = null;
+      }
+
+function desequiparSlot(slot) {
+        const p = G.players[G.invSel] || G.players[0];
+        const it = p.equipo[slot];
+        if (!it) return;
+        p.equipo[slot] = null;
+        p.bolsa.push(it);
+        p.hp = clamp(p.hp, 1, statsTot(p).hpMax);
+        toast(p.nombre + " guarda " + it.nombre, RAREZAS[it.rareza].col);
+        abrirInv();
+      }
+
+function soltarEnBolsa(ev) {
+        ev.preventDefault();
+        ev.currentTarget.classList.remove("arrastre-sobre");
+        let slot = arrastreEquipoSlot;
+        arrastreEquipoSlot = null;
+        if (!slot) {
+          const dato = ev.dataTransfer.getData("text/plain");
+          if (dato.startsWith("eq:")) slot = dato.slice(3);
+        }
+        if (slot) desequiparSlot(slot);
       }
 
 function permitirSoltar(ev) {
@@ -1833,6 +1888,10 @@ function darItem(idx, targetIdx) {
 // Expuestas en window: referenciadas desde onclick="..." en HTML generado dinámicamente.
 window.arrastrarItemFin = arrastrarItemFin;
 window.arrastrarItemInicio = arrastrarItemInicio;
+window.arrastrarEquipoInicio = arrastrarEquipoInicio;
+window.arrastrarEquipoFin = arrastrarEquipoFin;
+window.soltarEnBolsa = soltarEnBolsa;
+window.desequiparSlot = desequiparSlot;
 window.cerrarInv = cerrarInv;
 window.darItem = darItem;
 window.permitirSoltar = permitirSoltar;

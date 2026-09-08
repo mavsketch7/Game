@@ -2056,16 +2056,17 @@ img.hoja-pieza {
   align-items: center;
   justify-content: center;
 }
+/* Sin overflow:hidden/ellipsis -- a 7rem, "Personaje"/"Ajustes" no
+   caben en el ancho de la cinta (~32% del libro): en vez de recortar
+   la palabra a "Person…" (ilegible), se deja desbordar libremente por
+   encima del arte a los lados, centrado sobre la cinta. */
 .hoja-banner-titulo-texto {
   font-family: "Dungeon Font", "Cinzel", serif;
   font-weight: 800;
-  font-size: clamp(1.1rem, 5.2cqw, 3rem);
+  font-size: 7rem;
   color: #f4e6c4;
   text-shadow: 0 2px 3px rgba(0, 0, 0, 0.6);
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 88%;
 }
 
 .hoja-cerrar {
@@ -2137,7 +2138,11 @@ img.hoja-pieza {
   border: 2px solid transparent;
   background: transparent;
   border-radius: 3px;
-  padding: 0;
+  /* Fijo en px, no en % -- un % de padding se calcula contra el ancho
+     del CONTENEDOR POSICIONADO (.hoja-libro, ~1300px), no contra el
+     tamaño propio de la casilla (mismo bug que .hoja-stats-panel más
+     abajo). 10px confirmado a ojo por el usuario. */
+  padding: 10px;
   min-height: 0;
   gap: 0;
   display: flex;
@@ -2146,8 +2151,8 @@ img.hoja-pieza {
   justify-content: center;
 }
 .hoja-slot .eq-slot-ico {
-  width: 78%;
-  height: 78%;
+  width: 100%;
+  height: 100%;
 }
 .hoja-slot.vacio {
   opacity: 1;
@@ -2183,15 +2188,28 @@ img.hoja-pieza {
    propio del panel (~220px): un 8% "razonable" se convertía en ~105px
    por lado, casi devorando el panel entero (mismo bug ya documentado
    en .hoja-slot más abajo). Padding fijo en px, no en %. */
+/* Mínimo 16px, escalando un poco con el ancho del libro -- pedido
+   expreso: "los párrafos mínimo unos 16px con tamaño adaptativo
+   responsivo". padding en todos los lados (antes solo izq/der) para
+   que el texto no se pegue al borde del panel; si algún idioma/clase
+   mete más líneas de las que caben, el panel hace scroll en vez de
+   desbordar por encima del marco. */
+/* align-items:flex-start, no center -- con el texto a 16px+ el
+   contenido puede ser más alto que el panel; centrar un hijo que
+   desborda dentro de un contenedor con scroll deja la mitad de arriba
+   fuera del scroll (el scroll siempre empieza en 0), así que el
+   contenido queda inalcanzable. Empezando arriba, el scroll SÍ llega a
+   todo. */
 .hoja-stats-panel {
   left: 15.67%;
   top: 65%;
   width: 16.67%;
   height: 22%;
   display: flex;
-  align-items: center;
-  padding: 0 8px;
-  font-size: clamp(0.36rem, 1.3cqw, 0.56rem);
+  align-items: flex-start;
+  padding: 10px 14px;
+  overflow-y: auto;
+  font-size: clamp(1rem, 1.6cqw, 1.25rem);
   color: var(--piedra);
 }
 .hoja-skills-panel {
@@ -2200,9 +2218,10 @@ img.hoja-pieza {
   width: 16%;
   height: 22%;
   display: flex;
-  align-items: center;
-  padding: 0 8px;
-  font-size: clamp(0.36rem, 1.3cqw, 0.56rem);
+  align-items: flex-start;
+  padding: 10px 14px;
+  overflow-y: auto;
+  font-size: clamp(1rem, 1.6cqw, 1.25rem);
   color: var(--piedra);
 }
 .hoja-stats-col {
@@ -2210,19 +2229,19 @@ img.hoja-pieza {
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 1px;
+  gap: 4px;
 }
 .hoja-stat {
   display: flex;
   align-items: center;
-  gap: 3px;
+  gap: 6px;
   overflow: hidden;
   white-space: nowrap;
 }
 .hoja-hab {
   display: flex;
   align-items: baseline;
-  gap: 4px;
+  gap: 6px;
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
@@ -2258,13 +2277,33 @@ img.hoja-pieza {
   color: #4a3418;
   text-align: center;
 }
+/* Alineado con el hueco interior real de .hoja-marco-inv (57-85.67% /
+   18-58.5%), con un margen para el propio marco dibujado en el PNG --
+   pedido expreso: el scroll debe respetar el alto de ese marco, no
+   desbordar por encima. */
 .hoja-grid-inv-wrap {
-  left: 58.7%;
-  top: 20%;
-  width: 25%;
-  height: 30%;
+  left: 59%;
+  top: 20.5%;
+  width: 24.5%;
+  height: 35%;
   overflow-y: auto;
   padding: 1.5%;
+}
+/* Máximo 4 columnas -- pedido expreso -- con casillas bien delimitadas
+   (borde visible en vez de fiarse solo del color de rareza). */
+.grid-inv-libro {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8%;
+}
+.item-cell-libro {
+  position: relative;
+  aspect-ratio: 1;
+  border: 2px solid;
+  border-radius: 3px;
+  background: rgba(30, 22, 12, 0.3);
+  cursor: pointer;
+  padding: 6%;
 }
 .hoja-filtro {
   left: 57%;
@@ -2272,10 +2311,10 @@ img.hoja-pieza {
   width: 28.67%;
   height: 16%;
   overflow-y: auto;
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 4px 3%;
   align-content: flex-start;
-  gap: 3%;
 }
 /* Botón 3-slice reutilizable (boton-izq/centro/derecha.png) -- pedido
    expreso: sustituye a los .seg rojos genéricos en esta zona concreta.
@@ -2286,8 +2325,8 @@ img.hoja-pieza {
   border-radius: 0;
   color: #f4e6c4;
   text-shadow: 0 1px 1px rgba(0, 0, 0, 0.7);
-  padding: 3px 10px;
-  font-size: clamp(0.34rem, 1.05cqw, 0.48rem);
+  padding: 4px 6px;
+  font-size: clamp(0.6rem, 1.7cqw, 0.85rem);
   font-weight: 700;
   cursor: pointer;
   background-color: transparent;
@@ -2299,20 +2338,6 @@ img.hoja-pieza {
 }
 .hoja-filtro button.on {
   filter: brightness(1.35) saturate(1.2);
-}
-.grid-inv-libro {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(17%, 1fr));
-  gap: 6%;
-}
-.item-cell-libro {
-  position: relative;
-  aspect-ratio: 1;
-  border: 1px solid;
-  border-radius: 2px;
-  background: rgba(30, 22, 12, 0.3);
-  cursor: pointer;
-  padding: 6%;
 }
 .item-cell-libro img {
   width: 100%;
@@ -2351,18 +2376,56 @@ img.hoja-pieza {
    es un .hoja-pieza posicionado (vive dentro de la página en blanco de
    envolverEnLibroBlanco(), no del lienzo del libro), así que solo
    necesita el fondo y un poco de aire. */
+/* Alto limitado -- pedido expreso -- para que el scroll interno tenga
+   sentido en vez de alargar la página entera; scrollbar con el arte
+   real del libro (scroll.png de pulgar, flechas arriba/abajo) en vez
+   de la barra nativa del navegador -- solo soportado en navegadores
+   basados en Chromium (::-webkit-scrollbar), que es lo que usa el
+   juego; en el resto cae de vuelta a la barra nativa sin más. */
 .hoja-alma-inv-marco {
   background-repeat: no-repeat;
   background-size: 100% 100%;
   image-rendering: pixelated;
   padding: 22px 26px;
-  min-height: 90%;
+  max-height: 84%;
+  max-width: 90%;
+  margin: 0 auto;
+  overflow-y: auto;
+}
+.hoja-alma-inv-marco::-webkit-scrollbar {
+  width: 16px;
+}
+.hoja-alma-inv-marco::-webkit-scrollbar-track {
+  background: transparent;
+}
+.hoja-alma-inv-marco::-webkit-scrollbar-thumb {
+  background-image: url("/assets/ui/libro/scroll.png");
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
+  image-rendering: pixelated;
+  border-radius: 0;
+}
+.hoja-alma-inv-marco::-webkit-scrollbar-button:vertical:start:decrement {
+  background-image: url("/assets/ui/libro/flecha-arriba.png");
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
+  image-rendering: pixelated;
+  height: 16px;
+  display: block;
+}
+.hoja-alma-inv-marco::-webkit-scrollbar-button:vertical:end:increment {
+  background-image: url("/assets/ui/libro/flecha-abajo.png");
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
+  image-rendering: pixelated;
+  height: 16px;
+  display: block;
 }
 .hoja-alma-inv-titulo {
-  margin: 0 0 6px;
+  margin: 0 0 8px;
   font-family: "Dungeon Font", "Cinzel", serif;
   color: #4a3418;
-  font-size: 0.85rem;
+  font-size: 1.2rem;
 }
 
 /* ===== Libro v2, resto de pestañas (Mapa/Alma/Herrería/Ajustes -- ver
@@ -2374,10 +2437,7 @@ img.hoja-pieza {
    (ya probados), solo cambia el marco que lo rodea. */
 .hoja-libro-blanco-paginas {
   position: absolute;
-  left: 15%;
-  right: 8%;
-  top: 20%;
-  bottom: 4%;
+  inset: 20% 11% 3% 14%;
   display: flex;
   gap: 5%;
 }
@@ -2387,8 +2447,18 @@ img.hoja-pieza {
   overflow-y: auto;
   padding: 4px 10px;
 }
-/* Página única centrada (Mapa, sin contenido para repartir en dos) --
-   se limita a un ancho legible en vez de estirarse a las dos páginas. */
+/* Mapa: tarjeta oscura propia (pedido expreso) -- el minimapa está
+   pensado con colores claros sobre fondo oscuro (ver .mini-celda) y no
+   se leía directamente sobre el papel del libro. */
+.mapa-marco {
+  background: rgba(20, 14, 8, 0.72);
+  border: 1px solid var(--borde);
+  border-radius: 10px;
+  padding: 14px 16px;
+  min-height: 90%;
+}
+/* Página única centrada (sin contenido para repartir en dos) -- se
+   limita a un ancho legible en vez de estirarse a las dos páginas. */
 .hoja-libro-blanco-sola {
   flex: none;
   width: min(100%, 380px);
@@ -2860,6 +2930,35 @@ img.hoja-pieza {
 .hoja-libro-blanco-pagina .ajuste-ctrl {
   width: 100%;
 }
+/* Sin tarjeta oscura detrás (pedido expreso: "fondo transparente para
+   ajuste fila") -- se lee directamente sobre el papel del libro, así
+   que el texto (antes claro, pensado para la caja oscura de siempre)
+   pasa a un marrón oscuro para tener contraste ahí. Tamaños bastante
+   más grandes que el resto del proyecto -- pedido expreso con valores
+   concretos, no responsivos: h4 2rem, descripción 1.6rem, botones a
+   58px de alto con el mismo 1.6rem de texto. */
+.hoja-libro-blanco-pagina .ajuste-fila {
+  background: transparent;
+  border-color: rgba(74, 52, 24, 0.3);
+}
+.hoja-libro-blanco-pagina .ajuste-fila h4 {
+  font-size: 2rem;
+  color: #4a3418;
+}
+.hoja-libro-blanco-pagina .ajuste-fila .a-desc {
+  font-size: 1.6rem;
+  color: #6b5638;
+}
+.hoja-libro-blanco-pagina .ajuste-ctrl .btn,
+.hoja-libro-blanco-pagina .ajuste-ctrl .seg button {
+  --btn-height: 58px;
+  --btn-border-width: 22px;
+  font-size: 1.6rem;
+}
+.hoja-libro-blanco-pagina .val-num {
+  font-size: 1.4rem;
+  min-width: unset;
+}
 .ajuste-fila input[type="range"] {
   width: 130px;
   accent-color: var(--vespero);
@@ -3070,6 +3169,28 @@ img.hoja-pieza {
   bottom: auto;
   top: 50%;
   transform: translateY(-50%);
+}
+/* Tooltip de las casillas del libro -- más grande y con más aire que
+   el genérico (pensado para la rejilla pequeña de siempre): pedido
+   expreso, no se leía la descripción del objeto. */
+.hoja-slot .item-tooltip {
+  width: 230px;
+  padding: 12px 14px;
+}
+.hoja-slot .tt-nombre {
+  font-size: 1.05rem;
+}
+.hoja-slot .tt-slot {
+  font-size: 0.85rem;
+  margin-top: 4px;
+}
+.hoja-slot .tt-efecto {
+  font-size: 0.88rem;
+  margin-top: 6px;
+}
+.hoja-slot .tt-stat-linea {
+  font-size: 0.9rem;
+  margin-top: 5px;
 }
 .tt-nombre {
   font-weight: 800;
