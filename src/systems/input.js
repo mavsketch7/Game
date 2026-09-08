@@ -14,6 +14,7 @@ import { toggleSilencioRapido } from "../ui/settingsOverlay.js";
 import { cerrarTienda } from "../ui/shop.js";
 import { cerrarSkins } from "../ui/skins.js";
 import { cerrarYunque } from "../ui/workbench.js";
+import { cerrarFusion } from "../ui/forjaFusion.js";
 import { esTactil, leerInputTactil } from "./touchControls.js";
 
 export const keys = {};
@@ -217,6 +218,7 @@ const OVERLAYS_PAD = [
         "tienda",
         "skins",
         "yunque",
+        "fusion",
         "arena-pvp",
         "inv",
         "fin",
@@ -273,6 +275,7 @@ function padCierra() {
         else if (ov === "tienda") cerrarTienda();
         else if (ov === "skins") cerrarSkins();
         else if (ov === "yunque") cerrarYunque();
+        else if (ov === "fusion") cerrarFusion();
         else if (ov === "arena-pvp") cerrarArenaPvp();
         else if (ov === "info-overlay") cerrarInfo();
         padFoco = 0;
@@ -434,6 +437,12 @@ window.addEventListener("keydown", (e) => {
               !document.getElementById("yunque").classList.contains("oculto")
             ) {
               cerrarYunque();
+              return;
+            }
+            if (
+              !document.getElementById("fusion").classList.contains("oculto")
+            ) {
+              cerrarFusion();
               return;
             }
             cerrarInv();

@@ -21,6 +21,7 @@ import { abrirArenaPvp } from "../ui/pvp.js";
 import { abrirTienda } from "../ui/shop.js";
 import { abrirSkins } from "../ui/skins.js";
 import { abrirYunque } from "../ui/workbench.js";
+import { abrirFusion } from "../ui/forjaFusion.js";
 import { az, clamp, rnd } from "../utils/helpers.js";
 
 // Cooldowns simples que decrecen linealmente con dt cada frame para cada
@@ -1938,6 +1939,19 @@ export function update(dt) {
             abrirYunque();
           }
           if (!cerca) G.yunqueLock = false;
+        }
+        // Fragua de fusión: aparece por sorpresa en la mazmorra (ver
+        // systems/floorgen.js) -- a diferencia del yunque de arriba, esta
+        // SÍ funciona fuera del lobby (es su único punto de acceso en la
+        // torre, ver ui/forjaFusion.js).
+        if (G.fraguaNpc) {
+          const cerca = vivos().some(
+            (q) => Math.hypot(G.fraguaNpc.x - q.x, G.fraguaNpc.y - q.y) < 50,
+          );
+          if (cerca && !G.fraguaLock && !G.pausa) {
+            abrirFusion();
+          }
+          if (!cerca) G.fraguaLock = false;
         }
         // portal de la Arena PvP (solo en lobby): jugadores contra jugadores
         if (G.escena === "lobby" && G.arenaNpc) {

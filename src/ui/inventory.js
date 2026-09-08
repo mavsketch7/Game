@@ -5,14 +5,11 @@ import { abandonarPartida } from "../core/gameflow.js";
 import { META } from "../core/save.js";
 import { AJ, aplicarTexto } from "../core/settings.js";
 import { G } from "../core/state.js";
-import { fxOnda, fxParticulas } from "../render/effects.js";
 import { iconoDrop } from "../render/sprites.js";
 import { aplicarMusica, initAudio, sfx } from "../systems/audio.js";
 import { CARD_RAREZAS } from "../systems/cards.js";
 import { statsTot } from "../systems/combat.js";
 import { M } from "../systems/input.js";
-import { genItem } from "../systems/loot.js";
-import { genObjetoMitico } from "../systems/objetosMiticos.js";
 import {
   ALMA_COLS,
   ALMA_TOTAL,
@@ -26,7 +23,7 @@ import {
   puedeDesbloquearCasilla,
   quitarFragmento,
 } from "../systems/soul.js";
-import { banner, toast } from "./notifications.js";
+import { toast } from "./notifications.js";
 import { mostrar, ocultar } from "./overlays.js";
 import { clamp } from "../utils/helpers.js";
 
@@ -43,13 +40,12 @@ function escHtml(s) {
 // variable de módulo (igual que padFoco en systems/input.js) en vez de en
 // G, porque no hace falta sincronizarla por red ni guardarla.
 // "icoImg" -- nombre del PNG en public/assets/ui/libro/ico-<icoImg>.png
-// (ver pestanasLibro() más abajo) para las 4 pestañas con marcapáginas
-// real; Herrería no tiene icono en el set nuevo (confirmado con el
-// usuario) y se queda fuera del marcapáginas -- accesible con un botón
-// de repliegue propio, ver herreriaFallbackHtml().
+// (ver pestanasLibro() más abajo). Herrería ya NO vive aquí -- la
+// fusión se sacó del menú por completo (pedido expreso: "esta mecánica
+// pasará a encontrarla en el lobby o aleatoriamente en la mazmorra, no
+// en el menú"), ver ui/forjaFusion.js y el yunque del lobby/mazmorra.
 const PESTANAS_INV = [
         { id: "personaje", ico: "🧑", nombre: "Personaje", icoImg: "personaje" },
-        { id: "herreria", ico: "⚒", nombre: "Herrería" },
         { id: "alma", ico: "🔮", nombre: "Alma", icoImg: "alma" },
         { id: "mapa", ico: "🗺", nombre: "Mapa", icoImg: "mapa" },
         { id: "ajustes", ico: "⚙", nombre: "Ajustes", icoImg: "ajustes" },
@@ -115,11 +111,6 @@ const LIBRO_MARCAPAGINA_INACTIVO_POS = [
 let idxSel = -1;
 // uid del fragmento de la bolsa de Alma elegido para colocar (null = ninguno)
 let fragSel = null;
-// true justo tras una fusión real (ver fusionar() más abajo) -- lo lee y
-// consume tabHerreria() para que el martillo golpee y salten chispas SOLO
-// en el render que sigue a una fusión, no cada vez que se repinta la
-// pestaña por cualquier otro motivo.
-let golpeMartilloPendiente = false;
 
 export function cambiarPestanaInv(dir) {
         const i = PESTANAS_INV.findIndex((t) => t.id === invTab);
@@ -271,174 +262,12 @@ function precioVenta(it) {
         return Math.round(PRECIO_VENTA[it.rareza] * (1 + 0.1 * META.mejoras.fortuna));
       }
 
-// ---- Resumen de impacto en estadísticas (▲/▼ por stat) para la celda de
-// la cuadrícula y el tooltip -- comparado contra lo que ya lleva puesto el
-// personaje en ese mismo slot (null si el slot está vacío, en cuyo caso
-// todo cuenta como ganancia).
 const ETQ_CORTA = { atk: "ATK", hp: "HP", armor: "DEF", crit: "CRIT", vel: "VEL", cdr: "CDR" };
-
-function impactoStats(it, actual) {
-        const claves = new Set(Object.keys(it.stats));
-        if (actual) for (const k in actual.stats) claves.add(k);
-        const partes = [];
-        for (const k of claves) {
-          const v = it.stats[k] || 0;
-          const base = actual ? actual.stats[k] || 0 : 0;
-          const d = v - base;
-          if (d !== 0) partes.push({ k, d });
-        }
-        partes.sort((a, b) => b.d - a.d);
-        return partes;
-      }
-
-function impactoResumenHtml(partes) {
-        if (!partes.length) return '<span class="impacto-igual">= igual</span>';
-        return partes
-          .map(
-            ({ k, d }) =>
-              '<span class="impacto-' +
-              (d > 0 ? "up" : "down") +
-              '">' +
-              (d > 0 ? "▲" : "▼") +
-              (ETQ_CORTA[k] || k) +
-              "</span>",
-          )
-          .join(" ");
-      }
-
-function impactoDetalleHtml(partes) {
-        if (!partes.length)
-          return '<div class="tt-stat-linea igual">Sin cambio de estadísticas</div>';
-        return partes
-          .map(
-            ({ k, d }) =>
-              '<div class="tt-stat-linea ' +
-              (d > 0 ? "up" : "down") +
-              '">' +
-              (d > 0 ? "▲ +" + d : "▼ " + d) +
-              " " +
-              ETQ[k] +
-              "</div>",
-          )
-          .join("");
-      }
 
 function iconoUrl(it) {
         return iconoDrop(it).toDataURL();
       }
 
-// Celda de la cuadrícula de inventario: icono por tipo de objeto (ver
-// iconoDrop en render/sprites.js), color de borde por rareza, resumen
-// corto de impacto en stats y, al pasar el cursor, un tooltip con la
-// descripción completa (efecto especial + todas las estadísticas con
-// indicador de mejora/empeoramiento vs. lo ya equipado).
-function celdaItem(it, idx, p, equipada) {
-        const rar = RAREZAS[it.rareza];
-        const actual = equipada ? null : p.equipo[it.slot];
-        const partes = impactoStats(it, actual);
-        let tagClase = "";
-        if (it.slot === "arma" && it.clase) {
-          tagClase = ROLES[it.clase].nombre.split(" ")[0];
-        }
-        const seleccionada = !equipada && idx === idxSel;
-        const etiquetaSlot = SLOT_LABEL[it.slot] || it.slot;
-        return (
-          '<div class="item-cell ' +
-          rar.cls +
-          (seleccionada ? " seleccionada" : "") +
-          '" style="border-color:' +
-          rar.col +
-          '"' +
-          (equipada
-            ? ""
-            : ' draggable="true" ondragstart="arrastrarItemInicio(event,' +
-              idx +
-              ')" ondragend="arrastrarItemFin(event)" onclick="selItemInv(' +
-              idx +
-              ')"') +
-          ">" +
-          '<img class="item-cell-ico" src="' +
-          iconoUrl(it) +
-          '" alt="" />' +
-          '<div class="item-cell-nombre ' +
-          rar.cls +
-          '">' +
-          escHtml(it.nombre) +
-          "</div>" +
-          '<div class="item-cell-tipo">' +
-          etiquetaSlot +
-          (tagClase ? " · " + tagClase : "") +
-          "</div>" +
-          '<div class="item-cell-impacto">' +
-          impactoResumenHtml(partes) +
-          "</div>" +
-          '<div class="item-tooltip">' +
-          '<div class="tt-nombre ' +
-          rar.cls +
-          '">' +
-          escHtml(it.nombre) +
-          "</div>" +
-          '<div class="tt-slot">' +
-          etiquetaSlot +
-          (tagClase ? " · " + tagClase : "") +
-          ' · <span class="' +
-          rar.cls +
-          '">' +
-          rar.n +
-          "</span></div>" +
-          (it.efectoDesc
-            ? '<div class="tt-efecto">✦ ' + escHtml(it.efectoDesc) + "</div>"
-            : "") +
-          (typeof it.kills === "number"
-            ? '<div class="tt-efecto">🗡 ' + it.kills + " kills con esta arma</div>"
-            : "") +
-          impactoDetalleHtml(partes) +
-          "</div>" +
-          "</div>"
-        );
-      }
-
-// Misma rareza Y mismo slot (y misma clase si es arma) -- ver
-// gruposFusionables() para el porqué: los 7 slots no son intercambiables
-// entre sí aunque compartan rareza (un casco y un collar Épicos no fusionan).
-function mismoGrupoFusion(a, b) {
-        if (a.rareza !== b.rareza || a.slot !== b.slot) return false;
-        if (a.slot === "arma" && a.clase !== b.clase) return false;
-        return true;
-      }
-
-function fusBtnItem(it, idx, p) {
-        if (it.rareza >= 4) return ""; // Mítico es el techo, no se fusiona más
-        const dentro = p.fusionSel.includes(it);
-        if (dentro)
-          return (
-            '<button class="btn-fus dentro" onclick="togFusion(' +
-            idx +
-            ')">⚗ quitar</button>'
-          );
-        if (p.fusionSel.length >= 3) return "";
-        if (p.fusionSel.length > 0 && !mismoGrupoFusion(p.fusionSel[0], it))
-          return "";
-        return (
-          '<button class="btn-fus" onclick="togFusion(' +
-          idx +
-          ')">⚗ fusión</button>'
-        );
-      }
-
-function togFusion(idx) {
-        const p = G.players[G.invSel] || G.players[0];
-        const it = p.bolsa[idx];
-        if (!it) return;
-        const pos = p.fusionSel.indexOf(it);
-        if (pos >= 0) p.fusionSel.splice(pos, 1);
-        else if (
-          p.fusionSel.length < 3 &&
-          (p.fusionSel.length === 0 || mismoGrupoFusion(p.fusionSel[0], it))
-        )
-          p.fusionSel.push(it);
-        abrirInv();
-      }
 
 function filtrarBolsa(slot) {
         const p = G.players[G.invSel] || G.players[0];
@@ -465,117 +294,6 @@ function ordenarBolsa(crit) {
           );
         else p.bolsa.sort((a, b) => suma(b) - suma(a));
         idxSel = -1;
-        abrirInv();
-      }
-
-function gruposFusionables(p) {
-        const grupos = {};
-        for (const it of p.bolsa) {
-          if (it.rareza >= 4) continue; // Mítico es el techo, no se fusiona más
-          // agrupar por rareza y por slot -- las armas además por clase para
-          // no mezclar clases al evolucionar. Antes armadura y accesorio caían
-          // en la misma clave ("x"), así que la fusión rápida podía juntar
-          // p.ej. 2 armaduras + 1 accesorio de la misma rareza como si fueran
-          // "3 del mismo tipo" y fusionarlos igualmente, perdiendo el
-          // accesorio como relleno sin avisar.
-          const clave =
-            it.rareza +
-            "|" +
-            (it.slot === "arma" ? "arma:" + (it.clase || "") : it.slot);
-          (grupos[clave] = grupos[clave] || []).push(it);
-        }
-        return grupos;
-      }
-
-function contarFusionesRapidas(p) {
-        let n = 0;
-        const g = gruposFusionables(p);
-        for (const k in g) n += Math.floor(g[k].length / 3);
-        return n;
-      }
-
-function fusionRapida() {
-        const p = G.players[G.invSel] || G.players[0];
-        const g = gruposFusionables(p);
-        // preferir la rareza más alta disponible que tenga 3+
-        let mejor = null,
-          mejorRar = -1;
-        for (const k in g) {
-          if (g[k].length >= 3) {
-            const rar = parseInt(k.split("|")[0]);
-            if (rar > mejorRar) {
-              mejorRar = rar;
-              mejor = g[k];
-            }
-          }
-        }
-        if (!mejor) {
-          toast("No hay 3 objetos de la misma rareza para fusionar", "#c9a35a");
-          return;
-        }
-        p.fusionSel = mejor.slice(0, 3);
-        fusionar();
-      }
-
-function fusionar() {
-        const p = G.players[G.invSel] || G.players[0];
-        if (p.fusionSel.length !== 3) return;
-        golpeMartilloPendiente = true;
-        const rarF = p.fusionSel[0].rareza;
-        const base = p.fusionSel[0];
-        // sacar los 3 de la bolsa
-        for (const it of p.fusionSel) {
-          const i = p.bolsa.indexOf(it);
-          if (i >= 0) p.bolsa.splice(i, 1);
-        }
-        idxSel = -1;
-        if (rarF < 3) {
-          // evolución garantizada a la rareza superior, conservando el slot del primero
-          const nuevo = genItem(Math.max(1, G.planta), rarF + 1, base.slot);
-          if (base.slot === "arma") nuevo.clase = base.clase;
-          // las armas Legendarias ganadas por fusión (no las que caen
-          // sueltas del loot normal) llevan contador de kills, igual que
-          // las Míticas -- ver systems/soul.js: desmantelarArma().
-          if (nuevo.slot === "arma" && nuevo.rareza === 3) nuevo.kills = 0;
-          p.bolsa.push(nuevo);
-          fxOnda(p.x, p.y, 40, RAREZAS[rarF + 1].col);
-          fxParticulas(p.x, p.y, 14, RAREZAS[rarF + 1].col);
-          toast(
-            "⚗️ ¡Fusión! Nace " +
-              nuevo.nombre +
-              " [" +
-              RAREZAS[rarF + 1].n +
-              "]",
-            RAREZAS[rarF + 1].col,
-          );
-        } else if (rarF === 3) {
-          // fusión legendaria: única vía (junto al drop rarísimo al romper
-          // pilares/barriles, ver systems/combat.js) para conseguir un
-          // objeto Mítico. Antes esto daba un 30% de una "reliquia" con
-          // todos los stats sumados; ahora ese 30% baja a ~13% (sigue
-          // siendo un objeto curado de systems/objetosMiticos.js, no un
-          // simple sumatorio) para que el techo de la progresión siga
-          // sintiéndose especial sin ser inalcanzable.
-          if (Math.random() < 0.13) {
-            const nuevo = genObjetoMitico(Math.max(1, G.planta), base.slot);
-            p.bolsa.push(nuevo);
-            G.shake = Math.max(G.shake, 8);
-            fxOnda(p.x, p.y, 80, "#ff5a36");
-            fxOnda(p.x, p.y, 50, "#fff0c8");
-            fxParticulas(p.x, p.y, 30, "#ff5a36");
-            banner("✦ ¡LA FUSIÓN LEGENDARIA SOBREVIVE! ✦");
-            toast("Nace " + nuevo.nombre + " [Mítico]", "#ff5a36");
-          } else {
-            G.shake = Math.max(G.shake, 6);
-            fxParticulas(p.x, p.y, 24, "#57496f");
-            fxOnda(p.x, p.y, 60, "#d1545c");
-            banner(
-              "✝ La fusión colapsa: los tres legendarios se desintegran ✝",
-            );
-            toast("El poder era demasiado. Cenizas.", "#d1545c");
-          }
-        }
-        p.fusionSel = [];
         abrirInv();
       }
 
@@ -649,28 +367,6 @@ function celdaSlotEquipo(slot, p) {
           "</div>" +
           "</div>" +
           "</div>"
-        );
-      }
-
-function filtroCtrlHtml(p) {
-        const filtro = p.filtroBolsa || "todos";
-        return (
-          '<div style="display:flex;gap:6px;align-items:center;margin:2px 0 8px;flex-wrap:wrap">' +
-          '<span style="font-size:.75rem;color:var(--ceniza)">Filtrar:</span>' +
-          '<div class="seg">' +
-          [["Todo", "todos"], ...SLOTS.map((s) => [SLOT_LABEL[s] || s, s])]
-            .map(
-              ([lab, v]) =>
-                '<button class="' +
-                (filtro === v ? "on" : "") +
-                '" onclick="filtrarBolsa(\'' +
-                v +
-                "')\">" +
-                lab +
-                "</button>",
-            )
-            .join("") +
-          "</div></div>"
         );
       }
 
@@ -804,12 +500,12 @@ function selectorJugadorLibro() {
         );
       }
 
-// Marcapáginas de sección (Personaje/Alma/Mapa/Ajustes -- Herrería
-// aparte, ver herreriaFallbackHtml()): la pestaña ACTIVA ocupa siempre
-// el hueco grande/apuntado de arriba (marcapagina-activo.png, con su
-// propio icono), las demás se reparten en los huecos pequeños de
-// debajo (marcapagina.png) -- confirmado con el usuario ("la activa
-// sube al hueco grande, las demás se reordenan debajo").
+// Marcapáginas de sección (Personaje/Alma/Mapa/Ajustes): la pestaña
+// ACTIVA ocupa siempre el hueco grande/apuntado de arriba
+// (marcapagina-activo.png, con su propio icono), las demás se reparten
+// en los 3 huecos pequeños de debajo (marcapagina.png, uno para cada
+// una de las otras 3) -- confirmado con el usuario ("la activa sube al
+// hueco grande, las demás se reordenan debajo").
 function pestanasLibro() {
         const conIcono = PESTANAS_INV.filter((t) => t.icoImg);
         const activa = conIcono.find((t) => t.id === invTab) || conIcono[0];
@@ -841,24 +537,29 @@ function pestanasLibro() {
         return html;
       }
 
-// Herrería no tiene icono en el set nuevo (confirmado con el usuario) --
-// botón de repliegue sencillo, sin marcapáginas propio, bajo la pila de
-// los 3 marcapáginas inactivos.
-function herreriaFallbackHtml() {
-        const activa = invTab === "herreria";
+// Marcapáginas fijo de "Salir" (ico-salir.png) -- NO es una pestaña de
+// contenido (no cambia invTab ni redibuja el libro): dispara
+// directamente el popup de abandonar. Pedido expreso: separado del
+// botón de cerrar (X, ver marcoLibroChrome() -- ese vuelve a cerrar el
+// libro sin más, "para seguir jugando"), bajo la pila de los 3
+// marcapáginas de sección.
+function salirBotonHtml() {
         return (
-          '<button class="hoja-marcapagina hoja-marcapagina-texto' + (activa ? " hoja-marcapagina-activa" : "") + "\" onclick=\"irPestanaInv('herreria')\" title=\"Herrería\">" +
-          "⚒</button>"
+          '<button class="hoja-marcapagina hoja-marcapagina-salir" style="background-image:url(\'' +
+          libroSrc("marcapagina") +
+          "')\" onclick=\"abrirConfirmarAbandono()\" title=\"Salir\">" +
+          '<img class="hoja-marcapagina-ico hoja-marcapagina-ico-chica" src="' + libroSrc("ico-salir") + '" alt="" />' +
+          "</button>"
         );
       }
 
 // Popup "¿Seguro que quieres volver ya?" -- reutiliza el contenedor
 // #menu-pausa/#menu-pausa-inner que ya existe en index.html (antes
 // alojaba el menú de pausa intermedio, ahora sin uso, ver
-// ui/pauseMenu.js) en vez de crear un overlay nuevo. El botón de
-// cerrar del libro (antes cerrarInv()) llama a esto -- pedido expreso:
-// "el botón exit reemplaza el volver al lobby". Cerrar el libro SIN
-// abandonar sigue siendo solo Tab/Start, confirmado con el usuario.
+// ui/pauseMenu.js) en vez de crear un overlay nuevo. Solo lo abre el
+// marcapáginas de Salir (ver salirBotonHtml()) -- el botón de cerrar
+// (X) del libro vuelve a cerrar sin más, pedido expreso: "el botón con
+// la X es para seguir jugando".
 function abrirConfirmarAbandono() {
         document.getElementById("menu-pausa-inner").innerHTML =
           '<div class="popup-abandono">' +
@@ -889,21 +590,21 @@ window.cerrarPopupAbandono = cerrarPopupAbandono;
 window.confirmarAbandonoDefinitivo = confirmarAbandonoDefinitivo;
 
 // "Chrome" compartido por TODAS las pestañas del libro: fondo, pestañas
-// de sección, selector de jugador, título dinámico (banner -- pedido
-// expreso: bastante más grande, ~3rem) y botón de salir. `contenido` es
-// el HTML específico de cada pestaña, ya posicionado.
+// de sección, marcapáginas de salir, selector de jugador, título
+// dinámico (banner) y botón de cerrar. `contenido` es el HTML
+// específico de cada pestaña, ya posicionado.
 function marcoLibroChrome(contenido) {
         const titulo = (PESTANAS_INV.find((t) => t.id === invTab) || {}).nombre || "Personaje";
         return (
           '<div class="hoja-libro">' +
           '<img class="hoja-fondo" src="' + libroSrc("fondo") + '" alt="" />' +
           pestanasLibro() +
-          herreriaFallbackHtml() +
+          salirBotonHtml() +
           selectorJugadorLibro() +
           '<div class="hoja-pieza hoja-banner-titulo" style="background-image:url(\'' + libroSrc("banner-titulo") + "')\">" +
           '<span class="hoja-banner-titulo-texto">' + escHtml(titulo) + "</span>" +
           "</div>" +
-          '<button class="hoja-pieza hoja-cerrar" style="background-image:url(\'' + libroSrc("boton-cerrar") + "')\" onclick=\"abrirConfirmarAbandono()\" aria-label=\"Salir\"></button>" +
+          '<button class="hoja-pieza hoja-cerrar" style="background-image:url(\'' + libroSrc("boton-cerrar") + "')\" onclick=\"cerrarInv()\" aria-label=\"Cerrar\"></button>" +
           contenido +
           "</div>"
         );
@@ -1044,7 +745,7 @@ function tabPersonaje(p, t, b) {
       }
 
 // Envuelve el contenido de una pestaña que NO es "personaje" (Mapa/Alma/
-// Herrería/Ajustes) en el mismo libro de fondo (fondo.png, las 2 páginas
+// Ajustes) en el mismo libro de fondo (fondo.png, las 2 páginas
 // en blanco + bordes/esquinas, sin las piezas de equipo/inventario que
 // eran solo para la ficha) -- pedido expreso: "abandonar ya el sistema
 // actual y que todo se base en el libro, usándolo de fondo". Mismo
@@ -1380,7 +1081,6 @@ function panelAccionItem(p) {
             : '<button class="btn" disabled title="Arma de otra clase">Solo ' +
               ROLES[it.clase].nombre.split(" ")[0] +
               "</button>") +
-          fusBtnItem(it, idxSel, p) +
           transf +
           '<button class="btn" onclick="venderItem(' +
           idxSel +
@@ -1393,125 +1093,6 @@ function panelAccionItem(p) {
           "</div>" +
           "</div>"
         );
-      }
-
-function gridBolsa(p) {
-        const filtro = p.filtroBolsa || "todos";
-        const bolsaFiltrada = p.bolsa
-          .map((it, i) => ({ it, i }))
-          .filter(({ it }) => filtro === "todos" || it.slot === filtro);
-        if (!p.bolsa.length)
-          return '<p style="color:var(--ceniza);margin-top:8px">Tu bolsa está vacía. Recoge botín de enemigos, cofres y barriles.</p>';
-        if (!bolsaFiltrada.length)
-          return '<p style="color:var(--ceniza);margin-top:8px">Nada de ese tipo en la bolsa.</p>';
-        return (
-          '<div class="grid-inv">' +
-          bolsaFiltrada.map(({ it, i }) => celdaItem(it, i, p, false)).join("") +
-          "</div>"
-        );
-      }
-
-// Herrería: la mesa de fusión de siempre (3 objetos de la misma rareza →
-// evolucionan), reubicada aquí desde la antigua pestaña "Equipamiento" --
-// el yunque/martillo/chispas del boceto llegan en un pase aparte, de
-// momento la mecánica ya funciona igual que antes bajo el nuevo nombre.
-// N chispas con deriva aleatoria propia (--dx/--dy), un solo disparo al
-// golpear el martillo -- mismo mecanismo que las luciérnagas de la
-// pantalla de selección (ver ui/menu.js), aquí generadas en HTML en vez de
-// añadidas por JS porque tabHerreria() ya reconstruye todo el DOM de la
-// pestaña de golpe.
-function chispasForjaHtml() {
-        let html = "";
-        for (let i = 0; i < 10; i++) {
-          const ang = ((Math.random() * 140 - 70) - 90) * (Math.PI / 180);
-          const dist = 18 + Math.random() * 26;
-          const dx = Math.cos(ang) * dist;
-          const dy = Math.sin(ang) * dist;
-          html +=
-            '<span class="chispa-forja" style="--dx:' +
-            dx.toFixed(0) +
-            "px;--dy:" +
-            dy.toFixed(0) +
-            "px;animation-delay:" +
-            (Math.random() * 0.12).toFixed(2) +
-            's"></span>';
-        }
-        return html;
-      }
-
-function tabHerreria(p) {
-        p.fusionSel = p.fusionSel.filter((it) => p.bolsa.includes(it));
-        const slotsF = [0, 1, 2]
-          .map((k) => {
-            const it = p.fusionSel[k];
-            return it
-              ? '<div class="fusion-slot lleno" style="border-color:' +
-                  RAREZAS[it.rareza].col +
-                  ";color:" +
-                  RAREZAS[it.rareza].col +
-                  '">' +
-                  it.nombre +
-                  "</div>"
-              : '<div class="fusion-slot">vacío</div>';
-          })
-          .join("");
-        const rarF = p.fusionSel.length ? p.fusionSel[0].rareza : -1;
-        const esLeg = rarF === 3;
-        let fusBtn = "";
-        if (p.fusionSel.length === 3) {
-          fusBtn =
-            '<button class="btn dorado" onclick="fusionar()">⚗️ FUSIONAR' +
-            (esLeg ? " (13% de éxito)" : " → " + RAREZAS[rarF + 1].n) +
-            "</button>";
-        }
-        const avisoF =
-          esLeg && p.fusionSel.length === 3
-            ? '<div class="fusion-aviso">⚠ Fusión legendaria: si tiene éxito, nace un objeto Mítico único. Si falla (87%), LOS TRES SE DESTRUYEN.</div>'
-            : "";
-        const nRapidas = contarFusionesRapidas(p);
-        const btnRapida =
-          nRapidas > 0
-            ? '<button class="btn dorado" onclick="fusionRapida()">⚡ Fusión rápida (' +
-              nRapidas +
-              " disponible" +
-              (nRapidas > 1 ? "s" : "") +
-              ")</button>"
-            : '<button class="btn" disabled title="Necesitas 3 objetos de la misma rareza">⚡ Fusión rápida (0)</button>';
-        const golpe = golpeMartilloPendiente;
-        golpeMartilloPendiente = false;
-        const escena =
-          '<div class="herreria-escena">' +
-          '<div class="herreria-yunque' +
-          (golpe ? " golpea" : "") +
-          '"></div>' +
-          '<div class="fusion-slots-forja">' +
-          slotsF +
-          "</div>" +
-          (golpe ? chispasForjaHtml() : "") +
-          "</div>";
-        const fusion =
-          '<div class="fusion-panel">' +
-          '<b style="font-size:.9rem;color:var(--vespero)">⚒ Herrería</b>' +
-          '<div style="font-size:.72rem;color:var(--ceniza);margin-top:2px">Combina 3 objetos de la MISMA rareza (mismo slot, y misma clase si son armas) → evolucionan a la superior.</div>' +
-          '<div style="text-align:center;margin-top:8px">' +
-          fusBtn +
-          "</div>" +
-          '<div style="margin-top:8px;text-align:center">' +
-          btnRapida +
-          ' <span style="font-size:.7rem;color:var(--ceniza)">coge 3 iguales automáticamente (prioriza la rareza más alta)</span></div>' +
-          avisoF +
-          "</div>";
-        const paginaDer =
-          '<h3 style="margin-top:0;font-size:.85rem;color:#4a3418">Bolsa de ' +
-          escHtml(p.nombre) +
-          " (" +
-          p.bolsa.length +
-          ")</h3>" +
-          filtroCtrlHtml(p) +
-          ordCtrlHtml(p) +
-          gridBolsa(p) +
-          panelAccionItem(p);
-        return envolverEnLibroBlanco(escena + fusion, paginaDer);
       }
 
 // Ajustes: antes overlay aparte (#ajustes, accesible con el botón ⚙ incluso
@@ -1530,7 +1111,7 @@ function tabAjustes() {
         ];
         // Array de filas (en vez de una única cadena) para poder repartirlas
         // en las dos páginas del libro -- ver envolverEnLibroBlanco() más
-        // arriba, mismo criterio que tabAlma()/tabHerreria().
+        // arriba, mismo criterio que tabAlma().
         const filas = [
           '<div class="ajuste-fila"><div><h4>🖥 Pantalla completa</h4>' +
             '<div class="a-desc">Ocupa toda la pantalla (también con F11 o la tecla F).</div></div>' +
@@ -1674,8 +1255,7 @@ export function abrirInv() {
         const t = statsTot(p),
           b = ROLES[p.rol];
         let contenido;
-        if (invTab === "herreria") contenido = tabHerreria(p);
-        else if (invTab === "alma") contenido = tabAlma();
+        if (invTab === "alma") contenido = tabAlma();
         else if (invTab === "mapa") contenido = tabMapa();
         else if (invTab === "ajustes") contenido = tabAjustes();
         else contenido = tabPersonaje(p, t, b);
@@ -1904,8 +1484,6 @@ window.toggleSilencio = toggleSilencio;
 window.toggleControlTactil = toggleControlTactil;
 window.equipar = equipar;
 window.filtrarBolsa = filtrarBolsa;
-window.fusionRapida = fusionRapida;
-window.fusionar = fusionar;
 window.intentarColocarAlma = intentarColocarAlma;
 window.intentarDesbloquearAlma = intentarDesbloquearAlma;
 window.invSel = invSel;
@@ -1915,5 +1493,4 @@ window.quitarFragmentoAlma = quitarFragmentoAlma;
 window.selItemInv = selItemInv;
 window.seleccionarFragAlma = seleccionarFragAlma;
 window.tirarItem = tirarItem;
-window.togFusion = togFusion;
 window.venderItem = venderItem;

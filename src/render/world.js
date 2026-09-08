@@ -1137,6 +1137,32 @@ export function render() {
           cx.font = "700 10px Alegreya Sans";
           cx.fillText("MESA DE TRABAJO — acércate", m.x, m.y + 34);
         }
+        // Fragua de fusión: aparece por sorpresa en una sala normal de la
+        // planta (ver systems/floorgen.js, sala.fraguaNpc/poblarSala) --
+        // mismo marcador pulsante que el resto de estaciones interactuables.
+        if (G.fraguaNpc) {
+          const m = G.fraguaNpc;
+          for (let k = 0; k < 3; k++) {
+            cx.strokeStyle = "rgba(224,112,58," + (0.9 - k * 0.28) + ")";
+            cx.lineWidth = 3;
+            cx.beginPath();
+            cx.arc(
+              m.x,
+              m.y,
+              22 - k * 6 + Math.sin(animGlobal * 3 + k) * 2,
+              0,
+              TAU,
+            );
+            cx.stroke();
+          }
+          cx.fillStyle = "#ffb27f";
+          cx.font = "700 13px Alegreya Sans";
+          cx.textAlign = "center";
+          cx.fillText("⚗", m.x, m.y + 5);
+          cx.fillStyle = "#e0703a";
+          cx.font = "700 10px Alegreya Sans";
+          cx.fillText("FRAGUA — acércate", m.x, m.y + 34);
+        }
         // NPC de pruebas (QA, ?qa=1): sube de nivel al grupo por proximidad
         if (G.nivelNpc) {
           const m = G.nivelNpc;

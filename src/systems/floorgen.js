@@ -682,6 +682,28 @@ function poblarSala(sala, f) {
           spawnEnemigo(f, "mini");
           toast("⚠ Un minijefe merodea esta planta…", "#c07be0");
         }
+        // Fragua de fusión aleatoria (ver G.fraguaColocadaPlanta arriba):
+        // nunca en la sala de entrada/final ni en las de reto (esas ya
+        // han hecho return antes de llegar aquí) -- solo una vez por
+        // planta, la primera sala normal que se visite y gane la tirada
+        // se la queda.
+        if (
+          !G.fraguaColocadaPlanta &&
+          !sala.esInicial &&
+          !sala.esFinal &&
+          Math.random() < 0.18
+        ) {
+          let fx, fy, itf = 0;
+          do {
+            fx = rnd(140, W - 140);
+            fy = rnd(110, H - 180);
+            itf++;
+          } while (!puntoValido(fx, fy, 30) && itf < 25);
+          if (itf < 25) {
+            sala.fraguaNpc = { x: fx, y: fy };
+            G.fraguaColocadaPlanta = true;
+          }
+        }
       }
 
 // Carga una sala en G (reasigna las referencias que ya usa todo el motor:
@@ -745,6 +767,10 @@ function cargarSala(sala) {
           sala.poblada = true;
         }
         sala.visitada = true;
+        // DESPUÉS de poblarSala -- si se lee antes, sala.fraguaNpc todavía
+        // no existe la primera vez que se visita (bug real: se leía "null"
+        // y se quedaba así aunque poblarSala acabara de colocarla).
+        G.fraguaNpc = sala.fraguaNpc || null;
       }
 
 // Traslada a TODO el grupo a la sala conectada en cuanto un jugador vivo
@@ -800,6 +826,14 @@ export function iniciarPlanta() {
         G.skinNpc = null;
         G.arenaNpc = null;
         G.nivelNpc = null;
+        // Fragua de fusión (ver ui/forjaFusion.js): pedido expreso, la
+        // fusión de objetos se sacó del menú -- ahora solo se encuentra
+        // en el yunque del lobby o, aquí, apareciendo por sorpresa en
+        // UNA sala normal de la planta (ver poblarSala/cargarSala más
+        // abajo, sala.fraguaNpc). G.fraguaColocadaPlanta evita que
+        // salga en más de una sala por planta.
+        G.fraguaNpc = null;
+        G.fraguaColocadaPlanta = false;
         // Portal de pruebas (QA) del vestíbulo -- sin esto se quedaba
         // "pegado" en pantalla al entrar a cualquier planta (mismo bug
         // que ya evitan mercader/skinNpc/arenaNpc/nivelNpc de arriba).

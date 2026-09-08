@@ -1979,11 +1979,17 @@ img.hoja-pieza {
 .hoja-marcapagina:hover {
   filter: brightness(0.92);
 }
+/* El arte (marcapagina-activo.png) es una punta apuntando a la
+   izquierda -- el centro VISUAL de la zona roja queda más a la derecha
+   que el centro geométrico de toda la caja (que incluye la punta,
+   casi sin "peso" visual) -- pedido expreso, el icono chocaba con el
+   borde dorado izquierdo. */
 .hoja-marcapagina-activa {
   top: 5.5%;
   width: 13%;
   height: 12%;
   filter: none;
+  padding-left: 18%;
 }
 .hoja-marcapagina:not(.hoja-marcapagina-activa) {
   width: 8%;
@@ -1998,23 +2004,14 @@ img.hoja-pieza {
   width: 55%;
 }
 /* Herrería no tiene icono en el set nuevo -- botón de repliegue sencillo
-   con emoji, mismo hueco/estilo que un marcapáginas inactivo pero sin
-   imagen de fondo (ver herreriaFallbackHtml() en inventory.js). */
-.hoja-marcapagina-texto {
+   con su propio icono (ico-salir.png) -- NO es una pestaña de contenido,
+   dispara directamente el popup de abandonar (ver salirBotonHtml() en
+   inventory.js). Mismo hueco que ocupaba antes el de repliegue de
+   Herrería, ahora el único marcapáginas fijo bajo la pila de 3. */
+.hoja-marcapagina-salir {
   top: 78.5%;
   width: 8%;
   height: 12%;
-  background: linear-gradient(135deg, #7a5a3a, #4a3418);
-  border: 1px solid #8a6a34;
-  border-radius: 0 6px 6px 0;
-  font-size: clamp(0.6rem, 2cqw, 0.9rem);
-}
-.hoja-marcapagina-texto.hoja-marcapagina-activa {
-  top: 78.5%;
-  width: 10%;
-  height: 12%;
-  filter: none;
-  background: linear-gradient(135deg, #c9a35a, #8a5a1a);
 }
 
 /* -- Selector de jugador: fila de puntos de color junto al banner
@@ -2138,11 +2135,12 @@ img.hoja-pieza {
   border: 2px solid transparent;
   background: transparent;
   border-radius: 3px;
-  /* Fijo en px, no en % -- un % de padding se calcula contra el ancho
-     del CONTENEDOR POSICIONADO (.hoja-libro, ~1300px), no contra el
-     tamaño propio de la casilla (mismo bug que .hoja-stats-panel más
-     abajo). 10px confirmado a ojo por el usuario. */
-  padding: 10px;
+  /* cqw contra .hoja-libro (container-type:inline-size), NO % normal
+     -- un % de padding se calcula contra el ancho del CONTENEDOR
+     POSICIONADO (~1300px), no contra el tamaño propio de la casilla
+     (mismo bug que .hoja-stats-panel más abajo). ~20px a este tamaño,
+     escala igual que el resto del libro al cambiar de ventana. */
+  padding: clamp(12px, 1.6cqw, 22px);
   min-height: 0;
   gap: 0;
   display: flex;
@@ -2164,19 +2162,20 @@ img.hoja-pieza {
   pointer-events: none;
 }
 .hoja-slot-etiqueta {
-  font-size: 0.42rem;
+  font-size: 1rem;
   color: #6b5638;
   text-transform: uppercase;
   letter-spacing: 0.03em;
   pointer-events: none;
+  white-space: nowrap;
 }
 
 .hoja-retrato {
-  left: 30.3%;
+  left: 28.3%;
   top: 33%;
   width: 12%;
   height: 30%;
-  background: radial-gradient(ellipse 70% 60% at center, #241b12 0%, transparent 75%);
+  background: radial-gradient(ellipse 65% 55% at center, #241b12 0%, #241b12 35%, transparent 78%);
 }
 
 /* -- Stats/habilidades: DOS piezas separadas ahora, cada una con su
@@ -2229,7 +2228,8 @@ img.hoja-pieza {
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  padding: 1.5rem;
+  gap: 10px;
 }
 .hoja-stat {
   display: flex;
@@ -2269,11 +2269,11 @@ img.hoja-pieza {
 }
 .hoja-inv-titulo {
   left: 57%;
-  top: 13.5%;
+  top: 12.5%;
   width: 28.67%;
   font-family: "Dungeon Font", "Cinzel", serif;
   font-weight: 800;
-  font-size: clamp(0.5rem, 1.8cqw, 0.78rem);
+  font-size: clamp(1rem, 2.4cqw, 1.4rem);
   color: #4a3418;
   text-align: center;
 }
@@ -2428,7 +2428,7 @@ img.hoja-pieza {
   font-size: 1.2rem;
 }
 
-/* ===== Libro v2, resto de pestañas (Mapa/Alma/Herrería/Ajustes -- ver
+/* ===== Libro v2, resto de pestañas (Mapa/Alma/Ajustes -- ver
    envolverEnLibroBlanco() en ui/inventory.js): mismo marcoLibroChrome()
    que Personaje (pestañas/selector de jugador/título/botón de salir),
    SIN tarjeta de fondo en las páginas -- pedido expreso: "no pongas un
@@ -2567,8 +2567,8 @@ img.hoja-pieza {
   background: var(--vespero);
 }
 
-/* ===== Herrería: yunque + martillo, UN solo sprite (ver ui/inventory.js:
-   tabHerreria()/chispasForjaHtml()) -- antes eran dos imágenes separadas
+/* ===== Fragua: yunque + martillo, UN solo sprite (ver ui/forjaFusion.js)
+   -- antes eran dos imágenes separadas
    (yunque estático + martillo con su propio keyframe de rotación) que
    había que alinear a mano; el nuevo anvil-forja-strip.png (14 frames,
    40x32 cada uno, recortado de anvil.png) trae el yunque Y el martillo
@@ -2702,10 +2702,31 @@ img.hoja-pieza {
 .fusion-slot.lleno {
   border-style: solid;
 }
+/* Hueco de resultado -- pedido expreso: "3 huecos unidos que llevan a
+   otro hueco con ?" -- siempre "?" (misterio), no se adelanta el
+   resultado hasta pulsar fusionar. */
+.fusion-slot.resultado {
+  border-color: var(--vespero);
+  color: var(--vespero);
+  font-size: 1.3rem;
+  font-weight: 800;
+}
+.fusion-flecha {
+  color: var(--ceniza);
+  font-size: 1.1rem;
+  flex-shrink: 0;
+}
 .fusion-aviso {
   font-size: 0.72rem;
   color: var(--sangre);
   margin-top: 6px;
+}
+/* Celda de la bolsa dentro del popup de fusión: no se puede meter (ni
+   rareza Mítica, ni si ya hay 3, ni si es de otro grupo) -- se atenúa y
+   se quita el puntero en vez de dejar un clic que no hace nada. */
+.item-cell-libro.bloqueada {
+  opacity: 0.35;
+  cursor: default;
 }
 
 /* ===== Fragmentos de Alma (ver systems/soul.js, ui/inventory.js) ===== */

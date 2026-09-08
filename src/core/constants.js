@@ -256,14 +256,16 @@ export const SLOTS = ["arma", "escudo", "casco", "peto", "piernas", "collar", "a
 // pack de variantes.
 export const ARMA_ARTE_VARIANTES = { guerrero: 6, arquero: 16, picaro: 5 };
 
-// Etiqueta visible en la ficha de personaje -- "arma" internamente sigue
-// siendo la misma clave de siempre (restricción por clase, pivote de
-// dibujo del arma en render/character.js, etc.), solo se le cambia el
-// nombre que ve el jugador a "Brazo derecho" para encajar con el resto de
-// slots de la ficha en forma de libro.
+// Etiqueta visible en la ficha de personaje -- "arma"/"escudo"
+// internamente siguen siendo las mismas claves de siempre (restricción
+// por clase, pivote de dibujo del arma en render/character.js, etc.),
+// solo se les cambia el nombre que ve el jugador. Antes "Brazo derecho"/
+// "Brazo izquierdo" -- pedido expreso: simplificar, "Principal"/
+// "Secundaria" deja claro que son los dos huecos de arma sin que el
+// texto se salga de la casilla pequeña del libro.
 export const SLOT_LABEL = {
-  arma: "Brazo derecho",
-  escudo: "Brazo izquierdo",
+  arma: "Principal",
+  escudo: "Secundaria",
   casco: "Casco",
   peto: "Peto",
   piernas: "Piernas",
