@@ -1190,19 +1190,18 @@ export function render() {
         // verdad, plantado en el suelo, a tamaño bien visible.
         if (G.yunqueNpc) {
           const m = G.yunqueNpc;
-          const bob = Math.sin(animGlobal * 1.6) * 1.5;
           const s = 52;
           cx.fillStyle = "rgba(0,0,0,.35)";
           cx.beginPath();
           cx.ellipse(m.x, m.y + 18, 20, 6, 0, 0, TAU);
           cx.fill();
           if (yunqueIcoListo) {
-            cx.drawImage(imYunqueIco, 0, 0, 32, 32, m.x - s / 2, m.y + 18 - s + bob, s, s);
+            cx.drawImage(imYunqueIco, 0, 0, 32, 32, m.x - s / 2, m.y + 18 - s, s, s);
           } else {
             cx.fillStyle = "#e9c98a";
             cx.font = "700 26px Alegreya Sans";
             cx.textAlign = "center";
-            cx.fillText("⚒", m.x, m.y + 5 + bob);
+            cx.fillText("⚒", m.x, m.y + 5);
           }
           cx.fillStyle = "#e9c98a";
           cx.font = "700 10px Alegreya Sans";
