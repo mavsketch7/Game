@@ -42,41 +42,74 @@ function escHtml(s) {
 // Mapa) -- estado puramente de interfaz, no de partida: vive aquí como
 // variable de módulo (igual que padFoco en systems/input.js) en vez de en
 // G, porque no hace falta sincronizarla por red ni guardarla.
+// "icoImg" -- nombre del PNG en public/assets/ui/libro/ico-<icoImg>.png
+// (ver pestanasLibro() más abajo) para las 4 pestañas con marcapáginas
+// real; Herrería no tiene icono en el set nuevo (confirmado con el
+// usuario) y se queda fuera del marcapáginas -- accesible con un botón
+// de repliegue propio, ver herreriaFallbackHtml().
 const PESTANAS_INV = [
-        { id: "personaje", ico: "🧑", nombre: "Personaje" },
+        { id: "personaje", ico: "🧑", nombre: "Personaje", icoImg: "personaje" },
         { id: "herreria", ico: "⚒", nombre: "Herrería" },
-        { id: "alma", ico: "🔮", nombre: "Alma" },
-        { id: "mapa", ico: "🗺", nombre: "Mapa" },
-        { id: "ajustes", ico: "⚙", nombre: "Ajustes" },
+        { id: "alma", ico: "🔮", nombre: "Alma", icoImg: "alma" },
+        { id: "mapa", ico: "🗺", nombre: "Mapa", icoImg: "mapa" },
+        { id: "ajustes", ico: "⚙", nombre: "Ajustes", icoImg: "ajustes" },
       ];
 let invTab = "personaje";
 
-// ---- Ficha de personaje "libro real" (arte "libro inventario-menu",
-// torre-vespero-assets/UI, ver public/assets/ui/libro/) -- ver
-// tabPersonaje() más abajo. Coordenadas en % calculadas contra el
-// lienzo nativo del arte (267x199 -- ver el .aseprite de origen), así
-// el contenedor solo necesita aspect-ratio para que todo escale junto
-// sin recalcular nada al cambiar el tamaño de ventana.
+// ---- Libro real v2 (arte "inventario y assets menu.aseprite" +
+// "icons-equipment-menu.aseprite", torre-vespero-assets/UI, ver
+// public/assets/ui/libro/) -- sustituye TANTO la ficha de personaje
+// como el resto de pestañas: el libro es ahora la interfaz completa
+// (marcapáginas con icono, marco de stats partido en dos, botón de
+// salir con popup de abandono...), no solo el fondo de "personaje".
+// Coordenadas en % calculadas contra el lienzo nativo del arte NUEVO
+// (300x200, más grande que el anterior 267x199 -- incluye margen para
+// los marcapáginas que sobresalen a la izquierda y el botón de cerrar
+// que sobresale arriba-derecha), así el contenedor solo necesita
+// aspect-ratio para que todo escale junto sin recalcular nada al
+// cambiar el tamaño de ventana.
 const libroSrc = (nombre) => `${import.meta.env.BASE_URL}assets/ui/libro/${nombre}.png`;
-// 7 casillas reales detectadas en la capa "cuadro-equipo" (no 6 como
-// parecía a ojo -- la caja inferior izquierda son en realidad DOS
-// casillas con un borde compartido, confirmado muestreando los píxeles).
-// Agrupadas por intención: columna izquierda = arma/escudo/joyas,
-// columna derecha (junto al retrato) = armadura de pies a cabeza.
+// 7 casillas reales detectadas en la capa "marco-equipamiento" + la
+// guía "Ubicacion-resto-marcos de equipo" (mismo método que la sesión
+// anterior: flood-fill sobre los píxeles de la guía). Misma
+// agrupación por intención que antes: columna izquierda = arma/
+// escudo/joyas, columna derecha (junto al retrato) = armadura de pies
+// a cabeza.
 const LIBRO_SLOT_POS = {
-  arma: { l: 15.4, t: 33.7, w: 6.7, h: 9.0 },
-  escudo: { l: 15.4, t: 44.2, w: 6.7, h: 9.0 },
-  collar: { l: 15.4, t: 54.8, w: 6.4, h: 9.0 },
-  anillo: { l: 22.1, t: 54.8, w: 6.4, h: 9.0 },
-  casco: { l: 41.6, t: 33.7, w: 6.7, h: 9.0 },
-  peto: { l: 41.6, t: 44.2, w: 6.7, h: 9.0 },
-  piernas: { l: 41.6, t: 54.8, w: 6.7, h: 9.0 },
+  arma: { l: 15.67, t: 33, w: 6, h: 9 },
+  escudo: { l: 15.67, t: 43.5, w: 6, h: 9 },
+  collar: { l: 15.67, t: 54, w: 5.67, h: 9 },
+  anillo: { l: 21.67, t: 54, w: 5.67, h: 9 },
+  casco: { l: 42.33, t: 33, w: 6, h: 9 },
+  peto: { l: 42.33, t: 43.5, w: 6, h: 9 },
+  piernas: { l: 42.33, t: 54, w: 6, h: 9 },
 };
-// Alto de cada banderín + hueco hasta el siguiente, medido en la capa
-// "banderines" del .aseprite (4 pestañas de 19px cada 23px, /199 de
-// alto total * 100).
-const LIBRO_BANDERIN_PASO = 11.56;
-const LIBRO_BANDERIN_TOP0 = 24.1;
+// Icono de tipo de equipo (icons-equipment-menu.aseprite, 7x 16x16) que
+// se muestra DENTRO de cada casilla vacía para indicar qué pieza va ahí
+// -- pedido expreso, mensaje aparte: "van en los cuadrados de equipo
+// para indicar qué pieza de equipo va, también se puede poner un texto
+// pequeño debajo". Mapeo por forma reconocible en el recorte (espada,
+// anillo, collar, torso/peto, escudo, casco, piernas) -- si alguno sale
+// cambiado es un cambio de una palabra aquí, no hay lógica que dependa
+// del orden.
+const LIBRO_SLOT_ICO = {
+  arma: "arma",
+  escudo: "escudo",
+  casco: "casco",
+  peto: "peto",
+  piernas: "piernas",
+  collar: "collar",
+  anillo: "anillo",
+};
+// Posiciones de los 3 marcapáginas INACTIVOS (guía "botones-cambiomenu-
+// ubicacion" del .aseprite) -- el activo va siempre en el hueco grande
+// de arriba (ver pestanasLibro()), estos 3 son para las pestañas que NO
+// están abiertas ahora mismo.
+const LIBRO_MARCAPAGINA_INACTIVO_POS = [
+  { l: 3.67, t: 35.5 },
+  { l: 3.67, t: 48.5 },
+  { l: 3.67, t: 63.5 },
+];
 // objeto de la bolsa seleccionado en la pestaña Equipamiento (-1 = ninguno)
 let idxSel = -1;
 // uid del fragmento de la bolsa de Alma elegido para colocar (null = ninguno)
@@ -148,7 +181,7 @@ function minimapaPlanta() {
             );
           }
         return (
-          '<h3 style="margin-top:0;font-size:.85rem;color:var(--vespero)">🗺 Mapa de la planta</h3>' +
+          '<h3 style="margin-top:0;font-size:.85rem;color:#4a3418">🗺 Mapa de la planta</h3>' +
           '<div class="minimapa">' +
           celdas.join("") +
           "</div>" +
@@ -686,6 +719,8 @@ function celdaSlotLibro(slot, p) {
         if (!it) {
           return (
             '<div class="eq-slot hoja-slot vacio" style="' + style + '"' + dropAttrs + ">" +
+            '<img class="hoja-slot-tipo-ico" src="' + libroSrc("ico-slot-" + LIBRO_SLOT_ICO[slot]) + '" alt="" />' +
+            '<span class="hoja-slot-etiqueta">' + label + "</span>" +
             '<div class="item-tooltip"><div class="tt-nombre" style="color:var(--ceniza)">' +
             label +
             '</div><div class="tt-slot">Vacío</div></div>' +
@@ -742,21 +777,128 @@ function gridBolsaLibro(p) {
         );
       }
 
-// Banderines del lomo del libro: sustituyen a la fila .tabs-jug de
-// siempre SOLO en esta pestaña (ver el condicional en abrirInv()) --
-// mismo onclick="invSel(i)" que ya usaba esa fila, el punto de color por
-// jugador reemplaza el border-left que usaba la versión plana.
-function banderinesLibro() {
-        return G.players
-          .map((q, i) => {
-            const top = LIBRO_BANDERIN_TOP0 + i * LIBRO_BANDERIN_PASO;
-            return (
-              '<button class="hoja-banderin' + (i === G.invSel ? " activa" : "") + '" style="top:' + top + '%;background-image:url(\'' + libroSrc("banderin") + "')\" onclick=\"invSel(" + i + ')" title="' + escHtml(q.nombre) + '">' +
-              '<span class="hoja-banderin-punto" style="background:' + q.color + '"></span>' +
-              "</button>"
-            );
-          })
-          .join("");
+// Selector de jugador: fila de puntos de color junto al banner --
+// visible en TODAS las pestañas ahora (antes solo en "personaje", con
+// forma de marcapáginas en el lomo -- ese hueco lo ocupa ahora
+// pestanasLibro(), así que se muda aquí). Sigue llamando a
+// invSel(i), igual que la fila plana .tabs-jug de siempre.
+function selectorJugadorLibro() {
+        if (G.players.length < 2) return "";
+        return (
+          '<div class="hoja-pieza hoja-selector-jugador">' +
+          G.players
+            .map(
+              (q, i) =>
+                '<button class="hoja-jugador-punto' + (i === G.invSel ? " activa" : "") + '" style="background:' + q.color + '" onclick="invSel(' + i + ')" title="' + escHtml(q.nombre) + '"></button>',
+            )
+            .join("") +
+          "</div>"
+        );
+      }
+
+// Marcapáginas de sección (Personaje/Alma/Mapa/Ajustes -- Herrería
+// aparte, ver herreriaFallbackHtml()): la pestaña ACTIVA ocupa siempre
+// el hueco grande/apuntado de arriba (marcapagina-activo.png, con su
+// propio icono), las demás se reparten en los huecos pequeños de
+// debajo (marcapagina.png) -- confirmado con el usuario ("la activa
+// sube al hueco grande, las demás se reordenan debajo").
+function pestanasLibro() {
+        const conIcono = PESTANAS_INV.filter((t) => t.icoImg);
+        const activa = conIcono.find((t) => t.id === invTab) || conIcono[0];
+        const inactivas = conIcono.filter((t) => t.id !== activa.id);
+        let html =
+          '<button class="hoja-marcapagina hoja-marcapagina-activa" style="background-image:url(\'' +
+          libroSrc("marcapagina-activo") +
+          "')\" onclick=\"irPestanaInv('" +
+          activa.id +
+          "')\" title=\"" +
+          escHtml(activa.nombre) +
+          '">' +
+          '<img class="hoja-marcapagina-ico" src="' + libroSrc("ico-" + activa.icoImg) + '" alt="" />' +
+          "</button>";
+        inactivas.forEach((t, i) => {
+          const pos = LIBRO_MARCAPAGINA_INACTIVO_POS[i];
+          if (!pos) return;
+          html +=
+            '<button class="hoja-marcapagina" style="left:' + pos.l + "%;top:" + pos.t + "%;background-image:url('" +
+            libroSrc("marcapagina") +
+            "')\" onclick=\"irPestanaInv('" +
+            t.id +
+            "')\" title=\"" +
+            escHtml(t.nombre) +
+            '">' +
+            '<img class="hoja-marcapagina-ico hoja-marcapagina-ico-chica" src="' + libroSrc("ico-" + t.icoImg) + '" alt="" />' +
+            "</button>";
+        });
+        return html;
+      }
+
+// Herrería no tiene icono en el set nuevo (confirmado con el usuario) --
+// botón de repliegue sencillo, sin marcapáginas propio, bajo la pila de
+// los 3 marcapáginas inactivos.
+function herreriaFallbackHtml() {
+        const activa = invTab === "herreria";
+        return (
+          '<button class="hoja-marcapagina hoja-marcapagina-texto' + (activa ? " hoja-marcapagina-activa" : "") + "\" onclick=\"irPestanaInv('herreria')\" title=\"Herrería\">" +
+          "⚒</button>"
+        );
+      }
+
+// Popup "¿Seguro que quieres volver ya?" -- reutiliza el contenedor
+// #menu-pausa/#menu-pausa-inner que ya existe en index.html (antes
+// alojaba el menú de pausa intermedio, ahora sin uso, ver
+// ui/pauseMenu.js) en vez de crear un overlay nuevo. El botón de
+// cerrar del libro (antes cerrarInv()) llama a esto -- pedido expreso:
+// "el botón exit reemplaza el volver al lobby". Cerrar el libro SIN
+// abandonar sigue siendo solo Tab/Start, confirmado con el usuario.
+function abrirConfirmarAbandono() {
+        document.getElementById("menu-pausa-inner").innerHTML =
+          '<div class="popup-abandono">' +
+          "<h3>¿Seguro que quieres volver ya?</h3>" +
+          "<p>Perderás la mitad de lo que has conseguido en esta expedición.</p>" +
+          '<div class="popup-abandono-botones">' +
+          '<button class="btn peligro" onclick="confirmarAbandonoDefinitivo()">Abandonar</button>' +
+          '<button class="btn dorado" onclick="cerrarPopupAbandono()">Continuar</button>' +
+          "</div></div>";
+        mostrar("menu-pausa");
+      }
+
+function cerrarPopupAbandono() {
+        ocultar("menu-pausa");
+      }
+
+// abandonarPartida() (core/gameflow.js) trae su PROPIO confirm de doble
+// clic (G.confirmAband) pensado para el botón de texto de siempre --
+// aquí la confirmación ya la hizo este popup, así que se fuerza el flag
+// antes de llamarla para que ejecute el abandono real a la primera.
+function confirmarAbandonoDefinitivo() {
+        if (G) G.confirmAband = true;
+        cerrarPopupAbandono();
+        abandonarPartida();
+      }
+window.abrirConfirmarAbandono = abrirConfirmarAbandono;
+window.cerrarPopupAbandono = cerrarPopupAbandono;
+window.confirmarAbandonoDefinitivo = confirmarAbandonoDefinitivo;
+
+// "Chrome" compartido por TODAS las pestañas del libro: fondo, pestañas
+// de sección, selector de jugador, título dinámico (banner -- pedido
+// expreso: bastante más grande, ~3rem) y botón de salir. `contenido` es
+// el HTML específico de cada pestaña, ya posicionado.
+function marcoLibroChrome(contenido) {
+        const titulo = (PESTANAS_INV.find((t) => t.id === invTab) || {}).nombre || "Personaje";
+        return (
+          '<div class="hoja-libro">' +
+          '<img class="hoja-fondo" src="' + libroSrc("fondo") + '" alt="" />' +
+          pestanasLibro() +
+          herreriaFallbackHtml() +
+          selectorJugadorLibro() +
+          '<div class="hoja-pieza hoja-banner-titulo" style="background-image:url(\'' + libroSrc("banner-titulo") + "')\">" +
+          '<span class="hoja-banner-titulo-texto">' + escHtml(titulo) + "</span>" +
+          "</div>" +
+          '<button class="hoja-pieza hoja-cerrar" style="background-image:url(\'' + libroSrc("boton-cerrar") + "')\" onclick=\"abrirConfirmarAbandono()\" aria-label=\"Salir\"></button>" +
+          contenido +
+          "</div>"
+        );
       }
 
 // Lista de habilidades para la columna derecha de .hoja-stats -- combina
@@ -844,16 +986,6 @@ function tabPersonaje(p, t, b) {
               })
               .join("")
           : '<span style="color:var(--ceniza);font-size:.72rem">Ninguna todavía — sube de nivel</span>';
-        const statsHtml =
-          '<div class="hoja-stats-col">' +
-          '<div class="hoja-stat" title="Daño">⚔<b>' + t.atk + "</b></div>" +
-          '<div class="hoja-stat" title="Vida">❤<b>' + Math.ceil(p.hp) + "/" + t.hpMax + "</b></div>" +
-          '<div class="hoja-stat" title="Armadura">🛡<b>' + t.armor + "</b></div>" +
-          '<div class="hoja-stat" title="Crítico">🎯<b>' + t.crit + "%</b></div>" +
-          '<div class="hoja-stat" title="Velocidad">💨<b>' + t.vel + "</b></div>" +
-          '<div class="hoja-stat" title="Reducción de cooldown">⏱<b>' + t.cdr + "%</b></div>" +
-          "</div>" +
-          '<div class="hoja-stats-col hoja-hab-col">' + habilidadesLibro(p, b) + "</div>";
         const insignias =
           (p.rol === "druida"
             ? '<span style="color:' + FORMAS_INFO[p.forma].color + '">' + FORMAS_INFO[p.forma].ico + " " + FORMAS_INFO[p.forma].nombre + "</span>"
@@ -861,30 +993,34 @@ function tabPersonaje(p, t, b) {
           (p.cartasPendientes > 0
             ? ' <span style="color:#ffd27f">★ ' + p.cartasPendientes + " tarjeta(s) pendiente(s)</span>"
             : "");
-        return (
-          '<div class="hoja-libro">' +
-          '<img class="hoja-fondo" src="' + libroSrc("fondo") + '" alt="" />' +
-          '<div class="hoja-pieza hoja-banner" style="background-image:url(\'' + libroSrc("banner") + "')\">" +
-          '<span class="hoja-banner-texto">Hoja de Personaje</span>' +
+        const contenido =
+          '<div class="hoja-pieza hoja-info-jugador" style="background-image:url(\'' + libroSrc("info-jugador-marco") + "')\">" +
+          '<span class="hoja-info-jugador-texto">' + escHtml(p.nombre) + " · Nv. " + p.nivel + "/" + MAX_NIV_PJ + "</span>" +
           "</div>" +
           '<div class="hoja-pieza hoja-xp" style="background-image:url(\'' + libroSrc("xp-fondo") + "')\">" +
           '<div class="hoja-xp-relleno" style="width:' + xpPct + '%"></div>' +
-          '<span class="hoja-xp-texto">' + escHtml(p.nombre) + " · Nv. " + p.nivel + "/" + MAX_NIV_PJ + "</span>" +
           "</div>" +
-          '<img class="hoja-pieza hoja-xp-marco" src="' + libroSrc("xp-marco") + '" alt="" />' +
-          '<img class="hoja-pieza hoja-cuadro-equipo" src="' + libroSrc("cuadro-equipo") + '" alt="" />' +
+          SLOTS.map((s) => '<img class="hoja-pieza hoja-marco-equipo" src="' + libroSrc("marco-equipamiento") + '" style="left:' + LIBRO_SLOT_POS[s].l + "%;top:" + LIBRO_SLOT_POS[s].t + "%;width:" + LIBRO_SLOT_POS[s].w + "%;height:" + LIBRO_SLOT_POS[s].h + '%" alt="" />').join("") +
           SLOTS.map((s) => celdaSlotLibro(s, p)).join("") +
           '<canvas id="ficha-retrato" class="hoja-pieza hoja-retrato" width="160" height="180"></canvas>' +
-          '<div class="hoja-pieza hoja-stats" style="background-image:url(\'' + libroSrc("panel-stats") + "')\">" +
-          statsHtml +
+          '<div class="hoja-pieza hoja-stats-panel" style="background-image:url(\'' + libroSrc("stats-marco") + "')\">" +
+          '<div class="hoja-stats-col">' +
+          '<div class="hoja-stat" title="Daño">⚔<b>' + t.atk + "</b></div>" +
+          '<div class="hoja-stat" title="Vida">❤<b>' + Math.ceil(p.hp) + "/" + t.hpMax + "</b></div>" +
+          '<div class="hoja-stat" title="Armadura">🛡<b>' + t.armor + "</b></div>" +
+          '<div class="hoja-stat" title="Crítico">🎯<b>' + t.crit + "%</b></div>" +
+          '<div class="hoja-stat" title="Velocidad">💨<b>' + t.vel + "</b></div>" +
+          '<div class="hoja-stat" title="Reducción de cooldown">⏱<b>' + t.cdr + "%</b></div>" +
+          "</div></div>" +
+          '<div class="hoja-pieza hoja-skills-panel" style="background-image:url(\'' + libroSrc("skills-marco") + "')\">" +
+          '<div class="hoja-stats-col hoja-hab-col">' + habilidadesLibro(p, b) + "</div>" +
           "</div>" +
-          banderinesLibro() +
           '<img class="hoja-pieza hoja-marco-inv" src="' + libroSrc("marco-inventario") + '" alt="" />' +
           '<div class="hoja-pieza hoja-inv-titulo">Inventario</div>' +
           '<div class="hoja-pieza hoja-grid-inv-wrap">' + gridBolsaLibro(p) + "</div>" +
-          filtroLibroHtml(p) +
-          '<button class="hoja-pieza hoja-cerrar" style="background-image:url(\'' + libroSrc("boton-cerrar") + "')\" onclick=\"cerrarInv()\" aria-label=\"Cerrar\"></button>" +
-          "</div>" +
+          filtroLibroHtml(p);
+        return (
+          marcoLibroChrome(contenido) +
           (insignias ? '<div class="libro-insignias">' + insignias + "</div>" : "") +
           '<h3 class="libro-subtitulo">Mejoras de nivel (' +
           p.cartasElegidas.length +
@@ -903,25 +1039,22 @@ function tabPersonaje(p, t, b) {
 // Herrería/Ajustes) en el mismo libro de fondo (fondo.png, las 2 páginas
 // en blanco + bordes/esquinas, sin las piezas de equipo/inventario que
 // eran solo para la ficha) -- pedido expreso: "abandonar ya el sistema
-// actual y que todo se base en el libro, usándolo de fondo". No hay arte
-// específico por pestaña (a diferencia de personaje), así que cada
-// página es una tarjeta oscura semitransparente sobre el papel -- el
-// contenido de cada pestaña sigue exactamente igual (mismo HTML/CSS/
-// colores de siempre, ya probados), solo cambia el marco que lo rodea.
-// `der` es opcional: si se omite, `izq` ocupa una única página centrada
-// (pensado para contenido pequeño como el minimapa); si se pasa, cada
-// argumento va en su propia página.
+// actual y que todo se base en el libro, usándolo de fondo". Mismo
+// marcoLibroChrome() que tabPersonaje() (pestañas/selector de jugador/
+// título/botón de salir), sin tarjeta de fondo en las páginas -- pedido
+// expreso: "no pongas un background a la columna para que se vea bien
+// el libro de fondo". El contenido de cada pestaña sigue exactamente
+// igual (mismo HTML/CSS/colores de siempre, ya probados), solo cambia
+// el marco que lo rodea. `der` es opcional: si se omite, `izq` ocupa
+// una única página centrada (pensado para contenido pequeño como el
+// minimapa); si se pasa, cada argumento va en su propia página.
 function envolverEnLibroBlanco(izq, der) {
         const paginas =
           der != null
             ? '<div class="hoja-libro-blanco-pagina">' + izq + "</div>" +
               '<div class="hoja-libro-blanco-pagina">' + der + "</div>"
             : '<div class="hoja-libro-blanco-pagina hoja-libro-blanco-sola">' + izq + "</div>";
-        return (
-          '<div class="hoja-libro-blanco" style="background-image:url(\'' + libroSrc("fondo") + "')\">" +
-          '<div class="hoja-libro-blanco-paginas">' + paginas + "</div>" +
-          "</div>"
-        );
+        return marcoLibroChrome('<div class="hoja-libro-blanco-paginas">' + paginas + "</div>");
       }
 
 function tabMapa() {
@@ -1009,6 +1142,15 @@ function fragEnBolsaLinea(f) {
         );
       }
 
+// Fondo de cada celda de la rejilla del Alma: la misma casilla de
+// equipo que ya usa Personaje (marco-equipamiento.png, ver
+// LIBRO_SLOT_POS) -- pedido expreso: "usaremos los cuadrados del
+// inventario marco-equipamiento si puede ser para ajustar las almas".
+// Hay muchas más celdas de alma que huecos medidos a mano en Personaje,
+// así que aquí se repite el mismo PNG como fondo de CADA celda de
+// `.alma-grid`, no en posiciones fijas como las 7 de equipo.
+const ALMA_CELDA_BG = "background-image:url('" + libroSrc("marco-equipamiento") + "');background-size:100% 100%;";
+
 function celdaAlmaHtml(idx) {
         const { x, y } = idxAXY(idx);
         const a = META.alma;
@@ -1018,7 +1160,7 @@ function celdaAlmaHtml(idx) {
           return (
             '<div class="alma-celda bloqueada' +
             (puede ? " rompible" : "") +
-            '" title="Romper casilla: ' +
+            '" style="' + ALMA_CELDA_BG + '" title="Romper casilla: ' +
             coste +
             ' 🪙 + 1 punto de desbloqueo" onclick="intentarDesbloquearAlma(' +
             idx +
@@ -1050,7 +1192,7 @@ function celdaAlmaHtml(idx) {
             '<div class="alma-celda ocupada ' +
             rar.cls +
             (conectado ? " conectada" : "") +
-            '" style="border-color:' +
+            '" style="' + ALMA_CELDA_BG + "border-color:" +
             rar.col +
             '" title="' +
             escHtml(frag.nombre) +
@@ -1066,7 +1208,7 @@ function celdaAlmaHtml(idx) {
         return (
           '<div class="alma-celda vacia' +
           (fragSel ? " objetivo" : "") +
-          '" onclick="intentarColocarAlma(' +
+          '" style="' + ALMA_CELDA_BG + '" onclick="intentarColocarAlma(' +
           idx +
           ')"></div>'
         );
@@ -1101,8 +1243,16 @@ function tabAlma() {
           ',1fr)">' +
           celdas +
           "</div>";
+        // Mismo marco que la bolsa de Personaje (marco-inventario.png) --
+        // pedido expreso: "a la derecha tendrá el inventario de almas,
+        // usará el mismo grid que el inventario". La lista interior se
+        // queda como estaba (fragEnBolsaLinea, con la forma/orientación
+        // de cada fragmento) en vez de forzarla a iconos sueltos: esa
+        // info de forma es la que de verdad importa para saber si un
+        // fragmento va a encajar, un icono plano la perdería.
         const paginaDer =
-          '<h3 style="margin-top:0;font-size:.85rem;color:var(--vespero)">Fragmentos sueltos (' +
+          '<div class="hoja-alma-inv-marco" style="background-image:url(\'' + libroSrc("marco-inventario") + "')\">" +
+          '<h3 class="hoja-alma-inv-titulo">Inventario de Almas (' +
           a.inventario.length +
           ")</h3>" +
           (fragSel
@@ -1110,6 +1260,7 @@ function tabAlma() {
             : "") +
           '<div class="frag-bolsa">' +
           bolsaFrag +
+          "</div>" +
           "</div>";
         return envolverEnLibroBlanco(paginaIzq, paginaDer);
       }
@@ -1336,7 +1487,7 @@ function tabHerreria(p) {
           avisoF +
           "</div>";
         const paginaDer =
-          '<h3 style="margin-top:0;font-size:.85rem;color:var(--vespero)">Bolsa de ' +
+          '<h3 style="margin-top:0;font-size:.85rem;color:#4a3418">Bolsa de ' +
           escHtml(p.nombre) +
           " (" +
           p.bolsa.length +
@@ -1507,65 +1658,19 @@ export function abrirInv() {
         const p = G.players[G.invSel] || G.players[0];
         const t = statsTot(p),
           b = ROLES[p.rol];
-        const tabsJug = G.players
-          .map(
-            (q, i) =>
-              '<button class="tab-jug' +
-              (i === G.invSel ? " activa" : "") +
-              '" onclick="invSel(' +
-              i +
-              ')" style="border-left:3px solid ' +
-              q.color +
-              '">' +
-              escHtml(q.nombre) +
-              " · " +
-              ROLES[q.rol].nombre.split(" ")[0] +
-              "</button>",
-          )
-          .join("");
-        const pestanas = PESTANAS_INV.map(
-          (tb) =>
-            '<button class="tab-v' +
-            (invTab === tb.id ? " activa" : "") +
-            '" onclick="irPestanaInv(\'' +
-            tb.id +
-            "')\"><span class=\"tab-v-ico\">" +
-            tb.ico +
-            '</span><span class="tab-v-nombre">' +
-            tb.nombre +
-            "</span></button>",
-        ).join("");
         let contenido;
         if (invTab === "herreria") contenido = tabHerreria(p);
         else if (invTab === "alma") contenido = tabAlma();
         else if (invTab === "mapa") contenido = tabMapa();
         else if (invTab === "ajustes") contenido = tabAjustes();
         else contenido = tabPersonaje(p, t, b);
-        document.getElementById("inv-inner").innerHTML =
-          '<div class="libro-tabs">' +
-          pestanas +
-          '<span class="libro-hint">LB/RB para cambiar</span>' +
-          "</div>" +
-          '<div class="libro-pagina">' +
-          '<div class="fila-cerrar"><h2 class="display">Ficha de personaje</h2>' +
-          '<div style="display:flex;gap:8px">' +
-          (G.escena === "torre"
-            ? '<button class="btn peligro" onclick="abandonarPartida()">' +
-              (G.confirmAband
-                ? "⚠ ¿SEGURO? −" + Math.ceil(G.oroRun * 0.5) + " 🪙"
-                : "🏳 Al lobby (−50% oro)") +
-              "</button>"
-            : "") +
-          '<button class="btn dorado" onclick="cerrarInv()">Volver (Tab / Start)</button></div></div>' +
-          // En "personaje" el libro ya trae sus propios banderines de
-          // jugador en el lomo (ver banderinesLibro(), dentro de
-          // tabPersonaje()) -- la fila plana de siempre solo hace falta en
-          // el resto de pestañas, que no tienen ese fondo.
-          (invTab === "personaje" ? "" : '<div class="tabs-jug">' + tabsJug + "</div>") +
-          '<div class="inv-contenido">' +
-          contenido +
-          "</div>" +
-          "</div>";
+        // El libro es ahora la interfaz completa (marcoLibroChrome(), ver
+        // más arriba) -- ya no hace falta la lista lateral .libro-tabs ni
+        // la cabecera .fila-cerrar con los botones de siempre: el título
+        // vive en el banner del propio libro, las pestañas en los
+        // marcapáginas, y "salir" en su botón con popup de confirmación
+        // (ver abrirConfirmarAbandono()).
+        document.getElementById("inv-inner").innerHTML = contenido;
         mostrar("inv");
         if (invTab === "personaje") iniciarRetratoAnimado(p);
         else detenerRetratoAnimado();
