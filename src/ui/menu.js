@@ -8,6 +8,7 @@ import { COLORES_J, LOBBIES, ORDEN_ROLES, ROLES } from "../core/constants.js";
 import { nuevaPartida } from "../core/gameflow.js";
 import { MEJORAS_TIENDA, META } from "../core/save.js";
 import { AJ } from "../core/settings.js";
+import { G } from "../core/state.js";
 import { NET, crearSalaOnline, enviarRolPropio, netEnviarLobby, unirseSalaOnline } from "../net/peer.js";
 import { crearGremio, miGremio, rankingGremios, salirGremio, unirseGremio } from "../systems/guilds.js";
 import { sfx } from "../systems/audio.js";
@@ -238,8 +239,34 @@ function construirPopoverFogata() {
     (AJ.fuegoAmigo ? " dorado" : "") +
     '" onclick="toggleFuegoAmigo()">' +
     (AJ.fuegoAmigo ? "Activado" : "Desactivado") +
+    "</button></div></div>" +
+    // Botón auxiliar pedido expreso: antes solo se podía cambiar a
+    // controles táctiles DENTRO de una partida ya empezada (pestaña
+    // Ajustes del libro, ver toggleControlTactil() en ui/inventory.js) --
+    // en un móvil eso obliga a jugar a ciegas con teclado+ratón hasta
+    // llegar ahí. Mismo criterio de slot (M.slots[0], J1 local).
+    '<div class="ajuste-fila"><div><h4>👆 Controles táctiles</h4>' +
+    '<div class="a-desc">Joysticks y botones en pantalla en vez de teclado+ratón (prototipo).</div></div>' +
+    '<div class="ajuste-ctrl"><button class="btn' +
+    (M.slots[0].ctrl.tipo === "touch" ? " dorado" : "") +
+    '" onclick="toggleControlTactilMenu()">' +
+    (M.slots[0].ctrl.tipo === "touch" ? "Activados" : "Desactivados") +
     "</button></div></div>";
 }
+
+function toggleControlTactilMenu() {
+  const nuevoTipo = M.slots[0].ctrl.tipo === "touch" ? "kbm" : "touch";
+  M.slots[0].ctrl = { tipo: nuevoTipo };
+  if (G && G.players && G.players[0]) G.players[0].ctrl = { tipo: nuevoTipo };
+  sfx("ui");
+  construirPopoverFogata();
+  // El "Dispositivo" de cada tarjeta (J1 · Teclado+Ratón/Táctil) vive en
+  // construirMenu(), no en el popover -- sin esto el botón cambiaba pero
+  // la tarjeta de J1 se quedaba con el texto viejo hasta el siguiente
+  // repintado por otro motivo.
+  construirMenu();
+}
+window.toggleControlTactilMenu = toggleControlTactilMenu;
 
 function setLobby(id) {
   M.lobby = id;
