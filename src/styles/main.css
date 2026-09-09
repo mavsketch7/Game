@@ -3579,6 +3579,12 @@ img.hoja-pieza {
   touch-action: none;
   user-select: none;
   -webkit-user-select: none;
+  /* Zona segura (notch / barra de gestos) -- 0 en dispositivos sin
+     recorte, así que no cambia nada fuera de un móvil con notch. Los
+     hijos posicionados en absoluto (.tc-zona, .tc-botones...) se miden
+     desde el borde del padding, no del borde del elemento, así que este
+     padding sí los aparta del recorte real. */
+  padding: env(safe-area-inset-top, 0) env(safe-area-inset-right, 0) env(safe-area-inset-bottom, 0) env(safe-area-inset-left, 0);
 }
 /* No existe una regla ".oculto" genérica en todo el proyecto -- cada
    elemento la define a su medida (.overlay.oculto, #cursor-wrap.oculto,
@@ -3679,6 +3685,52 @@ img.hoja-pieza {
   height: 40px;
   font-size: 0.9rem;
   border-color: var(--col, var(--borde));
+}
+
+/* Aviso "gira tu dispositivo" (ver actualizarAvisoRotar() en
+   touchControls.js) -- por encima de TODO, incluido :fullscreen #marco
+   (z-index:5) y #pantalla-inicio (z-index:1000): el juego es panorámico
+   de principio a fin, este aviso puede necesitar tapar cualquier
+   pantalla. */
+#aviso-rotar {
+  position: fixed;
+  inset: 0;
+  z-index: 1500;
+  background: #0c0805;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  text-align: center;
+  padding: 24px;
+}
+#aviso-rotar.oculto {
+  display: none;
+}
+#aviso-rotar-ico {
+  font-size: 3.4rem;
+  animation: aviso-rotar-gira 1.8s ease-in-out infinite;
+}
+#aviso-rotar p {
+  color: var(--hueso);
+  font-family: "Dungeon Font", "Cinzel", serif;
+  font-size: 1.1rem;
+  max-width: 280px;
+}
+@keyframes aviso-rotar-gira {
+  0%,
+  100% {
+    transform: rotate(0deg);
+  }
+  50% {
+    transform: rotate(90deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  #aviso-rotar-ico {
+    animation: none;
+  }
 }
 
 /* El guantelete (#cursor-img) sustituye al cursor nativo en toda la

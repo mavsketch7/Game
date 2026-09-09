@@ -2,7 +2,7 @@
 <html lang="es">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <title>La Torre de Véspero — Cooperativo</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link
@@ -223,6 +223,17 @@
       <div id="ranking-gremios" class="overlay oculto" style="z-index: 20">
         <div class="overlay-inner" id="ranking-gremios-inner"></div>
       </div>
+    </div>
+
+    <!-- Aviso de "gira tu dispositivo" (ver systems/touchControls.js:
+         actualizarAvisoRotar()) -- el juego es panorámico, en vertical
+         desde un móvil no hay forma razonable de jugar. Oculto por
+         defecto, se muestra solo en dispositivos táctiles con la
+         ventana más alta que ancha; por encima incluso de :fullscreen
+         #marco. -->
+    <div id="aviso-rotar" class="oculto">
+      <span id="aviso-rotar-ico">🔄</span>
+      <p>Gira tu dispositivo para jugar</p>
     </div>
 
     <div id="hint">

@@ -72,6 +72,16 @@ export function esPantallaCompleta() {
         );
       }
 
+// Bloqueo de orientación "a horizontal" -- mejor esfuerzo, solo tiene
+// efecto en Android Chrome/Edge en pantalla completa (iOS Safari no
+// soporta screen.orientation.lock() en ningún caso, catch() lo ignora
+// en silencio ahí). El aviso de #aviso-rotar (ver systems/
+// touchControls.js) es el respaldo universal para cuando esto no hace
+// nada -- esto es solo una mejora extra donde el navegador lo permita.
+function intentarBloqueoOrientacion() {
+        screen.orientation?.lock?.("landscape").catch(() => {});
+      }
+
 // Pantalla completa "por defecto": los navegadores bloquean
 // requestFullscreen() sin un gesto real del usuario, así que no se puede
 // forzar al cargar la página. En su lugar, ui/intro.js llama a esto en el
@@ -85,6 +95,7 @@ export function pedirPantallaCompleta() {
         const req = el.requestFullscreen || el.webkitRequestFullscreen;
         if (req) {
           const pr = req.call(el);
+          if (pr && pr.then) pr.then(intentarBloqueoOrientacion);
           if (pr && pr.catch)
             pr.catch(() => {
               maximizado = true;
@@ -106,6 +117,7 @@ export function toggleFullscreen() {
           const req = el.requestFullscreen || el.webkitRequestFullscreen;
           if (req) {
             const pr = req.call(el);
+            if (pr && pr.then) pr.then(intentarBloqueoOrientacion);
             if (pr && pr.catch)
               pr.catch(() => {
                 maximizado = true;

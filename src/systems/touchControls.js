@@ -278,7 +278,17 @@ function conectarDelegacion() {
 let visible = false;
 export function sincronizarVisibilidadTactil() {
   if (!cont && !crearDom()) return;
-  const debeVerse = esTactil() && !!G && G.activo && !!jugadorTactil();
+  // Antes también exigía esTactil() aquí -- si la heurística automática
+  // daba falso negativo en un móvil real concreto (sin
+  // navigator.userAgentData, "Solicitar sitio de escritorio", etc.), el
+  // toggle manual de Ajustes cambiaba p.ctrl.tipo a "touch" (matando la
+  // rama de teclado/ratón en leerInput()) pero esta capa nunca llegaba a
+  // mostrarse: el jugador se quedaba sin ningún control posible. El
+  // toggle manual YA es la vía de escape documentada más arriba -- debe
+  // ser la última palabra, esTactil() solo decide el valor por defecto
+  // (ver input.js), no si esta capa se enseña una vez que el jugador ya
+  // está en modo táctil.
+  const debeVerse = !!G && G.activo && !!jugadorTactil();
   if (debeVerse === visible) return;
   visible = debeVerse;
   cont.classList.toggle("oculto", !visible);
@@ -321,3 +331,20 @@ if (crearDom()) {
   );
   conectarDelegacion();
 }
+
+// ---- Aviso de "gira tu dispositivo" -- el juego entero (selección de
+// personaje incluida) es panorámico, no tiene sentido intentar jugar en
+// vertical desde un móvil. No depende de G.activo a propósito (pedido
+// expreso: también en la pantalla de selección). Reactivo a resize/
+// orientationchange en vez de por frame -- un cambio de orientación es
+// un evento discreto y raro, no hace falta comprobarlo en el bucle de
+// juego como sincronizarVisibilidadTactil() de arriba. ----
+function actualizarAvisoRotar() {
+  const el = document.getElementById("aviso-rotar");
+  if (!el) return;
+  const mostrar = esTactil() && window.innerWidth < window.innerHeight;
+  el.classList.toggle("oculto", !mostrar);
+}
+window.addEventListener("resize", actualizarAvisoRotar);
+window.addEventListener("orientationchange", actualizarAvisoRotar);
+actualizarAvisoRotar();
