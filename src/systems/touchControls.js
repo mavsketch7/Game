@@ -61,9 +61,45 @@ const st = { mx: 0, my: 0, aimA: 0, aimActivo: false, atkHeld: false, lanzarHeld
 const RADIO_STICK = 42; // radio máximo de arrastre en px CSS, ver .tc-stick-base
 const UMBRAL_AIM = 0.3; // mismo umbral que el mando (systems/input.js: m2 > 0.3)
 
+// Asistido de puntería -- SOLO táctil (pedido expreso: con el dedo es
+// más difícil mantener el ángulo exacto que con un stick físico o el
+// ratón; el mando/kbm no lo necesitan y no lo tocan). Si el ángulo
+// arrastrado cae dentro de un cono estrecho hacia el enemigo vivo más
+// cercano en ángulo (no en distancia -- se premia apuntar bien, no
+// solo estar cerca) y dentro de alcance, el ángulo final se ajusta a
+// apuntar exactamente a ese enemigo. El jugador sigue eligiendo la
+// dirección general -- esto no es auto-objetivo duro (no hay bloqueo
+// ni persigue al enemigo si el jugador deja de apuntar hacia él): si
+// nadie cae dentro del cono, el ángulo se queda tal cual se arrastró.
+// No toca la posición visual del nub del stick (eso sigue el dedo tal
+// cual, ver moverNub()) -- solo el ángulo real de ataque.
+const CONO_ASISTIDO = (18 * Math.PI) / 180; // +-18°
+const ALCANCE_ASISTIDO = 260; // px -- mismo orden que el alcance de golpe/proyectil típico
+const TAU_LOCAL = Math.PI * 2;
+
+function asistirApuntado(p, angRaw) {
+  if (!G || !G.enemigos || !G.enemigos.length) return angRaw;
+  let mejorAng = null,
+    mejorDelta = CONO_ASISTIDO;
+  for (const e of G.enemigos) {
+    if (e.hp <= 0) continue;
+    const dx = e.x - p.x,
+      dy = e.y - p.y;
+    if (Math.hypot(dx, dy) > ALCANCE_ASISTIDO) continue;
+    const angObj = Math.atan2(dy, dx);
+    let delta = Math.abs(angObj - angRaw) % TAU_LOCAL;
+    if (delta > Math.PI) delta = TAU_LOCAL - delta;
+    if (delta < mejorDelta) {
+      mejorDelta = delta;
+      mejorAng = angObj;
+    }
+  }
+  return mejorAng !== null ? mejorAng : angRaw;
+}
+
 export function leerInputTactil(p) {
   sincronizarBotones(p);
-  const aimA = st.aimActivo ? st.aimA : p.aim;
+  const aimA = st.aimActivo ? asistirApuntado(p, st.aimA) : p.aim;
   const d = 160; // mismo criterio que el mando cuando no hay gamepad conectado (systems/input.js)
   return {
     mx: st.mx,
