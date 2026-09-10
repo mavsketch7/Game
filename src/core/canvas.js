@@ -58,7 +58,15 @@ export function ajustarLienzo() {
         let esc;
         if (AJ.escala === "auto") esc = escalaSinMoire(limite);
         else esc = escalaSinMoire(Math.min(parseFloat(AJ.escala), limite));
-        if (!fs) esc = Math.max(esc, 0.5);
+        // El suelo de 0.5 es solo para que una ventana normal no encoja el
+        // lienzo hasta hacerlo ilegible -- nunca debe forzarlo a un tamaño
+        // MAYOR que el hueco real disponible (limite ya es el tamaño máximo
+        // que cabe sin desbordar). Sin este tope, una ventana de escritorio
+        // angosta (p.ej. 300x800, sin pantalla completa) producía un
+        // lienzo/#marco más ancho que el viewport -- scroll horizontal en
+        // todo el body, con los overlays (position:absolute contra #marco)
+        // desbordando también. Confirmado con auditoría de responsive.
+        if (!fs) esc = Math.min(Math.max(esc, 0.5), limite);
         const cw = Math.round(W * esc),
           ch = Math.round(H * esc);
         cv.style.width = cw + "px";

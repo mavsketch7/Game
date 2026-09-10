@@ -174,16 +174,27 @@
   transform: scale(0.82) rotate(-12deg) translate(2px, 3px);
 }
 
-.overlay-inner {
-  font-size: calc(1rem * var(--esc-texto));
-}
 #hint {
-  font-size: calc(0.72rem * var(--esc-texto));
+  font-size: 0.72rem;
 }
 * {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
+}
+/* "Tamaño del texto" (Ajustes, setTexto() en ui/inventory.js) -- escala
+   la RAÍZ, no un contenedor concreto: casi todo el proyecto mide texto
+   en rem (siempre relativo a la raíz, no al padre), así que este único
+   sitio hace que el ajuste alcance de verdad a menús/ficha/ayudas como
+   promete su descripción. Antes solo multiplicaba el font-size de
+   .overlay-inner/#hint por separado, que no hacía nada visible: casi
+   nada del proyecto usa em (que sí heredaría de un font-size de
+   ancestro), así que ese multiplicador se quedaba sin efecto real.
+   Los tamaños en cqw/% del libro (.hoja-*, container-type:inline-size)
+   no dependen de rem y no se ven afectados -- siguen escalando con el
+   propio libro, como debe ser. */
+html {
+  font-size: calc(16px * var(--esc-texto));
 }
 body {
   background: var(--noche);
@@ -3670,13 +3681,19 @@ img.hoja-pieza {
 .tc-btn {
   pointer-events: auto;
   touch-action: none;
-  width: 52px;
-  height: 52px;
+  /* vh, no vw -- el aviso de "gira tu dispositivo" ya obliga apaisado
+     antes de que esta capa se use, así que la altura es siempre la
+     dimensión corta/limitante. clamp() evita que los botones se queden
+     diminutos en un móvil viejo pequeño (suelo 44px, mínimo táctil
+     recomendado) o ridículamente grandes en una tablet grande (techo
+     60px) -- antes eran 52px fijos sin importar el dispositivo. */
+  width: clamp(44px, 12vh, 60px);
+  height: clamp(44px, 12vh, 60px);
   border-radius: 50%;
   background: rgba(23, 17, 11, 0.75);
   border: 2px solid var(--borde);
   color: var(--hueso);
-  font-size: 1.15rem;
+  font-size: clamp(1rem, 2.6vh, 1.3rem);
   font-weight: 800;
   display: flex;
   align-items: center;
@@ -3687,9 +3704,9 @@ img.hoja-pieza {
   background: rgba(226, 196, 137, 0.35);
 }
 .tc-btn-clase {
-  width: 40px;
-  height: 40px;
-  font-size: 0.9rem;
+  width: clamp(34px, 9vh, 46px);
+  height: clamp(34px, 9vh, 46px);
+  font-size: clamp(0.75rem, 2vh, 1rem);
   border-color: var(--col, var(--borde));
 }
 /* Botón de pausa/ficha -- esquina superior derecha, fuera de
