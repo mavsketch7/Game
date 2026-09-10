@@ -14,7 +14,7 @@ import { iconoDrop } from "../render/sprites.js";
 import { genItem } from "../systems/loot.js";
 import { genObjetoMitico } from "../systems/objetosMiticos.js";
 import { banner, toast } from "./notifications.js";
-import { mostrar, ocultar } from "./overlays.js";
+import { cerrarOverlayBase, iniciarAperturaOverlay, mostrar } from "./overlays.js";
 
 function escHtml(s) {
   return String(s ?? "").replace(
@@ -124,9 +124,7 @@ function gridBolsaFusion(p) {
 }
 
 export function abrirFusion() {
-  if (!G || !G.activo) return;
-  G.pausa = true;
-  G.fraguaLock = true;
+  if (!iniciarAperturaOverlay("fraguaLock")) return;
   render();
   mostrar("fusion");
 }
@@ -283,8 +281,7 @@ function fusionarPop() {
 }
 
 export function cerrarFusion() {
-  ocultar("fusion");
-  if (G) G.pausa = false;
+  cerrarOverlayBase("fusion");
 }
 
 // Expuestas en window: referenciadas desde onclick="..." en HTML generado dinámicamente.

@@ -7,7 +7,7 @@ import { G } from "../core/state.js";
 import { cantidadFragmentos, desmantelarArma, fragPorId } from "../systems/soul.js";
 import { abrirFusion } from "./forjaFusion.js";
 import { toast } from "./notifications.js";
-import { mostrar, ocultar } from "./overlays.js";
+import { cerrarOverlayBase, iniciarAperturaOverlay, mostrar } from "./overlays.js";
 
 function lineaArma(it, idx) {
   const rar = RAREZAS[it.rareza];
@@ -50,9 +50,7 @@ function lineaArma(it, idx) {
 }
 
 export function abrirYunque() {
-  if (!G || !G.activo) return;
-  G.pausa = true;
-  G.yunqueLock = true;
+  if (!iniciarAperturaOverlay("yunqueLock")) return;
   const p = G.players[G.invSel] || G.players[0];
   const armas = p.bolsa
     .map((it, i) => ({ it, i }))
@@ -95,8 +93,7 @@ function desmantelar(idx) {
 }
 
 export function cerrarYunque() {
-  ocultar("yunque");
-  if (G) G.pausa = false;
+  cerrarOverlayBase("yunque");
 }
 
 // Expuestas en window: referenciadas desde onclick="..." en HTML generado dinámicamente.

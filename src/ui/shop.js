@@ -6,7 +6,7 @@ import { statsTot } from "../systems/combat.js";
 import { M } from "../systems/input.js";
 import { genItem } from "../systems/loot.js";
 import { toast } from "./notifications.js";
-import { mostrar, ocultar } from "./overlays.js";
+import { cerrarOverlayBase, iniciarAperturaOverlay, mostrar } from "./overlays.js";
 import { clamp } from "../utils/helpers.js";
 
 // Objetos a la venta: 3 piezas de equipo generadas al abrir la tienda (no
@@ -58,9 +58,7 @@ function lineaOferta(it, idx) {
       }
 
 export function abrirTienda() {
-        if (!G || !G.activo) return;
-        G.pausa = true;
-        G.tiendaLock = true;
+        if (!iniciarAperturaOverlay("tiendaLock")) return;
         if (!ofertaTienda) {
           const f = Math.max(1, G.planta || 1);
           ofertaTienda = [genItem(f), genItem(f), genItem(f)];
@@ -157,9 +155,8 @@ function comprarObjeto(idx) {
       }
 
 export function cerrarTienda() {
-        ocultar("tienda");
+        cerrarOverlayBase("tienda");
         ofertaTienda = null;
-        if (G) G.pausa = false;
       }
 
 // Expuestas en window: referenciadas desde onclick="..." en HTML generado dinámicamente.

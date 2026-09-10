@@ -5,13 +5,11 @@ import { G } from "../core/state.js";
 import { statsTot } from "../systems/combat.js";
 import { generarMapa, puntoValido } from "../systems/floorgen.js";
 import { banner, toast } from "./notifications.js";
-import { mostrar, ocultar } from "./overlays.js";
+import { cerrarOverlayBase, iniciarAperturaOverlay, mostrar } from "./overlays.js";
 import { az, ri, rnd } from "../utils/helpers.js";
 
 export function abrirArenaPvp() {
-        if (!G || !G.activo) return;
-        G.pausa = true;
-        G.arenaLock = true;
+        if (!iniciarAperturaOverlay("arenaLock")) return;
         const listos = G.players.length >= 2;
         const lista = G.players
           .map(
@@ -43,8 +41,7 @@ export function abrirArenaPvp() {
       }
 
 export function cerrarArenaPvp() {
-        ocultar("arena-pvp");
-        if (G) G.pausa = false;
+        cerrarOverlayBase("arena-pvp");
       }
 
 function comenzarPvp() {

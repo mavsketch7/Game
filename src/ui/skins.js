@@ -3,12 +3,10 @@ import { META, SKINS, guardarMeta } from "../core/save.js";
 import { G } from "../core/state.js";
 import { HERO_ROWS, PALS, ROWS_CLASE, buildSprite } from "../render/sprites.js";
 import { toast } from "./notifications.js";
-import { mostrar, ocultar } from "./overlays.js";
+import { cerrarOverlayBase, iniciarAperturaOverlay, mostrar } from "./overlays.js";
 
 export function abrirSkins() {
-        if (!G || !G.activo) return;
-        G.pausa = true;
-        G.skinLock = true;
+        if (!iniciarAperturaOverlay("skinLock")) return;
         const filas = SKINS.map((sk) => {
           const comprado = META.skins.comprados.includes(sk.id);
           // botones por jugador presente
@@ -135,8 +133,7 @@ function quitarSkins() {
       }
 
 export function cerrarSkins() {
-        ocultar("skins");
-        if (G) G.pausa = false;
+        cerrarOverlayBase("skins");
       }
 
 // Expuestas en window: referenciadas desde onclick="..." en HTML generado dinámicamente.
