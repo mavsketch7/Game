@@ -1,7 +1,6 @@
 // Pantalla de inicio ("Pulsa Start"): cubre toda la ventana por encima del
 // juego y se cierra con la primera tecla, clic o botón de mando. Puramente
 // de presentación — no toca el estado de la partida ni el menú de debajo.
-import { pedirPantallaCompleta } from "../core/canvas.js";
 import { initAudio, iniciarMusicaAmbiente, reanudarAudio } from "../systems/audio.js";
 
 const el = document.getElementById("pantalla-inicio");
@@ -19,12 +18,15 @@ if (el) {
     if (cerrada) return;
     cerrada = true;
     el.classList.add("oculto");
-    // primer gesto real del usuario: buen momento para desbloquear audio
-    // Y para pedir pantalla completa (ver pedirPantallaCompleta())
+    // primer gesto real del usuario: buen momento para desbloquear audio.
+    // La pantalla completa se pide sola, ver el listener de pointerdown
+    // en core/canvas.js -- se engancha a CUALQUIER toque, este incluido,
+    // así que no hace falta duplicar la llamada aquí (llamarla dos veces
+    // en el mismo toque disparaba requestFullscreen() por partida doble
+    // y el navegador rechazaba una de las dos).
     initAudio();
     reanudarAudio();
     iniciarMusicaAmbiente();
-    pedirPantallaCompleta();
     window.removeEventListener("keydown", cerrarInicio);
     window.removeEventListener("pointerdown", cerrarInicio);
     if (padTimer) clearInterval(padTimer);

@@ -82,12 +82,20 @@ export function esPantallaCompleta() {
 
 // Bloqueo de orientación "a horizontal" -- mejor esfuerzo, solo tiene
 // efecto en Android Chrome/Edge en pantalla completa (iOS Safari no
-// soporta screen.orientation.lock() en ningún caso, catch() lo ignora
-// en silencio ahí). El aviso de #aviso-rotar (ver systems/
-// touchControls.js) es el respaldo universal para cuando esto no hace
-// nada -- esto es solo una mejora extra donde el navegador lo permita.
+// soporta screen.orientation.lock() en ningún caso). El aviso de
+// #aviso-rotar (ver systems/touchControls.js) es el respaldo universal
+// para cuando esto no hace nada -- esto es solo una mejora extra donde
+// el navegador lo permita. try/catch además del .catch() de la
+// promesa: algunos navegadores (visto en pruebas) lanzan la excepción
+// de permisos de forma SÍNCRONA en vez de devolver una promesa
+// rechazada -- sin el try/catch, esa excepción escapa de este .then()
+// como un rechazo de promesa sin gestionar.
 function intentarBloqueoOrientacion() {
-        screen.orientation?.lock?.("landscape").catch(() => {});
+        try {
+          screen.orientation?.lock?.("landscape").catch(() => {});
+        } catch (e) {
+          /* ignorado a propósito, ver comentario de arriba */
+        }
       }
 
 // Pantalla completa "por defecto": los navegadores bloquean
@@ -97,8 +105,21 @@ function intentarBloqueoOrientacion() {
 // Start"), el mismo punto donde ya se desbloquea el audio -- efecto
 // práctico idéntico a "empieza en pantalla completa" sin violar la
 // política del navegador.
+//
+// Reportado con una captura real de un Android/Chrome concreto: el
+// primer intento se rechazó en silencio (Promise de requestFullscreen()
+// rechazada -- el motivo exacto varía por versión/OEM, no reproducible
+// aquí) y el juego se quedó para siempre en el respaldo de solo-CSS
+// (body.pantalla-completa), que llena el viewport del NAVEGADOR pero no
+// esconde su barra de direcciones ni la barra de navegación del sistema
+// -- a diferencia de la API de pantalla completa real, que si el
+// navegador la concede sí las esconde. Antes, `|| maximizado` en la
+// guarda de abajo hacía que UNA vez caído a ese respaldo, nunca se
+// volviera a intentar pantalla completa real -- ahora sigue
+// reintentando cada toque genuino posterior (ver el listener de
+// pointerdown al final de este archivo) hasta que lo consiga.
 export function pedirPantallaCompleta() {
-        if (esPantallaCompleta() || maximizado) return;
+        if (esPantallaCompleta()) return;
         const el = document.documentElement;
         const req = el.requestFullscreen || el.webkitRequestFullscreen;
         if (req) {
@@ -106,11 +127,16 @@ export function pedirPantallaCompleta() {
           if (pr && pr.then) pr.then(intentarBloqueoOrientacion);
           if (pr && pr.catch)
             pr.catch(() => {
-              maximizado = true;
-              document.body.classList.add("pantalla-completa");
-              ajustarLienzo();
+              if (!maximizado) {
+                maximizado = true;
+                document.body.classList.add("pantalla-completa");
+                ajustarLienzo();
+              }
             });
-        } else {
+        } else if (!maximizado) {
+          // API de pantalla completa ni existe (p.ej. iOS Safari, que no
+          // la soporta en páginas normales) -- este respaldo es lo máximo
+          // que se puede conseguir ahí, no tiene sentido reintentarlo.
           maximizado = true;
           document.body.classList.add("pantalla-completa");
         }
@@ -165,6 +191,27 @@ document.addEventListener("fullscreenchange", () => {
 document.addEventListener("webkitfullscreenchange", () => {
         setTimeout(ajustarLienzo, 60);
       });
+
+// Reintento de pantalla completa en cualquier gesto genuino posterior --
+// pointerdown/keydown SIEMPRE llegan dentro de un gesto real del
+// usuario (eventos de confianza del navegador), así que son un punto
+// seguro para reintentar sin arriesgar que el navegador lo rechace por
+// "no viene de un gesto". Ver el comentario de pedirPantallaCompleta()
+// más arriba -- esto es lo que de verdad soluciona el caso real
+// reportado (Android concreto que rechazó el primer intento en "Pulsa
+// Start"): antes ahí se acababa la única oportunidad, ahora cualquier
+// toque/tecla posterior (elegir clase, marcar listo, abrir la ficha...)
+// vuelve a intentarlo hasta conseguirlo. Una vez esPantallaCompleta()
+// es true, no hace nada (early return dentro de
+// pedirPantallaCompleta()) -- barato de dejar enganchado para siempre.
+// Único punto que la pide (ui/intro.js ya no la llama aparte, para no
+// disparar requestFullscreen() dos veces en el mismo toque -- el
+// navegador rechazaba una de las dos llamadas al hacerlo).
+function reintentarPantallaCompleta() {
+        if (!esPantallaCompleta()) pedirPantallaCompleta();
+      }
+window.addEventListener("pointerdown", reintentarPantallaCompleta);
+window.addEventListener("keydown", reintentarPantallaCompleta);
 
 // Expuestas en window: referenciadas desde onclick="..." en HTML generado dinámicamente.
 window.toggleFullscreen = toggleFullscreen;
