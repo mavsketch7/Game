@@ -3686,6 +3686,16 @@ img.hoja-pieza {
   font-size: 0.9rem;
   border-color: var(--col, var(--borde));
 }
+/* Botón de pausa/ficha -- esquina superior derecha, fuera de
+   .tc-botones (que vive abajo a la derecha). El padding de safe-area
+   de #touch-controls ya aparta top/right del notch, así que estos
+   14px son seguros tal cual. */
+.tc-btn-pausa {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  font-size: 1.3rem;
+}
 
 /* Aviso "gira tu dispositivo" (ver actualizarAvisoRotar() en
    touchControls.js) -- por encima de TODO, incluido :fullscreen #marco

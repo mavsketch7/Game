@@ -13,6 +13,7 @@
 import { ELEMENTOS, ELEM_MAGO, FORMAS_DRUIDA, FORMAS_INFO, SENDA_ELEMENTAL, SUPS } from "../core/constants.js";
 import { G } from "../core/state.js";
 import { activarParry, castSup, dashAtaque, disparoSecundario, esquivar, habilidad, interactuar, sendaElemental, transformar } from "./abilities.js";
+import { toggleMenuPausa } from "../ui/pauseMenu.js";
 
 // Detección de dispositivo táctil -- no existía nada de esto en el
 // proyecto, ver informe de exploración: cero uso de maxTouchPoints/
@@ -87,7 +88,8 @@ function crearDom() {
     '<div class="tc-zona tc-zona-apuntar"></div>' +
     '<div class="tc-stick tc-stick-mover" hidden><div class="tc-stick-base"></div><div class="tc-stick-nub"></div></div>' +
     '<div class="tc-stick tc-stick-apuntar" hidden><div class="tc-stick-base"></div><div class="tc-stick-nub"></div></div>' +
-    '<div class="tc-botones" id="tc-botones"><div class="tc-fila tc-fila-clase" id="tc-fila-clase"></div><div class="tc-fila tc-fila-universal" id="tc-fila-universal"></div></div>';
+    '<div class="tc-botones" id="tc-botones"><div class="tc-fila tc-fila-clase" id="tc-fila-clase"></div><div class="tc-fila tc-fila-universal" id="tc-fila-universal"></div></div>' +
+    '<button type="button" class="tc-btn tc-btn-pausa" id="tc-btn-pausa" aria-label="Pausa / Inventario">⏸</button>';
   zonaMover = cont.querySelector(".tc-zona-mover");
   zonaApuntar = cont.querySelector(".tc-zona-apuntar");
   stickMover = cont.querySelector(".tc-stick-mover");
@@ -243,6 +245,23 @@ function conectarBotonesEspeciales() {
   btn.addEventListener("touchcancel", soltar, { passive: false });
 }
 
+// Botón de pausa/ficha -- fijo, no depende del rol ni pasa por la
+// delegación de #tc-botones (vive fuera de ese contenedor). Misma
+// llamada que usan Tab (teclado) y Start (mando) en systems/input.js,
+// con sus mismos guardas (no hace nada si hay otro overlay abierto).
+function conectarBotonPausa() {
+  const btn = document.getElementById("tc-btn-pausa");
+  if (!btn) return;
+  btn.addEventListener(
+    "touchstart",
+    (e) => {
+      e.preventDefault();
+      toggleMenuPausa();
+    },
+    { passive: false },
+  );
+}
+
 // Delegación en el contenedor de botones para el resto (tap único, sin
 // estado mantenido) -- mismas funciones que ya llaman teclado y mando en
 // systems/input.js, ningún comportamiento de juego nuevo.
@@ -330,6 +349,7 @@ if (crearDom()) {
     },
   );
   conectarDelegacion();
+  conectarBotonPausa();
 }
 
 // ---- Aviso de "gira tu dispositivo" -- el juego entero (selección de
