@@ -9,13 +9,41 @@ import { abrirInfo, cerrarInfo } from "../ui/info.js";
 import { cambiarPestanaInv, cerrarInv, irPestanaInv } from "../ui/inventory.js";
 import { construirMenu } from "../ui/menu.js";
 import { toggleMenuPausa } from "../ui/pauseMenu.js";
-import { cerrarArenaPvp } from "../ui/pvp.js";
 import { toggleSilencioRapido } from "../ui/settingsOverlay.js";
-import { cerrarTienda } from "../ui/shop.js";
-import { cerrarSkins } from "../ui/skins.js";
-import { cerrarYunque } from "../ui/workbench.js";
-import { cerrarFusion } from "../ui/forjaFusion.js";
 import { esTactil, leerInputTactil } from "./touchControls.js";
+
+// Los 5 popups de estación (tienda/skins/yunque/fusión/arena) viven ya
+// dentro del chunk de core/loop.js (import dinámico, ver main.js) --
+// si este archivo los siguiera importando aquí de forma ESTÁTICA,
+// Rollup los metería igual en el bundle inicial pese a la carga
+// diferida de loop.js (mismo "import dinámico ineficaz" que ya
+// señalaba Vite para ui/inventory.js/render/character.js). Solo hace
+// falta cerrarX() cuando su overlay YA está abierto (ver
+// padCierra()/el "escape" del keydown más abajo) -- eso únicamente
+// puede pasar después de que loop.js llamara a abrirX() para abrirlo,
+// así que en la práctica el módulo siempre está cargado ya para cuando
+// de verdad hace falta invocar esto (guarda `if (cerrarX)` de todas
+// formas, mismo criterio que update en main.js).
+let cerrarTienda = null,
+  cerrarSkins = null,
+  cerrarYunque = null,
+  cerrarFusion = null,
+  cerrarArenaPvp = null;
+import("../ui/shop.js").then((m) => {
+  cerrarTienda = m.cerrarTienda;
+});
+import("../ui/skins.js").then((m) => {
+  cerrarSkins = m.cerrarSkins;
+});
+import("../ui/workbench.js").then((m) => {
+  cerrarYunque = m.cerrarYunque;
+});
+import("../ui/forjaFusion.js").then((m) => {
+  cerrarFusion = m.cerrarFusion;
+});
+import("../ui/pvp.js").then((m) => {
+  cerrarArenaPvp = m.cerrarArenaPvp;
+});
 
 export const keys = {};
 
@@ -272,11 +300,11 @@ function padCierra() {
         if (!ov) return;
         if (ov === "cartas-overlay" || ov === "fin") return; // las cartas se eligen, el fin no se esquiva
         if (ov === "inv") cerrarInv();
-        else if (ov === "tienda") cerrarTienda();
-        else if (ov === "skins") cerrarSkins();
-        else if (ov === "yunque") cerrarYunque();
-        else if (ov === "fusion") cerrarFusion();
-        else if (ov === "arena-pvp") cerrarArenaPvp();
+        else if (ov === "tienda") cerrarTienda && cerrarTienda();
+        else if (ov === "skins") cerrarSkins && cerrarSkins();
+        else if (ov === "yunque") cerrarYunque && cerrarYunque();
+        else if (ov === "fusion") cerrarFusion && cerrarFusion();
+        else if (ov === "arena-pvp") cerrarArenaPvp && cerrarArenaPvp();
         else if (ov === "info-overlay") cerrarInfo();
         padFoco = 0;
       }
@@ -424,25 +452,33 @@ window.addEventListener("keydown", (e) => {
             if (
               !document.getElementById("tienda").classList.contains("oculto")
             ) {
-              cerrarTienda();
+              cerrarTienda && cerrarTienda();
               return;
             }
             if (
               !document.getElementById("skins").classList.contains("oculto")
             ) {
-              cerrarSkins();
+              cerrarSkins && cerrarSkins();
               return;
             }
             if (
               !document.getElementById("yunque").classList.contains("oculto")
             ) {
-              cerrarYunque();
+              cerrarYunque && cerrarYunque();
               return;
             }
             if (
               !document.getElementById("fusion").classList.contains("oculto")
             ) {
-              cerrarFusion();
+              cerrarFusion && cerrarFusion();
+              return;
+            }
+            if (
+              !document
+                .getElementById("arena-pvp")
+                .classList.contains("oculto")
+            ) {
+              cerrarArenaPvp && cerrarArenaPvp();
               return;
             }
             cerrarInv();
