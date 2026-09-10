@@ -1,6 +1,5 @@
 // Auto-generated during the modularization refactor (2026-07-23).
 import { H, W, ajustarLienzo, cx } from "./core/canvas.js";
-import { update } from "./core/loop.js";
 import { aplicarTexto } from "./core/settings.js";
 import { G } from "./core/state.js";
 import { NET, interpolarPosicionesRed, netEnviarEventosFx, netEnviarInputCliente, netEnviarSnapshot } from "./net/peer.js";
@@ -13,6 +12,22 @@ import "./ui/cursor.js";
 import "./ui/guildRankings.js";
 import "./ui/intro.js";
 import "./ui/pauseMenu.js";
+
+// core/loop.js (y todo lo que importa: abilities/audio/combat/floorgen/
+// los popups de tienda/skins/yunque/fusión/arena...) no hace falta hasta
+// que hay una partida activa -- es ~35-40% de todo src/ y arrastraba el
+// bundle inicial a 585KB solo para pintar la pantalla de selección de
+// personaje. Import dinámico disparado ya (sin esperar ningún gesto del
+// jugador) para que el navegador lo descargue en paralelo mientras el
+// jugador todavía está eligiendo personaje/clase -- en la práctica ya
+// está listo mucho antes de pulsar "Empezar expedición". Si por lo que
+// sea no lo está aún, bucle() de abajo simplemente no llama a update()
+// ese frame (mismo criterio de tolerancia que ya existe para el
+// hit-stop: la lógica se salta un tick, pero render() sigue pintando).
+let update = null;
+import("./core/loop.js").then((m) => {
+  update = m.update;
+});
 
 let ultimo = 0;
 
@@ -55,7 +70,7 @@ function bucle(ts) {
           // queda literalmente congelada (el shake y los fx siguen vivos).
           // Se consume con el dt REAL de pantalla, no con el del juego.
           if (G.hitStopT > 0) G.hitStopT = Math.max(0, G.hitStopT - dt);
-          else update(dt);
+          else if (update) update(dt);
         }
         render();
         if (NET.modo === "host") {

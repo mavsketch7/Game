@@ -3,7 +3,6 @@ import { TAU } from "../core/canvas.js";
 // Alias: el único uso de W/H de este archivo es un clamp de objetivo
 // DENTRO de la sala (mundo) -- ver el mismo truco en systems/floorgen.js.
 import { ELEMENTOS, ELEM_MAGO, FORMAS_DRUIDA, FORMAS_INFO, PILAR_ROTO_DUR, RAREZAS, ROLES, SALA_H as H, SALA_W as W, SENDA_ELEMENTAL, SUPS } from "../core/constants.js";
-import { update } from "../core/loop.js";
 import { G } from "../core/state.js";
 import { fxEstocada, fxImpacto, fxOnda, fxParticulas, fxTajo, fxTexto } from "../render/effects.js";
 import { detenerSendaFuegoAudio, iniciarSendaFuegoAudio, sfx, sfxDisparoArco, sfxFuegoBolaLanzamiento, sfxFuegoUltiCast, sfxFuegoUltiExplosion, sfxGolpeAire, sfxGolpeCritico, sfxImpactoFrhor, sfxImpactoGuerrero, sfxImpactoPicaro, sfxMoneda, sfxRompeBarril, sfxRompeHielo, sfxSwingFrhor } from "./audio.js";
