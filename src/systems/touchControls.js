@@ -362,7 +362,20 @@ if (crearDom()) {
 function actualizarAvisoRotar() {
   const el = document.getElementById("aviso-rotar");
   if (!el) return;
-  const mostrar = esTactil() && window.innerWidth < window.innerHeight;
+  // esTactil() a secas se quedó corto aquí -- reportado con un móvil
+  // real donde daba falso negativo (mismo tipo de caso que ya se vio
+  // con el toggle manual de controles táctiles: sin
+  // navigator.userAgentData, "Solicitar sitio de escritorio", etc.) y
+  // el aviso nunca llegaba a mostrarse en vertical. A diferencia de
+  // esTactil() (que decide el ENRUTADO de controles -- un falso
+  // positivo ahí rompe la partida en un portátil con pantalla táctil,
+  // bug ya visto antes en este proyecto), este aviso es de bajo
+  // riesgo: como mucho se muestra de más en una ventana de escritorio
+  // angosta y alta (rarísimo), así que aquí basta con
+  // navigator.maxTouchPoints > 0 como señal adicional -- más inclusivo
+  // a propósito.
+  const posibleTactil = esTactil() || navigator.maxTouchPoints > 0;
+  const mostrar = posibleTactil && window.innerWidth < window.innerHeight;
   el.classList.toggle("oculto", !mostrar);
 }
 window.addEventListener("resize", actualizarAvisoRotar);
