@@ -7,7 +7,7 @@ import { K } from "./sprites.js";
 import { NIVEL_ULTI } from "../systems/abilities.js";
 import { statsTot, vivos } from "../systems/combat.js";
 import { ESTILO } from "../systems/juice.js";
-import { BOSS_BAR, BOSS_BAR_INTERIOR } from "./uiTiles.js";
+import { AVATAR_MONEDA_FRAME_W, AVATAR_MONEDA_IMG, BOSS_BAR, BOSS_BAR_INTERIOR } from "./uiTiles.js";
 import { banner } from "../ui/notifications.js";
 import { clamp, lighten } from "../utils/helpers.js";
 
@@ -154,17 +154,31 @@ export function renderHUD() {
           const [x, y] = pos[i] || pos[0];
           const t = statsTot(p),
             b = ROLES[p.rol];
-          // Avatar: icono representativo de la clase (de momento, en vez
-          // del retrato real -- pedido expreso, "ya se pondrán los
-          // definitivos" más adelante).
-          cx.fillStyle = "#0a0812";
-          cx.fillRect(x - 1, y + 3, 38, 44);
-          cx.font = "25px Alegreya Sans";
-          cx.textAlign = "center";
-          cx.fillText(b.ico, x + 18, y + 32);
-          cx.strokeStyle = "#3a3453";
-          cx.lineWidth = 1;
-          cx.strokeRect(x - 0.5, y + 3.5, 37, 43);
+          // Avatar: moneda de clase (avatar-moneda-class-*.png, ver
+          // render/uiTiles.js) -- frame 0 (cobre) de momento, el resto de
+          // la tira (bronce/plata/oro) ya está cargada a la espera de un
+          // sistema de rango. Fallback al icono de emoji en caja mientras
+          // la imagen carga (mismo criterio que BOSS_BAR más abajo).
+          const avatarImg = AVATAR_MONEDA_IMG[p.rol];
+          if (avatarImg && avatarImg.complete && avatarImg.naturalWidth) {
+            const boxX = x - 1, boxY = y + 3, boxW = 38, boxH = 44;
+            const frameH = avatarImg.naturalHeight;
+            const esc = Math.min(boxW / AVATAR_MONEDA_FRAME_W, boxH / frameH);
+            const dw = AVATAR_MONEDA_FRAME_W * esc, dh = frameH * esc;
+            cx.drawImage(
+              avatarImg, 0, 0, AVATAR_MONEDA_FRAME_W, frameH,
+              boxX + (boxW - dw) / 2, boxY + (boxH - dh) / 2, dw, dh,
+            );
+          } else {
+            cx.fillStyle = "#0a0812";
+            cx.fillRect(x - 1, y + 3, 38, 44);
+            cx.font = "25px Alegreya Sans";
+            cx.textAlign = "center";
+            cx.fillText(b.ico, x + 18, y + 32);
+            cx.strokeStyle = "#3a3453";
+            cx.lineWidth = 1;
+            cx.strokeRect(x - 0.5, y + 3.5, 37, 43);
+          }
           // Nombre: sin panel detrás, así que lleva su propia sombra (igual
           // que ya hacía el texto de las barras en barra()) para seguir
           // leyéndose sobre cualquier fondo del mundo.
