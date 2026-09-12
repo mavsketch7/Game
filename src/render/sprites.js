@@ -280,6 +280,41 @@ function iconoFrhor(item) {
   return iconoFrhorCache[item.id];
 }
 
+// Armadura de Mago (ver CASCO_IDLE_MAGO_TIN/PETO_IDLE_MAGO_TIN/
+// PIERNAS_IDLE_MAGO_TIN más abajo, [dir][rareza][frameIdx]): sin esto
+// caía al icono procedural genérico de iconoDrop() de más abajo -- SÍ se
+// veía el tinte correcto en el personaje (capaPorRareza en character.js),
+// pero no en el propio icono de inventario/drop. Mismo recorte que
+// iconoFrhor() (bboxAlfa sobre el frame idle-abajo), cacheado por
+// slot+rareza en vez de por id fijo porque, a diferencia de Frhor, estas
+// son piezas generadas al azar (genItem()) con distinta rareza cada vez.
+const iconoMagoCache = {};
+function iconoArmaduraMago(item) {
+  if (item.clase !== "mago") return null;
+  const setTin =
+    item.slot === "casco" ? CASCO_IDLE_MAGO_TIN.down :
+    item.slot === "peto" ? PETO_IDLE_MAGO_TIN.down :
+    item.slot === "piernas" ? PIERNAS_IDLE_MAGO_TIN.down :
+    null;
+  if (!setTin) return null;
+  const rareza = Math.max(0, Math.min(item.rareza || 0, RAREZAS.length - 1));
+  const frame = setTin[rareza] && setTin[rareza][0];
+  if (!frame) return null;
+  const clave = item.slot + "|" + rareza;
+  if (!iconoMagoCache[clave]) {
+    const b = bboxAlfa(frame.getContext("2d"), frame.width, frame.height) ||
+      { x: 0, y: 0, w: frame.width, h: frame.height };
+    const c = document.createElement("canvas");
+    c.width = b.w;
+    c.height = b.h;
+    const g = c.getContext("2d");
+    g.imageSmoothingEnabled = false;
+    g.drawImage(frame, b.x, b.y, b.w, b.h, 0, 0, b.w, b.h);
+    iconoMagoCache[clave] = c;
+  }
+  return iconoMagoCache[clave];
+}
+
 export function iconoDrop(item) {
         // Martillo de Frhor: icono real (azul zafiro, ver MARTILLO_FRHOR_IMG
         // más abajo) en vez del icono procedural genérico de "arma" -- si
@@ -290,6 +325,8 @@ export function iconoDrop(item) {
         if (LEYENDA_ARMA_IMG[item.id]) return LEYENDA_ARMA_IMG[item.id];
         const imgFrhor = iconoFrhor(item);
         if (imgFrhor) return imgFrhor;
+        const imgMago = iconoArmaduraMago(item);
+        if (imgMago) return imgMago;
         // Arma con arte real por variante (pack "iron-weapons", ver
         // WEAPON_ART_POOL más abajo y genItem() en systems/loot.js, que
         // asigna `arteIdx` de forma ESTABLE al generarse) -- se muestra tal

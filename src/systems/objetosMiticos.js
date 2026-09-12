@@ -66,7 +66,11 @@ export const OBJETOS_MITICOS = [
           id: "hacha_vampirica",
           nombre: "Hacha Vampírica",
           slot: "arma",
-          clase: null,
+          // A diferencia del resto (clase: null), se restringe a guerrero
+          // (pedido expreso del usuario: "es un arma de guerrero, no de
+          // mago") -- un hacha pesada encaja con ese rol, no con uno a
+          // distancia.
+          clase: "guerrero",
           statPool: ["atk", "atk", "hp"],
           // Mismo efecto que el Amuleto Vampírico (tieneEfecto() solo
           // comprueba presencia, no acumula por nº de piezas -- llevar

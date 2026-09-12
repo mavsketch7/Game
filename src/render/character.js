@@ -1187,7 +1187,29 @@ export function renderJugador(p) {
                 : null;
               if (datosHiltTip) {
                 const { hilt, tip } = datosHiltTip;
-                const rotIcono = -Math.atan2(tip[1] - hilt[1], tip[0] - hilt[0]);
+                const refAngle = Math.atan2(tip[1] - hilt[1], tip[0] - hilt[0]);
+                // El giro puro (alinear mango->punta con la puntería) no
+                // tiene forma de conservar qué lado del arte queda "arriba"
+                // -- para media vuelta del círculo completo el sprite
+                // termina boca abajo (reportado: espada-pistola y bastón
+                // del dragón "al apuntar a la derecha debería voltear
+                // también verticalmente"). Mismo criterio que ya usa el
+                // propio personaje para no darse la vuelta al apuntar a la
+                // izquierda (`flip` más arriba, `Math.cos(p.aim) < 0`): en
+                // vez de girar más de 90°, se refleja en horizontal
+                // (cx.scale(-1,1)) y se completa con el giro que falte --
+                // así el arma solo se espeja, nunca se ve invertida.
+                let rotIcono = -refAngle;
+                let totalRot = p.aim + rotIcono;
+                while (totalRot > Math.PI) totalRot -= TAU;
+                while (totalRot <= -Math.PI) totalRot += TAU;
+                const flipIcono = totalRot > Math.PI / 2 || totalRot < -Math.PI / 2;
+                if (flipIcono) {
+                  rotIcono = refAngle - Math.PI;
+                  while (rotIcono > Math.PI) rotIcono -= TAU;
+                  while (rotIcono <= -Math.PI) rotIcono += TAU;
+                  cx.scale(-1, 1);
+                }
                 cx.rotate(rotIcono);
                 cx.drawImage(wimg, -hilt[0] * s, -hilt[1] * s, ww, wh);
               } else if (esIconoArma) {
