@@ -2100,7 +2100,17 @@ img.hoja-pieza {
 .hoja-banner-titulo-texto {
   font-family: "Dungeon Font", "Cinzel", serif;
   font-weight: 800;
-  font-size: 7rem;
+  /* cqw contra .hoja-libro (container-type:inline-size), NO rem fijo --
+     mismo bug ya documentado en .hoja-slot/.hoja-stats-panel: a 7rem
+     fijos, cuando el libro se ve forzado a un ancho pequeño (viewport
+     bajo, p.ej. móvil en horizontal, ver .hoja-libro: height:100% +
+     aspect-ratio), el título se queda igual de grande en vez de
+     encoger con el libro y se come las pestañas/casillas de debajo
+     (reportado: "el texto Personaje enorme tapa las casillas"). 8.6cqw
+     equivale a 7rem con el ancho de referencia (~1300px) de siempre --
+     en una ventana de escritorio normal no cambia nada.
+     */
+  font-size: clamp(1.4rem, 8.6cqw, 7rem);
   color: #f4e6c4;
   text-shadow: 0 2px 3px rgba(0, 0, 0, 0.6);
   white-space: nowrap;
@@ -2202,7 +2212,11 @@ img.hoja-pieza {
   pointer-events: none;
 }
 .hoja-slot-etiqueta {
-  font-size: 1rem;
+  /* cqw, no rem fijo -- mismo bug que el título de arriba: con el libro
+     forzado a un ancho pequeño, las etiquetas ("CASCO"/"COLLAR"/...) se
+     quedaban igual de grandes que la propia casilla y se pisaban unas
+     con otras. */
+  font-size: clamp(0.55rem, 1.3cqw, 1rem);
   color: #6b5638;
   text-transform: uppercase;
   letter-spacing: 0.03em;
@@ -3027,22 +3041,33 @@ img.hoja-pieza {
   background: transparent;
   border-color: rgba(74, 52, 24, 0.3);
 }
+/* cqw contra .hoja-libro (container-type:inline-size), NO rem fijo --
+   estos tamaños se pidieron grandes A PROPÓSITO (ver el comentario de
+   arriba, "no responsivos"), pero un rem fijo significa GRANDE
+   SIEMPRE, incluso cuando el libro se ve forzado a un ancho pequeño
+   (móvil en horizontal): el texto desbordaba la tarjeta entera
+   (reportado: "Ajustes" ilegible, todo amontonado). El cqw mantiene
+   EXACTAMENTE el mismo tamaño de siempre en el ancho de referencia
+   (~1300px, escritorio normal) y solo encoge cuando el libro es
+   realmente estrecho -- sigue siendo el texto más grande del libro,
+   solo que ahora también cabe.
+   */
 .hoja-libro-blanco-pagina .ajuste-fila h4 {
-  font-size: 2rem;
+  font-size: clamp(1rem, 2.46cqw, 2rem);
   color: #4a3418;
 }
 .hoja-libro-blanco-pagina .ajuste-fila .a-desc {
-  font-size: 1.6rem;
+  font-size: clamp(0.85rem, 1.97cqw, 1.6rem);
   color: #6b5638;
 }
 .hoja-libro-blanco-pagina .ajuste-ctrl .btn,
 .hoja-libro-blanco-pagina .ajuste-ctrl .seg button {
   --btn-height: 58px;
   --btn-border-width: 22px;
-  font-size: 1.6rem;
+  font-size: clamp(0.85rem, 1.97cqw, 1.6rem);
 }
 .hoja-libro-blanco-pagina .val-num {
-  font-size: 1.4rem;
+  font-size: clamp(0.75rem, 1.08cqw, 1.4rem);
   min-width: unset;
 }
 .ajuste-fila input[type="range"] {
