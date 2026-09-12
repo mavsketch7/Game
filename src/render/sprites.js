@@ -315,6 +315,31 @@ function iconoArmaduraMago(item) {
   return iconoMagoCache[clave];
 }
 
+// Collar de Cenizas del Renacido: recorta el primer frame del fénix
+// animado (ver AMULETO_FENIX_IMG más abajo) igual que iconoFrhor(), en
+// vez de esperar a un icono procedural aparte.
+let iconoFenixCache = null;
+function iconoAmuletoFenix() {
+  if (!AMULETO_FENIX_IMG) return null;
+  if (iconoFenixCache) return iconoFenixCache;
+  const tmp = document.createElement("canvas");
+  tmp.width = AMULETO_FENIX_FRAME;
+  tmp.height = AMULETO_FENIX_FRAME;
+  const tg = tmp.getContext("2d");
+  tg.imageSmoothingEnabled = false;
+  tg.drawImage(AMULETO_FENIX_IMG, 0, 0, AMULETO_FENIX_FRAME, AMULETO_FENIX_FRAME, 0, 0, AMULETO_FENIX_FRAME, AMULETO_FENIX_FRAME);
+  const b = bboxAlfa(tg, AMULETO_FENIX_FRAME, AMULETO_FENIX_FRAME) ||
+    { x: 0, y: 0, w: AMULETO_FENIX_FRAME, h: AMULETO_FENIX_FRAME };
+  const c = document.createElement("canvas");
+  c.width = b.w;
+  c.height = b.h;
+  const g = c.getContext("2d");
+  g.imageSmoothingEnabled = false;
+  g.drawImage(tmp, b.x, b.y, b.w, b.h, 0, 0, b.w, b.h);
+  iconoFenixCache = c;
+  return iconoFenixCache;
+}
+
 export function iconoDrop(item) {
         // Martillo de Frhor: icono real (azul zafiro, ver MARTILLO_FRHOR_IMG
         // más abajo) en vez del icono procedural genérico de "arma" -- si
@@ -323,6 +348,10 @@ export function iconoDrop(item) {
         // Armas legendarias con arte propio (ver LEYENDA_ARMA_IMG más abajo):
         // mismo criterio, id concreto -> imagen concreta.
         if (LEYENDA_ARMA_IMG[item.id]) return LEYENDA_ARMA_IMG[item.id];
+        if (item.id === "collar_fenix") {
+          const imgFenix = iconoAmuletoFenix();
+          if (imgFenix) return imgFenix;
+        }
         const imgFrhor = iconoFrhor(item);
         if (imgFrhor) return imgFrhor;
         const imgMago = iconoArmaduraMago(item);
@@ -2389,6 +2418,26 @@ const LEYENDA_ARMA_HILT_TIP = {
 export function leyendaArmaHiltTip(id) {
   return LEYENDA_ARMA_HILT_TIP[id] || null;
 }
+
+// Collar de Cenizas del Renacido (Mítico, ver OBJETOS_MITICOS en
+// systems/objetosMiticos.js): fénix animado de 6 frames (68x68 cada uno,
+// tira horizontal) que flota junto a la cabeza mientras está equipado --
+// ver el bloque "collar" en character.js. Carga simple de una única
+// imagen (sin pasar por cargarHojaFrames(), pensado para cuerpos
+// anclados a los pies, no para un icono pequeño y centrado): el propio
+// bloque de dibujo recorta el frame que toca directamente con
+// drawImage() de 9 parámetros.
+export let AMULETO_FENIX_IMG = null;
+export const AMULETO_FENIX_FRAME = 68;
+export const AMULETO_FENIX_FRAMES_N = 6;
+(() => {
+  const im = new Image();
+  im.onload = () => {
+    AMULETO_FENIX_IMG = im;
+  };
+  im.onerror = () => console.warn("No se pudo cargar el amuleto fénix: " + im.src);
+  im.src = `${import.meta.env.BASE_URL}assets/sprites/weapons/amuletos/amuleto-fenix.png`;
+})();
 
 // Sangre de impacto (torre-vespero-assets/BloodFX Batch 1): sustituye el
 // simple estallido de píxeles cuadrados de fxParticulas por una salpicadura

@@ -93,6 +93,24 @@ export const OBJETOS_MITICOS = [
           efecto: "aliento_dragon",
           efectoDesc: "Con fuego activo, cada 4º lanzamiento se convierte en un abanico de proyectiles (Aliento de Dragón)",
         },
+        {
+          id: "collar_fenix",
+          nombre: "Collar de Cenizas del Renacido",
+          slot: "collar",
+          clase: null,
+          statPool: ["hp", "hp", "armor"],
+          // Efecto propio "renacido" (ver danoAlJugador en combat.js) --
+          // NO reutiliza "fenix" (Coraza del Fénix, arriba): esa pieza
+          // sobrevive con el 30% de vida sin más; esta revive con más
+          // vida Y además quema a TODOS los enemigos de la planta, un
+          // efecto claramente más fuerte pedido aparte por el usuario
+          // ("permite revivir una vez, y quema a todos los enemigos al
+          // revivir"), con su propio flag de un solo uso
+          // (p._renacidoUsado) para no interferir con Fénix si algún día
+          // coinciden equipados a la vez.
+          efecto: "renacido",
+          efectoDesc: "Revive una vez con 50% de vida y quema a todos los enemigos de la planta (1 solo uso)",
+        },
       ];
 
 export function tieneEfecto(p, id) {

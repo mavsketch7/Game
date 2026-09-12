@@ -611,6 +611,24 @@ export function danoAlJugador(p, raw, fuente) {
           toast(p.nombre + " renace de sus cenizas 🔥", "#ff5a36");
           return;
         }
+        // Collar de Cenizas del Renacido: revive con más vida que la
+        // Coraza del Fénix de arriba Y de paso quema a TODA la planta
+        // (no solo a los enemigos cercanos -- pedido expreso: "quema a
+        // todos los enemigos al revivir").
+        if (p.hp <= 0 && !p._renacidoUsado && tieneEfecto(p, "renacido")) {
+          p._renacidoUsado = true;
+          p.hp = Math.round(t.hpMax * 0.5);
+          p.invulT = Math.max(p.invulT, 1.5);
+          fxOnda(p.x, p.y, 90, "#ff5a36");
+          fxParticulas(p.x, p.y, 30, "#ff7d4d");
+          toast(p.nombre + " renace de sus cenizas y prende fuego a sus enemigos 🔥🦅", "#ff5a36");
+          for (const e of G.enemigos) {
+            if (e.hp <= 0 && !e.dummy) continue;
+            e.burnT = Math.max(e.burnT, 3);
+            e.burnDps = Math.max(e.burnDps, t.atk * 0.3);
+          }
+          return;
+        }
         if (p.hp <= 0) {
           p.hp = 0;
           p.ko = true;

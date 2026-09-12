@@ -9,7 +9,7 @@ import { ELEMENTOS, RAREZAS, SUPS } from "../core/constants.js";
 import { G } from "../core/state.js";
 import { fxParticulas } from "./effects.js";
 import { drawSprite, drawSpriteBottom } from "./spriteDraw.js";
-import { ARQUERO_BOW, ARQUERO_BOW_DUR, ATTACK_DUR, CASCO_ATTACK, CASCO_ATTACK_TIN, CASCO_HURT, CASCO_HURT_MAGO_TIN, CASCO_IDLE, CASCO_IDLE_MAGO_TIN, CASCO_MUERTE_MAGO_TIN, CASCO_RUN, CASCO_RUN_MAGO_TIN, CASCO_SPECIAL_TIN, CONFIG_ARMA, DASH_ATTACK_DUR, DUMMY_HIT, ESC_FORMA, FROST_GUARDIAN, LEYENDA_ARMA_IMG, MARTILLO_FRHOR_IMG, MIRA_IZQUIERDA_POR_DEFECTO, MOB_RUN, MUERTE_DUR, OFFHAND_IMG, OFFHAND_IMG_RAREZA, PARRY_FX_FH, PARRY_FX_FRAMES, PARRY_FX_FW, PARRY_FX_SHEET, PETO_ATTACK, PETO_ATTACK_TIN, PETO_HURT, PETO_HURT_MAGO_TIN, PETO_IDLE, PETO_IDLE_MAGO_TIN, PETO_MUERTE_MAGO_TIN, PETO_RUN, PETO_RUN_MAGO_TIN, PETO_SPECIAL_TIN, PIERNAS_ATTACK, PIERNAS_ATTACK_TIN, PIERNAS_HURT, PIERNAS_HURT_MAGO_TIN, PIERNAS_IDLE, PIERNAS_IDLE_MAGO_TIN, PIERNAS_MUERTE_MAGO_TIN, PIERNAS_RUN, PIERNAS_RUN_MAGO_TIN, PIERNAS_SPECIAL_TIN, REAL_ATTACK, REAL_ATTACK_ANCLA, REAL_DASH, REAL_DASH_ANCLA, REAL_HURT, REAL_IDLE, REAL_IDLE_ANCLA, REAL_MUERTE, REAL_RUN, REAL_RUN_ANCLA, REAL_SPECIAL, REAL_SPECIAL_ANCLA, REAL_SPRITE_SCALE, SHEETS, SPECIAL_ATTACK_DUR, SPR, SPR_FORMAS, TAM_HEROE, WEAPON_ART_POOL, WEAPON_IMG, WEAPON_IMG_RAREZA, armaHiltTip, assetOK, leyendaArmaHiltTip, seleccionarImgEnemigo, spriteJugador } from "./sprites.js";
+import { AMULETO_FENIX_FRAME, AMULETO_FENIX_FRAMES_N, AMULETO_FENIX_IMG, ARQUERO_BOW, ARQUERO_BOW_DUR, ATTACK_DUR, CASCO_ATTACK, CASCO_ATTACK_TIN, CASCO_HURT, CASCO_HURT_MAGO_TIN, CASCO_IDLE, CASCO_IDLE_MAGO_TIN, CASCO_MUERTE_MAGO_TIN, CASCO_RUN, CASCO_RUN_MAGO_TIN, CASCO_SPECIAL_TIN, CONFIG_ARMA, DASH_ATTACK_DUR, DUMMY_HIT, ESC_FORMA, FROST_GUARDIAN, LEYENDA_ARMA_IMG, MARTILLO_FRHOR_IMG, MIRA_IZQUIERDA_POR_DEFECTO, MOB_RUN, MUERTE_DUR, OFFHAND_IMG, OFFHAND_IMG_RAREZA, PARRY_FX_FH, PARRY_FX_FRAMES, PARRY_FX_FW, PARRY_FX_SHEET, PETO_ATTACK, PETO_ATTACK_TIN, PETO_HURT, PETO_HURT_MAGO_TIN, PETO_IDLE, PETO_IDLE_MAGO_TIN, PETO_MUERTE_MAGO_TIN, PETO_RUN, PETO_RUN_MAGO_TIN, PETO_SPECIAL_TIN, PIERNAS_ATTACK, PIERNAS_ATTACK_TIN, PIERNAS_HURT, PIERNAS_HURT_MAGO_TIN, PIERNAS_IDLE, PIERNAS_IDLE_MAGO_TIN, PIERNAS_MUERTE_MAGO_TIN, PIERNAS_RUN, PIERNAS_RUN_MAGO_TIN, PIERNAS_SPECIAL_TIN, REAL_ATTACK, REAL_ATTACK_ANCLA, REAL_DASH, REAL_DASH_ANCLA, REAL_HURT, REAL_IDLE, REAL_IDLE_ANCLA, REAL_MUERTE, REAL_RUN, REAL_RUN_ANCLA, REAL_SPECIAL, REAL_SPECIAL_ANCLA, REAL_SPRITE_SCALE, SHEETS, SPECIAL_ATTACK_DUR, SPR, SPR_FORMAS, TAM_HEROE, WEAPON_ART_POOL, WEAPON_IMG, WEAPON_IMG_RAREZA, armaHiltTip, assetOK, leyendaArmaHiltTip, seleccionarImgEnemigo, spriteJugador } from "./sprites.js";
 import { CARGA_ARQ_MAX, CARGA_ARQ_ZONA, CARGA_CUCH_MAX, CARGA_CUCH_ZONA, groundTarget } from "../systems/abilities.js";
 import { masCercano, PARRY_FX_DUR } from "../systems/combat.js";
 import { mouse } from "../systems/input.js";
@@ -990,7 +990,10 @@ export function renderJugador(p) {
 
         // anillo: gema flotante sobre la cabeza (antes "accesorio", partido
         // en collar/anillo al pasar a 7 slots -- ver core/constants.js:
-        // SLOTS. El collar todavía no tiene efecto visual propio).
+        // SLOTS). El resto de collares no tienen efecto visual propio
+        // todavía -- el Collar de Cenizas del Renacido (justo abajo) es
+        // el primero, por ser una pieza única con arte propio (pedido
+        // expreso del usuario), no un tratamiento genérico de slot.
         if (eq.anillo && !formaAnimal) {
           const gcol = RAREZAS[eq.anillo.rareza].col;
           cx.save();
@@ -998,6 +1001,30 @@ export function renderJugador(p) {
           cx.rotate(animGlobal * 1.5);
           cx.fillStyle = gcol;
           cx.fillRect(-3, -3, 6, 6);
+          cx.restore();
+        }
+
+        // Collar de Cenizas del Renacido: fénix animado (6 frames, ver
+        // AMULETO_FENIX_IMG en sprites.js) flotando junto a la cabeza --
+        // ~20px de distancia pedidos por el usuario, con un halo de
+        // fuego (mismo mecanismo de shadowColor/shadowBlur que ya usa el
+        // resplandor de rareza del arma/armadura) para que se note que
+        // es un objeto especial incluso en reposo, no solo al activarse.
+        if (eq.collar && eq.collar.id === "collar_fenix" && !formaAnimal && AMULETO_FENIX_IMG) {
+          const fIdx = Math.floor(animGlobal * 6) % AMULETO_FENIX_FRAMES_N;
+          const fx = p.x + 15 + Math.sin(animGlobal * 2.2 + p.idx) * 3;
+          const fy = p.y - 32 + Math.cos(animGlobal * 2.2 + p.idx) * 3;
+          const dTam = 20;
+          cx.save();
+          cx.translate(fx, fy);
+          cx.shadowColor = "#ff5a36";
+          cx.shadowBlur = 7;
+          cx.drawImage(
+            AMULETO_FENIX_IMG,
+            fIdx * AMULETO_FENIX_FRAME, 0, AMULETO_FENIX_FRAME, AMULETO_FENIX_FRAME,
+            -dTam / 2, -dTam / 2, dTam, dTam,
+          );
+          cx.shadowBlur = 0;
           cx.restore();
         }
 
