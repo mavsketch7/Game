@@ -110,8 +110,22 @@ export function atacar(p) {
           p.castCd = (0.45 * cdHaste(p)) / (1 + (p._hasteBonus || 0));
           p.swingT = 0.25; // ver ATTACK_DUR.mago en render/sprites.js -- mismo valor
           if (p.elemento === "fuego") {
-            dispararProy(p, p.aim, t.atk * 0.9, "bola", "#ff7d4d", 400);
-            G.projs[G.projs.length - 1].quema = true;
+            // Bastón del Dragón (Mítico, ver systems/objetosMiticos.js):
+            // cada ALIENTO_DRAGON_CADA lanzamientos de fuego, el disparo
+            // normal se transforma en un abanico de proyectiles (el
+            // "aliento") en vez de una sola bola -- el contador solo
+            // avanza mientras el efecto está equipado, así que cambiar de
+            // arma a mitad de cuenta simplemente la congela en vez de
+            // perderla.
+            const alientoActivo = tieneEfecto(p, "aliento_dragon");
+            if (alientoActivo) p._alientoCont = (p._alientoCont || 0) + 1;
+            if (alientoActivo && p._alientoCont >= ALIENTO_DRAGON_CADA) {
+              p._alientoCont = 0;
+              lanzarAlientoDragon(p, t);
+            } else {
+              dispararProy(p, p.aim, t.atk * 0.9, "bola", "#ff7d4d", 400);
+              G.projs[G.projs.length - 1].quema = true;
+            }
           } else {
             dispararProy(p, p.aim, t.atk * 0.8, "carambano", "#7fc9e8", 430);
             G.projs[G.projs.length - 1].congela = true;
@@ -623,6 +637,26 @@ function dispararProy(p, dir, dmg, tipo, color, v, silencioso) {
         if (tipo === "flecha" && p._pierceProy > 0) pr.pierce = p._pierceProy;
         G.projs.push(pr);
       }
+
+// Aliento de Dragón (efecto único del Bastón del Dragón, ver
+// systems/objetosMiticos.js) -- abanico de proyectiles de fuego en vez de
+// uno solo, mismo daño-por-impacto reducido para que no sea directamente
+// "4 disparos en 1" contra un solo objetivo, pero mucho más fuerte contra
+// varios enemigos en línea o un jefe grande que reciba todo el abanico.
+const ALIENTO_DRAGON_CADA = 4; // cada cuántos lanzamientos de fuego se activa
+const ALIENTO_DRAGON_PROYS = 6;
+const ALIENTO_DRAGON_ARCO = (50 * Math.PI) / 180; // abanico total
+function lanzarAlientoDragon(p, t) {
+  sfxFuegoBolaLanzamiento();
+  fxTexto(p.x, p.y - 24, "¡Aliento de Dragón!", "#ff7d4d");
+  fxOnda(p.x, p.y, 30, "#ff7d4d");
+  const dmgProy = t.atk * 0.5;
+  for (let i = 0; i < ALIENTO_DRAGON_PROYS; i++) {
+    const off = ALIENTO_DRAGON_ARCO * (i / (ALIENTO_DRAGON_PROYS - 1) - 0.5);
+    dispararProy(p, p.aim + off, dmgProy, "bola", "#ff9d4d", 420, true);
+    G.projs[G.projs.length - 1].quema = true;
+  }
+}
 
 // Duración mínima (ms) que el tensado del arco debe sonar antes de dejar
 // que un disparo lo corte -- un toque MUY corto (p.cargaArqT casi 0)

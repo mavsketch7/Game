@@ -77,6 +77,18 @@ export const OBJETOS_MITICOS = [
           efecto: "vampirismo",
           efectoDesc: "Los ataques curan un 8% del daño infligido",
         },
+        {
+          id: "baston_dragon",
+          nombre: "Bastón del Dragón",
+          slot: "arma",
+          // A diferencia del resto (clase: null), este SÍ se restringe a
+          // mago: el efecto depende del sistema elemental (p.elemento,
+          // ver ELEM_MAGO en core/constants.js) que solo tiene esa clase.
+          clase: "mago",
+          statPool: ["atk", "atk", "cdr"],
+          efecto: "aliento_dragon",
+          efectoDesc: "Con fuego activo, cada 4º lanzamiento se convierte en un abanico de proyectiles (Aliento de Dragón)",
+        },
       ];
 
 export function tieneEfecto(p, id) {
