@@ -1186,7 +1186,17 @@ export function renderJugador(p) {
               // el pivote YA ES la mano marcada en Aseprite -- empujar
               // GRIP px más allá dejaba el mango separado de la mano en
               // vez de sujeto desde ahí, que es justo lo que se pidió.
-              const s = (REACH - GRIP) / Math.max(ww0, wh0);
+              // Boost solo para las Míticas con arte propio (leyendaArmaHiltTip):
+              // con la escala normal del pack iron-weapons (pensada para
+              // espadas/hachas compactas) el pivote de mano del mago (cerca
+              // del pecho, ver REAL_IDLE_ANCLA) queda tan cerca de la
+              // cabeza que un bastón corto se veía "aplastado contra la
+              // cara" en vez de sujeto y extendido -- reportado: "se ve
+              // raro apuntando a la derecha". Un arma más larga se aleja
+              // lo bastante de la cabeza sin tocar la escala compartida de
+              // iron-weapons.
+              const boostLeyenda = imgLeyenda && wimg === imgLeyenda ? 1.6 : 1;
+              const s = ((REACH - GRIP) / Math.max(ww0, wh0)) * boostLeyenda;
               const ww = ww0 * s, wh = wh0 * s;
               const gripDibujo = anclaMano ? 0 : GRIP;
               // El pack "wood-weapons" no es consistente en cómo recortó cada
@@ -1232,6 +1242,18 @@ export function renderJugador(p) {
                 // vez de girar más de 90°, se refleja en horizontal
                 // (cx.scale(-1,1)) y se completa con el giro que falte --
                 // así el arma solo se espeja, nunca se ve invertida.
+                // OJO al ORDEN de las llamadas: cx.rotate()/cx.scale() se
+                // POST-multiplican sobre la matriz actual, así que el
+                // PUNTO sufre las transformaciones en el orden CONTRARIO a
+                // como se llaman (la última llamada es la que se aplica
+                // PRIMERO al punto). La fórmula de rotIcono de abajo se
+                // dedujo asumiendo "reflejo primero, giro después" sobre
+                // el punto -- para conseguir eso hay que LLAMAR a
+                // cx.rotate() antes que a cx.scale(-1,1), no al revés
+                // (bug real: con el orden invertido el bastón del dragón
+                // apenas se movía de la cabeza al apuntar a la derecha,
+                // confirmado volcando la matriz de transformación real
+                // con cx.getTransform() y comparándola a mano).
                 let rotIcono = -refAngle;
                 let totalRot = p.aim + rotIcono;
                 while (totalRot > Math.PI) totalRot -= TAU;
@@ -1241,9 +1263,9 @@ export function renderJugador(p) {
                   rotIcono = refAngle - Math.PI;
                   while (rotIcono > Math.PI) rotIcono -= TAU;
                   while (rotIcono <= -Math.PI) rotIcono += TAU;
-                  cx.scale(-1, 1);
                 }
                 cx.rotate(rotIcono);
+                if (flipIcono) cx.scale(-1, 1);
                 cx.drawImage(wimg, -hilt[0] * s, -hilt[1] * s, ww, wh);
               } else if (esIconoArma) {
                 cx.rotate(-Math.PI / 4);
