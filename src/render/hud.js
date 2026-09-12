@@ -154,30 +154,49 @@ export function renderHUD() {
           const [x, y] = pos[i] || pos[0];
           const t = statsTot(p),
             b = ROLES[p.rol];
+          // Barra de vida/estamina: se dibujan ANTES que la moneda y
+          // arrancan por debajo de su borde izquierdo (SOLAPE) -- a
+          // petición expresa, "que la barra de vida y estamina salgan de
+          // la moneda". El ancho crece en ese mismo SOLAPE para que el
+          // tramo VISIBLE (a la derecha de la moneda) mida lo mismo que
+          // antes; el resto de filas (XP, nivel, iconos) no se solapan
+          // con la moneda, así que siguen ancladas en x+44 como siempre.
+          const SOLAPE = 24;
+          const barX = x + 44 - SOLAPE;
+          barraHP(barX, y + 16, 180 + SOLAPE, 13, p, t);
+          barra(barX, y + 32, 180 + SOLAPE, 10, p.res / b.res, "#5a9ad1", "");
           // Avatar: moneda de clase (avatar-moneda-class-*.png, ver
           // render/uiTiles.js) -- frame 0 (cobre) de momento, el resto de
           // la tira (bronce/plata/oro) ya está cargada a la espera de un
-          // sistema de rango. Fallback al icono de emoji en caja mientras
+          // sistema de rango. Más grande que antes (48 de diámetro) y con
+          // el borde derecho fijo en x+44 -- el mismo punto donde
+          // arrancaban las barras antes de este cambio -- para que tape
+          // justo el tramo SOLAPE de arriba y dé la sensación de que
+          // nacen de la propia moneda. Se pinta ENCIMA de las barras a
+          // propósito. Fallback a un disco con el icono de emoji mientras
           // la imagen carga (mismo criterio que BOSS_BAR más abajo).
           const avatarImg = AVATAR_MONEDA_IMG[p.rol];
+          const boxX = x - 4, boxY = y + 5, boxD = 48;
           if (avatarImg && avatarImg.complete && avatarImg.naturalWidth) {
-            const boxX = x - 1, boxY = y + 3, boxW = 38, boxH = 44;
             const frameH = avatarImg.naturalHeight;
-            const esc = Math.min(boxW / AVATAR_MONEDA_FRAME_W, boxH / frameH);
+            const esc = Math.min(boxD / AVATAR_MONEDA_FRAME_W, boxD / frameH);
             const dw = AVATAR_MONEDA_FRAME_W * esc, dh = frameH * esc;
             cx.drawImage(
               avatarImg, 0, 0, AVATAR_MONEDA_FRAME_W, frameH,
-              boxX + (boxW - dw) / 2, boxY + (boxH - dh) / 2, dw, dh,
+              boxX + (boxD - dw) / 2, boxY + (boxD - dh) / 2, dw, dh,
             );
           } else {
             cx.fillStyle = "#0a0812";
-            cx.fillRect(x - 1, y + 3, 38, 44);
-            cx.font = "25px Alegreya Sans";
-            cx.textAlign = "center";
-            cx.fillText(b.ico, x + 18, y + 32);
+            cx.beginPath();
+            cx.arc(boxX + boxD / 2, boxY + boxD / 2, boxD / 2, 0, Math.PI * 2);
+            cx.fill();
             cx.strokeStyle = "#3a3453";
             cx.lineWidth = 1;
-            cx.strokeRect(x - 0.5, y + 3.5, 37, 43);
+            cx.stroke();
+            cx.font = "28px Alegreya Sans";
+            cx.textAlign = "center";
+            cx.fillStyle = "#c9c3d6";
+            cx.fillText(b.ico, boxX + boxD / 2, boxY + boxD / 2 + 9);
           }
           // Nombre: sin panel detrás, así que lleva su propia sombra (igual
           // que ya hacía el texto de las barras en barra()) para seguir
@@ -189,8 +208,6 @@ export function renderHUD() {
           cx.fillText(nombreTxt, x + 45, y + 12);
           cx.fillStyle = p.color;
           cx.fillText(nombreTxt, x + 44, y + 11);
-          barraHP(x + 44, y + 16, 180, 13, p, t);
-          barra(x + 44, y + 32, 180, 10, p.res / b.res, "#5a9ad1", "");
           // barra XP pequeña debajo
           const xpPct = p.nivel >= MAX_NIV_PJ ? 1 : p.xp / p.xpSig;
           barra(x + 44, y + 45, 120, 7, xpPct, "#4a8a5a", "");
