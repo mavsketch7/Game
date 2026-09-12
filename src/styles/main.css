@@ -434,7 +434,11 @@ body.pantalla-completa #hint {
 }
 .icono-ranking {
   left: 31%;
-  top: 23%;
+  /* Alineado con .icono-fogata (mismo 45.5%) -- pedido expreso: a
+     23% quedaba a la altura de las tarjetas de clase y en un móvil en
+     horizontal (tarjetas más altas relativamente) el pergamino se
+     pisaba con los iconos de clase. */
+  top: 45.5%;
   width: 6%;
   aspect-ratio: 3 / 5;
   background-image: url("/assets/ui/seleccion/note-rankings.png");
@@ -795,19 +799,19 @@ body.pantalla-completa #hint {
 .escena-slots .slot .pcolor {
   filter: drop-shadow(0 0 3px rgba(0, 0, 0, 0.8));
 }
-/* 240px fijos (assets del usuario en public/assets/ui/seleccion/) --
-   clamp() solo evita que desborde una columna muy estrecha. El límite
-   por vh (además del vw de siempre) es para el móvil en horizontal: con
-   una pantalla muy baja pero ancha, 26vw seguía dando un retrato enorme
-   que se comía las flechas de clase y el campo de nombre de debajo
-   (reportado: "los iconos de las clases se ven enormes y se pisan con
-   los demás botones") -- en un viewport de escritorio normal (más alto
-   que 44vh de sobra) esto no cambia nada, sigue mandando el 26vw de
-   siempre.
-   */
+/* % del ancho de SU PROPIA columna (.slot, contenedor flex de este
+   hijo), no de vw -- con vw el retrato se medía contra el ancho TOTAL
+   de la ventana en vez de contra el cuarto de fila que le toca de
+   verdad, así que con las 4 tarjetas activas (o incluso con solo J1 --
+   los 3 huecos "libre" de J2-4 ya ocupan columna real, ver #slots) el
+   retrato se salía de su propia columna y pisaba la de al lado
+   (reportado dos veces: "los iconos de clase se ven enormes y se pisan
+   con los demás botones", luego "hay que reducir más para que encajen
+   los 4 en la misma fila"). El límite por vh sigue de guardia para el
+   caso "ventana ancha pero muy baja" (columna ancha, poca altura). */
 .escena-slots .tarjeta-retrato {
   align-self: center;
-  width: clamp(96px, min(26vw, 44vh), 330px);
+  width: clamp(70px, min(82%, 44vh), 230px);
   margin: 2px 0;
   filter: drop-shadow(0 6px 10px rgba(0, 0, 0, 0.75));
 }
@@ -959,8 +963,15 @@ body.pantalla-completa #hint {
      .grupo-sel a 1366px de ancho (portátil típico) el contenido
      disponible ronda 788px -- con 195px la 4ª tarjeta (J4) no cabía en
      la fila y se caía a una fila aparte, añadiendo ~144px de alto extra
-     que empujaban el botón "Entrar en la Torre" fuera de pantalla. */
-  grid-template-columns: repeat(auto-fit, minmax(185px, 1fr));
+     que empujaban el botón "Entrar en la Torre" fuera de pantalla.
+     min(185px, 14.5vw): el suelo de 185px por sí solo es del ancho de
+     un portátil normal -- en un móvil en horizontal (mucho más
+     estrecho) ya NO caben los 4 en una fila con ese suelo (auto-fit
+     los manda a 2 filas de 2, reportado: "hay que reducir más el
+     tamaño para que encajen los 4 en la misma fila"). 14.5vw da
+     ~185px en 1280px de ancho (escritorio, sin cambio real) y encoge
+     de verdad por debajo de eso. */
+  grid-template-columns: repeat(auto-fit, minmax(min(185px, 14.5vw), 1fr));
   gap: 8px;
 }
 .slot {
