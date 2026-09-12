@@ -1585,6 +1585,9 @@ const ARMOR_BASE_ATTACK_GUERRERO = {
   down: "heroB_attack_guerrero_down",
   up: "heroB_attack_guerrero_up",
 };
+// Ataque básico de mago: solo lateral (mismo hueco que REAL_ATTACK_SRC.mago
+// más abajo, sin arte arriba/abajo todavía).
+const ARMOR_BASE_ATTACK_MAGO = { side: "heroB_attack_mago_side" };
 const ARMOR_BASE_HURT = "heroB_hurt_down";
 
 export const CASCO_IDLE = { side: [], down: [], up: [] };
@@ -1593,9 +1596,9 @@ export const PIERNAS_IDLE = { side: [], down: [], up: [] };
 export const CASCO_RUN = { side: [], down: [], up: [] };
 export const PETO_RUN = { side: [], down: [], up: [] };
 export const PIERNAS_RUN = { side: [], down: [], up: [] };
-export const CASCO_ATTACK = { guerrero: {} };
-export const PETO_ATTACK = { guerrero: {} };
-export const PIERNAS_ATTACK = { guerrero: {} };
+export const CASCO_ATTACK = { guerrero: {}, mago: {} };
+export const PETO_ATTACK = { guerrero: {}, mago: {} };
+export const PIERNAS_ATTACK = { guerrero: {}, mago: {} };
 export const CASCO_HURT = [];
 export const PETO_HURT = [];
 export const PIERNAS_HURT = [];
@@ -1628,6 +1631,43 @@ for (const dirRun in REAL_RUN_SRC) {
   });
 }
 
+// Armadura T1 de Mago (drop del cofre de pruebas QA lila, ver
+// systems/loot.js: ARMADURA_MAGO_T1 / core/gameflow.js) -- primer set con
+// arte PROPIO por clase en vez del genérico compartido de arriba (hasta
+// ahora solo el guerrero tenía capas de armadura reales, y encima solo
+// para el golpe básico). Mismo cuerpo heroB de idle/correr de siempre
+// (REAL_IDLE_SRC/REAL_RUN_SRC) -- solo cambian las 3 capas de armadura que
+// se superponen, por eso se llama a cargarHojaConArmadura() otra vez sobre
+// la MISMA URL de cuerpo (el bbox unido sale distinto: el sombrero de
+// mago sobresale distinto que el yelmo de guerrero). Solo mago consulta
+// estos arrays (ver calcularPoseHeroe() en render/character.js) -- el
+// resto de clases sigue leyendo CASCO_IDLE/CASCO_RUN de siempre, sin
+// tocar su comportamiento.
+const ARMOR_BASE_IDLE_MAGO = { side: "heroB_idle_side_mago", down: "heroB_idle_down_mago", up: "heroB_idle_up_mago" };
+const ARMOR_BASE_RUN_MAGO = { side: "heroB_run_side_mago", down: "heroB_run_down_mago", up: "heroB_run_up_mago" };
+
+export const CASCO_IDLE_MAGO = { side: [], down: [], up: [] };
+export const PETO_IDLE_MAGO = { side: [], down: [], up: [] };
+export const PIERNAS_IDLE_MAGO = { side: [], down: [], up: [] };
+export const CASCO_RUN_MAGO = { side: [], down: [], up: [] };
+export const PETO_RUN_MAGO = { side: [], down: [], up: [] };
+export const PIERNAS_RUN_MAGO = { side: [], down: [], up: [] };
+
+for (const dirIdle in REAL_IDLE_SRC) {
+  cargarHojaConArmadura(REAL_IDLE_SRC[dirIdle], armorUrlsDe(ARMOR_BASE_IDLE_MAGO[dirIdle]), TAM_HEROE, true, (frames, anclas, capas) => {
+    CASCO_IDLE_MAGO[dirIdle] = capas.casco;
+    PETO_IDLE_MAGO[dirIdle] = capas.peto;
+    PIERNAS_IDLE_MAGO[dirIdle] = capas.piernas;
+  });
+}
+for (const dirRun in REAL_RUN_SRC) {
+  cargarHojaConArmadura(REAL_RUN_SRC[dirRun], armorUrlsDe(ARMOR_BASE_RUN_MAGO[dirRun]), TAM_HEROE, true, (frames, anclas, capas) => {
+    CASCO_RUN_MAGO[dirRun] = capas.casco;
+    PETO_RUN_MAGO[dirRun] = capas.peto;
+    PIERNAS_RUN_MAGO[dirRun] = capas.piernas;
+  });
+}
+
 // Herido (flinch al recibir daño, ver p.golpeT en systems/combat.js) y
 // muerte (colapso al llegar a 0 HP, ver p.ko) -- cuerpo compartido, igual
 // que idle/correr. El pack de origen SOLO trae la dirección "abajo" para
@@ -1649,7 +1689,44 @@ cargarHojaConArmadura(REAL_HURT_SRC, armorUrlsDe(ARMOR_BASE_HURT), TAM_HEROE, tr
   PETO_HURT.push(...capas.peto);
   PIERNAS_HURT.push(...capas.piernas);
 });
-cargarHojaFrames(REAL_MUERTE_SRC, TAM_HEROE, (frames) => { REAL_MUERTE.push(...frames); }, true);
+
+// Herido/muerto de mago con arte propio (mismo criterio que idle/correr
+// arriba) -- el .aseprite de origen de "muerto" trae 6 frames frente a los
+// 5 del heroB_dead_down.png compartido; el bucle de cargarHojaConArmadura
+// va acotado por el frameCount del CUERPO, así que el 6º frame de armadura
+// simplemente no llega a usarse (recorte silencioso, mismo criterio de
+// "usar lo que hay" que el resto del pack -- no vale la pena volver a
+// exportar solo por un frame de más en un colapso que dura 0.6s).
+const ARMOR_BASE_HURT_MAGO = "heroB_hurt_down_mago";
+const ARMOR_BASE_MUERTE_MAGO = "heroB_dead_down_mago";
+export const CASCO_HURT_MAGO = [];
+export const PETO_HURT_MAGO = [];
+export const PIERNAS_HURT_MAGO = [];
+export const CASCO_MUERTE_MAGO = [];
+export const PETO_MUERTE_MAGO = [];
+export const PIERNAS_MUERTE_MAGO = [];
+
+cargarHojaConArmadura(REAL_HURT_SRC, armorUrlsDe(ARMOR_BASE_HURT_MAGO), TAM_HEROE, true, (frames, anclas, capas) => {
+  CASCO_HURT_MAGO.push(...capas.casco);
+  PETO_HURT_MAGO.push(...capas.peto);
+  PIERNAS_HURT_MAGO.push(...capas.piernas);
+});
+// A diferencia de HURT (donde REAL_HURT ya sale de cargarHojaConArmadura
+// de serie), REAL_MUERTE hasta ahora se cargaba con el loader simple (sin
+// armadura, ninguna clase la tenía) -- para que la capa de mago quede
+// pixel-alineada con el cuerpo necesita el MISMO cálculo de bbox unido,
+// así que este `cargarHojaConArmadura` sustituye por completo a la carga
+// de REAL_MUERTE de antes (ya no hay una llamada a cargarHojaFrames aquí
+// debajo). El resto de clases comparten este mismo REAL_MUERTE de
+// siempre -- su escala puede variar un pelín por la silueta del sombrero
+// de mago (mismo efecto ya aceptado en HURT con el yelmo de guerrero),
+// imperceptible en la práctica.
+cargarHojaConArmadura(REAL_MUERTE_SRC, armorUrlsDe(ARMOR_BASE_MUERTE_MAGO), TAM_HEROE, true, (frames, anclas, capas) => {
+  REAL_MUERTE.push(...frames);
+  CASCO_MUERTE_MAGO.push(...capas.casco);
+  PETO_MUERTE_MAGO.push(...capas.peto);
+  PIERNAS_MUERTE_MAGO.push(...capas.piernas);
+});
 
 // Duración del colapso hasta quedarse tumbado del todo -- después se
 // mantiene fijo en el último fotograma (ver p.koAnimT en core/loop.js y
@@ -1693,20 +1770,25 @@ export const REAL_ATTACK = { guerrero: {}, arquero: {}, picaro: {}, mago: {} };
 // en world.js). Aditivo: no hace falta que todas las hojas lo tengan.
 export const REAL_ATTACK_ANCLA = { guerrero: {}, arquero: {}, picaro: {}, mago: {} };
 
+// Bases de armadura del ataque básico por clase -- cada nueva clase con
+// arte de armadura propio (mago ahora, antes solo guerrero) solo necesita
+// una entrada aquí, ver ARMOR_BASE_ATTACK_GUERRERO/ARMOR_BASE_ATTACK_MAGO.
+const ARMOR_BASE_ATTACK_POR_CLASE = { guerrero: ARMOR_BASE_ATTACK_GUERRERO, mago: ARMOR_BASE_ATTACK_MAGO };
+
 for (const rolAtk in REAL_ATTACK_SRC) {
   for (const dirAtk in REAL_ATTACK_SRC[rolAtk]) {
-    // Solo el guerrero tiene arte de armadura para el ataque básico todavía
-    // (ver ARMOR_BASE_ATTACK_GUERRERO arriba) -- el resto de clases usa el
-    // loader simple de siempre, sin capas.
-    if (rolAtk === "guerrero") {
-      cargarHojaConArmadura(REAL_ATTACK_SRC[rolAtk][dirAtk], armorUrlsDe(ARMOR_BASE_ATTACK_GUERRERO[dirAtk]), TAM_HEROE, true, (frames, anclas, capas) => {
+    const baseArmaduraAtk = ARMOR_BASE_ATTACK_POR_CLASE[rolAtk]?.[dirAtk];
+    if (baseArmaduraAtk) {
+      cargarHojaConArmadura(REAL_ATTACK_SRC[rolAtk][dirAtk], armorUrlsDe(baseArmaduraAtk), TAM_HEROE, true, (frames, anclas, capas) => {
         REAL_ATTACK[rolAtk][dirAtk] = frames;
         REAL_ATTACK_ANCLA[rolAtk][dirAtk] = anclas;
-        CASCO_ATTACK.guerrero[dirAtk] = capas.casco;
-        PETO_ATTACK.guerrero[dirAtk] = capas.peto;
-        PIERNAS_ATTACK.guerrero[dirAtk] = capas.piernas;
+        CASCO_ATTACK[rolAtk][dirAtk] = capas.casco;
+        PETO_ATTACK[rolAtk][dirAtk] = capas.peto;
+        PIERNAS_ATTACK[rolAtk][dirAtk] = capas.piernas;
       });
     } else {
+      // Resto de clases: sin arte de armadura para el ataque básico
+      // todavía -- loader simple de siempre, sin capas.
       cargarHojaFramesConAncla(REAL_ATTACK_SRC[rolAtk][dirAtk], TAM_HEROE, (frames, anclas) => {
         REAL_ATTACK[rolAtk][dirAtk] = frames;
         REAL_ATTACK_ANCLA[rolAtk][dirAtk] = anclas;
@@ -1751,12 +1833,33 @@ export const REAL_SPECIAL_ANCLA = { guerrero: {}, mago: {} };
 export const REAL_DASH = { guerrero: {} };
 export const REAL_DASH_ANCLA = { guerrero: {} };
 
+// Casteo de la ulti de mago (Cataclismo) con capas de armadura -- primera
+// vez que "especial" tiene arte de armadura para cualquier clase (el
+// golpe colosal del guerrero sigue sin ella, ver el `especial` de
+// calcularPoseHeroe en render/character.js). Solo lateral, mismo hueco
+// que REAL_SPECIAL_SRC.mago.
+const ARMOR_BASE_SPECIAL_MAGO = { side: "heroB_special_mago_side" };
+export const CASCO_SPECIAL = { mago: {} };
+export const PETO_SPECIAL = { mago: {} };
+export const PIERNAS_SPECIAL = { mago: {} };
+
 for (const rolEsp in REAL_SPECIAL_SRC) {
   for (const dirEsp in REAL_SPECIAL_SRC[rolEsp]) {
-    cargarHojaFramesConAncla(REAL_SPECIAL_SRC[rolEsp][dirEsp], TAM_HEROE, (frames, anclas) => {
-      REAL_SPECIAL[rolEsp][dirEsp] = frames;
-      REAL_SPECIAL_ANCLA[rolEsp][dirEsp] = anclas;
-    }, true);
+    const baseArmaduraEsp = rolEsp === "mago" ? ARMOR_BASE_SPECIAL_MAGO[dirEsp] : null;
+    if (baseArmaduraEsp) {
+      cargarHojaConArmadura(REAL_SPECIAL_SRC[rolEsp][dirEsp], armorUrlsDe(baseArmaduraEsp), TAM_HEROE, true, (frames, anclas, capas) => {
+        REAL_SPECIAL[rolEsp][dirEsp] = frames;
+        REAL_SPECIAL_ANCLA[rolEsp][dirEsp] = anclas;
+        CASCO_SPECIAL[rolEsp][dirEsp] = capas.casco;
+        PETO_SPECIAL[rolEsp][dirEsp] = capas.peto;
+        PIERNAS_SPECIAL[rolEsp][dirEsp] = capas.piernas;
+      });
+    } else {
+      cargarHojaFramesConAncla(REAL_SPECIAL_SRC[rolEsp][dirEsp], TAM_HEROE, (frames, anclas) => {
+        REAL_SPECIAL[rolEsp][dirEsp] = frames;
+        REAL_SPECIAL_ANCLA[rolEsp][dirEsp] = anclas;
+      }, true);
+    }
   }
 }
 for (const rolDash in REAL_DASH_SRC) {

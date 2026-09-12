@@ -299,6 +299,21 @@ export function iniciarLobby() {
           // Guardián de Hielo) sin tener que bajar 4 plantas primero. Ver
           // el disparador de proximidad en core/loop.js.
           G.jefeNpcQA = { x: 250, y: 160 };
+          // Segundo cofre de pruebas (QA), brillo lila: suelta el set
+          // completo de la Armadura de Mago T1 (casco+peto+piernas) para
+          // probarla sin tener que fabricarla/farmearla -- ver
+          // ARMADURA_MAGO_T1 en systems/loot.js y el bloque `cofre.qaMago`
+          // en interactuar() (systems/abilities.js). Separado del cofre
+          // dorado de arriba (flag distinto) para no mezclar los dos sets
+          // de prueba en un único cofre.
+          G.objetos.push({
+            tipo: "cofre",
+            x: W / 2 - 200,
+            y: H - 220,
+            abierto: false,
+            abriendoT: 0,
+            qaMago: true,
+          });
         }
         G.tiendaLock = false;
         G.skinLock = false;

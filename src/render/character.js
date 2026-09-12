@@ -9,7 +9,7 @@ import { ELEMENTOS, RAREZAS, SUPS } from "../core/constants.js";
 import { G } from "../core/state.js";
 import { fxParticulas } from "./effects.js";
 import { drawSprite, drawSpriteBottom } from "./spriteDraw.js";
-import { ARQUERO_BOW, ARQUERO_BOW_DUR, ATTACK_DUR, CASCO_ATTACK, CASCO_HURT, CASCO_IDLE, CASCO_RUN, CONFIG_ARMA, DASH_ATTACK_DUR, DUMMY_HIT, ESC_FORMA, FROST_GUARDIAN, MARTILLO_FRHOR_IMG, MIRA_IZQUIERDA_POR_DEFECTO, MOB_RUN, MUERTE_DUR, OFFHAND_IMG, OFFHAND_IMG_RAREZA, PARRY_FX_FH, PARRY_FX_FRAMES, PARRY_FX_FW, PARRY_FX_SHEET, PETO_ATTACK, PETO_HURT, PETO_IDLE, PETO_RUN, PIERNAS_ATTACK, PIERNAS_HURT, PIERNAS_IDLE, PIERNAS_RUN, REAL_ATTACK, REAL_ATTACK_ANCLA, REAL_DASH, REAL_DASH_ANCLA, REAL_HURT, REAL_IDLE, REAL_IDLE_ANCLA, REAL_MUERTE, REAL_RUN, REAL_RUN_ANCLA, REAL_SPECIAL, REAL_SPECIAL_ANCLA, REAL_SPRITE_SCALE, SHEETS, SPECIAL_ATTACK_DUR, SPR, SPR_FORMAS, TAM_HEROE, WEAPON_ART_POOL, WEAPON_IMG, WEAPON_IMG_RAREZA, armaHiltTip, assetOK, seleccionarImgEnemigo, spriteJugador } from "./sprites.js";
+import { ARQUERO_BOW, ARQUERO_BOW_DUR, ATTACK_DUR, CASCO_ATTACK, CASCO_HURT, CASCO_HURT_MAGO, CASCO_IDLE, CASCO_IDLE_MAGO, CASCO_MUERTE_MAGO, CASCO_RUN, CASCO_RUN_MAGO, CASCO_SPECIAL, CONFIG_ARMA, DASH_ATTACK_DUR, DUMMY_HIT, ESC_FORMA, FROST_GUARDIAN, MARTILLO_FRHOR_IMG, MIRA_IZQUIERDA_POR_DEFECTO, MOB_RUN, MUERTE_DUR, OFFHAND_IMG, OFFHAND_IMG_RAREZA, PARRY_FX_FH, PARRY_FX_FRAMES, PARRY_FX_FW, PARRY_FX_SHEET, PETO_ATTACK, PETO_HURT, PETO_HURT_MAGO, PETO_IDLE, PETO_IDLE_MAGO, PETO_MUERTE_MAGO, PETO_RUN, PETO_RUN_MAGO, PETO_SPECIAL, PIERNAS_ATTACK, PIERNAS_HURT, PIERNAS_HURT_MAGO, PIERNAS_IDLE, PIERNAS_IDLE_MAGO, PIERNAS_MUERTE_MAGO, PIERNAS_RUN, PIERNAS_RUN_MAGO, PIERNAS_SPECIAL, REAL_ATTACK, REAL_ATTACK_ANCLA, REAL_DASH, REAL_DASH_ANCLA, REAL_HURT, REAL_IDLE, REAL_IDLE_ANCLA, REAL_MUERTE, REAL_RUN, REAL_RUN_ANCLA, REAL_SPECIAL, REAL_SPECIAL_ANCLA, REAL_SPRITE_SCALE, SHEETS, SPECIAL_ATTACK_DUR, SPR, SPR_FORMAS, TAM_HEROE, WEAPON_ART_POOL, WEAPON_IMG, WEAPON_IMG_RAREZA, armaHiltTip, assetOK, seleccionarImgEnemigo, spriteJugador } from "./sprites.js";
 import { CARGA_ARQ_MAX, CARGA_ARQ_ZONA, CARGA_CUCH_MAX, CARGA_CUCH_ZONA, groundTarget } from "../systems/abilities.js";
 import { masCercano, PARRY_FX_DUR } from "../systems/combat.js";
 import { mouse } from "../systems/input.js";
@@ -80,9 +80,15 @@ function calcularPoseHeroe(p, x, yPies, mov) {
         // `null` si esa animación todavía no tiene arte de armadura propio
         // (golpe especial, dash, muerte); dibujarCuerpoHeroe() simplemente no
         // dibuja la capa en ese caso, y p.equipo decide si se dibuja o no.
-        let imgCasco = idleFrameIdx >= 0 ? (CASCO_IDLE[dirAim]?.[idleFrameIdx] || null) : null;
-        let imgPeto = idleFrameIdx >= 0 ? (PETO_IDLE[dirAim]?.[idleFrameIdx] || null) : null;
-        let imgPiernas = idleFrameIdx >= 0 ? (PIERNAS_IDLE[dirAim]?.[idleFrameIdx] || null) : null;
+        // Mago tiene arte de armadura PROPIO (sombrero/túnica en vez del
+        // yelmo/peto de guerrero) -- ver CASCO_IDLE_MAGO en sprites.js. El
+        // resto de clases sigue leyendo el set compartido de siempre.
+        const cascoIdleDir = p.rol === "mago" ? CASCO_IDLE_MAGO : CASCO_IDLE;
+        const petoIdleDir = p.rol === "mago" ? PETO_IDLE_MAGO : PETO_IDLE;
+        const piernasIdleDir = p.rol === "mago" ? PIERNAS_IDLE_MAGO : PIERNAS_IDLE;
+        let imgCasco = idleFrameIdx >= 0 ? (cascoIdleDir[dirAim]?.[idleFrameIdx] || null) : null;
+        let imgPeto = idleFrameIdx >= 0 ? (petoIdleDir[dirAim]?.[idleFrameIdx] || null) : null;
+        let imgPiernas = idleFrameIdx >= 0 ? (piernasIdleDir[dirAim]?.[idleFrameIdx] || null) : null;
         // Ataque real de esta clase para `dirAim`; si esa clase no tiene arte
         // para arriba/abajo todavía (mago/pícaro, ver REAL_ATTACK_SRC en
         // sprites.js) cae a la hoja lateral antes que no mostrar nada.
@@ -129,12 +135,23 @@ function calcularPoseHeroe(p, x, yPies, mov) {
           // REAL_SPECIAL_SRC en sprites.js) -- cae a la hoja lateral antes
           // que no mostrar nada, mismo criterio que REAL_ATTACK arriba.
           usaArteClase = true;
-          imgCasco = imgPeto = imgPiernas = null; // sin arte de armadura para esto todavía
           const dur = SPECIAL_ATTACK_DUR[p.rol] || 0.5;
           const prog = clamp(1 - p.castUltT / dur, 0, 0.999);
           const frameIdx = Math.floor(prog * framesCast.length);
           const fr = framesCast[frameIdx];
           if (fr) img = fr;
+          // Armadura durante el casteo (por ahora solo mago, ver
+          // CASCO_SPECIAL en sprites.js) -- el resto de clases no tiene
+          // arte de armadura para "especial" todavía.
+          const cascoEspPorClase = CASCO_SPECIAL[p.rol] || {};
+          const petoEspPorClase = PETO_SPECIAL[p.rol] || {};
+          const piernasEspPorClase = PIERNAS_SPECIAL[p.rol] || {};
+          const cascoEspFrames = cascoEspPorClase[dirAim] || cascoEspPorClase.side;
+          const petoEspFrames = petoEspPorClase[dirAim] || petoEspPorClase.side;
+          const piernasEspFrames = piernasEspPorClase[dirAim] || piernasEspPorClase.side;
+          imgCasco = (cascoEspFrames && cascoEspFrames[frameIdx]) || null;
+          imgPeto = (petoEspFrames && petoEspFrames[frameIdx]) || null;
+          imgPiernas = (piernasEspFrames && piernasEspFrames[frameIdx]) || null;
           const anclasDir = REAL_SPECIAL_ANCLA[p.rol]?.[dirAim];
           anclaLocal = anclasDir ? anclasDir[frameIdx] : null;
         } else if (p.dashAtkT > 0) {
@@ -232,9 +249,12 @@ function calcularPoseHeroe(p, x, yPies, mov) {
           const frameIdx = Math.floor(prog * REAL_HURT.length);
           const fr = REAL_HURT[frameIdx];
           if (fr) img = fr;
-          imgCasco = CASCO_HURT[frameIdx] || null;
-          imgPeto = PETO_HURT[frameIdx] || null;
-          imgPiernas = PIERNAS_HURT[frameIdx] || null;
+          const cascoHurtSet = p.rol === "mago" ? CASCO_HURT_MAGO : CASCO_HURT;
+          const petoHurtSet = p.rol === "mago" ? PETO_HURT_MAGO : PETO_HURT;
+          const piernasHurtSet = p.rol === "mago" ? PIERNAS_HURT_MAGO : PIERNAS_HURT;
+          imgCasco = cascoHurtSet[frameIdx] || null;
+          imgPeto = petoHurtSet[frameIdx] || null;
+          imgPiernas = piernasHurtSet[frameIdx] || null;
         } else if (mov && p.inp) {
           anguloFacing = Math.atan2(p.inp.my, p.inp.mx);
           dir = direccionDesdeAim(anguloFacing);
@@ -244,9 +264,12 @@ function calcularPoseHeroe(p, x, yPies, mov) {
             const fr = runFrames[runFrameIdx];
             if (fr) img = fr;
             anclaLocal = REAL_RUN_ANCLA[dir]?.[runFrameIdx] || null;
-            imgCasco = CASCO_RUN[dir]?.[runFrameIdx] || null;
-            imgPeto = PETO_RUN[dir]?.[runFrameIdx] || null;
-            imgPiernas = PIERNAS_RUN[dir]?.[runFrameIdx] || null;
+            const cascoRunDir = p.rol === "mago" ? CASCO_RUN_MAGO : CASCO_RUN;
+            const petoRunDir = p.rol === "mago" ? PETO_RUN_MAGO : PETO_RUN;
+            const piernasRunDir = p.rol === "mago" ? PIERNAS_RUN_MAGO : PIERNAS_RUN;
+            imgCasco = cascoRunDir[dir]?.[runFrameIdx] || null;
+            imgPeto = petoRunDir[dir]?.[runFrameIdx] || null;
+            imgPiernas = piernasRunDir[dir]?.[runFrameIdx] || null;
           }
         }
         // Espejo izq/derecha: solo tiene sentido en el bucket lateral (arriba/
@@ -665,9 +688,19 @@ export function renderJugador(p) {
           // arte no cargó todavía (un instante, al arrancar).
           if (REAL_MUERTE.length) {
             const prog = clamp((p.koAnimT || 0) / MUERTE_DUR, 0, 0.999);
-            const fr = REAL_MUERTE[Math.floor(prog * REAL_MUERTE.length)];
+            const frameIdxKo = Math.floor(prog * REAL_MUERTE.length);
+            const fr = REAL_MUERTE[frameIdxKo];
+            const esc = REAL_SPRITE_SCALE[p.rol] || 1;
             cx.globalAlpha = 0.8;
-            if (fr) drawSpriteBottom(fr, p.x, p.y, false, REAL_SPRITE_SCALE[p.rol] || 1);
+            if (fr) drawSpriteBottom(fr, p.x, p.y, false, esc);
+            // Armadura durante el colapso (por ahora solo mago, ver
+            // CASCO_MUERTE_MAGO en sprites.js) -- primera vez que "muerto"
+            // dibuja armadura para cualquier clase.
+            if (p.rol === "mago") {
+              if (eq.piernas && PIERNAS_MUERTE_MAGO[frameIdxKo]) drawSpriteBottom(PIERNAS_MUERTE_MAGO[frameIdxKo], p.x, p.y, false, esc);
+              if (eq.peto && PETO_MUERTE_MAGO[frameIdxKo]) drawSpriteBottom(PETO_MUERTE_MAGO[frameIdxKo], p.x, p.y, false, esc);
+              if (eq.casco && CASCO_MUERTE_MAGO[frameIdxKo]) drawSpriteBottom(CASCO_MUERTE_MAGO[frameIdxKo], p.x, p.y, false, esc);
+            }
             cx.globalAlpha = 1;
           } else {
             cx.save();

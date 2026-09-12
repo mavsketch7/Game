@@ -14,7 +14,7 @@ import { OBJETOS_MITICOS, genObjetoMitico, tieneEfecto } from "./objetosMiticos.
 import { FRAGMENTOS_CATALOGO } from "./soul.js";
 import { META, guardarMeta } from "../core/save.js";
 import { toast } from "../ui/notifications.js";
-import { clamp } from "../utils/helpers.js";
+import { clamp, rnd } from "../utils/helpers.js";
 
 export function groundTarget(p, maxR) {
         let tx = p.inp ? p.inp.gtX : p.x,
@@ -521,6 +521,33 @@ export function interactuar(p) {
           META.oro += 2000;
           guardarMeta();
           toast("🔮 Cofre de pruebas: set de Fragmentos de Alma + 20 puntos + 2000 🪙", "#c9a35a");
+          return;
+        }
+        if (cofre.qaMago) {
+          // Segundo cofre de pruebas (?qa=1, brillo lila): suelta el set
+          // completo de la Armadura de Mago T1 -- mismo patrón que la
+          // Armadura de Frhor (systems/combat.js: matarEnemigo()), genItem()
+          // para las stats + nombre/id fijos por pieza, pero restringida a
+          // mago (clase) porque el arte de armadura real (ver
+          // CASCO_IDLE_MAGO etc. en render/sprites.js) es específico de esa
+          // clase -- equipada en otra clase no se vería nada especial.
+          const PIEZAS_ARMADURA_MAGO_T1 = {
+            casco: { nombre: "Sombrero de Aprendiz", id: "casco_mago_t1" },
+            peto: { nombre: "Túnica de Aprendiz", id: "peto_mago_t1" },
+            piernas: { nombre: "Calzas de Aprendiz", id: "piernas_mago_t1" },
+          };
+          for (const slotArm of ["casco", "peto", "piernas"]) {
+            const pieza = genItem(G.planta || 1, 0, slotArm);
+            pieza.nombre = PIEZAS_ARMADURA_MAGO_T1[slotArm].nombre;
+            pieza.id = PIEZAS_ARMADURA_MAGO_T1[slotArm].id;
+            pieza.clase = "mago";
+            const pv = posDropValida(
+              cofre.x + rnd(-20, 20),
+              cofre.y + rnd(-20, 20),
+            );
+            dropItem(pv.x, pv.y, pieza);
+          }
+          toast("🧪 Cofre de pruebas: Armadura de Mago T1 completa", "#c084f0");
           return;
         }
         const pv1 = posDropValida(cofre.x, cofre.y - 14);

@@ -1082,9 +1082,20 @@ export function render() {
               cx.textAlign = "center";
               cx.fillText("⚠ COFRE DE PRUEBAS (QA) ⚠", o.x, o.y - 34);
             }
+            if (o.qaMago) {
+              // Segundo cofre de pruebas, brillo lila (ver el bloque
+              // cofre.qaMago en systems/abilities.js: interactuar()) --
+              // etiqueta propia para distinguirlo del cofre dorado de
+              // arriba a simple vista.
+              cx.fillStyle = "#c084f0";
+              cx.font = "800 11px Alegreya Sans";
+              cx.textAlign = "center";
+              cx.fillText("⚠ COFRE DE PRUEBAS: ARMADURA MAGO (QA) ⚠", o.x, o.y - 34);
+            }
             if (!o.abierto) {
+              const colorBrillo = o.qaMago ? "#c084f0" : "#e9b45c";
               cx.globalAlpha = 0.3 + Math.sin(animGlobal * 3) * 0.15;
-              cx.fillStyle = "#e9b45c";
+              cx.fillStyle = colorBrillo;
               cx.beginPath();
               cx.arc(o.x, o.y, 18, 0, TAU);
               cx.fill();
