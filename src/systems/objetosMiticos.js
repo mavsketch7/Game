@@ -62,6 +62,21 @@ export const OBJETOS_MITICOS = [
           efecto: "vampirismo",
           efectoDesc: "Los ataques curan un 8% del daño infligido",
         },
+        {
+          id: "hacha_vampirica",
+          nombre: "Hacha Vampírica",
+          slot: "arma",
+          clase: null,
+          statPool: ["atk", "atk", "hp"],
+          // Mismo efecto que el Amuleto Vampírico (tieneEfecto() solo
+          // comprueba presencia, no acumula por nº de piezas -- llevar
+          // ambas a la vez no cura el doble), pero aquí en el arma en vez
+          // de en el collar, que es lo que se pidió ("hacha que roba
+          // vida"). Reutiliza el mismo 8% ya equilibrado en combat.js en
+          // vez de inventar un segundo número sin testear.
+          efecto: "vampirismo",
+          efectoDesc: "Los ataques curan un 8% del daño infligido",
+        },
       ];
 
 export function tieneEfecto(p, id) {
@@ -95,6 +110,7 @@ export function genObjetoMitico(f, slot) {
           stats[k] = (stats[k] || 0) + v;
         }
         return {
+          id: base.id,
           slot: base.slot,
           clase: base.clase,
           rareza: 4,

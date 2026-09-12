@@ -502,7 +502,8 @@ export function interactuar(p) {
               cofre.y + Math.sin(ang) * 40,
             );
             const item = genObjetoMitico(G.planta || 1, tpl.slot);
-            item.nombre = tpl.nombre; // set completo, no uno al azar por slot
+            item.id = tpl.id; // set completo, no uno al azar por slot
+            item.nombre = tpl.nombre;
             item.efecto = tpl.efecto;
             item.efectoDesc = tpl.efectoDesc;
             dropItem(pv.x, pv.y, item);

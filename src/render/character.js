@@ -9,7 +9,7 @@ import { ELEMENTOS, RAREZAS, SUPS } from "../core/constants.js";
 import { G } from "../core/state.js";
 import { fxParticulas } from "./effects.js";
 import { drawSprite, drawSpriteBottom } from "./spriteDraw.js";
-import { ARQUERO_BOW, ARQUERO_BOW_DUR, ATTACK_DUR, CASCO_ATTACK, CASCO_ATTACK_TIN, CASCO_HURT, CASCO_HURT_MAGO_TIN, CASCO_IDLE, CASCO_IDLE_MAGO_TIN, CASCO_MUERTE_MAGO_TIN, CASCO_RUN, CASCO_RUN_MAGO_TIN, CASCO_SPECIAL_TIN, CONFIG_ARMA, DASH_ATTACK_DUR, DUMMY_HIT, ESC_FORMA, FROST_GUARDIAN, MARTILLO_FRHOR_IMG, MIRA_IZQUIERDA_POR_DEFECTO, MOB_RUN, MUERTE_DUR, OFFHAND_IMG, OFFHAND_IMG_RAREZA, PARRY_FX_FH, PARRY_FX_FRAMES, PARRY_FX_FW, PARRY_FX_SHEET, PETO_ATTACK, PETO_ATTACK_TIN, PETO_HURT, PETO_HURT_MAGO_TIN, PETO_IDLE, PETO_IDLE_MAGO_TIN, PETO_MUERTE_MAGO_TIN, PETO_RUN, PETO_RUN_MAGO_TIN, PETO_SPECIAL_TIN, PIERNAS_ATTACK, PIERNAS_ATTACK_TIN, PIERNAS_HURT, PIERNAS_HURT_MAGO_TIN, PIERNAS_IDLE, PIERNAS_IDLE_MAGO_TIN, PIERNAS_MUERTE_MAGO_TIN, PIERNAS_RUN, PIERNAS_RUN_MAGO_TIN, PIERNAS_SPECIAL_TIN, REAL_ATTACK, REAL_ATTACK_ANCLA, REAL_DASH, REAL_DASH_ANCLA, REAL_HURT, REAL_IDLE, REAL_IDLE_ANCLA, REAL_MUERTE, REAL_RUN, REAL_RUN_ANCLA, REAL_SPECIAL, REAL_SPECIAL_ANCLA, REAL_SPRITE_SCALE, SHEETS, SPECIAL_ATTACK_DUR, SPR, SPR_FORMAS, TAM_HEROE, WEAPON_ART_POOL, WEAPON_IMG, WEAPON_IMG_RAREZA, armaHiltTip, assetOK, seleccionarImgEnemigo, spriteJugador } from "./sprites.js";
+import { ARQUERO_BOW, ARQUERO_BOW_DUR, ATTACK_DUR, CASCO_ATTACK, CASCO_ATTACK_TIN, CASCO_HURT, CASCO_HURT_MAGO_TIN, CASCO_IDLE, CASCO_IDLE_MAGO_TIN, CASCO_MUERTE_MAGO_TIN, CASCO_RUN, CASCO_RUN_MAGO_TIN, CASCO_SPECIAL_TIN, CONFIG_ARMA, DASH_ATTACK_DUR, DUMMY_HIT, ESC_FORMA, FROST_GUARDIAN, LEYENDA_ARMA_IMG, MARTILLO_FRHOR_IMG, MIRA_IZQUIERDA_POR_DEFECTO, MOB_RUN, MUERTE_DUR, OFFHAND_IMG, OFFHAND_IMG_RAREZA, PARRY_FX_FH, PARRY_FX_FRAMES, PARRY_FX_FW, PARRY_FX_SHEET, PETO_ATTACK, PETO_ATTACK_TIN, PETO_HURT, PETO_HURT_MAGO_TIN, PETO_IDLE, PETO_IDLE_MAGO_TIN, PETO_MUERTE_MAGO_TIN, PETO_RUN, PETO_RUN_MAGO_TIN, PETO_SPECIAL_TIN, PIERNAS_ATTACK, PIERNAS_ATTACK_TIN, PIERNAS_HURT, PIERNAS_HURT_MAGO_TIN, PIERNAS_IDLE, PIERNAS_IDLE_MAGO_TIN, PIERNAS_MUERTE_MAGO_TIN, PIERNAS_RUN, PIERNAS_RUN_MAGO_TIN, PIERNAS_SPECIAL_TIN, REAL_ATTACK, REAL_ATTACK_ANCLA, REAL_DASH, REAL_DASH_ANCLA, REAL_HURT, REAL_IDLE, REAL_IDLE_ANCLA, REAL_MUERTE, REAL_RUN, REAL_RUN_ANCLA, REAL_SPECIAL, REAL_SPECIAL_ANCLA, REAL_SPRITE_SCALE, SHEETS, SPECIAL_ATTACK_DUR, SPR, SPR_FORMAS, TAM_HEROE, WEAPON_ART_POOL, WEAPON_IMG, WEAPON_IMG_RAREZA, armaHiltTip, assetOK, leyendaArmaHiltTip, seleccionarImgEnemigo, spriteJugador } from "./sprites.js";
 import { CARGA_ARQ_MAX, CARGA_ARQ_ZONA, CARGA_CUCH_MAX, CARGA_CUCH_ZONA, groundTarget } from "../systems/abilities.js";
 import { masCercano, PARRY_FX_DUR } from "../systems/combat.js";
 import { mouse } from "../systems/input.js";
@@ -1134,8 +1134,10 @@ export function renderJugador(p) {
             // `arteIdx`; arquero tiene su propio arco animado más arriba y
             // mago/clérigo/druida siguen sin pack de variantes todavía).
             const poolArma = eq.arma && eq.arma.arteIdx !== undefined ? WEAPON_ART_POOL[eq.arma.clase] : null;
+            const imgLeyenda = eq.arma && LEYENDA_ARMA_IMG[eq.arma.id];
             const wimg =
               (eq.arma && eq.arma.id === "martillo_frhor" && MARTILLO_FRHOR_IMG) ||
+              imgLeyenda ||
               (poolArma && poolArma.length && poolArma[eq.arma.arteIdx % poolArma.length]) ||
               (WEAPON_IMG_RAREZA[p.rol] && WEAPON_IMG_RAREZA[p.rol][rarezaArma]) ||
               WEAPON_IMG[p.rol];
@@ -1176,8 +1178,13 @@ export function renderJugador(p) {
               // dos intentos previos fallidos con un ángulo fijo). Sin datos
               // calibrados para esa variante concreta (arquero, u otra
               // futura), cae al mismo -45° de siempre como aproximación.
-              const esIconoArma = !!(poolArma && poolArma.length && wimg === poolArma[eq.arma.arteIdx % poolArma.length]);
-              const datosHiltTip = esIconoArma ? armaHiltTip(eq.arma.clase, eq.arma.arteIdx) : null;
+              const esArmaLeyenda = !!imgLeyenda && wimg === imgLeyenda;
+              const esIconoArma = esArmaLeyenda || !!(poolArma && poolArma.length && wimg === poolArma[eq.arma.arteIdx % poolArma.length]);
+              const datosHiltTip = esArmaLeyenda
+                ? leyendaArmaHiltTip(eq.arma.id)
+                : esIconoArma
+                ? armaHiltTip(eq.arma.clase, eq.arma.arteIdx)
+                : null;
               if (datosHiltTip) {
                 const { hilt, tip } = datosHiltTip;
                 const rotIcono = -Math.atan2(tip[1] - hilt[1], tip[0] - hilt[0]);

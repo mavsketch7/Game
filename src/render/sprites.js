@@ -285,6 +285,9 @@ export function iconoDrop(item) {
         // más abajo) en vez del icono procedural genérico de "arma" -- si
         // todavía no cargó, cae al procedural de siempre por esta vez.
         if (item.id === "martillo_frhor" && MARTILLO_FRHOR_IMG) return MARTILLO_FRHOR_IMG;
+        // Armas legendarias con arte propio (ver LEYENDA_ARMA_IMG más abajo):
+        // mismo criterio, id concreto -> imagen concreta.
+        if (LEYENDA_ARMA_IMG[item.id]) return LEYENDA_ARMA_IMG[item.id];
         const imgFrhor = iconoFrhor(item);
         if (imgFrhor) return imgFrhor;
         // Arma con arte real por variante (pack "iron-weapons", ver
@@ -2308,6 +2311,46 @@ const ARMA_HILT_TIP = {
 export function armaHiltTip(clase, arteIdx) {
   const arr = ARMA_HILT_TIP[clase];
   return arr ? arr[arteIdx % arr.length] : null;
+}
+
+// Armas legendarias (Mítico) con arte propio -- ver OBJETOS_MITICOS en
+// systems/objetosMiticos.js. Mismo criterio que MARTILLO_FRHOR_IMG (id
+// concreto -> imagen concreta, sin recolorear por rareza: ya son rareza 4
+// fija) pero SIN pasar por teñirSprite(), porque a diferencia del martillo
+// (que reteñía la base hammer-wood existente) estas son arte original
+// propio ya con su color final -- solo se recorta a canvas propio
+// (imageSmoothingEnabled = false) igual que WEAPON_ART_POOL.
+const LEYENDA_ARMA_SRC = {
+  baston_dragon: "dragon-staff.png",
+  espada_pistola: "swordgun.png",
+  hacha_vampirica: "vampir-axe.png",
+};
+export const LEYENDA_ARMA_IMG = {};
+for (const idLeyenda in LEYENDA_ARMA_SRC) {
+  const im = new Image();
+  im.onload = () => {
+    const c = document.createElement("canvas");
+    c.width = im.naturalWidth;
+    c.height = im.naturalHeight;
+    const g = c.getContext("2d");
+    g.imageSmoothingEnabled = false;
+    g.drawImage(im, 0, 0);
+    LEYENDA_ARMA_IMG[idLeyenda] = c;
+  };
+  im.onerror = () => console.warn("No se pudo cargar arma legendaria: " + im.src);
+  im.src = `${import.meta.env.BASE_URL}assets/sprites/weapons/legends-weapons/${LEYENDA_ARMA_SRC[idLeyenda]}`;
+}
+
+// Punto de mango/punta medido a mano (mismo criterio que ARMA_HILT_TIP),
+// aquí indexado por id concreto en vez de clase+variante: son piezas
+// únicas, no un pool.
+const LEYENDA_ARMA_HILT_TIP = {
+  baston_dragon: { hilt: [2, 29], tip: [27, 3] },
+  espada_pistola: { hilt: [28, 29], tip: [1, 1] },
+  hacha_vampirica: { hilt: [29, 28], tip: [2, 13] },
+};
+export function leyendaArmaHiltTip(id) {
+  return LEYENDA_ARMA_HILT_TIP[id] || null;
 }
 
 // Sangre de impacto (torre-vespero-assets/BloodFX Batch 1): sustituye el
