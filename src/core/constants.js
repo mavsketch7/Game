@@ -301,15 +301,14 @@ export const NOMBRES_ITEM = {
         anillo: ["Anillo", "Talismán", "Sello", "Vial", "Reliquia"],
       };
 
+// Un array de sufijos por franja de rareza (mismo orden que RAREZAS):
+// así el nombre del objeto también escala en "grandiosidad" con su poder.
 export const SUFIJOS = [
-        "del Anochecer",
-        "de la Planta Rota",
-        "del Lucero",
-        "de Ceniza",
-        "del Juramento",
-        "de Véspero",
-        "del Peregrino",
-        "de Sangre Fría",
+        ["del Anochecer", "de la Planta Rota", "del Peregrino"], // Común
+        ["de Ceniza", "del Lucero", "del Camino Perdido"], // Raro
+        ["del Juramento", "de Sangre Fría", "del Abismo"], // Épico
+        ["del Ocaso Eterno", "de la Corona Caída", "del Último Aliento"], // Legendario
+        ["de Véspero", "del Alba Robada", "del Fin de los Días"], // Mítico
       ];
 
 export const ETQ = {

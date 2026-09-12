@@ -88,7 +88,7 @@ export function genItem(f, forceRar, forceSlot) {
           slot,
           clase,
           rareza: riX,
-          nombre: nombreBase + " " + az(SUFIJOS),
+          nombre: nombreBase + " " + az(SUFIJOS[riX]),
           stats,
           ...(nVariantes ? { arteIdx: ri(0, nVariantes - 1) } : {}),
         };
