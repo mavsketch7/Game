@@ -2144,6 +2144,36 @@ function teñirSprite(img, color) {
   return c;
 }
 
+// Como teñirSprite(), pero con un segundo pase de saturación encima del
+// matiz -- teñirSprite() a secas conserva la SATURACIÓN original de
+// cada píxel, así que en un arte ya de por sí apagado/cálido (como el
+// sombrero marrón de mago) un matiz cercano al original (dorado,
+// rojizo) casi no se nota, aunque el matiz SÍ haya cambiado por dentro
+// (reportado: Legendario/Mítico casi iguales a Común a la vista). Este
+// segundo pase con blend "saturation" toma la saturación del color de
+// relleno (mucho más alta que la del arte apagado) sin tocar el matiz
+// ni la luminosidad ya fijados por el primer pase -- conserva el
+// sombreado/highlights originales, solo lo hace más vívido. Solo la
+// usa la armadura (tenirFramesPorRareza) -- teñirSprite() a secas se
+// deja intacta para las armas, que ya se veían bien tal cual.
+function teñirSpriteFuerte(img, color) {
+  const c = document.createElement("canvas");
+  c.width = img.naturalWidth || img.width;
+  c.height = img.naturalHeight || img.height;
+  const g = c.getContext("2d");
+  g.imageSmoothingEnabled = false;
+  g.drawImage(img, 0, 0);
+  g.globalCompositeOperation = "hue";
+  g.fillStyle = color;
+  g.fillRect(0, 0, c.width, c.height);
+  g.globalCompositeOperation = "saturation";
+  g.fillStyle = color;
+  g.fillRect(0, 0, c.width, c.height);
+  g.globalCompositeOperation = "destination-in";
+  g.drawImage(img, 0, 0);
+  return c;
+}
+
 // Como teñirSprite(), pero para un ARRAY de fotogramas ya recortados
 // (el formato que devuelve capas.casco/peto/piernas de
 // cargarHojaConArmadura() -- un <canvas> por frame, no una tira única)
@@ -2156,7 +2186,7 @@ function teñirSprite(img, color) {
 // calcularPoseHeroe()/capaPorRareza() en render/character.js.
 function tenirFramesPorRareza(frames) {
   if (!frames || !frames.length) return RAREZAS.map(() => []);
-  return RAREZAS.map((r, i) => (i === 0 ? frames : frames.map((f) => teñirSprite(f, r.col))));
+  return RAREZAS.map((r, i) => (i === 0 ? frames : frames.map((f) => teñirSpriteFuerte(f, r.col))));
 }
 
 // Carga la pieza base y, en cuanto está lista, pre-genera sus 5 variantes de
