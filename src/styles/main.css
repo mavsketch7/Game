@@ -434,14 +434,21 @@ body.pantalla-completa #hint {
 }
 .icono-ranking {
   left: 31%;
-  /* Alineado con .icono-fogata (mismo 45.5%) -- pedido expreso: a
-     23% quedaba a la altura de las tarjetas de clase y en un móvil en
-     horizontal (tarjetas más altas relativamente) el pergamino se
-     pisaba con los iconos de clase. */
-  top: 45.5%;
+  top: 23%;
   width: 6%;
   aspect-ratio: 3 / 5;
   background-image: url("/assets/ui/seleccion/note-rankings.png");
+}
+/* En escritorio (a 23%) se ve bien -- el problema es solo en móvil en
+   horizontal: ahí las tarjetas de clase quedan más altas en relación a
+   la pantalla y el pergamino se pisaba con ellas. Alineado con
+   .icono-fogata (mismo 45.5%) SOLO en ese caso concreto, en vez de
+   cambiar el escritorio (pedido expreso: "esos cambios deben de ser
+   sobre todo visibles en horizontal en móviles"). */
+@media (max-height: 500px) and (orientation: landscape) {
+  .icono-ranking {
+    top: 45.5%;
+  }
 }
 .portal-entrar {
   position: absolute;
