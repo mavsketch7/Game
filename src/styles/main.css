@@ -654,22 +654,37 @@ body.pantalla-completa #hint {
 .popover.oculto {
   display: none;
 }
+/* #menu es position:fixed;inset:0 (ver arriba), así que estos % de "top"
+   son % de la altura REAL de la ventana -- con un 70% de max-height fijo,
+   en un móvil en horizontal (bajo pero ancho) top+max-height se salía
+   del viewport sin dejar sitio para hacer scroll hasta el final del
+   popover (reportado: el popover de la hoguera tapaba sus propios
+   botones de abajo, entre ellos el de Controles táctiles). El min()
+   calcula cuánto alto queda REALMENTE desde el "top" de cada uno hasta
+   el borde inferior (mismo % en vh que en top, ya que el contenedor es
+   exactamente 100vh) y usa lo que sea más pequeño -- en una ventana de
+   escritorio normal sigue mandando el 70% de siempre.
+   */
 #popover-ayuda {
   left: 2.4%;
   top: 9%;
+  max-height: min(70%, calc(100vh - 9vh - 24px));
 }
 #popover-fogata {
   left: 50%;
   top: 56%;
   transform: translateX(-50%);
+  max-height: min(70%, calc(100vh - 56vh - 24px));
 }
 #popover-gremio {
   right: 6%;
   top: 44%;
+  max-height: min(70%, calc(100vh - 44vh - 24px));
 }
 #popover-ranking {
   left: 6%;
   top: 44%;
+  max-height: min(70%, calc(100vh - 44vh - 24px));
 }
 .popover-cab {
   display: flex;
@@ -781,10 +796,18 @@ body.pantalla-completa #hint {
   filter: drop-shadow(0 0 3px rgba(0, 0, 0, 0.8));
 }
 /* 240px fijos (assets del usuario en public/assets/ui/seleccion/) --
-   clamp() solo evita que desborde una columna muy estrecha. */
+   clamp() solo evita que desborde una columna muy estrecha. El límite
+   por vh (además del vw de siempre) es para el móvil en horizontal: con
+   una pantalla muy baja pero ancha, 26vw seguía dando un retrato enorme
+   que se comía las flechas de clase y el campo de nombre de debajo
+   (reportado: "los iconos de las clases se ven enormes y se pisan con
+   los demás botones") -- en un viewport de escritorio normal (más alto
+   que 44vh de sobra) esto no cambia nada, sigue mandando el 26vw de
+   siempre.
+   */
 .escena-slots .tarjeta-retrato {
   align-self: center;
-  width: clamp(96px, 26vw, 330px);
+  width: clamp(96px, min(26vw, 44vh), 330px);
   margin: 2px 0;
   filter: drop-shadow(0 6px 10px rgba(0, 0, 0, 0.75));
 }
