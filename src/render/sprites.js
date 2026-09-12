@@ -315,31 +315,6 @@ function iconoArmaduraMago(item) {
   return iconoMagoCache[clave];
 }
 
-// Collar de Cenizas del Renacido: recorta el primer frame del fénix
-// animado (ver AMULETO_FENIX_IMG más abajo) igual que iconoFrhor(), en
-// vez de esperar a un icono procedural aparte.
-let iconoFenixCache = null;
-function iconoAmuletoFenix() {
-  if (!AMULETO_FENIX_IMG) return null;
-  if (iconoFenixCache) return iconoFenixCache;
-  const tmp = document.createElement("canvas");
-  tmp.width = AMULETO_FENIX_FRAME;
-  tmp.height = AMULETO_FENIX_FRAME;
-  const tg = tmp.getContext("2d");
-  tg.imageSmoothingEnabled = false;
-  tg.drawImage(AMULETO_FENIX_IMG, 0, 0, AMULETO_FENIX_FRAME, AMULETO_FENIX_FRAME, 0, 0, AMULETO_FENIX_FRAME, AMULETO_FENIX_FRAME);
-  const b = bboxAlfa(tg, AMULETO_FENIX_FRAME, AMULETO_FENIX_FRAME) ||
-    { x: 0, y: 0, w: AMULETO_FENIX_FRAME, h: AMULETO_FENIX_FRAME };
-  const c = document.createElement("canvas");
-  c.width = b.w;
-  c.height = b.h;
-  const g = c.getContext("2d");
-  g.imageSmoothingEnabled = false;
-  g.drawImage(tmp, b.x, b.y, b.w, b.h, 0, 0, b.w, b.h);
-  iconoFenixCache = c;
-  return iconoFenixCache;
-}
-
 export function iconoDrop(item) {
         // Martillo de Frhor: icono real (azul zafiro, ver MARTILLO_FRHOR_IMG
         // más abajo) en vez del icono procedural genérico de "arma" -- si
@@ -348,10 +323,10 @@ export function iconoDrop(item) {
         // Armas legendarias con arte propio (ver LEYENDA_ARMA_IMG más abajo):
         // mismo criterio, id concreto -> imagen concreta.
         if (LEYENDA_ARMA_IMG[item.id]) return LEYENDA_ARMA_IMG[item.id];
-        if (item.id === "collar_fenix") {
-          const imgFenix = iconoAmuletoFenix();
-          if (imgFenix) return imgFenix;
-        }
+        // Collar de Cenizas del Renacido: icono de colgante propio (ver
+        // AMULETO_FENIX_ICONO_IMG más abajo), no un frame recortado de la
+        // animación en vuelo -- se lee mejor quieto a tamaño de icono.
+        if (item.id === "collar_fenix" && AMULETO_FENIX_ICONO_IMG) return AMULETO_FENIX_ICONO_IMG;
         const imgFrhor = iconoFrhor(item);
         if (imgFrhor) return imgFrhor;
         const imgMago = iconoArmaduraMago(item);
@@ -2411,7 +2386,10 @@ for (const idLeyenda in LEYENDA_ARMA_SRC) {
 // aquí indexado por id concreto en vez de clase+variante: son piezas
 // únicas, no un pool.
 const LEYENDA_ARMA_HILT_TIP = {
-  baston_dragon: { hilt: [2, 29], tip: [27, 3] },
+  // Cabeza de dragón arriba-izquierda, mango abajo-derecha (al revés de
+  // como se midió la primera vez -- confirmado a mano por el usuario:
+  // "el punto de agarre está en el pixel 26,26").
+  baston_dragon: { hilt: [26, 26], tip: [4, 6] },
   espada_pistola: { hilt: [28, 29], tip: [1, 1] },
   hacha_vampirica: { hilt: [29, 28], tip: [2, 13] },
 };
@@ -2437,6 +2415,24 @@ export const AMULETO_FENIX_FRAMES_N = 6;
   };
   im.onerror = () => console.warn("No se pudo cargar el amuleto fénix: " + im.src);
   im.src = `${import.meta.env.BASE_URL}assets/sprites/weapons/amuletos/amuleto-fenix.png`;
+})();
+
+// Icono de inventario/drop propio (colgante quieto, no un frame recortado
+// de la animación en vuelo de arriba -- se lee mejor a tamaño de icono).
+export let AMULETO_FENIX_ICONO_IMG = null;
+(() => {
+  const im = new Image();
+  im.onload = () => {
+    const c = document.createElement("canvas");
+    c.width = im.naturalWidth;
+    c.height = im.naturalHeight;
+    const g = c.getContext("2d");
+    g.imageSmoothingEnabled = false;
+    g.drawImage(im, 0, 0);
+    AMULETO_FENIX_ICONO_IMG = c;
+  };
+  im.onerror = () => console.warn("No se pudo cargar el icono del amuleto fénix: " + im.src);
+  im.src = `${import.meta.env.BASE_URL}assets/sprites/weapons/amuletos/amuleto-fenix-icono.png`;
 })();
 
 // Sangre de impacto (torre-vespero-assets/BloodFX Batch 1): sustituye el

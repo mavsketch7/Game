@@ -1010,13 +1010,19 @@ export function renderJugador(p) {
         // fuego (mismo mecanismo de shadowColor/shadowBlur que ya usa el
         // resplandor de rareza del arma/armadura) para que se note que
         // es un objeto especial incluso en reposo, no solo al activarse.
+        // Se espeja con el mismo `flip` (Math.cos(p.aim)<0) que ya usa el
+        // resto del cuerpo -- pedido expreso: "falta que se gire también
+        // a la derecha cuando el personaje mira hacia allá" (antes se
+        // quedaba siempre al mismo lado, sin girar con la puntería).
         if (eq.collar && eq.collar.id === "collar_fenix" && !formaAnimal && AMULETO_FENIX_IMG) {
           const fIdx = Math.floor(animGlobal * 6) % AMULETO_FENIX_FRAMES_N;
-          const fx = p.x + 15 + Math.sin(animGlobal * 2.2 + p.idx) * 3;
+          const lado = flip ? -1 : 1;
+          const fx = p.x + lado * (15 + Math.sin(animGlobal * 2.2 + p.idx) * 3);
           const fy = p.y - 32 + Math.cos(animGlobal * 2.2 + p.idx) * 3;
           const dTam = 20;
           cx.save();
           cx.translate(fx, fy);
+          if (flip) cx.scale(-1, 1);
           cx.shadowColor = "#ff5a36";
           cx.shadowBlur = 7;
           cx.drawImage(
