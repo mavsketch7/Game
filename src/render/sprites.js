@@ -1655,25 +1655,29 @@ for (const dirRun in REAL_RUN_SRC) {
 const ARMOR_BASE_IDLE_MAGO = { side: "heroB_idle_side_mago", down: "heroB_idle_down_mago", up: "heroB_idle_up_mago" };
 const ARMOR_BASE_RUN_MAGO = { side: "heroB_run_side_mago", down: "heroB_run_down_mago", up: "heroB_run_up_mago" };
 
-export const CASCO_IDLE_MAGO = { side: [], down: [], up: [] };
-export const PETO_IDLE_MAGO = { side: [], down: [], up: [] };
-export const PIERNAS_IDLE_MAGO = { side: [], down: [], up: [] };
-export const CASCO_RUN_MAGO = { side: [], down: [], up: [] };
-export const PETO_RUN_MAGO = { side: [], down: [], up: [] };
-export const PIERNAS_RUN_MAGO = { side: [], down: [], up: [] };
+// Variantes por rareza -- [dir][rareza][frameIdx], ver
+// tenirFramesPorRareza()/capaPorRareza() en render/character.js (único
+// consumidor: la versión sin teñir vive en el índice 0 de cada una, no
+// hace falta guardarla aparte).
+export const CASCO_IDLE_MAGO_TIN = { side: null, down: null, up: null };
+export const PETO_IDLE_MAGO_TIN = { side: null, down: null, up: null };
+export const PIERNAS_IDLE_MAGO_TIN = { side: null, down: null, up: null };
+export const CASCO_RUN_MAGO_TIN = { side: null, down: null, up: null };
+export const PETO_RUN_MAGO_TIN = { side: null, down: null, up: null };
+export const PIERNAS_RUN_MAGO_TIN = { side: null, down: null, up: null };
 
 for (const dirIdle in REAL_IDLE_SRC) {
   cargarHojaConArmadura(REAL_IDLE_SRC[dirIdle], armorUrlsDe(ARMOR_BASE_IDLE_MAGO[dirIdle]), TAM_HEROE, true, (frames, anclas, capas) => {
-    CASCO_IDLE_MAGO[dirIdle] = capas.casco;
-    PETO_IDLE_MAGO[dirIdle] = capas.peto;
-    PIERNAS_IDLE_MAGO[dirIdle] = capas.piernas;
+    CASCO_IDLE_MAGO_TIN[dirIdle] = tenirFramesPorRareza(capas.casco);
+    PETO_IDLE_MAGO_TIN[dirIdle] = tenirFramesPorRareza(capas.peto);
+    PIERNAS_IDLE_MAGO_TIN[dirIdle] = tenirFramesPorRareza(capas.piernas);
   });
 }
 for (const dirRun in REAL_RUN_SRC) {
   cargarHojaConArmadura(REAL_RUN_SRC[dirRun], armorUrlsDe(ARMOR_BASE_RUN_MAGO[dirRun]), TAM_HEROE, true, (frames, anclas, capas) => {
-    CASCO_RUN_MAGO[dirRun] = capas.casco;
-    PETO_RUN_MAGO[dirRun] = capas.peto;
-    PIERNAS_RUN_MAGO[dirRun] = capas.piernas;
+    CASCO_RUN_MAGO_TIN[dirRun] = tenirFramesPorRareza(capas.casco);
+    PETO_RUN_MAGO_TIN[dirRun] = tenirFramesPorRareza(capas.peto);
+    PIERNAS_RUN_MAGO_TIN[dirRun] = tenirFramesPorRareza(capas.piernas);
   });
 }
 
@@ -1708,17 +1712,18 @@ cargarHojaConArmadura(REAL_HURT_SRC, armorUrlsDe(ARMOR_BASE_HURT), TAM_HEROE, tr
 // exportar solo por un frame de más en un colapso que dura 0.6s).
 const ARMOR_BASE_HURT_MAGO = "heroB_hurt_down_mago";
 const ARMOR_BASE_MUERTE_MAGO = "heroB_dead_down_mago";
-export const CASCO_HURT_MAGO = [];
-export const PETO_HURT_MAGO = [];
-export const PIERNAS_HURT_MAGO = [];
-export const CASCO_MUERTE_MAGO = [];
-export const PETO_MUERTE_MAGO = [];
-export const PIERNAS_MUERTE_MAGO = [];
+// Variantes por rareza -- [rareza][frameIdx], mismo criterio que arriba.
+export const CASCO_HURT_MAGO_TIN = [];
+export const PETO_HURT_MAGO_TIN = [];
+export const PIERNAS_HURT_MAGO_TIN = [];
+export const CASCO_MUERTE_MAGO_TIN = [];
+export const PETO_MUERTE_MAGO_TIN = [];
+export const PIERNAS_MUERTE_MAGO_TIN = [];
 
 cargarHojaConArmadura(REAL_HURT_SRC, armorUrlsDe(ARMOR_BASE_HURT_MAGO), TAM_HEROE, true, (frames, anclas, capas) => {
-  CASCO_HURT_MAGO.push(...capas.casco);
-  PETO_HURT_MAGO.push(...capas.peto);
-  PIERNAS_HURT_MAGO.push(...capas.piernas);
+  CASCO_HURT_MAGO_TIN.push(...tenirFramesPorRareza(capas.casco));
+  PETO_HURT_MAGO_TIN.push(...tenirFramesPorRareza(capas.peto));
+  PIERNAS_HURT_MAGO_TIN.push(...tenirFramesPorRareza(capas.piernas));
 });
 // A diferencia de HURT (donde REAL_HURT ya sale de cargarHojaConArmadura
 // de serie), REAL_MUERTE hasta ahora se cargaba con el loader simple (sin
@@ -1732,9 +1737,9 @@ cargarHojaConArmadura(REAL_HURT_SRC, armorUrlsDe(ARMOR_BASE_HURT_MAGO), TAM_HERO
 // imperceptible en la práctica.
 cargarHojaConArmadura(REAL_MUERTE_SRC, armorUrlsDe(ARMOR_BASE_MUERTE_MAGO), TAM_HEROE, true, (frames, anclas, capas) => {
   REAL_MUERTE.push(...frames);
-  CASCO_MUERTE_MAGO.push(...capas.casco);
-  PETO_MUERTE_MAGO.push(...capas.peto);
-  PIERNAS_MUERTE_MAGO.push(...capas.piernas);
+  CASCO_MUERTE_MAGO_TIN.push(...tenirFramesPorRareza(capas.casco));
+  PETO_MUERTE_MAGO_TIN.push(...tenirFramesPorRareza(capas.peto));
+  PIERNAS_MUERTE_MAGO_TIN.push(...tenirFramesPorRareza(capas.piernas));
 });
 
 // Duración del colapso hasta quedarse tumbado del todo -- después se
@@ -1784,6 +1789,13 @@ export const REAL_ATTACK_ANCLA = { guerrero: {}, arquero: {}, picaro: {}, mago: 
 // una entrada aquí, ver ARMOR_BASE_ATTACK_GUERRERO/ARMOR_BASE_ATTACK_MAGO.
 const ARMOR_BASE_ATTACK_POR_CLASE = { guerrero: ARMOR_BASE_ATTACK_GUERRERO, mago: ARMOR_BASE_ATTACK_MAGO };
 
+// Variantes por rareza -- SOLO mago (el set Frhor del guerrero es un
+// objeto único siempre Épico, no tiene sentido re-teñirlo). Mismo
+// shape que CASCO_ATTACK: [dir][rareza][frameIdx].
+export const CASCO_ATTACK_TIN = { mago: {} };
+export const PETO_ATTACK_TIN = { mago: {} };
+export const PIERNAS_ATTACK_TIN = { mago: {} };
+
 for (const rolAtk in REAL_ATTACK_SRC) {
   for (const dirAtk in REAL_ATTACK_SRC[rolAtk]) {
     const baseArmaduraAtk = ARMOR_BASE_ATTACK_POR_CLASE[rolAtk]?.[dirAtk];
@@ -1794,6 +1806,11 @@ for (const rolAtk in REAL_ATTACK_SRC) {
         CASCO_ATTACK[rolAtk][dirAtk] = capas.casco;
         PETO_ATTACK[rolAtk][dirAtk] = capas.peto;
         PIERNAS_ATTACK[rolAtk][dirAtk] = capas.piernas;
+        if (rolAtk === "mago") {
+          CASCO_ATTACK_TIN.mago[dirAtk] = tenirFramesPorRareza(capas.casco);
+          PETO_ATTACK_TIN.mago[dirAtk] = tenirFramesPorRareza(capas.peto);
+          PIERNAS_ATTACK_TIN.mago[dirAtk] = tenirFramesPorRareza(capas.piernas);
+        }
       });
     } else {
       // Resto de clases: sin arte de armadura para el ataque básico
@@ -1848,9 +1865,9 @@ export const REAL_DASH_ANCLA = { guerrero: {} };
 // calcularPoseHeroe en render/character.js). Solo lateral, mismo hueco
 // que REAL_SPECIAL_SRC.mago.
 const ARMOR_BASE_SPECIAL_MAGO = { side: "heroB_special_mago_side" };
-export const CASCO_SPECIAL = { mago: {} };
-export const PETO_SPECIAL = { mago: {} };
-export const PIERNAS_SPECIAL = { mago: {} };
+export const CASCO_SPECIAL_TIN = { mago: {} };
+export const PETO_SPECIAL_TIN = { mago: {} };
+export const PIERNAS_SPECIAL_TIN = { mago: {} };
 
 for (const rolEsp in REAL_SPECIAL_SRC) {
   for (const dirEsp in REAL_SPECIAL_SRC[rolEsp]) {
@@ -1859,9 +1876,9 @@ for (const rolEsp in REAL_SPECIAL_SRC) {
       cargarHojaConArmadura(REAL_SPECIAL_SRC[rolEsp][dirEsp], armorUrlsDe(baseArmaduraEsp), TAM_HEROE, true, (frames, anclas, capas) => {
         REAL_SPECIAL[rolEsp][dirEsp] = frames;
         REAL_SPECIAL_ANCLA[rolEsp][dirEsp] = anclas;
-        CASCO_SPECIAL[rolEsp][dirEsp] = capas.casco;
-        PETO_SPECIAL[rolEsp][dirEsp] = capas.peto;
-        PIERNAS_SPECIAL[rolEsp][dirEsp] = capas.piernas;
+        CASCO_SPECIAL_TIN[rolEsp][dirEsp] = tenirFramesPorRareza(capas.casco);
+        PETO_SPECIAL_TIN[rolEsp][dirEsp] = tenirFramesPorRareza(capas.peto);
+        PIERNAS_SPECIAL_TIN[rolEsp][dirEsp] = tenirFramesPorRareza(capas.piernas);
       });
     } else {
       cargarHojaFramesConAncla(REAL_SPECIAL_SRC[rolEsp][dirEsp], TAM_HEROE, (frames, anclas) => {
@@ -2125,6 +2142,21 @@ function teñirSprite(img, color) {
   g.globalCompositeOperation = "destination-in";
   g.drawImage(img, 0, 0);
   return c;
+}
+
+// Como teñirSprite(), pero para un ARRAY de fotogramas ya recortados
+// (el formato que devuelve capas.casco/peto/piernas de
+// cargarHojaConArmadura() -- un <canvas> por frame, no una tira única)
+// -- mismo criterio que ARQUERO_BOW más abajo, que ya tiñe frame a
+// frame dentro de un bucle. Devuelve un array de 5 posiciones (una por
+// tier de RAREZAS); Común (índice 0) se queda con los frames
+// originales sin teñir, mismo criterio que las armas ("el tinte es
+// señal de que esto es especial"). Usado por la armadura de mago para
+// que un único set de arte sirva para las 5 rarezas -- ver
+// calcularPoseHeroe()/capaPorRareza() en render/character.js.
+function tenirFramesPorRareza(frames) {
+  if (!frames || !frames.length) return RAREZAS.map(() => []);
+  return RAREZAS.map((r, i) => (i === 0 ? frames : frames.map((f) => teñirSprite(f, r.col))));
 }
 
 // Carga la pieza base y, en cuanto está lista, pre-genera sus 5 variantes de

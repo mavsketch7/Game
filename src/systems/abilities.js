@@ -524,30 +524,36 @@ export function interactuar(p) {
           return;
         }
         if (cofre.qaMago) {
-          // Segundo cofre de pruebas (?qa=1, brillo lila): suelta el set
-          // completo de la Armadura de Mago T1 -- mismo patrón que la
-          // Armadura de Frhor (systems/combat.js: matarEnemigo()), genItem()
-          // para las stats + nombre/id fijos por pieza, pero restringida a
-          // mago (clase) porque el arte de armadura real (ver
-          // CASCO_IDLE_MAGO etc. en render/sprites.js) es específico de esa
-          // clase -- equipada en otra clase no se vería nada especial.
-          const PIEZAS_ARMADURA_MAGO_T1 = {
-            casco: { nombre: "Sombrero de Aprendiz", id: "casco_mago_t1" },
-            peto: { nombre: "Túnica de Aprendiz", id: "peto_mago_t1" },
-            piernas: { nombre: "Calzas de Aprendiz", id: "piernas_mago_t1" },
+          // Segundo cofre de pruebas (?qa=1, brillo lila): suelta las 5
+          // rarezas de la Armadura de Mago -- un solo set de arte
+          // recoloreado por rareza (ver tenirFramesPorRareza() en
+          // render/sprites.js), así que aquí se sueltan las 5 variantes de
+          // golpe para poder compararlas/equiparlas sin depender del RNG
+          // de genItem(). Mismo patrón que la Armadura de Frhor
+          // (systems/combat.js: matarEnemigo()) para nombre/id fijos por
+          // pieza, restringida a mago (clase) porque el arte real es
+          // específico de esa clase -- equipada en otra clase no se vería
+          // nada especial.
+          const PIEZAS_ARMADURA_MAGO = {
+            casco: { nombre: "Sombrero de Aprendiz", id: "casco_mago" },
+            peto: { nombre: "Túnica de Aprendiz", id: "peto_mago" },
+            piernas: { nombre: "Calzas de Aprendiz", id: "piernas_mago" },
           };
-          for (const slotArm of ["casco", "peto", "piernas"]) {
-            const pieza = genItem(G.planta || 1, 0, slotArm);
-            pieza.nombre = PIEZAS_ARMADURA_MAGO_T1[slotArm].nombre;
-            pieza.id = PIEZAS_ARMADURA_MAGO_T1[slotArm].id;
-            pieza.clase = "mago";
-            const pv = posDropValida(
-              cofre.x + rnd(-20, 20),
-              cofre.y + rnd(-20, 20),
-            );
-            dropItem(pv.x, pv.y, pieza);
-          }
-          toast("🧪 Cofre de pruebas: Armadura de Mago T1 completa", "#c084f0");
+          RAREZAS.forEach((r, rareza) => {
+            for (const slotArm of ["casco", "peto", "piernas"]) {
+              const pieza = genItem(G.planta || 1, rareza, slotArm);
+              const base = PIEZAS_ARMADURA_MAGO[slotArm];
+              pieza.nombre = rareza === 0 ? base.nombre : `${base.nombre} [${r.n}]`;
+              pieza.id = base.id + "_r" + rareza;
+              pieza.clase = "mago";
+              const pv = posDropValida(
+                cofre.x + rnd(-40, 40),
+                cofre.y + rnd(-40, 40),
+              );
+              dropItem(pv.x, pv.y, pieza);
+            }
+          });
+          toast("🧪 Cofre de pruebas: Armadura de Mago, las 5 rarezas", "#c084f0");
           return;
         }
         const pv1 = posDropValida(cofre.x, cofre.y - 14);
