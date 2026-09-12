@@ -1153,8 +1153,17 @@ function cargarHojaConArmadura(bodyUrl, armorUrls, destSize, sinAmpliar, onListo
             c.height = destSize;
             const g = c.getContext("2d");
             g.imageSmoothingEnabled = false;
-            const w = b.w * escala, h = b.h * escala;
-            g.drawImage(im, i * frameSize + b.x, b.y, b.w, b.h, (destSize - w) / 2, destSize - h, w, h);
+            // Redondeado a entero -- con w/h o el desplazamiento en medio
+            // píxel, drawImage() difumina el borde del recorte por
+            // antialiasing de la propia forma del rectángulo destino
+            // (imageSmoothingEnabled=false solo evita el filtrado del
+            // MUESTREO de origen, no esto), perdiendo nitidez/algún píxel
+            // de borde -- reportado en el ataque de mago, donde el ancho
+            // del bbox de la armadura es impar. Coordenadas y tamaño
+            // enteros para que caiga siempre en la rejilla de píxeles.
+            const w = Math.round(b.w * escala), h = Math.round(b.h * escala);
+            const dx = Math.round((destSize - w) / 2), dy = destSize - h;
+            g.drawImage(im, i * frameSize + b.x, b.y, b.w, b.h, dx, dy, w, h);
             frames.push(c);
           }
           return frames;
