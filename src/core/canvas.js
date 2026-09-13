@@ -19,6 +19,11 @@ export const W = cv.width,
 
 export let maximizado = false;
 
+// Factor de escala CSS real del lienzo (cw/W tras ajustarLienzo()). Lo usa
+// render/hud.js para agrandar el HUD en móvil cuando el lienzo se muestra
+// más pequeño de lo normal -- ver hudEscala() ahí.
+export let escalaActual = 1;
+
 const _marco = document.getElementById("marco");
 
 // Por debajo de 1x (ventana más pequeña que el lienzo nativo) no hay forma
@@ -47,6 +52,7 @@ export function ajustarLienzo() {
         if (AJ.escala === "auto") esc = escalaSinMoire(limite);
         else esc = escalaSinMoire(Math.min(parseFloat(AJ.escala), limite));
         if (!fs) esc = Math.max(esc, 0.5);
+        escalaActual = esc;
         const cw = Math.round(W * esc),
           ch = Math.round(H * esc);
         cv.style.width = cw + "px";

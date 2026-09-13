@@ -1,5 +1,5 @@
 // Auto-generated during the modularization refactor (2026-07-23).
-import { H, W, cx } from "../core/canvas.js";
+import { escalaActual, H, W, cx } from "../core/canvas.js";
 import { ELEMENTOS, ELEM_MAGO, FORMAS_DRUIDA, FORMAS_INFO, MAX_NIV_PJ, MAX_PLANTA, NOMBRE_CLIMA, RAREZAS, ROLES, SUPS } from "../core/constants.js";
 import { META } from "../core/save.js";
 import { G } from "../core/state.js";
@@ -7,8 +7,23 @@ import { K, spriteJugador } from "./sprites.js";
 import { animGlobal } from "./world.js";
 import { NIVEL_ULTI } from "../systems/abilities.js";
 import { statsTot, vivos } from "../systems/combat.js";
+import { tocarActivo } from "../systems/touchInput.js";
 import { banner } from "../ui/notifications.js";
 import { clamp, lighten } from "../utils/helpers.js";
+
+// En móvil el lienzo se muestra más pequeño que su resolución nativa
+// (960x560) para caber en una pantalla baja en horizontal -- ver
+// escalaActual en core/canvas.js. El panel de HUD (vida/recurso/iconos) se
+// dibuja a tamaño fijo en espacio de lienzo, así que sin compensar queda
+// diminuto. Se agranda el panel (vía cx.scale(), que afecta también a
+// fuentes y grosores de trazo) lo justo para que el tamaño FÍSICO en
+// pantalla se acerque al que tendría en escritorio -- sin pasarse si el
+// dispositivo táctil ya muestra el lienzo grande (tablet, por ejemplo).
+const HUD_OBJETIVO_TACTIL = 0.85;
+function hudEscala() {
+        if (!tocarActivo()) return 1;
+        return clamp(HUD_OBJETIVO_TACTIL / (escalaActual || 1), 1, 2.2);
+      }
 
 export function barra(x, y, w2, h2, pct, col, txt) {
         pct = clamp(pct, 0, 1);
@@ -108,22 +123,39 @@ function iconoCd(x, y, tam, etiqueta, cd, total, col) {
       }
 
 export function renderHUD() {
-        const pos = [
-          [16, 14],
-          [W - 206, 14],
-          [16, H - 82],
-          [W - 206, H - 82],
-        ];
+        const s = hudEscala();
+        const pos =
+          s === 1
+            ? [
+                [16, 14],
+                [W - 206, 14],
+                [16, H - 82],
+                [W - 206, H - 82],
+              ]
+            : [
+                [16, 14],
+                [W - 16 - 198 * s, 14],
+                [16, H - 16 - 68 * s],
+                [W - 16 - 198 * s, H - 16 - 68 * s],
+              ];
         G.players.forEach((p, i) => {
-          const [x, y] = pos[i] || pos[0];
+          const [px, py] = pos[i] || pos[0];
           const t = statsTot(p),
             b = ROLES[p.rol];
-          const panelG = cx.createLinearGradient(x - 4, y - 4, x - 4, y + 64);
+          cx.save();
+          cx.translate(px, py);
+          cx.scale(s, s);
+          // A partir de aquí todo se dibuja en coordenadas LOCALES al panel
+          // (origen 0,0 = esquina del panel): el translate+scale de arriba
+          // ya sitúa y agranda el panel entero -- fuentes y grosores de
+          // trazo incluidos, al ser parte de la matriz de transformación
+          // del canvas -- sin tener que multiplicar cada número a mano.
+          const panelG = cx.createLinearGradient(-4, -4, -4, 64);
           panelG.addColorStop(0, "rgba(23,20,36,.86)");
           panelG.addColorStop(1, "rgba(11,9,18,.86)");
           cx.fillStyle = panelG;
           cx.beginPath();
-          cx.roundRect(x - 4, y - 4, 198, 68, 7);
+          cx.roundRect(-4, -4, 198, 68, 7);
           cx.fill();
           cx.strokeStyle = p.ko ? "#4a4560" : p.color;
           cx.lineWidth = 1.5;
@@ -133,20 +165,20 @@ export function renderHUD() {
           // marco del retrato con color de rareza de armadura
           const armR = p.equipo.armadura ? p.equipo.armadura.rareza : -1;
           cx.fillStyle = "#0a0812";
-          cx.fillRect(x - 1, y + 2, 27, 31);
-          cx.drawImage(spriteJugador(p), x, y + 4, 24, 28);
+          cx.fillRect(-1, 2, 27, 31);
+          cx.drawImage(spriteJugador(p), 0, 4, 24, 28);
           cx.strokeStyle = armR >= 0 ? RAREZAS[armR].col : "#3a3453";
           cx.lineWidth = 1;
-          cx.strokeRect(x - 1.5, y + 1.5, 27, 31);
+          cx.strokeRect(-1.5, 1.5, 27, 31);
           cx.fillStyle = p.color;
           cx.font = "800 10px Alegreya Sans";
           cx.textAlign = "left";
-          cx.fillText(p.nombre + " · " + b.nombre.split(" ")[0], x + 30, y + 7);
-          barraHP(x + 30, y + 11, 130, 10, p, t);
-          barra(x + 30, y + 23, 130, 8, p.res / b.res, "#5a9ad1", "");
+          cx.fillText(p.nombre + " · " + b.nombre.split(" ")[0], 30, 7);
+          barraHP(30, 11, 130, 10, p, t);
+          barra(30, 23, 130, 8, p.res / b.res, "#5a9ad1", "");
           // barra XP pequeña debajo
           const xpPct = p.nivel >= MAX_NIV_PJ ? 1 : p.xp / p.xpSig;
-          barra(x + 30, y + 33, 85, 5, xpPct, "#4a8a5a", "");
+          barra(30, 33, 85, 5, xpPct, "#4a8a5a", "");
           cx.fillStyle = "#9a93ab";
           cx.font = "700 9px Alegreya Sans";
           cx.textAlign = "left";
@@ -154,46 +186,46 @@ export function renderHUD() {
             "Nv." +
               p.nivel +
               (p.cartasPendientes > 0 ? " ★" + p.cartasPendientes : ""),
-            x + 118,
-            y + 39,
+            118,
+            39,
           );
           // iconos
-          const iy = y + 42;
+          const iy = 42;
           if (p.nivel < NIVEL_ULTI) {
             cx.fillStyle = "#1c1830";
-            cx.fillRect(x + 30, iy, 16, 16);
+            cx.fillRect(30, iy, 16, 16);
             cx.strokeStyle = "#3a3453";
-            cx.strokeRect(x + 30.5, iy + 0.5, 15, 15);
+            cx.strokeRect(30.5, iy + 0.5, 15, 15);
             cx.fillStyle = "#9a93ab";
             cx.font = "800 8px Alegreya Sans";
             cx.textAlign = "center";
-            cx.fillText("🔒" + NIVEL_ULTI, x + 38, iy + 11);
+            cx.fillText("🔒" + NIVEL_ULTI, 38, iy + 11);
           } else {
-            iconoCd(x + 30, iy, 16, "Q", p.skillCd, b.skill.cd, "#e9b45c");
+            iconoCd(30, iy, 16, "Q", p.skillCd, b.skill.cd, "#e9b45c");
           }
           if (p.rol === "mago") {
             ELEM_MAGO.forEach((el, k) => {
               const col = ELEMENTOS[el].color;
               const sel = p.elemento === el;
               cx.fillStyle = sel ? col : "#3a3453";
-              cx.fillRect(x + 52 + k * 20, iy, 16, 16);
+              cx.fillRect(52 + k * 20, iy, 16, 16);
               cx.strokeStyle = sel ? "#e9e3d5" : "#3a3453";
-              cx.strokeRect(x + 52.5 + k * 20, iy + 0.5, 15, 15);
+              cx.strokeRect(52.5 + k * 20, iy + 0.5, 15, 15);
               cx.fillStyle = sel ? "#1a1206" : "#9a93ab";
               cx.font = "800 9px Alegreya Sans";
               cx.textAlign = "center";
-              cx.fillText(k + 1, x + 60 + k * 20, iy + 12);
+              cx.fillText(k + 1, 60 + k * 20, iy + 12);
             });
           } else if (p.rol === "clerigo") {
-            SUPS.forEach((s, k) =>
+            SUPS.forEach((sp, k) =>
               iconoCd(
-                x + 52 + k * 20,
+                52 + k * 20,
                 iy,
                 16,
                 "" + (k + 1),
                 p.supCd[k],
-                s.cd,
-                s.color,
+                sp.cd,
+                sp.color,
               ),
             );
           } else if (p.rol === "druida") {
@@ -201,21 +233,22 @@ export function renderHUD() {
               const fi = FORMAS_INFO[fo];
               const sel = p.forma === fo;
               cx.fillStyle = sel ? fi.color : "#3a3453";
-              cx.fillRect(x + 52 + k * 20, iy, 16, 16);
+              cx.fillRect(52 + k * 20, iy, 16, 16);
               cx.strokeStyle = sel ? "#e9e3d5" : "#3a3453";
-              cx.strokeRect(x + 52.5 + k * 20, iy + 0.5, 15, 15);
+              cx.strokeRect(52.5 + k * 20, iy + 0.5, 15, 15);
               cx.fillStyle = sel ? "#1a1206" : "#9a93ab";
               cx.font = "800 9px Alegreya Sans";
               cx.textAlign = "center";
-              cx.fillText(k + 1, x + 60 + k * 20, iy + 12);
+              cx.fillText(k + 1, 60 + k * 20, iy + 12);
             });
           }
           if (p.hasteT > 0) {
             cx.fillStyle = "#e9b45c";
             cx.font = "800 10px Alegreya Sans";
             cx.textAlign = "left";
-            cx.fillText("»» " + p.hasteT.toFixed(0) + "s", x + 118, iy + 12);
+            cx.fillText("»» " + p.hasteT.toFixed(0) + "s", 118, iy + 12);
           }
+          cx.restore();
         });
 
         // planta arriba-centro

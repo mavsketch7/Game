@@ -318,6 +318,32 @@ body.pantalla-completa #hint {
 .overlay-inner {
   width: min(860px, 100%);
 }
+/* En móvil (dispositivo cuyo puntero primario es un dedo -- mismo criterio
+   que systems/touchInput.js) el resto de overlays (inventario, tienda,
+   skins, yunque, ajustes, cartas, pvp, fin, info, rankings) sufren el mismo
+   problema que #menu ya tenía resuelto arriba: viven dentro de #marco, que
+   fuera de pantalla completa mide el tamaño ESCALADO DEL LIENZO (ver
+   ajustarLienzo() en core/canvas.js), no el de la ventana -- en un móvil en
+   horizontal con poca altura eso los deja encajonados en una caja mucho más
+   pequeña que la pantalla real. Se aplica aquí el mismo arreglo que #menu,
+   pero solo en móvil para no tocar el aspecto de escritorio. De paso se
+   sube el tamaño de fuente base: casi todo el texto de los overlays usa
+   "rem" (ver .ajuste-fila, .card-sel, etc.), así que agrandar la fuente
+   raíz reescala ese texto de forma uniforme sin tener que tocar cada regla. */
+@media (pointer: coarse) and (hover: none) {
+  html {
+    font-size: 120%;
+  }
+  .overlay:not(#menu) {
+    position: fixed;
+    inset: 0;
+    border-radius: 0;
+    padding-left: calc(16px + env(safe-area-inset-left));
+    padding-right: calc(16px + env(safe-area-inset-right));
+    padding-top: calc(12px + env(safe-area-inset-top));
+    padding-bottom: calc(12px + env(safe-area-inset-bottom));
+  }
+}
 #hero-titulo {
   text-align: center;
   padding: 0 0 6px;
