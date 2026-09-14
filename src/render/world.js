@@ -1092,8 +1092,16 @@ export function render() {
               cx.textAlign = "center";
               cx.fillText("⚠ COFRE DE PRUEBAS: ARMADURA MAGO (QA) ⚠", o.x, o.y - 34);
             }
+            if (o.qaPicaro) {
+              // Tercer cofre de pruebas, brillo verde (ver el bloque
+              // cofre.qaPicaro en systems/abilities.js: interactuar()).
+              cx.fillStyle = "#4a9d4a";
+              cx.font = "800 11px Alegreya Sans";
+              cx.textAlign = "center";
+              cx.fillText("⚠ COFRE DE PRUEBAS: ARMADURA PÍCARO (QA) ⚠", o.x, o.y - 34);
+            }
             if (!o.abierto) {
-              const colorBrillo = o.qaMago ? "#c084f0" : "#e9b45c";
+              const colorBrillo = o.qaMago ? "#c084f0" : o.qaPicaro ? "#4a9d4a" : "#e9b45c";
               cx.globalAlpha = 0.3 + Math.sin(animGlobal * 3) * 0.15;
               cx.fillStyle = colorBrillo;
               cx.beginPath();

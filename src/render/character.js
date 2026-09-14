@@ -9,7 +9,7 @@ import { ELEMENTOS, RAREZAS, SUPS } from "../core/constants.js";
 import { G } from "../core/state.js";
 import { fxParticulas } from "./effects.js";
 import { drawSprite, drawSpriteBottom } from "./spriteDraw.js";
-import { AMULETO_FENIX_FRAME, AMULETO_FENIX_FRAMES_N, AMULETO_FENIX_IMG, ARQUERO_BOW, ARQUERO_BOW_DUR, ATTACK_DUR, cargarSpritesDeClase, CASCO_ATTACK, CASCO_ATTACK_TIN, CASCO_HURT, CASCO_HURT_MAGO_TIN, CASCO_IDLE, CASCO_IDLE_MAGO_TIN, CASCO_MUERTE_MAGO_TIN, CASCO_RUN, CASCO_RUN_MAGO_TIN, CASCO_SPECIAL_TIN, CONFIG_ARMA, DASH_ATTACK_DUR, DUMMY_HIT, ESC_FORMA, FROST_GUARDIAN, LEYENDA_ARMA_IMG, MARTILLO_FRHOR_IMG, MIRA_IZQUIERDA_POR_DEFECTO, MOB_RUN, MUERTE_DUR, OFFHAND_IMG, OFFHAND_IMG_RAREZA, PARRY_FX_FH, PARRY_FX_FRAMES, PARRY_FX_FW, PARRY_FX_SHEET, PETO_ATTACK, PETO_ATTACK_TIN, PETO_HURT, PETO_HURT_MAGO_TIN, PETO_IDLE, PETO_IDLE_MAGO_TIN, PETO_MUERTE_MAGO_TIN, PETO_RUN, PETO_RUN_MAGO_TIN, PETO_SPECIAL_TIN, PIERNAS_ATTACK, PIERNAS_ATTACK_TIN, PIERNAS_HURT, PIERNAS_HURT_MAGO_TIN, PIERNAS_IDLE, PIERNAS_IDLE_MAGO_TIN, PIERNAS_MUERTE_MAGO_TIN, PIERNAS_RUN, PIERNAS_RUN_MAGO_TIN, PIERNAS_SPECIAL_TIN, REAL_ATTACK, REAL_ATTACK_ANCLA, REAL_DASH, REAL_DASH_ANCLA, REAL_HURT, REAL_IDLE, REAL_IDLE_ANCLA, REAL_MUERTE, REAL_RUN, REAL_RUN_ANCLA, REAL_SPECIAL, REAL_SPECIAL_ANCLA, REAL_SPRITE_SCALE, SHEETS, SPECIAL_ATTACK_DUR, SPR, SPR_FORMAS, TAM_HEROE, WEAPON_ART_POOL, WEAPON_IMG, WEAPON_IMG_RAREZA, armaHiltTip, assetOK, leyendaArmaHiltTip, seleccionarImgEnemigo, spriteJugador } from "./sprites.js";
+import { AMULETO_FENIX_FRAME, AMULETO_FENIX_FRAMES_N, AMULETO_FENIX_IMG, ARQUERO_BOW, ARQUERO_BOW_DUR, ATTACK_DUR, cargarSpritesDeClase, CASCO_ATTACK, CASCO_ATTACK_TIN, CASCO_HURT, CASCO_HURT_MAGO_TIN, CASCO_HURT_PICARO_TIN, CASCO_IDLE, CASCO_IDLE_MAGO_TIN, CASCO_IDLE_PICARO_TIN, CASCO_MUERTE_MAGO_TIN, CASCO_MUERTE_PICARO_TIN, CASCO_RUN, CASCO_RUN_MAGO_TIN, CASCO_RUN_PICARO_TIN, CASCO_SPECIAL_TIN, CONFIG_ARMA, DAGA_CARGADA_FH, DAGA_CARGADA_FRAMES, DAGA_CARGADA_FW, DAGA_CARGADA_SHEET, DASH_ATTACK_DUR, DUMMY_HIT, ESC_FORMA, FROST_GUARDIAN, LEYENDA_ARMA_IMG, MARTILLO_FRHOR_IMG, MIRA_IZQUIERDA_POR_DEFECTO, MOB_RUN, MUERTE_DUR, OFFHAND_IMG, OFFHAND_IMG_RAREZA, PARRY_FX_FH, PARRY_FX_FRAMES, PARRY_FX_FW, PARRY_FX_SHEET, PETO_ATTACK, PETO_ATTACK_TIN, PETO_HURT, PETO_HURT_MAGO_TIN, PETO_HURT_PICARO_TIN, PETO_IDLE, PETO_IDLE_MAGO_TIN, PETO_IDLE_PICARO_TIN, PETO_MUERTE_MAGO_TIN, PETO_MUERTE_PICARO_TIN, PETO_RUN, PETO_RUN_MAGO_TIN, PETO_RUN_PICARO_TIN, PETO_SPECIAL_TIN, PIERNAS_ATTACK, PIERNAS_ATTACK_TIN, PIERNAS_HURT, PIERNAS_HURT_MAGO_TIN, PIERNAS_HURT_PICARO_TIN, PIERNAS_IDLE, PIERNAS_IDLE_MAGO_TIN, PIERNAS_IDLE_PICARO_TIN, PIERNAS_MUERTE_MAGO_TIN, PIERNAS_MUERTE_PICARO_TIN, PIERNAS_RUN, PIERNAS_RUN_MAGO_TIN, PIERNAS_RUN_PICARO_TIN, PIERNAS_SPECIAL_TIN, REAL_ATTACK, REAL_ATTACK_ANCLA, REAL_DASH, REAL_DASH_ANCLA, REAL_HURT, REAL_IDLE, REAL_IDLE_ANCLA, REAL_MUERTE, REAL_RUN, REAL_RUN_ANCLA, REAL_SPECIAL, REAL_SPECIAL_ANCLA, REAL_SPRITE_SCALE, SHEETS, SPECIAL_ATTACK_DUR, SPR, SPR_FORMAS, TAM_HEROE, WEAPON_ART_POOL, WEAPON_IMG, WEAPON_IMG_RAREZA, armaHiltTip, assetOK, leyendaArmaHiltTip, seleccionarImgEnemigo, spriteJugador } from "./sprites.js";
 import { CARGA_ARQ_MAX, CARGA_ARQ_ZONA, CARGA_CUCH_MAX, CARGA_CUCH_ZONA, groundTarget } from "../systems/abilities.js";
 import { masCercano, PARRY_FX_DUR } from "../systems/combat.js";
 import { mouse } from "../systems/input.js";
@@ -98,11 +98,19 @@ function calcularPoseHeroe(p, x, yPies, mov) {
         // ver CASCO_IDLE_MAGO_TIN). El resto de clases sigue leyendo el set
         // compartido de siempre, sin variantes de color.
         const esMago = p.rol === "mago";
+        // Pícaro (Ladrón) tiene el mismo tratamiento que mago: arte de
+        // armadura PROPIO recoloreado por rareza -- ver CASCO_IDLE_PICARO_TIN
+        // etc en sprites.js.
+        const esPicaro = p.rol === "picaro";
         let imgCasco, imgPeto, imgPiernas;
         if (esMago) {
           imgCasco = idleFrameIdx >= 0 ? capaPorRareza(CASCO_IDLE_MAGO_TIN[dirAim], p.equipo.casco?.rareza, idleFrameIdx) : null;
           imgPeto = idleFrameIdx >= 0 ? capaPorRareza(PETO_IDLE_MAGO_TIN[dirAim], p.equipo.peto?.rareza, idleFrameIdx) : null;
           imgPiernas = idleFrameIdx >= 0 ? capaPorRareza(PIERNAS_IDLE_MAGO_TIN[dirAim], p.equipo.piernas?.rareza, idleFrameIdx) : null;
+        } else if (esPicaro) {
+          imgCasco = idleFrameIdx >= 0 ? capaPorRareza(CASCO_IDLE_PICARO_TIN[dirAim], p.equipo.casco?.rareza, idleFrameIdx) : null;
+          imgPeto = idleFrameIdx >= 0 ? capaPorRareza(PETO_IDLE_PICARO_TIN[dirAim], p.equipo.peto?.rareza, idleFrameIdx) : null;
+          imgPiernas = idleFrameIdx >= 0 ? capaPorRareza(PIERNAS_IDLE_PICARO_TIN[dirAim], p.equipo.piernas?.rareza, idleFrameIdx) : null;
         } else {
           imgCasco = idleFrameIdx >= 0 ? (CASCO_IDLE[dirAim]?.[idleFrameIdx] || null) : null;
           imgPeto = idleFrameIdx >= 0 ? (PETO_IDLE[dirAim]?.[idleFrameIdx] || null) : null;
@@ -113,12 +121,13 @@ function calcularPoseHeroe(p, x, yPies, mov) {
         // sprites.js) cae a la hoja lateral antes que no mostrar nada.
         const atkPorClase = REAL_ATTACK[p.rol] || {};
         const atkFrames = atkPorClase[dirAim] || atkPorClase.side;
-        // Mago: set recoloreado por rareza (CASCO_ATTACK_TIN), igual que
-        // idle -- el resto de clases (guerrero/Frhor) sigue con el set
-        // fijo de siempre, sin variantes.
-        const cascoAtkPorClase = (esMago ? CASCO_ATTACK_TIN.mago : CASCO_ATTACK[p.rol]) || {};
-        const petoAtkPorClase = (esMago ? PETO_ATTACK_TIN.mago : PETO_ATTACK[p.rol]) || {};
-        const piernasAtkPorClase = (esMago ? PIERNAS_ATTACK_TIN.mago : PIERNAS_ATTACK[p.rol]) || {};
+        // Mago y pícaro: set recoloreado por rareza (CASCO_ATTACK_TIN),
+        // igual que idle -- el resto de clases (guerrero/Frhor) sigue con
+        // el set fijo de siempre, sin variantes.
+        const usaAtaqueTintado = esMago || esPicaro;
+        const cascoAtkPorClase = (usaAtaqueTintado ? CASCO_ATTACK_TIN[p.rol] : CASCO_ATTACK[p.rol]) || {};
+        const petoAtkPorClase = (usaAtaqueTintado ? PETO_ATTACK_TIN[p.rol] : PETO_ATTACK[p.rol]) || {};
+        const piernasAtkPorClase = (usaAtaqueTintado ? PIERNAS_ATTACK_TIN[p.rol] : PIERNAS_ATTACK[p.rol]) || {};
         // Encarado a usar para ESTE frame: por defecto el de la puntería
         // (idle/ataque -- miras hacia donde apuntas). Correr es la
         // excepción -- encara hacia donde te MUEVES, no hacia donde
@@ -230,8 +239,8 @@ function calcularPoseHeroe(p, x, yPies, mov) {
             const cascoFrames = cascoAtkPorClase[dirAim] || cascoAtkPorClase.side;
             const petoFrames = petoAtkPorClase[dirAim] || petoAtkPorClase.side;
             const piernasFrames = piernasAtkPorClase[dirAim] || piernasAtkPorClase.side;
-            if (esMago) {
-              // cascoAtkPorClase viene de CASCO_ATTACK_TIN.mago aquí --
+            if (usaAtaqueTintado) {
+              // cascoAtkPorClase viene de CASCO_ATTACK_TIN[p.rol] aquí --
               // [rareza][frameIdx], no un array plano -- ver capaPorRareza().
               imgCasco = capaPorRareza(cascoFrames, p.equipo.casco?.rareza, frameIdx);
               imgPeto = capaPorRareza(petoFrames, p.equipo.peto?.rareza, frameIdx);
@@ -284,6 +293,10 @@ function calcularPoseHeroe(p, x, yPies, mov) {
             imgCasco = capaPorRareza(CASCO_HURT_MAGO_TIN, p.equipo.casco?.rareza, frameIdx);
             imgPeto = capaPorRareza(PETO_HURT_MAGO_TIN, p.equipo.peto?.rareza, frameIdx);
             imgPiernas = capaPorRareza(PIERNAS_HURT_MAGO_TIN, p.equipo.piernas?.rareza, frameIdx);
+          } else if (esPicaro) {
+            imgCasco = capaPorRareza(CASCO_HURT_PICARO_TIN, p.equipo.casco?.rareza, frameIdx);
+            imgPeto = capaPorRareza(PETO_HURT_PICARO_TIN, p.equipo.peto?.rareza, frameIdx);
+            imgPiernas = capaPorRareza(PIERNAS_HURT_PICARO_TIN, p.equipo.piernas?.rareza, frameIdx);
           } else {
             imgCasco = CASCO_HURT[frameIdx] || null;
             imgPeto = PETO_HURT[frameIdx] || null;
@@ -302,6 +315,10 @@ function calcularPoseHeroe(p, x, yPies, mov) {
               imgCasco = capaPorRareza(CASCO_RUN_MAGO_TIN[dir], p.equipo.casco?.rareza, runFrameIdx);
               imgPeto = capaPorRareza(PETO_RUN_MAGO_TIN[dir], p.equipo.peto?.rareza, runFrameIdx);
               imgPiernas = capaPorRareza(PIERNAS_RUN_MAGO_TIN[dir], p.equipo.piernas?.rareza, runFrameIdx);
+            } else if (esPicaro) {
+              imgCasco = capaPorRareza(CASCO_RUN_PICARO_TIN[dir], p.equipo.casco?.rareza, runFrameIdx);
+              imgPeto = capaPorRareza(PETO_RUN_PICARO_TIN[dir], p.equipo.peto?.rareza, runFrameIdx);
+              imgPiernas = capaPorRareza(PIERNAS_RUN_PICARO_TIN[dir], p.equipo.piernas?.rareza, runFrameIdx);
             } else {
               imgCasco = CASCO_RUN[dir]?.[runFrameIdx] || null;
               imgPeto = PETO_RUN[dir]?.[runFrameIdx] || null;
@@ -755,10 +772,13 @@ export function renderJugador(p) {
             // Armadura durante el colapso (por ahora solo mago, ver
             // CASCO_MUERTE_MAGO_TIN en sprites.js, recoloreada por rareza) --
             // primera vez que "muerto" dibuja armadura para cualquier clase.
-            if (p.rol === "mago") {
-              const imgPiernasKo = capaPorRareza(PIERNAS_MUERTE_MAGO_TIN, eq.piernas?.rareza, frameIdxKo);
-              const imgPetoKo = capaPorRareza(PETO_MUERTE_MAGO_TIN, eq.peto?.rareza, frameIdxKo);
-              const imgCascoKo = capaPorRareza(CASCO_MUERTE_MAGO_TIN, eq.casco?.rareza, frameIdxKo);
+            if (p.rol === "mago" || p.rol === "picaro") {
+              const PIERNAS_KO_TIN = p.rol === "mago" ? PIERNAS_MUERTE_MAGO_TIN : PIERNAS_MUERTE_PICARO_TIN;
+              const PETO_KO_TIN = p.rol === "mago" ? PETO_MUERTE_MAGO_TIN : PETO_MUERTE_PICARO_TIN;
+              const CASCO_KO_TIN = p.rol === "mago" ? CASCO_MUERTE_MAGO_TIN : CASCO_MUERTE_PICARO_TIN;
+              const imgPiernasKo = capaPorRareza(PIERNAS_KO_TIN, eq.piernas?.rareza, frameIdxKo);
+              const imgPetoKo = capaPorRareza(PETO_KO_TIN, eq.peto?.rareza, frameIdxKo);
+              const imgCascoKo = capaPorRareza(CASCO_KO_TIN, eq.casco?.rareza, frameIdxKo);
               if (eq.piernas && imgPiernasKo) drawSpriteBottom(imgPiernasKo, p.x, p.y, false, esc);
               if (eq.peto && imgPetoKo) drawSpriteBottom(imgPetoKo, p.x, p.y, false, esc);
               if (eq.casco && imgCascoKo) drawSpriteBottom(imgCascoKo, p.x, p.y, false, esc);
@@ -1037,6 +1057,29 @@ export function renderJugador(p) {
             -dTam / 2, -dTam / 2, dTam, dTam,
           );
           cx.shadowBlur = 0;
+          cx.restore();
+        }
+
+        // Cuchillo cargado (pícaro, Mayús·R3, ver lanzarCuchillo() en
+        // systems/abilities.js): prop suelto de 4 frames (DAGA_CARGADA_SHEET,
+        // sprites.js) que crece con la carga -- el personaje se sigue
+        // viendo con su pose de ataque de siempre mientras tanto (el
+        // .aseprite de origen no traía cuerpo propio para esto).
+        if (p.rol === "picaro" && p.cargaCuchT > 0 && DAGA_CARGADA_SHEET.complete && DAGA_CARGADA_SHEET.naturalWidth) {
+          const progCarga = clamp(p.cargaCuchT / CARGA_CUCH_MAX, 0, 1);
+          const fIdxDaga = Math.min(DAGA_CARGADA_FRAMES - 1, Math.floor(progCarga * DAGA_CARGADA_FRAMES));
+          const lado = flip ? -1 : 1;
+          const dxDaga = p.x + lado * 12;
+          const dyDaga = p.y - 14;
+          const dTamDaga = 20;
+          cx.save();
+          cx.translate(dxDaga, dyDaga);
+          if (flip) cx.scale(-1, 1);
+          cx.drawImage(
+            DAGA_CARGADA_SHEET,
+            fIdxDaga * DAGA_CARGADA_FW, 0, DAGA_CARGADA_FW, DAGA_CARGADA_FH,
+            -dTamDaga / 2, -dTamDaga / 2, dTamDaga, dTamDaga,
+          );
           cx.restore();
         }
 

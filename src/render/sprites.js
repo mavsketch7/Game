@@ -315,6 +315,36 @@ function iconoArmaduraMago(item) {
   return iconoMagoCache[clave];
 }
 
+// Armadura de Pícaro (Ladrón) -- mismo criterio que iconoArmaduraMago()
+// de arriba, ver CASCO_IDLE_PICARO_TIN/PETO_IDLE_PICARO_TIN/
+// PIERNAS_IDLE_PICARO_TIN más abajo.
+const iconoPicaroCache = {};
+function iconoArmaduraPicaro(item) {
+  if (item.clase !== "picaro") return null;
+  const setTin =
+    item.slot === "casco" ? CASCO_IDLE_PICARO_TIN.down :
+    item.slot === "peto" ? PETO_IDLE_PICARO_TIN.down :
+    item.slot === "piernas" ? PIERNAS_IDLE_PICARO_TIN.down :
+    null;
+  if (!setTin) return null;
+  const rareza = Math.max(0, Math.min(item.rareza || 0, RAREZAS.length - 1));
+  const frame = setTin[rareza] && setTin[rareza][0];
+  if (!frame) return null;
+  const clave = item.slot + "|" + rareza;
+  if (!iconoPicaroCache[clave]) {
+    const b = bboxAlfa(frame.getContext("2d"), frame.width, frame.height) ||
+      { x: 0, y: 0, w: frame.width, h: frame.height };
+    const c = document.createElement("canvas");
+    c.width = b.w;
+    c.height = b.h;
+    const g = c.getContext("2d");
+    g.imageSmoothingEnabled = false;
+    g.drawImage(frame, b.x, b.y, b.w, b.h, 0, 0, b.w, b.h);
+    iconoPicaroCache[clave] = c;
+  }
+  return iconoPicaroCache[clave];
+}
+
 export function iconoDrop(item) {
         // Martillo de Frhor: icono real (azul zafiro, ver MARTILLO_FRHOR_IMG
         // más abajo) en vez del icono procedural genérico de "arma" -- si
@@ -331,6 +361,8 @@ export function iconoDrop(item) {
         if (imgFrhor) return imgFrhor;
         const imgMago = iconoArmaduraMago(item);
         if (imgMago) return imgMago;
+        const imgPicaro = iconoArmaduraPicaro(item);
+        if (imgPicaro) return imgPicaro;
         // Arma con arte real por variante (pack "iron-weapons", ver
         // WEAPON_ART_POOL más abajo y genItem() en systems/loot.js, que
         // asigna `arteIdx` de forma ESTABLE al generarse) -- se muestra tal
@@ -1645,6 +1677,9 @@ const ARMOR_BASE_ATTACK_GUERRERO = {
 // Ataque básico de mago: solo lateral (mismo hueco que REAL_ATTACK_SRC.mago
 // más abajo, sin arte arriba/abajo todavía).
 const ARMOR_BASE_ATTACK_MAGO = { side: "heroB_attack_mago_side" };
+// Puñalada (ataque básico de pícaro, sustituye al de un solo frame lateral
+// de antes) -- mismo hueco que REAL_ATTACK_SRC.picaro más abajo.
+const ARMOR_BASE_ATTACK_PICARO = { side: "heroB_attack_picaro_side" };
 const ARMOR_BASE_HURT = "heroB_hurt_down";
 
 export const CASCO_IDLE = { side: [], down: [], up: [] };
@@ -1653,9 +1688,9 @@ export const PIERNAS_IDLE = { side: [], down: [], up: [] };
 export const CASCO_RUN = { side: [], down: [], up: [] };
 export const PETO_RUN = { side: [], down: [], up: [] };
 export const PIERNAS_RUN = { side: [], down: [], up: [] };
-export const CASCO_ATTACK = { guerrero: {}, mago: {} };
-export const PETO_ATTACK = { guerrero: {}, mago: {} };
-export const PIERNAS_ATTACK = { guerrero: {}, mago: {} };
+export const CASCO_ATTACK = { guerrero: {}, mago: {}, picaro: {} };
+export const PETO_ATTACK = { guerrero: {}, mago: {}, picaro: {} };
+export const PIERNAS_ATTACK = { guerrero: {}, mago: {}, picaro: {} };
 export const CASCO_HURT = [];
 export const PETO_HURT = [];
 export const PIERNAS_HURT = [];
@@ -1735,6 +1770,38 @@ function cargarArmaduraTinIdleRunMago() {
   }
 }
 
+// Armadura T1 de Pícaro (Ladrón) -- mismo criterio exacto que la de mago
+// de arriba: cuerpo heroB de idle/correr de siempre, solo cambian las 3
+// capas de armadura que se superponen.
+const ARMOR_BASE_IDLE_PICARO = { side: "heroB_idle_side_picaro", down: "heroB_idle_down_picaro", up: "heroB_idle_up_picaro" };
+const ARMOR_BASE_RUN_PICARO = { side: "heroB_run_side_picaro", down: "heroB_run_down_picaro", up: "heroB_run_up_picaro" };
+export const CASCO_IDLE_PICARO_TIN = { side: null, down: null, up: null };
+export const PETO_IDLE_PICARO_TIN = { side: null, down: null, up: null };
+export const PIERNAS_IDLE_PICARO_TIN = { side: null, down: null, up: null };
+export const CASCO_RUN_PICARO_TIN = { side: null, down: null, up: null };
+export const PETO_RUN_PICARO_TIN = { side: null, down: null, up: null };
+export const PIERNAS_RUN_PICARO_TIN = { side: null, down: null, up: null };
+
+// Carga perezosa por clase (ver cargarSpritesDeClase() más abajo): estas
+// capas de armadura teñida solo hacen falta si hay un pícaro en la
+// partida -- REAL_IDLE/REAL_RUN (cuerpo compartido) no se tocan aquí.
+function cargarArmaduraTinIdleRunPicaro() {
+  for (const dirIdle in REAL_IDLE_SRC) {
+    cargarHojaConArmadura(REAL_IDLE_SRC[dirIdle], armorUrlsDe(ARMOR_BASE_IDLE_PICARO[dirIdle]), TAM_HEROE, true, (frames, anclas, capas) => {
+      CASCO_IDLE_PICARO_TIN[dirIdle] = tenirFramesPorRareza(capas.casco);
+      PETO_IDLE_PICARO_TIN[dirIdle] = tenirFramesPorRareza(capas.peto);
+      PIERNAS_IDLE_PICARO_TIN[dirIdle] = tenirFramesPorRareza(capas.piernas);
+    });
+  }
+  for (const dirRun in REAL_RUN_SRC) {
+    cargarHojaConArmadura(REAL_RUN_SRC[dirRun], armorUrlsDe(ARMOR_BASE_RUN_PICARO[dirRun]), TAM_HEROE, true, (frames, anclas, capas) => {
+      CASCO_RUN_PICARO_TIN[dirRun] = tenirFramesPorRareza(capas.casco);
+      PETO_RUN_PICARO_TIN[dirRun] = tenirFramesPorRareza(capas.peto);
+      PIERNAS_RUN_PICARO_TIN[dirRun] = tenirFramesPorRareza(capas.piernas);
+    });
+  }
+}
+
 // Herido (flinch al recibir daño, ver p.golpeT en systems/combat.js) y
 // muerte (colapso al llegar a 0 HP, ver p.ko) -- cuerpo compartido, igual
 // que idle/correr. El pack de origen SOLO trae la dirección "abajo" para
@@ -1803,6 +1870,38 @@ cargarHojaConArmadura(REAL_MUERTE_SRC, armorUrlsDe(ARMOR_BASE_MUERTE_MAGO), TAM_
   PIERNAS_MUERTE_MAGO_TIN.push(...tenirFramesPorRareza(capas.piernas));
 });
 
+// Herido/muerto de pícaro (Ladrón) -- mismo criterio que mago arriba.
+const ARMOR_BASE_HURT_PICARO = "heroB_hurt_down_picaro";
+const ARMOR_BASE_MUERTE_PICARO = "heroB_dead_down_picaro";
+export const CASCO_HURT_PICARO_TIN = [];
+export const PETO_HURT_PICARO_TIN = [];
+export const PIERNAS_HURT_PICARO_TIN = [];
+export const CASCO_MUERTE_PICARO_TIN = [];
+export const PETO_MUERTE_PICARO_TIN = [];
+export const PIERNAS_MUERTE_PICARO_TIN = [];
+
+// Carga perezosa por clase: solo hace falta si hay un pícaro en la
+// partida. A diferencia de la MUERTE de mago (forzosamente eager arriba
+// porque esa fue la llamada que originalmente pobló REAL_MUERTE), esta
+// de pícaro puede ser perezosa sin más: REAL_MUERTE ya está poblado por
+// la llamada de mago, así que aquí solo se leen las `capas`, nunca se
+// toca `frames`/REAL_MUERTE -- mismo criterio que ya usa HURT para
+// cualquier clase.
+function cargarArmaduraTinHurtPicaro() {
+  cargarHojaConArmadura(REAL_HURT_SRC, armorUrlsDe(ARMOR_BASE_HURT_PICARO), TAM_HEROE, true, (frames, anclas, capas) => {
+    CASCO_HURT_PICARO_TIN.push(...tenirFramesPorRareza(capas.casco));
+    PETO_HURT_PICARO_TIN.push(...tenirFramesPorRareza(capas.peto));
+    PIERNAS_HURT_PICARO_TIN.push(...tenirFramesPorRareza(capas.piernas));
+  });
+}
+function cargarArmaduraTinMuertePicaro() {
+  cargarHojaConArmadura(REAL_MUERTE_SRC, armorUrlsDe(ARMOR_BASE_MUERTE_PICARO), TAM_HEROE, true, (frames, anclas, capas) => {
+    CASCO_MUERTE_PICARO_TIN.push(...tenirFramesPorRareza(capas.casco));
+    PETO_MUERTE_PICARO_TIN.push(...tenirFramesPorRareza(capas.peto));
+    PIERNAS_MUERTE_PICARO_TIN.push(...tenirFramesPorRareza(capas.piernas));
+  });
+}
+
 // Duración del colapso hasta quedarse tumbado del todo -- después se
 // mantiene fijo en el último fotograma (ver p.koAnimT en core/loop.js y
 // el bloque `if (p.ko)` en render/character.js) mientras dura el K.O., no
@@ -1848,14 +1947,14 @@ export const REAL_ATTACK_ANCLA = { guerrero: {}, arquero: {}, picaro: {}, mago: 
 // Bases de armadura del ataque básico por clase -- cada nueva clase con
 // arte de armadura propio (mago ahora, antes solo guerrero) solo necesita
 // una entrada aquí, ver ARMOR_BASE_ATTACK_GUERRERO/ARMOR_BASE_ATTACK_MAGO.
-const ARMOR_BASE_ATTACK_POR_CLASE = { guerrero: ARMOR_BASE_ATTACK_GUERRERO, mago: ARMOR_BASE_ATTACK_MAGO };
+const ARMOR_BASE_ATTACK_POR_CLASE = { guerrero: ARMOR_BASE_ATTACK_GUERRERO, mago: ARMOR_BASE_ATTACK_MAGO, picaro: ARMOR_BASE_ATTACK_PICARO };
 
-// Variantes por rareza -- SOLO mago (el set Frhor del guerrero es un
+// Variantes por rareza -- mago y pícaro (el set Frhor del guerrero es un
 // objeto único siempre Épico, no tiene sentido re-teñirlo). Mismo
 // shape que CASCO_ATTACK: [dir][rareza][frameIdx].
-export const CASCO_ATTACK_TIN = { mago: {} };
-export const PETO_ATTACK_TIN = { mago: {} };
-export const PIERNAS_ATTACK_TIN = { mago: {} };
+export const CASCO_ATTACK_TIN = { mago: {}, picaro: {} };
+export const PETO_ATTACK_TIN = { mago: {}, picaro: {} };
+export const PIERNAS_ATTACK_TIN = { mago: {}, picaro: {} };
 
 // Carga perezosa por clase (ver cargarSpritesDeClase() más abajo): cada
 // clase pide solo su propia entrada de REAL_ATTACK_SRC.
@@ -1869,10 +1968,10 @@ function cargarAtaqueClase(rolAtk) {
         CASCO_ATTACK[rolAtk][dirAtk] = capas.casco;
         PETO_ATTACK[rolAtk][dirAtk] = capas.peto;
         PIERNAS_ATTACK[rolAtk][dirAtk] = capas.piernas;
-        if (rolAtk === "mago") {
-          CASCO_ATTACK_TIN.mago[dirAtk] = tenirFramesPorRareza(capas.casco);
-          PETO_ATTACK_TIN.mago[dirAtk] = tenirFramesPorRareza(capas.peto);
-          PIERNAS_ATTACK_TIN.mago[dirAtk] = tenirFramesPorRareza(capas.piernas);
+        if (rolAtk === "mago" || rolAtk === "picaro") {
+          CASCO_ATTACK_TIN[rolAtk][dirAtk] = tenirFramesPorRareza(capas.casco);
+          PETO_ATTACK_TIN[rolAtk][dirAtk] = tenirFramesPorRareza(capas.peto);
+          PIERNAS_ATTACK_TIN[rolAtk][dirAtk] = tenirFramesPorRareza(capas.piernas);
         }
       });
     } else {
@@ -2376,6 +2475,22 @@ function cargarArteHierroClase(rolIron) {
   });
 }
 
+// Prop de "cuchillo cargado" (Mayús·R3, ver lanzarCuchillo() en
+// systems/abilities.js) -- 4 frames de 48x48 (frame 0 vacío, sin carga
+// aún), se dibuja cerca de la mano mientras p.cargaCuchT > 0 (ver
+// render/character.js). El personaje sigue con su pose de ataque de
+// siempre mientras tanto -- este archivo no traía capa de cuerpo
+// propia, solo el cuchillo suelto (ver plan de esta sesión). Mismo
+// patrón simple que FIREBALL_SHEET: una sola imagen, recortada por
+// frame al dibujar.
+export const DAGA_CARGADA_SHEET = new Image();
+export const DAGA_CARGADA_FRAMES = 4;
+export const DAGA_CARGADA_FW = 48;
+export const DAGA_CARGADA_FH = 48;
+function cargarDagaCargadaPicaro() {
+  DAGA_CARGADA_SHEET.src = assetUrl("fx/daga_cargada/sheet");
+}
+
 // Carga perezosa de sprites por clase -- despachador central. El cuerpo
 // base (idle/correr/herido/muerte) y los iconos de clase (KENNEY_ICON_SRC,
 // de los que depende el propio fallback spriteJugador()) se cargan SIEMPRE
@@ -2415,8 +2530,12 @@ const CARGADORES_SPRITES_CLASE = {
   },
   picaro: () => {
     cargarAtaqueClase("picaro");
+    cargarArmaduraTinIdleRunPicaro();
+    cargarArmaduraTinHurtPicaro();
+    cargarArmaduraTinMuertePicaro();
     cargarArmaClase("picaro");
     cargarArteHierroClase("picaro");
+    cargarDagaCargadaPicaro();
   },
 };
 export function cargarSpritesDeClase(rol) {

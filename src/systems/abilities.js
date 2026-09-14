@@ -571,6 +571,32 @@ export function interactuar(p) {
           toast("🧪 Cofre de pruebas: Armadura de Mago, las 5 rarezas", "#c084f0");
           return;
         }
+        if (cofre.qaPicaro) {
+          // Tercer cofre de pruebas (?qa=1, brillo verde): mismo patrón
+          // exacto que cofre.qaMago de arriba, para la Armadura de Pícaro
+          // (Ladrón).
+          const PIEZAS_ARMADURA_PICARO = {
+            casco: { nombre: "Capucha de Ladrón", id: "casco_picaro" },
+            peto: { nombre: "Chaleco de Ladrón", id: "peto_picaro" },
+            piernas: { nombre: "Botas de Ladrón", id: "piernas_picaro" },
+          };
+          RAREZAS.forEach((r, rareza) => {
+            for (const slotArm of ["casco", "peto", "piernas"]) {
+              const pieza = genItem(G.planta || 1, rareza, slotArm);
+              const base = PIEZAS_ARMADURA_PICARO[slotArm];
+              pieza.nombre = rareza === 0 ? base.nombre : `${base.nombre} [${r.n}]`;
+              pieza.id = base.id + "_r" + rareza;
+              pieza.clase = "picaro";
+              const pv = posDropValida(
+                cofre.x + rnd(-40, 40),
+                cofre.y + rnd(-40, 40),
+              );
+              dropItem(pv.x, pv.y, pieza);
+            }
+          });
+          toast("🧪 Cofre de pruebas: Armadura de Pícaro, las 5 rarezas", "#4a9d4a");
+          return;
+        }
         const pv1 = posDropValida(cofre.x, cofre.y - 14);
         dropItem(pv1.x, pv1.y, genItem(G.planta || 1));
         const pv2 = posDropValida(cofre.x + 14, cofre.y);

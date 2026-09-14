@@ -314,6 +314,17 @@ export function iniciarLobby() {
             abriendoT: 0,
             qaMago: true,
           });
+          // Tercer cofre de pruebas (QA), brillo verde: mismo patrón que
+          // el de mago de arriba, para la Armadura de Pícaro (Ladrón) T1 --
+          // ver el bloque `cofre.qaPicaro` en interactuar() (abilities.js).
+          G.objetos.push({
+            tipo: "cofre",
+            x: W / 2 + 200,
+            y: H - 220,
+            abierto: false,
+            abriendoT: 0,
+            qaPicaro: true,
+          });
         }
         G.tiendaLock = false;
         G.skinLock = false;
