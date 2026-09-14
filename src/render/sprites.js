@@ -1167,8 +1167,25 @@ function cargarHojaFrames(url, destSize, onListo, sinAmpliar) {
 // las cercenaba por los lados ("el casco se ve recortado", reportado).
 // `armorUrls` = { casco, peto, piernas }, cualquiera puede ser null/
 // undefined si esa animación no tiene esa capa todavía -- se omite sin más.
-// onListo(bodyFrames, anclas, { casco, peto, piernas })
-function cargarHojaConArmadura(bodyUrl, armorUrls, destSize, sinAmpliar, onListo) {
+// onListo(bodyFrames, anclas, { casco, peto, piernas }, { bboxesUnion, escala })
+//
+// `unionExterna` (opcional) = { bboxesUnion, escala } ya calculados por OTRA
+// llamada a esta misma función (normalmente la del cuerpo "de siempre" de
+// esa pose, con la armadura POR DEFECTO) -- cuando se pasa, esta llamada
+// NO calcula su propia unión cuerpo+armadura, reutiliza la dada. Hace
+// falta porque idle/correr/herido/muerto cargan el cuerpo compartido y
+// las capas teñidas de una clase (mago/pícaro) en DOS llamadas
+// INDEPENDIENTES (cuerpo con armadura por defecto vs. cuerpo con armadura
+// de esa clase) -- si cada una calcula su propia unión (con siluetas de
+// armadura distintas), el recorte/posición sale ligeramente distinto
+// entre las dos, y el cuerpo (de la 1ª llamada) y la armadura teñida (de
+// la 2ª) dejan de coincidir píxel a píxel al superponerlos en el render
+// (reportado: "la posición de la armadura no corresponde", más notorio
+// cuanto más se aleja la silueta de esa armadura de la armadura por
+// defecto). Ataque/especial no tienen este problema -- ahí cuerpo y
+// armadura de esa clase siempre salen de una ÚNICA llamada, con la MISMA
+// unión ya por construcción.
+function cargarHojaConArmadura(bodyUrl, armorUrls, destSize, sinAmpliar, onListo, unionExterna) {
   const jsonUrl = bodyUrl.replace(/\.png(\?.*)?$/, ".json$1");
   const piezas = ["casco", "peto", "piernas"];
   const imgs = { body: null, casco: null, peto: null, piernas: null };
@@ -1190,38 +1207,49 @@ function cargarHojaConArmadura(bodyUrl, armorUrls, destSize, sinAmpliar, onListo
         const bodyImg = imgs.body;
         const frameSize = bodyImg.naturalHeight;
         const frameCount = Math.max(1, Math.round(bodyImg.naturalWidth / frameSize));
-        const tmp = document.createElement("canvas");
-        tmp.width = frameSize;
-        tmp.height = frameSize;
-        const tg = tmp.getContext("2d");
-        tg.imageSmoothingEnabled = false;
 
-        function bboxDeFrame(im, i) {
-          if (!im) return null;
-          tg.clearRect(0, 0, frameSize, frameSize);
-          tg.drawImage(im, i * frameSize, 0, frameSize, frameSize, 0, 0, frameSize, frameSize);
-          return bboxAlfa(tg, frameSize, frameSize);
-        }
+        let bboxesUnion, escala;
+        if (unionExterna) {
+          // Reutilizar la unión/escala ya calculadas por otra llamada (ver
+          // comentario de cargarHojaConArmadura) -- el recorte de ESTE
+          // cuerpo/armadura cae exactamente en el mismo sitio que el de la
+          // llamada original, así que ambas quedan pixel-alineadas al
+          // superponerlas.
+          ({ bboxesUnion, escala } = unionExterna);
+        } else {
+          const tmp = document.createElement("canvas");
+          tmp.width = frameSize;
+          tmp.height = frameSize;
+          const tg = tmp.getContext("2d");
+          tg.imageSmoothingEnabled = false;
 
-        const bboxesUnion = [];
-        for (let i = 0; i < frameCount; i++) {
-          const candidatos = [imgs.body, imgs.casco, imgs.peto, imgs.piernas]
-            .map((im) => bboxDeFrame(im, i))
-            .filter(Boolean);
-          if (!candidatos.length) {
-            bboxesUnion.push({ x: 0, y: 0, w: frameSize, h: frameSize });
-            continue;
+          const bboxDeFrame = (im, i) => {
+            if (!im) return null;
+            tg.clearRect(0, 0, frameSize, frameSize);
+            tg.drawImage(im, i * frameSize, 0, frameSize, frameSize, 0, 0, frameSize, frameSize);
+            return bboxAlfa(tg, frameSize, frameSize);
+          };
+
+          bboxesUnion = [];
+          for (let i = 0; i < frameCount; i++) {
+            const candidatos = [imgs.body, imgs.casco, imgs.peto, imgs.piernas]
+              .map((im) => bboxDeFrame(im, i))
+              .filter(Boolean);
+            if (!candidatos.length) {
+              bboxesUnion.push({ x: 0, y: 0, w: frameSize, h: frameSize });
+              continue;
+            }
+            const minX = Math.min(...candidatos.map((b) => b.x));
+            const minY = Math.min(...candidatos.map((b) => b.y));
+            const maxX = Math.max(...candidatos.map((b) => b.x + b.w));
+            const maxY = Math.max(...candidatos.map((b) => b.y + b.h));
+            bboxesUnion.push({ x: minX, y: minY, w: maxX - minX, h: maxY - minY });
           }
-          const minX = Math.min(...candidatos.map((b) => b.x));
-          const minY = Math.min(...candidatos.map((b) => b.y));
-          const maxX = Math.max(...candidatos.map((b) => b.x + b.w));
-          const maxY = Math.max(...candidatos.map((b) => b.y + b.h));
-          bboxesUnion.push({ x: minX, y: minY, w: maxX - minX, h: maxY - minY });
+          const altoMax = Math.max(...bboxesUnion.map((b) => b.h));
+          escala = sinAmpliar
+            ? Math.min(1, (destSize * 0.86) / altoMax)
+            : (destSize * 0.86) / altoMax;
         }
-        const altoMax = Math.max(...bboxesUnion.map((b) => b.h));
-        const escala = sinAmpliar
-          ? Math.min(1, (destSize * 0.86) / altoMax)
-          : (destSize * 0.86) / altoMax;
 
         function recortarSerie(im) {
           if (!im) return [];
@@ -1282,7 +1310,7 @@ function cargarHojaConArmadura(bodyUrl, armorUrls, destSize, sinAmpliar, onListo
           }
         }
 
-        onListo(bodyFrames, anclas, capas);
+        onListo(bodyFrames, anclas, capas, { bboxesUnion, escala });
       });
   }
 }
@@ -1704,22 +1732,33 @@ function armorUrlsDe(baseName) {
   };
 }
 
+// Unión cuerpo+armadura-por-defecto ya calculada por la carga de arriba,
+// una por dirección -- las capas teñidas de mago/pícaro (más abajo) la
+// reutilizan en vez de calcular la suya propia, para quedar
+// pixel-alineadas con este mismo cuerpo (ver el comentario grande en
+// cargarHojaConArmadura sobre por qué hace falta).
+const UNION_IDLE = { side: null, down: null, up: null };
+const UNION_RUN = { side: null, down: null, up: null };
+let UNION_HURT = null;
+
 for (const dirIdle in REAL_IDLE_SRC) {
-  cargarHojaConArmadura(REAL_IDLE_SRC[dirIdle], armorUrlsDe(ARMOR_BASE_IDLE[dirIdle]), TAM_HEROE, true, (frames, anclas, capas) => {
+  cargarHojaConArmadura(REAL_IDLE_SRC[dirIdle], armorUrlsDe(ARMOR_BASE_IDLE[dirIdle]), TAM_HEROE, true, (frames, anclas, capas, meta) => {
     REAL_IDLE[dirIdle] = frames;
     REAL_IDLE_ANCLA[dirIdle] = anclas;
     CASCO_IDLE[dirIdle] = capas.casco;
     PETO_IDLE[dirIdle] = capas.peto;
     PIERNAS_IDLE[dirIdle] = capas.piernas;
+    UNION_IDLE[dirIdle] = meta;
   });
 }
 for (const dirRun in REAL_RUN_SRC) {
-  cargarHojaConArmadura(REAL_RUN_SRC[dirRun], armorUrlsDe(ARMOR_BASE_RUN[dirRun]), TAM_HEROE, true, (frames, anclas, capas) => {
+  cargarHojaConArmadura(REAL_RUN_SRC[dirRun], armorUrlsDe(ARMOR_BASE_RUN[dirRun]), TAM_HEROE, true, (frames, anclas, capas, meta) => {
     REAL_RUN[dirRun] = frames;
     REAL_RUN_ANCLA[dirRun] = anclas;
     CASCO_RUN[dirRun] = capas.casco;
     PETO_RUN[dirRun] = capas.peto;
     PIERNAS_RUN[dirRun] = capas.piernas;
+    UNION_RUN[dirRun] = meta;
   });
 }
 
@@ -1759,14 +1798,14 @@ function cargarArmaduraTinIdleRunMago() {
       CASCO_IDLE_MAGO_TIN[dirIdle] = tenirFramesPorRareza(capas.casco);
       PETO_IDLE_MAGO_TIN[dirIdle] = tenirFramesPorRareza(capas.peto);
       PIERNAS_IDLE_MAGO_TIN[dirIdle] = tenirFramesPorRareza(capas.piernas);
-    });
+    }, UNION_IDLE[dirIdle]);
   }
   for (const dirRun in REAL_RUN_SRC) {
     cargarHojaConArmadura(REAL_RUN_SRC[dirRun], armorUrlsDe(ARMOR_BASE_RUN_MAGO[dirRun]), TAM_HEROE, true, (frames, anclas, capas) => {
       CASCO_RUN_MAGO_TIN[dirRun] = tenirFramesPorRareza(capas.casco);
       PETO_RUN_MAGO_TIN[dirRun] = tenirFramesPorRareza(capas.peto);
       PIERNAS_RUN_MAGO_TIN[dirRun] = tenirFramesPorRareza(capas.piernas);
-    });
+    }, UNION_RUN[dirRun]);
   }
 }
 
@@ -1791,14 +1830,14 @@ function cargarArmaduraTinIdleRunPicaro() {
       CASCO_IDLE_PICARO_TIN[dirIdle] = tenirFramesPorRareza(capas.casco);
       PETO_IDLE_PICARO_TIN[dirIdle] = tenirFramesPorRareza(capas.peto);
       PIERNAS_IDLE_PICARO_TIN[dirIdle] = tenirFramesPorRareza(capas.piernas);
-    });
+    }, UNION_IDLE[dirIdle]);
   }
   for (const dirRun in REAL_RUN_SRC) {
     cargarHojaConArmadura(REAL_RUN_SRC[dirRun], armorUrlsDe(ARMOR_BASE_RUN_PICARO[dirRun]), TAM_HEROE, true, (frames, anclas, capas) => {
       CASCO_RUN_PICARO_TIN[dirRun] = tenirFramesPorRareza(capas.casco);
       PETO_RUN_PICARO_TIN[dirRun] = tenirFramesPorRareza(capas.peto);
       PIERNAS_RUN_PICARO_TIN[dirRun] = tenirFramesPorRareza(capas.piernas);
-    });
+    }, UNION_RUN[dirRun]);
   }
 }
 
@@ -1817,11 +1856,12 @@ const REAL_MUERTE_SRC = assetUrl("characters/heroB_dead_down");
 export const REAL_HURT = [];
 export const REAL_MUERTE = [];
 
-cargarHojaConArmadura(REAL_HURT_SRC, armorUrlsDe(ARMOR_BASE_HURT), TAM_HEROE, true, (frames, anclas, capas) => {
+cargarHojaConArmadura(REAL_HURT_SRC, armorUrlsDe(ARMOR_BASE_HURT), TAM_HEROE, true, (frames, anclas, capas, meta) => {
   REAL_HURT.push(...frames);
   CASCO_HURT.push(...capas.casco);
   PETO_HURT.push(...capas.peto);
   PIERNAS_HURT.push(...capas.piernas);
+  UNION_HURT = meta;
 });
 
 // Herido/muerto de mago con arte propio (mismo criterio que idle/correr
@@ -1851,8 +1891,12 @@ function cargarArmaduraTinHurtMago() {
     CASCO_HURT_MAGO_TIN.push(...tenirFramesPorRareza(capas.casco));
     PETO_HURT_MAGO_TIN.push(...tenirFramesPorRareza(capas.peto));
     PIERNAS_HURT_MAGO_TIN.push(...tenirFramesPorRareza(capas.piernas));
-  });
+  }, UNION_HURT);
 }
+// Unión cuerpo+armadura-de-mago de MUERTE, capturada aquí para que la
+// llamada perezosa de pícaro (más abajo) la reutilice -- ver comentario
+// grande en cargarHojaConArmadura.
+let UNION_MUERTE = null;
 // A diferencia de HURT (donde REAL_HURT ya sale de cargarHojaConArmadura
 // de serie), REAL_MUERTE hasta ahora se cargaba con el loader simple (sin
 // armadura, ninguna clase la tenía) -- para que la capa de mago quede
@@ -1863,11 +1907,12 @@ function cargarArmaduraTinHurtMago() {
 // siempre -- su escala puede variar un pelín por la silueta del sombrero
 // de mago (mismo efecto ya aceptado en HURT con el yelmo de guerrero),
 // imperceptible en la práctica.
-cargarHojaConArmadura(REAL_MUERTE_SRC, armorUrlsDe(ARMOR_BASE_MUERTE_MAGO), TAM_HEROE, true, (frames, anclas, capas) => {
+cargarHojaConArmadura(REAL_MUERTE_SRC, armorUrlsDe(ARMOR_BASE_MUERTE_MAGO), TAM_HEROE, true, (frames, anclas, capas, meta) => {
   REAL_MUERTE.push(...frames);
   CASCO_MUERTE_MAGO_TIN.push(...tenirFramesPorRareza(capas.casco));
   PETO_MUERTE_MAGO_TIN.push(...tenirFramesPorRareza(capas.peto));
   PIERNAS_MUERTE_MAGO_TIN.push(...tenirFramesPorRareza(capas.piernas));
+  UNION_MUERTE = meta;
 });
 
 // Herido/muerto de pícaro (Ladrón) -- mismo criterio que mago arriba.
@@ -1892,14 +1937,14 @@ function cargarArmaduraTinHurtPicaro() {
     CASCO_HURT_PICARO_TIN.push(...tenirFramesPorRareza(capas.casco));
     PETO_HURT_PICARO_TIN.push(...tenirFramesPorRareza(capas.peto));
     PIERNAS_HURT_PICARO_TIN.push(...tenirFramesPorRareza(capas.piernas));
-  });
+  }, UNION_HURT);
 }
 function cargarArmaduraTinMuertePicaro() {
   cargarHojaConArmadura(REAL_MUERTE_SRC, armorUrlsDe(ARMOR_BASE_MUERTE_PICARO), TAM_HEROE, true, (frames, anclas, capas) => {
     CASCO_MUERTE_PICARO_TIN.push(...tenirFramesPorRareza(capas.casco));
     PETO_MUERTE_PICARO_TIN.push(...tenirFramesPorRareza(capas.peto));
     PIERNAS_MUERTE_PICARO_TIN.push(...tenirFramesPorRareza(capas.piernas));
-  });
+  }, UNION_MUERTE);
 }
 
 // Duración del colapso hasta quedarse tumbado del todo -- después se
