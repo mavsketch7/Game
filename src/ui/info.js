@@ -222,7 +222,7 @@ const INFO_CLASE = {
               ico: "⚔️",
               nombre: "Danza de Cuchillas (ulti)",
               tec: "E · Y",
-              desc: "Te lanzas 190 px en línea recta hacia el cursor atravesando a todos los enemigos del camino con ×1.6 de daño e invulnerabilidad durante el desplazamiento.",
+              desc: "Encadena un teletransporte+golpe (×1.6 de daño, invulnerable) a los 3 enemigos más cercanos. Sin nadie cerca, te lanzas 190 px en línea recta hacia el cursor atravesando a todos los enemigos del camino.",
             },
             {
               ico: "🃏",

@@ -786,6 +786,39 @@ export function lanzarCuchillo(p) {
         sfxDisparoArco(); // mismo golpe de soltar que el arquero, ver dispararFlechaCargada
       }
 
+// Avance de "Paso entre Sombras" (ver la rama p.rol==="picaro" de
+// lanzarUlti() más abajo, que rellena p._sombraObjetivos) -- un salto por
+// llamada, con p._sombraT como temporizador entre saltos (mismo criterio
+// que p.dashAtkT/p.rootT, ver core/loop.js: se llama una vez por jugador
+// por frame). No es movimiento continuo (es un teletransporte discreto
+// por objetivo), así que vive aparte del if/else de vx/vy del jugador en
+// vez de engancharse ahí.
+export function actualizarSombraPicaro(p, dt) {
+        if (!p._sombraObjetivos) return;
+        if (p.ko) {
+          p._sombraObjetivos = null;
+          return;
+        }
+        p._sombraT -= dt;
+        if (p._sombraT > 0) return;
+        const e = p._sombraObjetivos[p._sombraIdx];
+        if (e && e.hp > 0) {
+          p.trail.push({ x: p.x, y: p.y, t: 0.2 });
+          const ang = Math.atan2(e.y - p.y, e.x - p.x);
+          p.x = clamp(e.x - Math.cos(ang) * (e.r + 20), 28, W - 28);
+          p.y = clamp(e.y - Math.sin(ang) * (e.r + 20), 28, H - 28);
+          p.aim = ang;
+          p.swingT = 0.1; // reutiliza la pose real de puñalada, sin arte nuevo
+          const t = statsTot(p);
+          danoAEnemigo(e, t.atk * 1.6, p, true, Math.cos(ang) * 180, Math.sin(ang) * 180);
+          fxEstocada(p.x, p.y - ALTO_MANO_ESTOCADA, ang, ALCANCE_ESTOCADA_FX);
+          G.shake = Math.max(G.shake, 2);
+        }
+        p._sombraIdx++;
+        p._sombraObjetivos = p._sombraIdx < p._sombraObjetivos.length ? p._sombraObjetivos : null;
+        p._sombraT = 0.14; // ritmo entre golpes -- rápido pero perceptible
+      }
+
 // Vida total del área de una explosión (fuego, `explosivo`, ver más abajo)
 // -- EXPLOSION_BURST_DUR es cuánto tarda en jugar el sprite del estallido
 // (FIRE_EXPLOSION_SHEET, ver render/world.js, mismo valor que usa ahí para
@@ -1073,45 +1106,67 @@ export function habilidad(p) {
             }
             G.shake = Math.max(G.shake, 4);
           } else if (p.rol === "picaro") {
-            // Danza de Cuchillas: atraviesa 190px en línea, daña todo en el camino
-            const dist = 190;
-            const x0 = p.x,
-              y0 = p.y;
-            let x1 = clamp(p.x + Math.cos(p.aim) * dist, 28, W - 28);
-            let y1 = clamp(p.y + Math.sin(p.aim) * dist, 28, H - 28);
-            for (const e of G.enemigos) {
-              if (e.hp <= 0 && !e.dummy) continue;
-              // distancia del enemigo al segmento
-              const dx = x1 - x0,
-                dy = y1 - y0,
-                len2 = dx * dx + dy * dy || 1;
-              let u = ((e.x - x0) * dx + (e.y - y0) * dy) / len2;
-              u = clamp(u, 0, 1);
-              const px2 = x0 + u * dx,
-                py2 = y0 + u * dy;
-              if (Math.hypot(e.x - px2, e.y - py2) < 30 + e.r) {
-                danoAEnemigo(
-                  e,
-                  t.atk * 1.6,
-                  p,
-                  true,
-                  Math.cos(p.aim) * 180,
-                  Math.sin(p.aim) * 180,
-                );
+            // Paso entre Sombras: si hay enemigos cerca, encadena
+            // teletransporte+golpe a los 3 más cercanos (sin restricción de
+            // dirección, a diferencia de la línea recta de abajo) -- ver
+            // actualizarSombraPicaro(), que hace el avance real un paso por
+            // frame desde core/loop.js. Reutiliza p.swingT (pose real de
+            // puñalada, sin arte nuevo), fxEstocada, p.trail y danoAEnemigo,
+            // igual que el resto del kit del pícaro.
+            const RANGO_SOMBRA = 260;
+            const objetivos = G.enemigos
+              .filter((e) => e.hp > 0 && !e.dummy && Math.hypot(e.x - p.x, e.y - p.y) <= RANGO_SOMBRA)
+              .sort((a, b) => Math.hypot(a.x - p.x, a.y - p.y) - Math.hypot(b.x - p.x, b.y - p.y))
+              .slice(0, 3);
+            if (objetivos.length) {
+              p._sombraObjetivos = objetivos;
+              p._sombraIdx = 0;
+              p._sombraT = 0; // primer golpe ya, en el próximo tick de actualizarSombraPicaro
+              p.invulT = Math.max(p.invulT, 0.16 * objetivos.length + 0.3);
+              G.shake = Math.max(G.shake, 3);
+            } else {
+              // Sin nada cerca: Danza de Cuchillas de siempre (línea recta de
+              // 190px, daña todo en el camino) -- para que la ulti nunca
+              // "falle" del todo si no hay presas alrededor.
+              const dist = 190;
+              const x0 = p.x,
+                y0 = p.y;
+              let x1 = clamp(p.x + Math.cos(p.aim) * dist, 28, W - 28);
+              let y1 = clamp(p.y + Math.sin(p.aim) * dist, 28, H - 28);
+              for (const e of G.enemigos) {
+                if (e.hp <= 0 && !e.dummy) continue;
+                // distancia del enemigo al segmento
+                const dx = x1 - x0,
+                  dy = y1 - y0,
+                  len2 = dx * dx + dy * dy || 1;
+                let u = ((e.x - x0) * dx + (e.y - y0) * dy) / len2;
+                u = clamp(u, 0, 1);
+                const px2 = x0 + u * dx,
+                  py2 = y0 + u * dy;
+                if (Math.hypot(e.x - px2, e.y - py2) < 30 + e.r) {
+                  danoAEnemigo(
+                    e,
+                    t.atk * 1.6,
+                    p,
+                    true,
+                    Math.cos(p.aim) * 180,
+                    Math.sin(p.aim) * 180,
+                  );
+                }
               }
+              for (let k = 0; k < 5; k++)
+                fxTajo(
+                  x0 + ((x1 - x0) * k) / 4,
+                  y0 + ((y1 - y0) * k) / 4,
+                  p.aim,
+                  26,
+                );
+              p.x = x1;
+              p.y = y1;
+              p.invulT = 0.5;
+              p.trail.push({ x: x0, y: y0, t: 0.25 });
+              G.shake = Math.max(G.shake, 3);
             }
-            for (let k = 0; k < 5; k++)
-              fxTajo(
-                x0 + ((x1 - x0) * k) / 4,
-                y0 + ((y1 - y0) * k) / 4,
-                p.aim,
-                26,
-              );
-            p.x = x1;
-            p.y = y1;
-            p.invulT = 0.5;
-            p.trail.push({ x: x0, y: y0, t: 0.25 });
-            G.shake = Math.max(G.shake, 3);
           } else if (p.rol === "druida") {
             const g = groundTarget(p, 280);
             crearArea(g.x, g.y, 100, "zarzas", 1.6, p);

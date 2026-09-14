@@ -108,7 +108,7 @@ export const ROLES = {
           vel: 178,
           skill: {
             nombre: "Danza de Cuchillas",
-            desc: "Atraviesa a los enemigos en línea recta",
+            desc: "Encadena golpes a los enemigos más cercanos (o atraviesa en línea recta si no hay ninguno alrededor)",
             cd: 5,
             coste: 30,
           },
