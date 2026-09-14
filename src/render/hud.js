@@ -51,6 +51,34 @@ export function barra(x, y, w2, h2, pct, col, txt) {
         }
       }
 
+// Brillo ambiental (puntitos blancos parpadeando) sobre el tramo
+// relleno de una barra -- vida/maná/estamina, a petición expresa. Sin
+// estado propio: cada punto tiene una posición FIJA (hash de
+// seed+índice) cuya opacidad oscila con animGlobal, mismo criterio
+// que el resto de animación ambiental del juego (ver el vaivén del
+// fénix en render/character.js) -- no hace falta array de partículas
+// ni engancharse a ningún update(). Se llama explícitamente solo tras
+// la barra de vida y la de recurso en renderHUD(), NO se mete dentro
+// de barra()/barraHP() -- esas son genéricas y las usan también XP,
+// jefe, enemigos... que no llevan brillo.
+function brilloBarra(x, y, w2, h2, pct, seed) {
+        const anchoRelleno = w2 * clamp(pct, 0, 1);
+        if (anchoRelleno < 6) return;
+        const nPuntos = Math.max(2, Math.round(anchoRelleno / 14));
+        for (let i = 0; i < nPuntos; i++) {
+          const h = Math.sin((seed * 7 + i) * 12.9898) * 43758.5453;
+          const frac = h - Math.floor(h);
+          const px = x + 3 + frac * (anchoRelleno - 6);
+          const py = y + 2 + ((i % 3) / 2) * (h2 - 4);
+          const alpha = Math.max(0, Math.sin(animGlobal * 2.4 + frac * 6.283));
+          if (alpha < 0.05) continue;
+          cx.globalAlpha = alpha * 0.85;
+          cx.fillStyle = "#fff";
+          cx.fillRect(px, py, 1.5, 1.5);
+        }
+        cx.globalAlpha = 1;
+      }
+
 function barraHP(x, y, w2, h2, p, t) {
         if (p.ko) {
           barra(x, y, w2, h2, 0, "#555", "K.O.");
@@ -164,7 +192,9 @@ export function renderHUD() {
           const SOLAPE = 24;
           const barX = x + 44 - SOLAPE;
           barraHP(barX, y + 16, 180 + SOLAPE, 13, p, t);
+          brilloBarra(barX, y + 16, 180 + SOLAPE, 13, p.hp / t.hpMax, i * 2);
           barra(barX, y + 32, 180 + SOLAPE, 10, p.res / b.res, "#5a9ad1", "");
+          brilloBarra(barX, y + 32, 180 + SOLAPE, 10, p.res / b.res, i * 2 + 1);
           // Avatar: moneda de clase (avatar-moneda-class-*.png, ver
           // render/uiTiles.js) -- frame 0 (cobre) de momento, el resto de
           // la tira (bronce/plata/oro) ya está cargada a la espera de un
