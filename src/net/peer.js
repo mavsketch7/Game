@@ -114,6 +114,14 @@ export function crearSalaOnline() {
             conn.on("data", (d) => onDataHost(conn, d));
             conn.on("close", () => {
               NET.conns = NET.conns.filter((c) => c !== conn);
+              // Al reconectar, PeerJS asigna un id nuevo (ver comentario
+              // más abajo sobre GRACIA_RECONEXION_MS) -- estas entradas
+              // quedan huérfanas para siempre bajo el id viejo, tanto si
+              // el jugador vuelve como si no, así que se limpian aquí sin
+              // esperar a la ventana de gracia (esa solo afecta a si se
+              // libera el HUECO del slot, no a estos dos mapas).
+              delete NET.inputRemoto[conn.peer];
+              delete NET.prevRemoto[conn.peer];
               const s = M.slots.find(
                 (s) =>
                   s.ctrl &&

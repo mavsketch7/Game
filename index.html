@@ -5,6 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <title>La Torre de Véspero — Cooperativo</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <!-- Los .woff2 reales se sirven desde fonts.gstatic.com (no
+         fonts.googleapis.com, que solo da el CSS) -- sin este preconnect
+         el navegador paga una negociación DNS/TLS extra antes de poder
+         descargar cada fuente. -->
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
       href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;800&family=Alegreya+Sans:wght@400;500;700;800&display=swap"
       rel="stylesheet"

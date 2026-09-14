@@ -60,6 +60,15 @@ const CDS_LINEALES = [
 // tocar nada al cargar el juego.
 const MAX_FLECHAS_CLAVADAS = 24;
 
+// Tope de partículas de fx (G.fx: sangre, chispas, desintegración de
+// enemigo...) vivas a la vez -- sin esto, fxDesintegrarEnemigo() sola
+// puede añadir ~225 de golpe (una por píxel muestreado del sprite), así
+// que una matanza en área que mata a varios enemigos en el mismo frame
+// podría disparar miles sin límite. Se recorta por el FRENTE (las más
+// viejas, ya más desvanecidas) justo después de podar las caducadas por
+// TTL, mismo criterio que MAX_FLECHAS_CLAVADAS de arriba.
+const MAX_FX = 700;
+
 // Radio de colisión sólida de un barril (16x22 en pantalla, ver
 // render/world.js) -- antes era puramente decorativo (sin colisión
 // ninguna, ni contra jugadores ni contra enemigos), pedido expreso del
@@ -388,28 +397,27 @@ export function update(dt) {
               p.y = pl.y + Math.sin(a) * (pl.r + p.r);
             }
           }
-          // Barriles: eran puramente decorativos, sin colisión -- pedido
-          // expreso ("son objetos sólidos"). BARRIL_R a ojo del sprite real
-          // (16x22, ver render/world.js), un pelín menor que el semiancho
-          // para no sentirse "invisible y más grande de lo que se ve".
+          // Barriles y cofres: sólidos (pedido expreso: "son objetos
+          // sólidos" / "que no se puedan atravesar") -- un único recorrido
+          // de G.objetos con if/else en vez de dos pasadas idénticas.
+          // BARRIL_R a ojo del sprite real (16x22, ver render/world.js),
+          // un pelín menor que el semiancho para no sentirse "invisible y
+          // más grande de lo que se ve".
           for (const o of G.objetos) {
-            if (o.tipo !== "barril") continue;
-            const d = Math.hypot(p.x - o.x, p.y - o.y);
-            if (d < BARRIL_R + p.r) {
-              const a = Math.atan2(p.y - o.y, p.x - o.x) || rnd(0, TAU);
-              p.x = o.x + Math.cos(a) * (BARRIL_R + p.r);
-              p.y = o.y + Math.sin(a) * (BARRIL_R + p.r);
-            }
-          }
-          // Cofres: mismo empuje sólido que los barriles -- pedido expreso
-          // ("que no se puedan atravesar").
-          for (const o of G.objetos) {
-            if (o.tipo !== "cofre") continue;
-            const dCf = Math.hypot(p.x - o.x, p.y - o.y);
-            if (dCf < COFRE_R + p.r) {
-              const aCf = Math.atan2(p.y - o.y, p.x - o.x) || rnd(0, TAU);
-              p.x = o.x + Math.cos(aCf) * (COFRE_R + p.r);
-              p.y = o.y + Math.sin(aCf) * (COFRE_R + p.r);
+            if (o.tipo === "barril") {
+              const d = Math.hypot(p.x - o.x, p.y - o.y);
+              if (d < BARRIL_R + p.r) {
+                const a = Math.atan2(p.y - o.y, p.x - o.x) || rnd(0, TAU);
+                p.x = o.x + Math.cos(a) * (BARRIL_R + p.r);
+                p.y = o.y + Math.sin(a) * (BARRIL_R + p.r);
+              }
+            } else if (o.tipo === "cofre") {
+              const dCf = Math.hypot(p.x - o.x, p.y - o.y);
+              if (dCf < COFRE_R + p.r) {
+                const aCf = Math.atan2(p.y - o.y, p.x - o.x) || rnd(0, TAU);
+                p.x = o.x + Math.cos(aCf) * (COFRE_R + p.r);
+                p.y = o.y + Math.sin(aCf) * (COFRE_R + p.r);
+              }
             }
           }
           aplicarLimites(p);
@@ -1370,21 +1378,20 @@ export function update(dt) {
                 }
               }
               for (const o of G.objetos) {
-                if (o.tipo !== "barril") continue;
-                const dB = Math.hypot(e.x - o.x, e.y - o.y);
-                if (dB < BARRIL_R + e.r) {
-                  const aB = Math.atan2(e.y - o.y, e.x - o.x) || rnd(0, TAU);
-                  e.x = o.x + Math.cos(aB) * (BARRIL_R + e.r);
-                  e.y = o.y + Math.sin(aB) * (BARRIL_R + e.r);
-                }
-              }
-              for (const o of G.objetos) {
-                if (o.tipo !== "cofre") continue;
-                const dCfB = Math.hypot(e.x - o.x, e.y - o.y);
-                if (dCfB < COFRE_R + e.r) {
-                  const aCfB = Math.atan2(e.y - o.y, e.x - o.x) || rnd(0, TAU);
-                  e.x = o.x + Math.cos(aCfB) * (COFRE_R + e.r);
-                  e.y = o.y + Math.sin(aCfB) * (COFRE_R + e.r);
+                if (o.tipo === "barril") {
+                  const dB = Math.hypot(e.x - o.x, e.y - o.y);
+                  if (dB < BARRIL_R + e.r) {
+                    const aB = Math.atan2(e.y - o.y, e.x - o.x) || rnd(0, TAU);
+                    e.x = o.x + Math.cos(aB) * (BARRIL_R + e.r);
+                    e.y = o.y + Math.sin(aB) * (BARRIL_R + e.r);
+                  }
+                } else if (o.tipo === "cofre") {
+                  const dCfB = Math.hypot(e.x - o.x, e.y - o.y);
+                  if (dCfB < COFRE_R + e.r) {
+                    const aCfB = Math.atan2(e.y - o.y, e.x - o.x) || rnd(0, TAU);
+                    e.x = o.x + Math.cos(aCfB) * (COFRE_R + e.r);
+                    e.y = o.y + Math.sin(aCfB) * (COFRE_R + e.r);
+                  }
                 }
               }
               e.x = clamp(e.x, e.r, SALA_W - e.r);
@@ -1744,26 +1751,24 @@ export function update(dt) {
               }
             }
           }
-          // Barriles: mismo empuje sólido que contra el jugador (ver arriba
-          // en el bucle de jugadores) -- antes solo los pilares bloqueaban
-          // a los enemigos.
+          // Barriles y cofres: mismo empuje sólido que contra el jugador
+          // (ver arriba en el bucle de jugadores) -- un único recorrido de
+          // G.objetos con if/else en vez de dos pasadas idénticas.
           for (const o of G.objetos) {
-            if (o.tipo !== "barril") continue;
-            const dd = Math.hypot(e.x - o.x, e.y - o.y);
-            if (dd < BARRIL_R + e.r) {
-              const a2 = Math.atan2(e.y - o.y, e.x - o.x) || rnd(0, TAU);
-              e.x = o.x + Math.cos(a2) * (BARRIL_R + e.r);
-              e.y = o.y + Math.sin(a2) * (BARRIL_R + e.r);
-            }
-          }
-          // Cofres: mismo empuje sólido (ver arriba en el bucle de jugadores).
-          for (const o of G.objetos) {
-            if (o.tipo !== "cofre") continue;
-            const dCf2 = Math.hypot(e.x - o.x, e.y - o.y);
-            if (dCf2 < COFRE_R + e.r) {
-              const aCf2 = Math.atan2(e.y - o.y, e.x - o.x) || rnd(0, TAU);
-              e.x = o.x + Math.cos(aCf2) * (COFRE_R + e.r);
-              e.y = o.y + Math.sin(aCf2) * (COFRE_R + e.r);
+            if (o.tipo === "barril") {
+              const dd = Math.hypot(e.x - o.x, e.y - o.y);
+              if (dd < BARRIL_R + e.r) {
+                const a2 = Math.atan2(e.y - o.y, e.x - o.x) || rnd(0, TAU);
+                e.x = o.x + Math.cos(a2) * (BARRIL_R + e.r);
+                e.y = o.y + Math.sin(a2) * (BARRIL_R + e.r);
+              }
+            } else if (o.tipo === "cofre") {
+              const dCf2 = Math.hypot(e.x - o.x, e.y - o.y);
+              if (dCf2 < COFRE_R + e.r) {
+                const aCf2 = Math.atan2(e.y - o.y, e.x - o.x) || rnd(0, TAU);
+                e.x = o.x + Math.cos(aCf2) * (COFRE_R + e.r);
+                e.y = o.y + Math.sin(aCf2) * (COFRE_R + e.r);
+              }
             }
           }
           e.x = clamp(e.x, 24, SALA_W - 24);
@@ -2221,6 +2226,7 @@ export function update(dt) {
           G.fx[i].t -= dt;
           if (G.fx[i].t <= 0) G.fx.splice(i, 1);
         }
+        if (G.fx.length > MAX_FX) G.fx.splice(0, G.fx.length - MAX_FX);
         for (let i = G.flechasClavadas.length - 1; i >= 0; i--) {
           const fc = G.flechasClavadas[i];
           fc.t -= dt;

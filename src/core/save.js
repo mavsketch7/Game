@@ -27,12 +27,26 @@ const CLAVE_META = "vespero_meta_v1";
 
 // Progreso entre partidas (oro, mejoras, skins) persistido en el propio
 // navegador -- antes vivía solo en memoria y se perdía al recargar.
+// Coalescida con queueMicrotask: ganarXP() (systems/combat.js) puede
+// llamar a esto varias veces seguidas en el mismo frame (un jugador que
+// sube varios niveles de golpe, ×4 jugadores tras matar a un jefe), y
+// cada llamada sería un localStorage.setItem SÍNCRONO -- con el flag de
+// abajo, N llamadas en el mismo tick colapsan en una sola escritura
+// real, sin cambiar cuándo se guarda de forma perceptible (el
+// microtask corre antes de que el navegador pueda pintar o cerrar la
+// pestaña, no hay ventana real de pérdida de datos).
+let _guardarPendiente = false;
 export function guardarMeta() {
-        try {
-          localStorage.setItem(CLAVE_META, JSON.stringify(META));
-        } catch (e) {
-          /* localStorage lleno/deshabilitado: seguir sin persistir */
-        }
+        if (_guardarPendiente) return;
+        _guardarPendiente = true;
+        queueMicrotask(() => {
+          _guardarPendiente = false;
+          try {
+            localStorage.setItem(CLAVE_META, JSON.stringify(META));
+          } catch (e) {
+            /* localStorage lleno/deshabilitado: seguir sin persistir */
+          }
+        });
       }
 
 function cargarMeta() {
