@@ -343,6 +343,18 @@ body.pantalla-completa #hint {
     padding-top: calc(12px + env(safe-area-inset-top));
     padding-bottom: calc(12px + env(safe-area-inset-bottom));
   }
+  /* Miniatura de skin (tamaño fijo en px, no "rem"): al ser overlays ahora a
+     pantalla completa hay sitio de sobra, así que se agranda un poco --
+     image-rendering:pixelated (ya heredado) mantiene el look pixel-art
+     nítido al escalar por CSS. Las demás miniaturas de tamaño fijo
+     (minimapa, rejilla de fragmentos de alma, columnas del ranking) se
+     ajustan junto a su regla base más abajo en la hoja: colocarlas aquí
+     arriba no serviría de nada, porque una regla posterior con la misma
+     especificidad (.minimapa, .rank-fila...) ganaría la cascada igualmente. */
+  .skin-fila canvas {
+    width: 45px;
+    height: 54px;
+  }
 }
 #hero-titulo {
   text-align: center;
@@ -1113,6 +1125,16 @@ body.pantalla-completa #hint {
 .rank-fila:first-of-type {
   border-top: none;
 }
+/* Con la fuente base ya un 20% más grande en móvil (ver media query junto a
+   #menu), las columnas fijas necesitan algo más de aire para no apretar los
+   números contra el borde. Va DESPUÉS de la regla base a propósito: puesta
+   antes, la regla base (misma especificidad, más abajo en la cascada) la
+   ganaría igualmente. */
+@media (pointer: coarse) and (hover: none) {
+  .rank-fila {
+    grid-template-columns: 32px minmax(0, 1fr) 70px 70px 80px;
+  }
+}
 .rank-pos {
   color: var(--ceniza);
   font-weight: 800;
@@ -1190,6 +1212,15 @@ body.pantalla-completa #hint {
   border: 1px solid var(--vespero);
   color: #1a1206;
   font-weight: 800;
+}
+/* Rejilla no interactiva, meramente informativa: en móvil se agranda un
+   poco para que se distinga mejor -- va después de la regla base por la
+   misma razón que .rank-fila arriba (cascada, no especificidad). */
+@media (pointer: coarse) and (hover: none) {
+  .minimapa {
+    grid-template-columns: repeat(3, 46px);
+    grid-template-rows: repeat(3, 46px);
+  }
 }
 .ficha-cab {
   display: flex;
@@ -1530,6 +1561,12 @@ body.pantalla-completa #hint {
 .mini-frag-cel.on {
   background: #9a93ab;
   border-radius: 1px;
+}
+@media (pointer: coarse) and (hover: none) {
+  .mini-frag-cel {
+    width: 11px;
+    height: 11px;
+  }
 }
 
 /* ===== Skins ===== */
