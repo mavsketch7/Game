@@ -958,16 +958,20 @@ imMercader.src = assetUrl("merchant");
 // triángulo dibujado a mano de antes (apex en +x). "cargada" es la
 // variante roja para el disparo con carga (ver dispararFlechaCargada en
 // systems/abilities.js); la básica se queda con la gris de siempre.
-const imFlecha = new Image();
-imFlecha.onload = () => {
-  SPR.flecha = imFlecha;
-};
-imFlecha.src = assetUrl("fx/arrow_fly");
-const imFlechaCargada = new Image();
-imFlechaCargada.onload = () => {
-  SPR.flechaCargada = imFlechaCargada;
-};
-imFlechaCargada.src = assetUrl("fx/arrow_fly_crit");
+// Carga perezosa por clase (ver cargarSpritesDeClase() más abajo): estas
+// dos imágenes solo hacen falta si hay un arquero en la partida.
+function cargarFlechasArquero() {
+  const imFlecha = new Image();
+  imFlecha.onload = () => {
+    SPR.flecha = imFlecha;
+  };
+  imFlecha.src = assetUrl("fx/arrow_fly");
+  const imFlechaCargada = new Image();
+  imFlechaCargada.onload = () => {
+    SPR.flechaCargada = imFlechaCargada;
+  };
+  imFlechaCargada.src = assetUrl("fx/arrow_fly_crit");
+}
 
 const KENNEY_TILE_SRC = {
         wall: assetUrl("wall"),
@@ -1710,19 +1714,25 @@ export const CASCO_RUN_MAGO_TIN = { side: null, down: null, up: null };
 export const PETO_RUN_MAGO_TIN = { side: null, down: null, up: null };
 export const PIERNAS_RUN_MAGO_TIN = { side: null, down: null, up: null };
 
-for (const dirIdle in REAL_IDLE_SRC) {
-  cargarHojaConArmadura(REAL_IDLE_SRC[dirIdle], armorUrlsDe(ARMOR_BASE_IDLE_MAGO[dirIdle]), TAM_HEROE, true, (frames, anclas, capas) => {
-    CASCO_IDLE_MAGO_TIN[dirIdle] = tenirFramesPorRareza(capas.casco);
-    PETO_IDLE_MAGO_TIN[dirIdle] = tenirFramesPorRareza(capas.peto);
-    PIERNAS_IDLE_MAGO_TIN[dirIdle] = tenirFramesPorRareza(capas.piernas);
-  });
-}
-for (const dirRun in REAL_RUN_SRC) {
-  cargarHojaConArmadura(REAL_RUN_SRC[dirRun], armorUrlsDe(ARMOR_BASE_RUN_MAGO[dirRun]), TAM_HEROE, true, (frames, anclas, capas) => {
-    CASCO_RUN_MAGO_TIN[dirRun] = tenirFramesPorRareza(capas.casco);
-    PETO_RUN_MAGO_TIN[dirRun] = tenirFramesPorRareza(capas.peto);
-    PIERNAS_RUN_MAGO_TIN[dirRun] = tenirFramesPorRareza(capas.piernas);
-  });
+// Carga perezosa por clase (ver cargarSpritesDeClase() más abajo): estas
+// capas de armadura teñida solo hacen falta si hay un mago en la
+// partida -- REAL_IDLE/REAL_RUN (cuerpo compartido) no se tocan aquí,
+// se cargan siempre para las 4 clases más arriba.
+function cargarArmaduraTinIdleRunMago() {
+  for (const dirIdle in REAL_IDLE_SRC) {
+    cargarHojaConArmadura(REAL_IDLE_SRC[dirIdle], armorUrlsDe(ARMOR_BASE_IDLE_MAGO[dirIdle]), TAM_HEROE, true, (frames, anclas, capas) => {
+      CASCO_IDLE_MAGO_TIN[dirIdle] = tenirFramesPorRareza(capas.casco);
+      PETO_IDLE_MAGO_TIN[dirIdle] = tenirFramesPorRareza(capas.peto);
+      PIERNAS_IDLE_MAGO_TIN[dirIdle] = tenirFramesPorRareza(capas.piernas);
+    });
+  }
+  for (const dirRun in REAL_RUN_SRC) {
+    cargarHojaConArmadura(REAL_RUN_SRC[dirRun], armorUrlsDe(ARMOR_BASE_RUN_MAGO[dirRun]), TAM_HEROE, true, (frames, anclas, capas) => {
+      CASCO_RUN_MAGO_TIN[dirRun] = tenirFramesPorRareza(capas.casco);
+      PETO_RUN_MAGO_TIN[dirRun] = tenirFramesPorRareza(capas.peto);
+      PIERNAS_RUN_MAGO_TIN[dirRun] = tenirFramesPorRareza(capas.piernas);
+    });
+  }
 }
 
 // Herido (flinch al recibir daño, ver p.golpeT en systems/combat.js) y
@@ -1764,11 +1774,18 @@ export const CASCO_MUERTE_MAGO_TIN = [];
 export const PETO_MUERTE_MAGO_TIN = [];
 export const PIERNAS_MUERTE_MAGO_TIN = [];
 
-cargarHojaConArmadura(REAL_HURT_SRC, armorUrlsDe(ARMOR_BASE_HURT_MAGO), TAM_HEROE, true, (frames, anclas, capas) => {
-  CASCO_HURT_MAGO_TIN.push(...tenirFramesPorRareza(capas.casco));
-  PETO_HURT_MAGO_TIN.push(...tenirFramesPorRareza(capas.peto));
-  PIERNAS_HURT_MAGO_TIN.push(...tenirFramesPorRareza(capas.piernas));
-});
+// Carga perezosa por clase (ver cargarSpritesDeClase() más abajo): a
+// diferencia de MUERTE (ver el comentario de abajo, se deja SIEMPRE
+// eager a propósito por el cálculo de bbox compartido), esta llamada de
+// HURT sí está limpiamente separada de REAL_HURT (cuerpo compartido,
+// cargado más arriba) -- solo hace falta si hay un mago en la partida.
+function cargarArmaduraTinHurtMago() {
+  cargarHojaConArmadura(REAL_HURT_SRC, armorUrlsDe(ARMOR_BASE_HURT_MAGO), TAM_HEROE, true, (frames, anclas, capas) => {
+    CASCO_HURT_MAGO_TIN.push(...tenirFramesPorRareza(capas.casco));
+    PETO_HURT_MAGO_TIN.push(...tenirFramesPorRareza(capas.peto));
+    PIERNAS_HURT_MAGO_TIN.push(...tenirFramesPorRareza(capas.piernas));
+  });
+}
 // A diferencia de HURT (donde REAL_HURT ya sale de cargarHojaConArmadura
 // de serie), REAL_MUERTE hasta ahora se cargaba con el loader simple (sin
 // armadura, ninguna clase la tenía) -- para que la capa de mago quede
@@ -1840,7 +1857,9 @@ export const CASCO_ATTACK_TIN = { mago: {} };
 export const PETO_ATTACK_TIN = { mago: {} };
 export const PIERNAS_ATTACK_TIN = { mago: {} };
 
-for (const rolAtk in REAL_ATTACK_SRC) {
+// Carga perezosa por clase (ver cargarSpritesDeClase() más abajo): cada
+// clase pide solo su propia entrada de REAL_ATTACK_SRC.
+function cargarAtaqueClase(rolAtk) {
   for (const dirAtk in REAL_ATTACK_SRC[rolAtk]) {
     const baseArmaduraAtk = ARMOR_BASE_ATTACK_POR_CLASE[rolAtk]?.[dirAtk];
     if (baseArmaduraAtk) {
@@ -1913,7 +1932,8 @@ export const CASCO_SPECIAL_TIN = { mago: {} };
 export const PETO_SPECIAL_TIN = { mago: {} };
 export const PIERNAS_SPECIAL_TIN = { mago: {} };
 
-for (const rolEsp in REAL_SPECIAL_SRC) {
+// Carga perezosa por clase (ver cargarSpritesDeClase() más abajo).
+function cargarEspecialClase(rolEsp) {
   for (const dirEsp in REAL_SPECIAL_SRC[rolEsp]) {
     const baseArmaduraEsp = rolEsp === "mago" ? ARMOR_BASE_SPECIAL_MAGO[dirEsp] : null;
     if (baseArmaduraEsp) {
@@ -1932,11 +1952,12 @@ for (const rolEsp in REAL_SPECIAL_SRC) {
     }
   }
 }
-for (const rolDash in REAL_DASH_SRC) {
-  for (const dirDash in REAL_DASH_SRC[rolDash]) {
-    cargarHojaFramesConAncla(REAL_DASH_SRC[rolDash][dirDash], TAM_HEROE, (frames, anclas) => {
-      REAL_DASH[rolDash][dirDash] = frames;
-      REAL_DASH_ANCLA[rolDash][dirDash] = anclas;
+// Solo guerrero tiene Estocada (REAL_DASH_SRC solo trae esa clave).
+function cargarDashGuerrero() {
+  for (const dirDash in REAL_DASH_SRC.guerrero) {
+    cargarHojaFramesConAncla(REAL_DASH_SRC.guerrero[dirDash], TAM_HEROE, (frames, anclas) => {
+      REAL_DASH.guerrero[dirDash] = frames;
+      REAL_DASH_ANCLA.guerrero[dirDash] = anclas;
     }, true);
   }
 }
@@ -2047,12 +2068,6 @@ export const IMPACT_VFX_DUR = 4 / 15; // mismo ritmo que SANGRE_FPS (~15fps)
 // bbox/reposicionado). Se ancla por la BASE (no el centro, ver world.js)
 // para que la llama "crezca desde el suelo" en vez de desde su centro.
 export const FIRE_COLUMN = [];
-for (let iFuego = 1; iFuego <= 14; iFuego++) {
-  const imFuego = new Image();
-  const idxFuego = iFuego - 1;
-  imFuego.onload = () => { FIRE_COLUMN[idxFuego] = imFuego; };
-  imFuego.src = assetUrl(`fx/fire_column/frame_${iFuego}`);
-}
 
 // Estallido de hielo (equivalente a FIRE_COLUMN pero para el elemento
 // hielo): 4 frames sueltos (fuente irregular, sin rejilla fija -- se
@@ -2063,12 +2078,6 @@ for (let iFuego = 1; iFuego <= 14; iFuego++) {
 // con elemento hielo (rastro, escala pequeña como el fuego) -- ver
 // render/world.js.
 export const ICE_BURST = [];
-for (let iHielo = 1; iHielo <= 4; iHielo++) {
-  const imHielo = new Image();
-  const idxHielo = iHielo - 1;
-  imHielo.onload = () => { ICE_BURST[idxHielo] = imHielo; };
-  imHielo.src = assetUrl(`fx/ice_burst/frame_${iHielo}`);
-}
 
 // Bola de fuego real del ataque básico del mago (sustituye al círculo
 // procedural, ver pr.tipo === "bola" en render/world.js): hoja única de
@@ -2079,7 +2088,6 @@ for (let iHielo = 1; iHielo <= 4; iHielo++) {
 // nada (ya viene lista para usarse tal cual, a diferencia de los heroB
 // que necesitan bbox/escala).
 export const FIREBALL_SHEET = new Image();
-FIREBALL_SHEET.src = assetUrl("fx/fireball/sheet");
 export const FIREBALL_FRAMES = 15;
 export const FIREBALL_FW = 64;
 export const FIREBALL_FH = 16;
@@ -2091,11 +2099,32 @@ export const FIREBALL_FH = 16;
 // con sonido+animación de personaje en vez de este sprite); world.js
 // arranca la animación en el frame 6 (el flash real del estallido).
 export const FIRE_EXPLOSION_SHEET = new Image();
-FIRE_EXPLOSION_SHEET.src = assetUrl("fx/fire_explosion/sheet");
 export const FIRE_EXPLOSION_FRAMES = 18;
 export const FIRE_EXPLOSION_FW = 48;
 export const FIRE_EXPLOSION_FH = 48;
 export const FIRE_EXPLOSION_INICIO = 6;
+
+// Carga perezosa por clase (ver cargarSpritesDeClase() más abajo): las 4
+// constantes de arriba (FIRE_COLUMN/ICE_BURST/FIREBALL_SHEET/
+// FIRE_EXPLOSION_SHEET) quedan declaradas -- para que cualquier import
+// externo siga funcionando -- pero solo se piden por red si hay un mago
+// en la partida.
+function cargarFXFuegoHieloMago() {
+  for (let iFuego = 1; iFuego <= 14; iFuego++) {
+    const imFuego = new Image();
+    const idxFuego = iFuego - 1;
+    imFuego.onload = () => { FIRE_COLUMN[idxFuego] = imFuego; };
+    imFuego.src = assetUrl(`fx/fire_column/frame_${iFuego}`);
+  }
+  for (let iHielo = 1; iHielo <= 4; iHielo++) {
+    const imHielo = new Image();
+    const idxHielo = iHielo - 1;
+    imHielo.onload = () => { ICE_BURST[idxHielo] = imHielo; };
+    imHielo.src = assetUrl(`fx/ice_burst/frame_${iHielo}`);
+  }
+  FIREBALL_SHEET.src = assetUrl("fx/fireball/sheet");
+  FIRE_EXPLOSION_SHEET.src = assetUrl("fx/fire_explosion/sheet");
+}
 
 // Destello de parry exitoso (ver parryExitoso() en systems/combat.js y
 // p.parryFxT en render/character.js): hoja única de 9 frames de 48x48 --
@@ -2254,12 +2283,19 @@ export const WEAPON_IMG_RAREZA = {}; // WEAPON_IMG_RAREZA[rol] = [canvas por cad
 export const OFFHAND_IMG = {};
 export const OFFHAND_IMG_RAREZA = {};
 
-for (const rolArma in WEAPON_SRC) {
+// Carga perezosa por clase (ver cargarSpritesDeClase() más abajo) para
+// guerrero/mago/picaro. clerigo/druida no son seleccionables desde la UI
+// (ORDEN_ROLES solo tiene las 4 jugables) pero se cargan igual, siempre,
+// justo debajo -- clerigo en concreto hace falta para MARTILLO_FRHOR_IMG
+// (ver más abajo), que es un drop alcanzable por cualquier grupo.
+function cargarArmaClase(rolArma) {
   cargarConVariantesRareza(WEAPON_SRC[rolArma], (im, variantes) => {
     WEAPON_IMG[rolArma] = im;
     WEAPON_IMG_RAREZA[rolArma] = variantes;
   });
 }
+cargarArmaClase("clerigo");
+cargarArmaClase("druida");
 for (const rolOff in OFFHAND_SRC) {
   cargarConVariantesRareza(OFFHAND_SRC[rolOff], (im, variantes) => {
     OFFHAND_IMG[rolOff] = im;
@@ -2289,13 +2325,17 @@ export let MARTILLO_FRHOR_IMG = null;
 // 3 frames se recolorea igual que el resto de armas por tier de rareza.
 export const ARQUERO_BOW = RAREZAS.map(() => []);
 
-cargarHojaFrames(assetUrl("weapons/wood-weapons/bow-tension"), 32, (frames) => {
-  frames.forEach((frame, i) => {
-    RAREZAS.forEach((r, tier) => {
-      ARQUERO_BOW[tier][i] = tier === 0 ? frame : teñirSprite(frame, r.col);
+// Carga perezosa por clase (ver cargarSpritesDeClase() más abajo): solo
+// hace falta si hay un arquero en la partida.
+function cargarArcoArquero() {
+  cargarHojaFrames(assetUrl("weapons/wood-weapons/bow-tension"), 32, (frames) => {
+    frames.forEach((frame, i) => {
+      RAREZAS.forEach((r, tier) => {
+        ARQUERO_BOW[tier][i] = tier === 0 ? frame : teñirSprite(frame, r.col);
+      });
     });
   });
-});
+}
 
 export const ARQUERO_BOW_DUR = 0.35; // duración del gesto de tensar el arco al atacar
 
@@ -2316,7 +2356,10 @@ const IRON_WEAPON_NUMS = {
 };
 const IRON_WEAPON_PREFIX = { guerrero: "sword", arquero: "arco", picaro: "daga" };
 export const WEAPON_ART_POOL = { guerrero: [], arquero: [], picaro: [] };
-for (const rolIron in IRON_WEAPON_NUMS) {
+// Carga perezosa por clase (ver cargarSpritesDeClase() más abajo): el
+// bloque más pesado de los tres (27 archivos repartidos entre las 3
+// clases), solo se pide el pool de la clase que realmente se juega.
+function cargarArteHierroClase(rolIron) {
   IRON_WEAPON_NUMS[rolIron].forEach((n, idx) => {
     const im = new Image();
     im.onload = () => {
@@ -2331,6 +2374,55 @@ for (const rolIron in IRON_WEAPON_NUMS) {
     im.onerror = () => console.warn("No se pudo cargar arte de arma: " + im.src);
     im.src = `${import.meta.env.BASE_URL}assets/sprites/weapons/iron-weapons/${IRON_WEAPON_PREFIX[rolIron]} (${n}).png`;
   });
+}
+
+// Carga perezosa de sprites por clase -- despachador central. El cuerpo
+// base (idle/correr/herido/muerte) y los iconos de clase (KENNEY_ICON_SRC,
+// de los que depende el propio fallback spriteJugador()) se cargan SIEMPRE
+// para las 4 clases más arriba en este archivo, sin pasar por aquí; lo que
+// disparan estas 4 funciones es SOLO lo específico de cada clase (ataque/
+// especial/dash, armadura teñida de mago, arma equipable, FX elementales).
+//
+// Se llama desde render/character.js: renderJugador(p), una vez por
+// jugador VISIBLE en cada frame -- cubre host, invitado y cualquier
+// compañero local sin tener que enumerar la composición del grupo en
+// ningún otro sitio (ver el plan de esta sesión para el porqué de este
+// punto de enganche en concreto, en vez de la pantalla de selección).
+// El Set hace que llamar dos veces sea gratis: cada función de carga solo
+// se ejecuta la primera vez que se pide esa clase.
+const clasesSpritesCargadas = new Set();
+const CARGADORES_SPRITES_CLASE = {
+  guerrero: () => {
+    cargarAtaqueClase("guerrero");
+    cargarEspecialClase("guerrero");
+    cargarDashGuerrero();
+    cargarArmaClase("guerrero");
+    cargarArteHierroClase("guerrero");
+  },
+  arquero: () => {
+    cargarAtaqueClase("arquero");
+    cargarFlechasArquero();
+    cargarArcoArquero();
+    cargarArteHierroClase("arquero");
+  },
+  mago: () => {
+    cargarAtaqueClase("mago");
+    cargarEspecialClase("mago");
+    cargarArmaduraTinIdleRunMago();
+    cargarArmaduraTinHurtMago();
+    cargarArmaClase("mago");
+    cargarFXFuegoHieloMago();
+  },
+  picaro: () => {
+    cargarAtaqueClase("picaro");
+    cargarArmaClase("picaro");
+    cargarArteHierroClase("picaro");
+  },
+};
+export function cargarSpritesDeClase(rol) {
+  if (clasesSpritesCargadas.has(rol)) return;
+  clasesSpritesCargadas.add(rol);
+  CARGADORES_SPRITES_CLASE[rol]?.();
 }
 
 // Punto de mango y de punta (píxeles del PNG de 32x32 origen, medidos a
