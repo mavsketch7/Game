@@ -127,7 +127,11 @@ function barraHP(x, y, w2, h2, p, t, arte) {
           return null;
         }
         const pct = p.hp / t.hpMax;
-        const col = pct < 0.3 ? "#c8434b" : pct < 0.6 ? "#d1913a" : "#4f9d5c";
+        // Rojo fijo (mismo tono que el hp-fill del arte, ver uiTiles.js)
+        // en vez del tricolor verde/naranja/rojo de antes -- a petición
+        // expresa, "la vida en rojo, como en los assets". El aviso de
+        // vida baja lo sigue dando el aro rojo pulsante de más abajo.
+        const col = "#ac3232";
         const txt =
           "HP " +
           Math.ceil(p.hp) +
