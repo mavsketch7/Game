@@ -7,12 +7,50 @@ import { K } from "./sprites.js";
 import { NIVEL_ULTI } from "../systems/abilities.js";
 import { statsTot, vivos } from "../systems/combat.js";
 import { ESTILO } from "../systems/juice.js";
-import { AVATAR_MONEDA_FRAME_W, AVATAR_MONEDA_IMG, BOSS_BAR, BOSS_BAR_INTERIOR } from "./uiTiles.js";
+import { AVATAR_MONEDA_FRAME_W, AVATAR_MONEDA_IMG, BOSS_BAR, BOSS_BAR_INTERIOR, HP_BAR_FRAME, HP_BAR_FRAME_INTERIOR, RES_BAR_FRAME, RES_BAR_FRAME_INTERIOR } from "./uiTiles.js";
 import { banner } from "../ui/notifications.js";
 import { clamp, lighten } from "../utils/helpers.js";
 
-export function barra(x, y, w2, h2, pct, col, txt) {
+// `arte` opcional: { img, interior } -- marco de imagen real (mismo
+// mecanismo que BOSS_BAR/BOSS_BAR_INTERIOR en render/uiTiles.js) en vez
+// del marco programático de siempre. Cuando `img` ya cargó, el relleno
+// se dibuja en el hueco INTERIOR medido a mano sobre el PNG y el marco
+// se pinta encima (su interior es transparente); `h2` se ignora en ese
+// caso, la altura real sale de la proporción nativa de la imagen para
+// no deformarla. Devuelve el rect { x, y, w, h } donde quedó el relleno
+// -- con o sin arte -- para que el llamador pueda colocar encima cosas
+// como el brillo ambiental (brilloBarra) sin repetir esta cuenta.
+export function barra(x, y, w2, h2, pct, col, txt, arte) {
         pct = clamp(pct, 0, 1);
+        if (arte && arte.img.complete && arte.img.naturalWidth) {
+          const esc = w2 / arte.img.naturalWidth;
+          const ix = x + arte.interior.x * esc,
+            iy = y + arte.interior.y * esc,
+            iw = arte.interior.w * esc,
+            ih = arte.interior.h * esc;
+          cx.fillStyle = "#0d0b15";
+          cx.fillRect(ix, iy, iw, ih);
+          if (pct > 0) {
+            const g = cx.createLinearGradient(ix, iy, ix, iy + ih);
+            g.addColorStop(0, lighten(col, 32));
+            g.addColorStop(0.55, col);
+            g.addColorStop(1, lighten(col, -22));
+            cx.fillStyle = g;
+            cx.fillRect(ix, iy, iw * pct, ih);
+            cx.fillStyle = "rgba(255,255,255,.22)";
+            cx.fillRect(ix, iy, iw * pct, Math.max(1, ih * 0.4));
+          }
+          cx.drawImage(arte.img, x, y, w2, arte.img.naturalHeight * esc);
+          if (txt) {
+            cx.font = "700 9px Alegreya Sans";
+            cx.textAlign = "center";
+            cx.fillStyle = "rgba(0,0,0,.6)";
+            cx.fillText(txt, ix + iw / 2, iy + ih - 0.5);
+            cx.fillStyle = "#e9e3d5";
+            cx.fillText(txt, ix + iw / 2, iy + ih - 1.5);
+          }
+          return { x: ix, y: iy, w: iw, h: ih };
+        }
         // fondo hundido con leve viñeta
         cx.fillStyle = "#0d0b15";
         cx.fillRect(x, y, w2, h2);
@@ -49,6 +87,7 @@ export function barra(x, y, w2, h2, pct, col, txt) {
           cx.fillStyle = "#e9e3d5";
           cx.fillText(txt, x + w2 / 2, y + h2 - 2.5);
         }
+        return { x, y, w: w2, h: h2 };
       }
 
 // Brillo ambiental (puntitos blancos parpadeando) sobre el tramo
@@ -79,10 +118,13 @@ function brilloBarra(x, y, w2, h2, pct, seed) {
         cx.globalAlpha = 1;
       }
 
-function barraHP(x, y, w2, h2, p, t) {
+// Devuelve el rect { x, y, w, h } de barra() (null si K.O., no hay
+// nada que solapar encima) para que el llamador coloque el brillo
+// ambiental (brilloBarra) sobre el mismo hueco exacto, con o sin arte.
+function barraHP(x, y, w2, h2, p, t, arte) {
         if (p.ko) {
           barra(x, y, w2, h2, 0, "#555", "K.O.");
-          return;
+          return null;
         }
         const pct = p.hp / t.hpMax;
         const col = pct < 0.3 ? "#c8434b" : pct < 0.6 ? "#d1913a" : "#4f9d5c";
@@ -92,17 +134,17 @@ function barraHP(x, y, w2, h2, p, t) {
           "/" +
           t.hpMax +
           (p.escudo > 0 ? " 🛡" + Math.ceil(p.escudo) : "");
-        barra(x, y, w2, h2, pct, col, txt);
+        const r = barra(x, y, w2, h2, pct, col, txt, arte);
         if (p.escudo > 0) {
           const escPct = clamp(p.escudo / t.hpMax, 0, 1);
           cx.strokeStyle = "#8fb8e8";
           cx.lineWidth = 1.4;
           cx.globalAlpha = 0.9;
           cx.strokeRect(
-            x + 0.5,
-            y + 0.5,
-            w2 * clamp(pct + escPct, 0, 1) - 1,
-            h2 - 1,
+            r.x + 0.5,
+            r.y + 0.5,
+            r.w * clamp(pct + escPct, 0, 1) - 1,
+            r.h - 1,
           );
           cx.globalAlpha = 1;
         }
@@ -110,9 +152,10 @@ function barraHP(x, y, w2, h2, p, t) {
           cx.strokeStyle = "#ff5c5c";
           cx.globalAlpha = 0.35 + Math.sin(animGlobal * 10) * 0.3;
           cx.lineWidth = 2;
-          cx.strokeRect(x - 1, y - 1, w2 + 2, h2 + 2);
+          cx.strokeRect(r.x - 1, r.y - 1, r.w + 2, r.h + 2);
           cx.globalAlpha = 1;
         }
+        return r;
       }
 
 function iconoCd(x, y, tam, etiqueta, cd, total, col) {
@@ -191,10 +234,15 @@ export function renderHUD() {
           // con la moneda, así que siguen ancladas en x+44 como siempre.
           const SOLAPE = 24;
           const barX = x + 44 - SOLAPE;
-          barraHP(barX, y + 16, 180 + SOLAPE, 13, p, t);
-          brilloBarra(barX, y + 16, 180 + SOLAPE, 13, p.hp / t.hpMax, i * 2);
-          barra(barX, y + 32, 180 + SOLAPE, 10, p.res / b.res, "#5a9ad1", "");
-          brilloBarra(barX, y + 32, 180 + SOLAPE, 10, p.res / b.res, i * 2 + 1);
+          const rHP = barraHP(barX, y + 16, 180 + SOLAPE, 13, p, t, { img: HP_BAR_FRAME, interior: HP_BAR_FRAME_INTERIOR });
+          if (rHP) brilloBarra(rHP.x, rHP.y, rHP.w, rHP.h, p.hp / t.hpMax, i * 2);
+          // Color de relleno del recurso según el tipo (maná = azul,
+          // estamina/aguante/naturaleza = verde) -- mismos tonos que trae
+          // el arte (avatar-hp-stamina-mana-bar-assets-ui-ux.aseprite),
+          // el marco es el mismo para los dos, solo cambia el relleno.
+          const colRes = b.resNombre === "Maná" ? "#5b6ee1" : "#37946e";
+          const rRes = barra(barX, y + 32, 180 + SOLAPE, 10, p.res / b.res, colRes, "", { img: RES_BAR_FRAME, interior: RES_BAR_FRAME_INTERIOR });
+          brilloBarra(rRes.x, rRes.y, rRes.w, rRes.h, p.res / b.res, i * 2 + 1);
           // Avatar: moneda de clase (avatar-moneda-class-*.png, ver
           // render/uiTiles.js) -- frame 0 (cobre) de momento, el resto de
           // la tira (bronce/plata/oro) ya está cargada a la espera de un

@@ -34,3 +34,21 @@ for (const rol in AVATAR_MONEDA_SRC) {
   im.src = `${import.meta.env.BASE_URL}assets/ui/ui-ingame/${AVATAR_MONEDA_SRC[rol]}`;
   AVATAR_MONEDA_IMG[rol] = im;
 }
+
+// Marcos de la barra de vida y de recurso (maná/estamina) del HUD del
+// jugador (ver render/hud.js: barra()/barraHP()) -- recortados del
+// documento de diseño que trajo el usuario
+// (avatar-hp-stamina-mana-bar-assets-ui-ux.aseprite), mismo mecanismo
+// que BOSS_BAR de arriba: interior transparente medido a mano sobre el
+// PNG, el relleno de color va ahí y el marco se dibuja encima. El marco
+// de recurso es COMPARTIDO por maná y estamina -- solo cambia el color
+// de relleno según la clase (ver render/hud.js).
+export const HP_BAR_FRAME = new Image();
+HP_BAR_FRAME.src = `${import.meta.env.BASE_URL}assets/ui/ui-ingame/hp-bar-frame.png`;
+// Rect interior en el espacio nativo de la imagen (163x10).
+export const HP_BAR_FRAME_INTERIOR = { x: 2, y: 3, w: 156, h: 4 };
+
+export const RES_BAR_FRAME = new Image();
+RES_BAR_FRAME.src = `${import.meta.env.BASE_URL}assets/ui/ui-ingame/resource-bar-frame.png`;
+// Rect interior en el espacio nativo de la imagen (143x9).
+export const RES_BAR_FRAME_INTERIOR = { x: 4, y: 3, w: 136, h: 3 };
