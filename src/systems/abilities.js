@@ -4,7 +4,7 @@ import { TAU } from "../core/canvas.js";
 // DENTRO de la sala (mundo) -- ver el mismo truco en systems/floorgen.js.
 import { ELEMENTOS, ELEM_MAGO, FORMAS_DRUIDA, FORMAS_INFO, PILAR_ROTO_DUR, RAREZAS, ROLES, SALA_H as H, SALA_W as W, SENDA_ELEMENTAL, SUPS } from "../core/constants.js";
 import { G } from "../core/state.js";
-import { fxEstocada, fxImpacto, fxOnda, fxParticulas, fxTajo, fxTexto } from "../render/effects.js";
+import { fxEstocada, fxImpacto, fxOnda, fxParticulas, fxTajo, fxTexto, fxViento } from "../render/effects.js";
 import { detenerSendaFuegoAudio, iniciarSendaFuegoAudio, sfx, sfxDisparoArco, sfxFuegoBolaLanzamiento, sfxFuegoUltiCast, sfxFuegoUltiExplosion, sfxGolpeAire, sfxGolpeCritico, sfxImpactoFrhor, sfxImpactoGuerrero, sfxImpactoPicaro, sfxMoneda, sfxRompeBarril, sfxRompeHielo, sfxSwingFrhor } from "./audio.js";
 import { curarP, danoAEnemigo, danoAlJugador, masCercano, matarEnemigo, statsTot, vivos } from "./combat.js";
 import { posDropValida } from "./floorgen.js";
@@ -316,8 +316,10 @@ function golpeArco(p, dir, rango, arco, dmgBase, esPicaro) {
           else if (huboCrit) sfxGolpeCritico();
           else sfxImpactoGuerrero();
         } else if (esPicaro) {
-          if (hits === 0) sfx("golpe");
-          else if (huboCrit) sfxGolpeCritico();
+          if (hits === 0) {
+            sfx("golpe");
+            fxViento(p.x, p.y - ALTO_MANO_ESTOCADA, dir, rango);
+          } else if (huboCrit) sfxGolpeCritico();
           else sfxImpactoPicaro();
         }
         return hits;

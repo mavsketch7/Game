@@ -1811,6 +1811,39 @@ export function render() {
             cx.lineTo(f.r, 0);
             cx.stroke();
             cx.restore();
+          } else if (f.tipo === "viento") {
+            // Corte de viento (pícaro al fallar, ver fxViento en
+            // render/effects.js): misma silueta de hoja que "estocada"
+            // pero pálida/fría (sin el tinte rojizo del impacto) y con
+            // una segunda estela fina detrás, para que se lea como una
+            // ráfaga de aire cortado en vez de una puñalada.
+            const grosorV = 2.4 + f.r * 0.015;
+            cx.save();
+            cx.translate(f.x, f.y);
+            cx.rotate(f.dir);
+            cx.filter = "blur(1.6px)";
+            cx.globalAlpha = k * 0.85;
+            for (const off of [0, -5]) {
+              cx.beginPath();
+              cx.moveTo(f.r * 0.1, off);
+              cx.quadraticCurveTo(f.r * 0.55, off - grosorV, f.r, off);
+              cx.quadraticCurveTo(f.r * 0.55, off + grosorV, f.r * 0.1, off);
+              cx.closePath();
+              const gradV = cx.createLinearGradient(f.r * 0.1, 0, f.r, 0);
+              gradV.addColorStop(0, "rgba(214,238,255,0)");
+              gradV.addColorStop(0.55, "rgba(214,238,255,.65)");
+              gradV.addColorStop(1, "rgba(255,255,255,.9)");
+              cx.fillStyle = gradV;
+              cx.fill();
+            }
+            cx.globalAlpha = k;
+            cx.strokeStyle = "#eaf7ff";
+            cx.lineWidth = 1;
+            cx.beginPath();
+            cx.moveTo(f.r * 0.5, 0);
+            cx.lineTo(f.r, 0);
+            cx.stroke();
+            cx.restore();
           } else if (f.tipo === "sangre") {
             // Salpicadura de sangre real (ver fxSangre en render/effects.js
             // y SANGRE_ANIM en render/sprites.js) -- fotograma calculado por

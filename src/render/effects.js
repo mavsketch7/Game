@@ -42,6 +42,15 @@ export function fxEstocada(x, y, dir, r) {
         G.fx.push({ id: _fxId++, tipo: "estocada", x, y, dir, r, t: 0.18, t0: 0.18 });
       }
 
+// Corte de viento (pícaro, cuando golpeArco() no alcanza a nadie): un
+// segundo "filo" pálido, sin el tinte cálido/rojizo de fxEstocada, que
+// recorre el rango REAL del golpe (no el ALCANCE_ESTOCADA_FX recortado) y
+// se apaga más despacio -- comunica "la hoja atravesó el aire entero, no
+// encontró nada" en vez de repetir el mismo golpe corto de siempre.
+export function fxViento(x, y, dir, r) {
+        G.fx.push({ id: _fxId++, tipo: "viento", x, y, dir, r, t: 0.3, t0: 0.3 });
+      }
+
 // Salpicadura de sangre real (torre-vespero-assets/BloodFX Batch 1, ver
 // SANGRE_ANIM en render/sprites.js) -- efecto PRINCIPAL de sangre, con la
 // dispersión de píxeles de fxParticulas (más abajo) como acompañamiento de
