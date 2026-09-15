@@ -1261,21 +1261,27 @@ export function renderJugador(p) {
                 : esIconoArma
                 ? armaHiltTip(eq.arma.clase, eq.arma.arteIdx)
                 : null;
-              // Arco: a diferencia de una hoja (mango→punta = dirección
-              // real de la hoja, tiene sentido girar para "enderezarla"),
-              // un arco es una media luna sin un extremo delantero --
-              // tras 3 intentos con una rotación propia calculada (que el
-              // usuario reportó repetidamente como espejada/mal
-              // colocada), pedido expreso: "solo tienes que pegarlo al
-              // punto de ancla de la mano". Sin cx.rotate()/cx.scale(-1,1)
-              // propios aquí -- el giro ya lo aporta POR COMPLETO la
-              // rotación general del personaje (cx.rotate(p.aim+...) más
-              // arriba en esta función), así que el arco simplemente
-              // queda pegado por el mango y gira con ella, con su
-              // inclinación diagonal nativa del PNG en cualquier
-              // dirección (sin intentar verse "de perfil").
+              // Arco: "solo pégalo a la mano, sin girar el dibujo" (sin
+              // rotación propia) dejaba el arco con su inclinación
+              // diagonal NATIVA tal cual a cualquier puntería -- el
+              // usuario confirmó que solo apuntando a la izquierda se
+              // leía como "sujetado de verdad" (por pura coincidencia:
+              // la rotación general del personaje, 180°, giraba esa
+              // diagonal nativa lo bastante como para parecer vertical),
+              // en el resto de direcciones seguía viéndose "tumbado"
+              // sobre la línea de puntería en vez de "abierto" hacia
+              // ella. Confirmado con un barrido aislado de las 4
+              // cardinales: una corrección FIJA de -45° (mismo ángulo
+              // que ya usa el fallback genérico de abajo para cualquier
+              // icono sin calibrar) endereza la media luna a perfil
+              // vertical en CUALQUIER dirección -- pero, a diferencia de
+              // un giro continuo, hay que completarla con un espejado
+              // (mismo criterio que el cuerpo, `Math.cos(p.aim)<0`) para
+              // que no se vea "boca abajo" al apuntar a la izquierda.
               const esArqueroIcono = esIconoArma && p.rol === "arquero";
               if (esArqueroIcono) {
+                if (Math.cos(p.aim) < 0) cx.scale(-1, 1);
+                cx.rotate(-Math.PI / 4);
                 cx.drawImage(wimg, -ARQUERO_MANGO[0] * s, -ARQUERO_MANGO[1] * s, ww, wh);
               } else if (datosHiltTip) {
                 const { hilt, tip } = datosHiltTip;
