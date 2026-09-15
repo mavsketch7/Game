@@ -317,7 +317,7 @@ function golpeArco(p, dir, rango, arco, dmgBase, esPicaro) {
           else sfxImpactoGuerrero();
         } else if (esPicaro) {
           if (hits === 0) {
-            sfx("golpe");
+            sfxGolpeAire();
             fxViento(p.x, p.y - ALTO_MANO_ESTOCADA, dir, rango);
           } else if (huboCrit) sfxGolpeCritico();
           else sfxImpactoPicaro();
