@@ -932,8 +932,27 @@ export function iniciarPlanta() {
               // el cuerpo ocupa ~40-43% del ancho nativo (192px) en
               // idle/walk, que sobre el lienzo ya recompuesto (276px de
               // ancho) da un semiancho de ~55-60px -- 46 se quedaba corto y
-              // dejaba hombros/brazos fuera del círculo de golpe.
+              // dejaba hombros/brazos fuera del círculo de golpe. e.r
+              // también fija el ALCANCE DE ATAQUE del propio jefe (ver
+              // core/loop.js: `e.r+p.r+16`) y el tamaño de la sombra/la
+              // altura de su barra de vida (render/character.js) -- NO se
+              // toca aquí para no alargar esas cosas de rebote.
               j.r = 58;
+              // e.hitR/e.hitOy (ver golpeArco() en systems/abilities.js y
+              // la colisión de proyectiles en core/loop.js, ambos caen a
+              // e.r/0 si no están puestos -- cero cambio para el resto de
+              // enemigos): un círculo de r=58 centrado en los PIES (e.y,
+              // ver render/character.js: drawSpriteBottom) solo cubre
+              // ~1/3 de los FROST_ALTO=184px de alto real del sprite,
+              // dejando torso/hombros/cabeza sin hitbox -- reportado: "de
+              // cintura para arriba no tiene hitbox". SOLO para las dos
+              // pruebas de "¿me golpearon?" (no para el alcance de ataque
+              // del jefe ni nada visual) se sube el centro a media altura
+              // (-92) y se agranda el radio a 92 -- llega hasta arriba del
+              // todo y unos px por debajo de los pies, con margen de sobra
+              // también en ancho.
+              j.hitOy = -92;
+              j.hitR = 92;
               j.knockRes = 0.6;
               j.faseHielo1 = false;
               j.faseHielo2 = false;

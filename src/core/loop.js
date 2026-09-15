@@ -803,7 +803,11 @@ export function update(dt) {
             for (const e of G.enemigos) {
               if (e.hp <= 0 && !e.dummy) continue;
               if (pr.golpeados && pr.golpeados.has(e)) continue;
-              if (Math.hypot(pr.x - e.x, pr.y - e.y) < pr.r + e.r) {
+              // e.hitOy/e.hitR: mismo centro/radio opcionales del círculo
+              // de golpe que usa golpeArco() en systems/abilities.js (ver
+              // ese comentario) -- caen a e.y/e.r para cualquier enemigo
+              // salvo el Guardián de Hielo, sin cambio de comportamiento.
+              if (Math.hypot(pr.x - e.x, pr.y - (e.y + (e.hitOy || 0))) < pr.r + (e.hitR || e.r)) {
                 danoAEnemigo(
                   e,
                   pr.dmg,

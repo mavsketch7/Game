@@ -232,7 +232,18 @@ function golpeArco(p, dir, rango, arco, dmgBase, esPicaro) {
           huboCrit = false;
         for (const e of G.enemigos) {
           if (e.hp <= 0 && !e.dummy) continue;
-          if (dentroDelArco(p, dir, rango, arco, e.x, e.y, e.r)) {
+          // e.hitOy/e.hitR (opcionales): centro/radio del círculo de
+          // golpe, SOLO para "¿esto conectó?" -- e.y (posición real, pies,
+          // usada por movimiento/colisión/render) y e.r (alcance de
+          // ataque del propio enemigo, sombra, barra de vida) no cambian.
+          // Hace falta en sprites muy altos anclados por los pies
+          // (Guardián de Hielo, ver systems/floorgen.js) donde un círculo
+          // centrado en e.y con radio e.r (ya topado al ANCHO real del
+          // cuerpo) solo cubre hasta la cintura, dejando hombros/cabeza
+          // sin hitbox (reportado: "de cintura para arriba no tiene
+          // hitbox"). Caen a e.y/e.r si no están puestos -- cero cambio
+          // para el resto de enemigos.
+          if (dentroDelArco(p, dir, rango, arco, e.x, e.y + (e.hitOy || 0), e.hitR || e.r)) {
               let dmg = dmgBase;
               if (p.imbuido === "arcano") dmg *= 1.15; // sinergia arcana
               // pícaro: puñalada por la espalda si el enemigo está centrado en otro
