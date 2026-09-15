@@ -1341,16 +1341,35 @@ export function render() {
             cx.fillStyle = gGlow;
             cx.fillRect(dr.x - anchoGlow / 2, dr.y - beamH, anchoGlow, beamH);
             // núcleo brillante con halo real de canvas (shadowBlur) -- más
-            // ancho y luminoso cuanto mayor la rareza
+            // ancho y luminoso cuanto mayor la rareza. Trazo ONDULADO (más
+            // puntos de muestreo, no un cx.fillRect recto de siempre) en
+            // vez de una vara perfectamente rígida -- pedido expreso: "más
+            // pixeles para que se vea más fluido y curvilíneo". Mismo
+            // criterio que las hebras de abajo (solo Épico+) pero con una
+            // amplitud mucho más sutil y en CUALQUIER rareza -- antes solo
+            // la Épica+ tenía algo de curvatura (las hebras), el núcleo en
+            // sí seguía siendo una barra recta a cualquier tier.
             cx.shadowColor = col;
             cx.shadowBlur = (5 + rareza * 4) * pulso;
             const gCore = cx.createLinearGradient(dr.x, dr.y - beamH, dr.x, dr.y);
             gCore.addColorStop(0, "rgba(255,255,255,0)");
             gCore.addColorStop(0.6, hexRgba(col, 0.85));
             gCore.addColorStop(1, "#fff");
-            cx.fillStyle = gCore;
             const anchoCore = 1.6 + rareza * 0.45; // más finito que antes (3+0.8·rar)
-            cx.fillRect(dr.x - anchoCore / 2, dr.y - beamH, anchoCore, beamH);
+            cx.strokeStyle = gCore;
+            cx.lineWidth = anchoCore;
+            cx.lineCap = "round";
+            cx.beginPath();
+            const nSegCore = 20;
+            for (let i = 0; i <= nSegCore; i++) {
+              const t2 = i / nSegCore;
+              const cy = dr.y - t2 * beamH;
+              const onda = Math.sin(t2 * TAU * 1.6 + animGlobal * 2.8) * (0.8 + rareza * 0.35) * (1 - t2 * 0.25);
+              const cx2 = dr.x + onda;
+              if (i === 0) cx.moveTo(cx2, cy);
+              else cx.lineTo(cx2, cy);
+            }
+            cx.stroke();
             cx.restore();
 
             // hebras onduladas (solo épico+): dos cintas de energía que
