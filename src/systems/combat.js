@@ -814,6 +814,18 @@ const PARTES_CABALLERO = [
 // defensa"); sin ninguna, 0% (el arma recibe el golpe entero).
 const DEFENSA_POR_PARTE = 0.16;
 export const VENTANA_ARMA_DUR = 4.5; // segundos que el arma queda golpeable tras cada pieza rota
+// Escala visual (ver render/character.js: usa la MISMA constante para
+// que las piezas no se despeguen del cuerpo al agrandarlo) -- pedido
+// expreso: "aumenta un poco el tamaño".
+export const ESCALA_CABALLERO = 1.4;
+// La primera versión escalaba directo con la planta (f=5, la misma sala
+// que el Guardián de Hielo) -- pedido expreso: "con mis stats actuales
+// con el arquero lo fundí rápido". Multiplicador plano sobre el hp ya
+// calculado (mismo criterio simple en toda la pieza/arma, sin inventar
+// una fórmula de dificultad nueva) -- ni tan alto que el arma se vuelva
+// un sponge de horas, ni tan bajo que se note poco el cambio.
+const DIFICULTAD_HP_MULT = 4;
+const DIFICULTAD_ATK_MULT = 2.2;
 
 export function spawnJefeCaballero(f, posFija) {
   spawnEnemigo(f, "jefe", false, posFija);
@@ -823,27 +835,31 @@ export function spawnJefeCaballero(f, posFija) {
   ancla.invulnerable = true;
   ancla.r = 30;
   ancla.knockRes = 0;
-  ancla.atkCdJefe = 1.6;
+  ancla.atk = Math.round(ancla.atk * DIFICULTAD_ATK_MULT);
+  // Cadencia/windup más cortos que la primera versión (1.6s/0.7s) --
+  // pedido expreso: "que sea más agresivo".
+  ancla.atkCdJefe = 1.0;
   ancla.atkT = 0;
-  ancla.atkTMax = 0.7;
+  ancla.atkTMax = 0.55;
   ancla.moviendose = false;
   ancla.partes = [];
-  ancla.armaHpMax = Math.round(ancla.hpMax * 1.1);
+  ancla.armaHpMax = Math.round(ancla.hpMax * 1.1 * DIFICULTAD_HP_MULT);
   ancla.armaHp = ancla.armaHpMax;
   ancla.armaDefensa = PARTES_CABALLERO.length * DEFENSA_POR_PARTE;
   ancla.armaVentanaT = 0;
   ancla.armaPlantX = ancla.x;
   ancla.armaPlantY = ancla.y;
   for (const pdef of PARTES_CABALLERO) {
-    spawnEnemigo(f, "melee", false, { x: ancla.x + pdef.ox, y: ancla.y + pdef.oy });
+    const ox = pdef.ox * ESCALA_CABALLERO, oy = pdef.oy * ESCALA_CABALLERO;
+    spawnEnemigo(f, "melee", false, { x: ancla.x + ox, y: ancla.y + oy });
     const parte = G.enemigos[G.enemigos.length - 1];
     parte.parteDeJefe = ancla;
     parte.parteKey = pdef.key;
     parte.parteNombre = pdef.nombre;
-    parte.ox = pdef.ox;
-    parte.oy = pdef.oy;
-    parte.r = pdef.r;
-    parte.hp = parte.hpMax = Math.max(6, Math.round(ancla.hpMax * pdef.hpMul));
+    parte.ox = ox;
+    parte.oy = oy;
+    parte.r = pdef.r * ESCALA_CABALLERO;
+    parte.hp = parte.hpMax = Math.max(6, Math.round(ancla.hpMax * pdef.hpMul * DIFICULTAD_HP_MULT));
     parte.atk = 0;
     parte.stunT = 1e9;
     parte.knockRes = 0;
@@ -866,8 +882,14 @@ function romperParteJefe(parte, duenio) {
         ancla.armaDefensa = Math.max(0, ancla.armaDefensa - DEFENSA_POR_PARTE);
         ancla.armaVentanaT = VENTANA_ARMA_DUR;
         const mano = ancla.partes.find((p) => p.parteKey === "l-hand");
-        ancla.armaPlantX = (mano ? mano.x : ancla.x) + (ancla._flip ? -16 : 16);
-        ancla.armaPlantY = ancla.y + 16;
+        ancla.armaPlantX = (mano ? mano.x : ancla.x) + (ancla._flip ? -16 : 16) * ESCALA_CABALLERO;
+        ancla.armaPlantY = ancla.y + 16 * ESCALA_CABALLERO;
+        // Mientras el arma está expuesta, el resto de piezas deja de ser
+        // objetivo válido -- pedido expreso: "si la espada está en el
+        // suelo, el cuerpo no es golpeable". Fuerza a elegir: rematar el
+        // arma AHORA o dejar pasar la ventana, no las dos cosas a la vez.
+        // Se reactivan en core/loop.js cuando la ventana se cierra.
+        for (const p of ancla.partes) p.invulnerable = true;
         banner(
           (ancla.partes.length > 0
             ? "¡" + parte.parteNombre + " destruida! El arma queda expuesta"

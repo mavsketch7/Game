@@ -1416,6 +1416,12 @@ export function update(dt) {
             // más sencillo). e.atkT impulsa también la animación de giro
             // del brazo/espada en render/character.js.
             if (arq === "caballero") {
+              // Sin la espada en la mano (ventana de vulnerabilidad
+              // abierta, ver systems/combat.js: romperParteJefe()) no
+              // puede atacar -- pero SIGUE persiguiendo (pedido expreso:
+              // "que sea más agresivo", no se le regala un respiro
+              // completo mientras se decide si rematar el arma).
+              const sinArma = e.armaVentanaT > 0;
               e.atkCdJefe -= dt;
               if (e.atkT > 0) {
                 e.atkT -= dt;
@@ -1435,10 +1441,10 @@ export function update(dt) {
                 e.moviendose = true;
               } else {
                 e.moviendose = false;
-                if (e.atkCdJefe <= 0) {
+                if (e.atkCdJefe <= 0 && !sinArma) {
                   e.atkT = e.atkTMax;
                   e.atkGolpeo = false;
-                  e.atkCdJefe = 1.7;
+                  e.atkCdJefe = 1.0;
                 }
               }
               e.x = clamp(e.x, e.r, SALA_W - e.r);
@@ -1889,6 +1895,10 @@ export function update(dt) {
               ancla.armaHp = arma.hp;
               const wi = G.enemigos.indexOf(arma);
               if (wi >= 0) G.enemigos.splice(wi, 1);
+              // Piezas vuelven a ser objetivo válido en cuanto el arma se
+              // resguarda (ver el invulnerable=true de romperParteJefe en
+              // systems/combat.js).
+              for (const p of ancla.partes) p.invulnerable = false;
               banner(ancla.nombre + " protege de nuevo su arma", "#9a93ab");
             }
           }

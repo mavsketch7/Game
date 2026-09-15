@@ -11,7 +11,7 @@ import { fxParticulas } from "./effects.js";
 import { drawSprite, drawSpriteBottom } from "./spriteDraw.js";
 import { AMULETO_FENIX_FRAME, AMULETO_FENIX_FRAMES_N, AMULETO_FENIX_IMG, ATTACK_DUR, CABALLERO_IMG, CABALLERO_LIENZO, cargarSpritesDeClase, CASCO_ATTACK, metaCaballero, CASCO_ATTACK_TIN, CASCO_HURT, CASCO_HURT_MAGO_TIN, CASCO_HURT_PICARO_TIN, CASCO_IDLE, CASCO_IDLE_MAGO_TIN, CASCO_IDLE_PICARO_TIN, CASCO_MUERTE_MAGO_TIN, CASCO_MUERTE_PICARO_TIN, CASCO_RUN, CASCO_RUN_MAGO_TIN, CASCO_RUN_PICARO_TIN, CASCO_SPECIAL_TIN, CONFIG_ARMA, DAGA_CARGADA_FH, DAGA_CARGADA_FRAMES, DAGA_CARGADA_FW, DAGA_CARGADA_SHEET, DASH_ATTACK_DUR, DUMMY_HIT, ESC_FORMA, FROST_GUARDIAN, LEYENDA_ARMA_IMG, MARTILLO_FRHOR_IMG, MIRA_IZQUIERDA_POR_DEFECTO, MOB_RUN, MUERTE_DUR, OFFHAND_IMG, OFFHAND_IMG_RAREZA, PARRY_FX_FH, PARRY_FX_FRAMES, PARRY_FX_FW, PARRY_FX_SHEET, PETO_ATTACK, PETO_ATTACK_TIN, PETO_HURT, PETO_HURT_MAGO_TIN, PETO_HURT_PICARO_TIN, PETO_IDLE, PETO_IDLE_MAGO_TIN, PETO_IDLE_PICARO_TIN, PETO_MUERTE_MAGO_TIN, PETO_MUERTE_PICARO_TIN, PETO_RUN, PETO_RUN_MAGO_TIN, PETO_RUN_PICARO_TIN, PETO_SPECIAL_TIN, PIERNAS_ATTACK, PIERNAS_ATTACK_TIN, PIERNAS_HURT, PIERNAS_HURT_MAGO_TIN, PIERNAS_HURT_PICARO_TIN, PIERNAS_IDLE, PIERNAS_IDLE_MAGO_TIN, PIERNAS_IDLE_PICARO_TIN, PIERNAS_MUERTE_MAGO_TIN, PIERNAS_MUERTE_PICARO_TIN, PIERNAS_RUN, PIERNAS_RUN_MAGO_TIN, PIERNAS_RUN_PICARO_TIN, PIERNAS_SPECIAL_TIN, REAL_ATTACK, REAL_ATTACK_ANCLA, REAL_DASH, REAL_DASH_ANCLA, REAL_HURT, REAL_IDLE, REAL_IDLE_ANCLA, REAL_MUERTE, REAL_RUN, REAL_RUN_ANCLA, REAL_SPECIAL, REAL_SPECIAL_ANCLA, REAL_SPRITE_SCALE, SHEETS, SPECIAL_ATTACK_DUR, SPR, SPR_FORMAS, TAM_HEROE, WEAPON_ART_POOL, WEAPON_IMG, WEAPON_IMG_RAREZA, armaHiltTip, assetOK, leyendaArmaHiltTip, seleccionarImgEnemigo, spriteJugador } from "./sprites.js";
 import { CARGA_ARQ_MAX, CARGA_ARQ_ZONA, CARGA_CUCH_MAX, CARGA_CUCH_ZONA, groundTarget } from "../systems/abilities.js";
-import { masCercano, PARRY_FX_DUR } from "../systems/combat.js";
+import { ESCALA_CABALLERO, masCercano, PARRY_FX_DUR } from "../systems/combat.js";
 import { mouse } from "../systems/input.js";
 import { JUICE } from "../systems/juice.js";
 import { ENEMY_BAR, ENEMY_BAR_INTERIOR } from "./uiTiles.js";
@@ -1970,10 +1970,12 @@ export function renderEnemigo(e) {
           const armaEnt = G.enemigos.find((en) => en.armaDeJefe === e);
 
           // sombra propia (esta rama queda excluida de la sombra genérica
-          // de más arriba, ver el `!(e.cerdo || ...)` de la cabecera)
+          // de más arriba, ver el `!(e.cerdo || ...)` de la cabecera) --
+          // escalada a juego con ESCALA_CABALLERO (pedido expreso:
+          // "aumenta un poco el tamaño").
           cx.fillStyle = "rgba(0,0,0,.35)";
           cx.beginPath();
-          cx.ellipse(e.x, e.y + 30, 22, 8, 0, 0, TAU);
+          cx.ellipse(e.x, e.y + 30 * ESCALA_CABALLERO, 22 * ESCALA_CABALLERO, 8 * ESCALA_CABALLERO, 0, 0, TAU);
           cx.fill();
 
           function dibujarCapaK(key, ox = 0, oy = 0) {
@@ -1983,6 +1985,7 @@ export function renderEnemigo(e) {
             cx.save();
             cx.translate(cxK, cyK);
             if (flipK) cx.scale(-1, 1);
+            cx.scale(ESCALA_CABALLERO, ESCALA_CABALLERO);
             cx.translate(ox, oy);
             cx.drawImage(img, meta.x - mitad, meta.y - mitad, meta.w, meta.h);
             cx.restore();
@@ -2011,6 +2014,7 @@ export function renderEnemigo(e) {
             cx.save();
             cx.translate(cxK, cyK);
             if (flipK) cx.scale(-1, 1);
+            cx.scale(ESCALA_CABALLERO, ESCALA_CABALLERO);
             cx.translate(pivX, pivY);
             cx.rotate(giro * signoK);
             cx.translate(-pivX, -pivY);
@@ -2037,7 +2041,7 @@ export function renderEnemigo(e) {
           // del resto del compuesto, que no la lleva).
           if (armaEnt && CABALLERO_IMG.weapon) {
             const m = metaCaballero("weapon");
-            const escArma = 0.9;
+            const escArma = 0.9 * ESCALA_CABALLERO;
             const pulsoArma = 0.6 + Math.sin(animGlobal * 6) * 0.4;
             cx.save();
             cx.translate(armaEnt.x, armaEnt.y);
@@ -2049,30 +2053,52 @@ export function renderEnemigo(e) {
             cx.strokeStyle = "rgba(127,201,232," + (0.5 + pulsoArma * 0.4) + ")";
             cx.lineWidth = 2;
             cx.beginPath();
-            cx.arc(armaEnt.x, armaEnt.y, 16 + pulsoArma * 3, 0, TAU);
+            cx.arc(armaEnt.x, armaEnt.y, (16 + pulsoArma * 3) * ESCALA_CABALLERO, 0, TAU);
             cx.stroke();
             const wArma = 54;
+            const armaBarY = armaEnt.y - 34 * ESCALA_CABALLERO;
             cx.fillStyle = "#0d0b15";
-            cx.fillRect(armaEnt.x - wArma / 2, armaEnt.y - 34, wArma, 5);
+            cx.fillRect(armaEnt.x - wArma / 2, armaBarY, wArma, 5);
             cx.fillStyle = "#7fc9e8";
-            cx.fillRect(armaEnt.x - wArma / 2, armaEnt.y - 34, (wArma * Math.max(0, armaEnt.hp)) / armaEnt.hpMax, 5);
+            cx.fillRect(armaEnt.x - wArma / 2, armaBarY, (wArma * Math.max(0, armaEnt.hp)) / armaEnt.hpMax, 5);
             cx.fillStyle = "#eaf6ff";
             cx.font = "700 10px Alegreya Sans";
             cx.textAlign = "center";
-            cx.fillText("⚔ ¡golpea el arma!", armaEnt.x, armaEnt.y - 38);
+            cx.fillText("⚔ ¡golpea el arma!", armaEnt.x, armaBarY - 4);
+          }
+
+          // Barras de vida individuales por pieza dañada (pedido expreso:
+          // "que se vea bien cuando golpeas una parte del cuerpo que
+          // tenga su propia barra de vida") -- siguen a cada pieza real
+          // (parte.x/y, sincronizadas cada fotograma en core/loop.js), no
+          // hace falta el compuesto rotado/escalado de arriba. Solo se
+          // muestran mientras la pieza ya está dañada (hp<hpMax), para no
+          // saturar la pantalla con 5 barras completas todo el rato.
+          for (const parte of e.partes || []) {
+            if (parte.hp >= parte.hpMax) continue;
+            const wP = 26;
+            const yP = parte.y - parte.r - 8;
+            cx.fillStyle = "#0d0b15";
+            cx.fillRect(parte.x - wP / 2, yP, wP, 4);
+            cx.fillStyle = parte.hurtT > 0 ? "#fff" : "#e8a15a";
+            cx.fillRect(parte.x - wP / 2, yP, (wP * Math.max(0, parte.hp)) / parte.hpMax, 4);
+            cx.strokeStyle = "rgba(0,0,0,.6)";
+            cx.lineWidth = 1;
+            cx.strokeRect(parte.x - wP / 2 + 0.5, yP + 0.5, wP - 1, 3);
           }
 
           // Barra de vida "real" del jefe (la del arma, ver
           // spawnJefeCaballero()) + nombre, siempre visible.
           const w4 = 96;
+          const barY = e.y - 62 * ESCALA_CABALLERO;
           cx.fillStyle = "#0d0b15";
-          cx.fillRect(e.x - w4 / 2, e.y - 62, w4, 6);
+          cx.fillRect(e.x - w4 / 2, barY, w4, 6);
           cx.fillStyle = "#c9a35a";
-          cx.fillRect(e.x - w4 / 2, e.y - 62, (w4 * Math.max(0, e.armaHp)) / e.armaHpMax, 6);
+          cx.fillRect(e.x - w4 / 2, barY, (w4 * Math.max(0, e.armaHp)) / e.armaHpMax, 6);
           cx.fillStyle = "#e9e3d5";
           cx.font = "800 12px Alegreya Sans";
           cx.textAlign = "center";
-          cx.fillText("👻 " + e.nombre, e.x, e.y - 68);
+          cx.fillText("👻 " + e.nombre, e.x, barY - 6);
           return;
         }
         // Sprite/escala base (ver seleccionarImgEnemigo en render/sprites.js
