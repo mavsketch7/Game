@@ -131,7 +131,13 @@ function barraHP(x, y, w2, h2, p, t, arte) {
         // en vez del tricolor verde/naranja/rojo de antes -- a petición
         // expresa, "la vida en rojo, como en los assets". El aviso de
         // vida baja lo sigue dando el aro rojo pulsante de más abajo.
-        const col = "#ac3232";
+        // Con escudo activo (Égida/Pasiva del Alba, ver p.escudo en
+        // systems/combat.js) la barra entera pasa a azul -- antes el
+        // único aviso era un contorno fino + "🛡+N" en el texto, poco
+        // visible (pedido expreso: "pintar la barra de azul"). En cuanto
+        // el escudo se agota vuelve al rojo de siempre, sin más estado
+        // que comprobar p.escudo > 0 cada fotograma.
+        const col = p.escudo > 0 ? "#3f7fc4" : "#ac3232";
         const txt =
           "HP " +
           Math.ceil(p.hp) +
