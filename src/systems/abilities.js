@@ -256,8 +256,19 @@ function golpeArco(p, dir, rango, arco, dmgBase, esPicaro) {
               )
                 huboCrit = true;
               hits++;
-              if (backstab)
+              if (backstab) {
                 fxTexto(e.x, e.y - e.r - 16, "¡por la espalda!", "#c084f0");
+                // Colmillo del Umbral (Mítico, ver OBJETOS_MITICOS en
+                // systems/objetosMiticos.js): el colmillo muerde y drena
+                // vida específicamente en la puñalada por la espalda, no
+                // en cualquier golpe (a diferencia de vampirismo/8%) --
+                // encaja con la mecánica ya exclusiva de esta clase.
+                if (tieneEfecto(p, "colmillo_umbral")) {
+                  const robo = Math.round(dmg * 0.25);
+                  if (robo > 0) curarP(p, robo, true);
+                  fxParticulas(e.x, e.y - e.r * 0.3, 6, "#b18fd6", 3, e.r * 0.4);
+                }
+              }
               if (esPicaro && p._poison && !e.dummy) {
                 e.poisonT = 3;
                 e.poisonDps = statsTot(p).atk * 0.3;

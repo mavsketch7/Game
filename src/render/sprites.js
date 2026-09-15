@@ -2517,13 +2517,15 @@ export const ARQUERO_BOW_DUR = 0.35; // duración del gesto de tensar el arco al
 // generado guarda su propio `arteIdx` ESTABLE (ver genItem() en
 // systems/loot.js) y siempre muestra ESA imagen concreta, sin recolorear --
 // la rareza se transmite con el halo/brillo (ver character.js/world.js), no
-// tiñendo el sprite. "picaro" (daga) tiene huecos reales en la numeración
-// de archivo (no hay daga (2)/(3)) -- de ahí la lista explícita en vez de
-// un rango 1..N como guerrero/arquero.
+// tiñendo el sprite. "picaro" (daga) tiene un hueco real en la numeración
+// de archivo (no hay daga (3)) -- de ahí la lista explícita en vez de un
+// rango 1..N como guerrero/arquero. daga (2) = "Daga de Bronce" (T2, arte
+// propio distinto del resto: vertical y más corta, no la plantilla
+// diagonal compartida -- ver ARMA_HILT_TIP más abajo).
 const IRON_WEAPON_NUMS = {
   guerrero: [1, 2, 3, 4, 5, 6],
   arquero: Array.from({ length: 16 }, (_, i) => i + 1),
-  picaro: [1, 4, 5, 6, 7],
+  picaro: [1, 2, 4, 5, 6, 7],
 };
 const IRON_WEAPON_PREFIX = { guerrero: "sword", arquero: "arco", picaro: "daga" };
 export const WEAPON_ART_POOL = { guerrero: [], arquero: [], picaro: [] };
@@ -2628,9 +2630,24 @@ export function cargarSpritesDeClase(rol) {
 // -- el arco en mano usa su propia animación de tensado (ARQUERO_BOW más
 // arriba), nunca pasa por este camino; el arco de iron-weapons solo se ve
 // en el suelo/inventario (iconoDrop), sin rotación que calibrar.
+// picaro: las variantes 1/4/5/6/7 comparten la plantilla diagonal de
+// siempre (mango abajo-derecha / punta arriba-izquierda). daga (2) rompe
+// el molde (arte propio vertical de 10x28, punta arriba / mango abajo,
+// ver public/assets/sprites/weapons/iron-weapons/daga (2).png) -- medido
+// a mano sobre ESE archivo en concreto, no reutiliza el punto compartido.
+// El índice sigue el ORDEN de IRON_WEAPON_NUMS.picaro ([1,2,4,5,6,7]), no
+// el número de archivo -- daga (2) es el índice 1, no el 2.
+const HILT_TIP_DAGA_DIAGONAL = { hilt: [24, 24], tip: [7, 7] };
 const ARMA_HILT_TIP = {
   guerrero: Array(6).fill({ hilt: [25, 25], tip: [4, 4] }),
-  picaro: Array(5).fill({ hilt: [24, 24], tip: [7, 7] }),
+  picaro: [
+    HILT_TIP_DAGA_DIAGONAL, // daga (1)
+    { hilt: [5, 21], tip: [6, 1] }, // daga (2) -- Daga de Bronce
+    HILT_TIP_DAGA_DIAGONAL, // daga (4)
+    HILT_TIP_DAGA_DIAGONAL, // daga (5)
+    HILT_TIP_DAGA_DIAGONAL, // daga (6)
+    HILT_TIP_DAGA_DIAGONAL, // daga (7)
+  ],
 };
 export function armaHiltTip(clase, arteIdx) {
   const arr = ARMA_HILT_TIP[clase];
@@ -2648,6 +2665,7 @@ const LEYENDA_ARMA_SRC = {
   baston_dragon: "dragon-staff.png",
   espada_pistola: "swordgun.png",
   hacha_vampirica: "vampir-axe.png",
+  colmillo_umbral: "colmillo-umbral.png",
 };
 export const LEYENDA_ARMA_IMG = {};
 for (const idLeyenda in LEYENDA_ARMA_SRC) {
@@ -2675,6 +2693,9 @@ const LEYENDA_ARMA_HILT_TIP = {
   baston_dragon: { hilt: [26, 26], tip: [4, 6] },
   espada_pistola: { hilt: [28, 29], tip: [1, 1] },
   hacha_vampirica: { hilt: [29, 28], tip: [2, 13] },
+  // Mango abajo-derecha, punta arriba-izquierda (misma plantilla diagonal
+  // que el resto de legendarias) -- medido a mano sobre colmillo-umbral.png.
+  colmillo_umbral: { hilt: [29, 28], tip: [4, 3] },
 };
 export function leyendaArmaHiltTip(id) {
   return LEYENDA_ARMA_HILT_TIP[id] || null;

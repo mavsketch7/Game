@@ -94,6 +94,19 @@ export const OBJETOS_MITICOS = [
           efectoDesc: "Con fuego activo, cada 4º lanzamiento se convierte en un abanico de proyectiles (Aliento de Dragón)",
         },
         {
+          id: "colmillo_umbral",
+          nombre: "Colmillo del Umbral",
+          slot: "arma",
+          // Restringida a pícaro (pedido expreso del usuario) -- el efecto
+          // amplifica la puñalada por la espalda, una mecánica que solo
+          // existe para esta clase (ver el bloque `backstab` en
+          // golpeArco(), systems/abilities.js).
+          clase: "picaro",
+          statPool: ["atk", "atk", "crit"],
+          efecto: "colmillo_umbral",
+          efectoDesc: "Los golpes por la espalda drenan 25% del daño como vida",
+        },
+        {
           id: "collar_fenix",
           nombre: "Collar de Cenizas del Renacido",
           slot: "collar",

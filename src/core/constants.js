@@ -254,7 +254,7 @@ export const SLOTS = ["arma", "escudo", "casco", "peto", "piernas", "collar", "a
 // que no aparecen aquí (mago, clérigo, druida) siguen con el sprite único
 // de siempre (wood-weapons, teñido por rareza) hasta que tengan su propio
 // pack de variantes.
-export const ARMA_ARTE_VARIANTES = { guerrero: 6, arquero: 16, picaro: 5 };
+export const ARMA_ARTE_VARIANTES = { guerrero: 6, arquero: 16, picaro: 6 };
 
 // Etiqueta visible en la ficha de personaje -- "arma"/"escudo"
 // internamente siguen siendo las mismas claves de siempre (restricción
