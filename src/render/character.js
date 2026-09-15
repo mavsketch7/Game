@@ -1231,7 +1231,19 @@ export function renderJugador(p) {
               const boostLeyenda = imgLeyenda && wimg === imgLeyenda ? 1.6 : 1;
               const s = ((REACH - GRIP) / Math.max(ww0, wh0)) * boostLeyenda;
               const ww = ww0 * s, wh = wh0 * s;
-              const gripDibujo = anclaMano ? 0 : GRIP;
+              // El arco (ver ARMA_HILT_TIP.arquero más abajo) tiene el
+              // mango en el CENTRO del dibujo, no en un extremo como una
+              // hoja -- con ancla real (gripDibujo=0, mismo criterio que
+              // el resto) queda literalmente encima del pecho durante el
+              // reposo (mismo síntoma que el bastón del mago más abajo,
+              // "aplastado contra la cara", pero ahí escalar más grande
+              // basta porque el mango SÍ está en un extremo). Reportado
+              // dos veces: "sigue cogiendo el arco al revés"/"punto de
+              // anclaje" -- no era el ángulo, era que no se separaba del
+              // cuerpo. Empuja el arco hacia fuera en la dirección de la
+              // puntería, igual que GRIP hace para las armas sin ancla
+              // real.
+              const gripDibujo = anclaMano ? (p.rol === "arquero" ? 22 : 0) : GRIP;
               // El pack "wood-weapons" no es consistente en cómo recortó cada
               // pieza: espada/daga/maza/báculo vienen en vertical (más alto
               // que ancho, punta arriba -- p.ej. sword-wood.png 10x41), pero
