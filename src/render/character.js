@@ -9,7 +9,7 @@ import { ELEMENTOS, RAREZAS, SUPS } from "../core/constants.js";
 import { G } from "../core/state.js";
 import { fxParticulas } from "./effects.js";
 import { drawSprite, drawSpriteBottom } from "./spriteDraw.js";
-import { AMULETO_FENIX_FRAME, AMULETO_FENIX_FRAMES_N, AMULETO_FENIX_IMG, ARQUERO_BOW, ARQUERO_BOW_DUR, ATTACK_DUR, cargarSpritesDeClase, CASCO_ATTACK, CASCO_ATTACK_TIN, CASCO_HURT, CASCO_HURT_MAGO_TIN, CASCO_HURT_PICARO_TIN, CASCO_IDLE, CASCO_IDLE_MAGO_TIN, CASCO_IDLE_PICARO_TIN, CASCO_MUERTE_MAGO_TIN, CASCO_MUERTE_PICARO_TIN, CASCO_RUN, CASCO_RUN_MAGO_TIN, CASCO_RUN_PICARO_TIN, CASCO_SPECIAL_TIN, CONFIG_ARMA, DAGA_CARGADA_FH, DAGA_CARGADA_FRAMES, DAGA_CARGADA_FW, DAGA_CARGADA_SHEET, DASH_ATTACK_DUR, DUMMY_HIT, ESC_FORMA, FROST_GUARDIAN, LEYENDA_ARMA_IMG, MARTILLO_FRHOR_IMG, MIRA_IZQUIERDA_POR_DEFECTO, MOB_RUN, MUERTE_DUR, OFFHAND_IMG, OFFHAND_IMG_RAREZA, PARRY_FX_FH, PARRY_FX_FRAMES, PARRY_FX_FW, PARRY_FX_SHEET, PETO_ATTACK, PETO_ATTACK_TIN, PETO_HURT, PETO_HURT_MAGO_TIN, PETO_HURT_PICARO_TIN, PETO_IDLE, PETO_IDLE_MAGO_TIN, PETO_IDLE_PICARO_TIN, PETO_MUERTE_MAGO_TIN, PETO_MUERTE_PICARO_TIN, PETO_RUN, PETO_RUN_MAGO_TIN, PETO_RUN_PICARO_TIN, PETO_SPECIAL_TIN, PIERNAS_ATTACK, PIERNAS_ATTACK_TIN, PIERNAS_HURT, PIERNAS_HURT_MAGO_TIN, PIERNAS_HURT_PICARO_TIN, PIERNAS_IDLE, PIERNAS_IDLE_MAGO_TIN, PIERNAS_IDLE_PICARO_TIN, PIERNAS_MUERTE_MAGO_TIN, PIERNAS_MUERTE_PICARO_TIN, PIERNAS_RUN, PIERNAS_RUN_MAGO_TIN, PIERNAS_RUN_PICARO_TIN, PIERNAS_SPECIAL_TIN, REAL_ATTACK, REAL_ATTACK_ANCLA, REAL_DASH, REAL_DASH_ANCLA, REAL_HURT, REAL_IDLE, REAL_IDLE_ANCLA, REAL_MUERTE, REAL_RUN, REAL_RUN_ANCLA, REAL_SPECIAL, REAL_SPECIAL_ANCLA, REAL_SPRITE_SCALE, SHEETS, SPECIAL_ATTACK_DUR, SPR, SPR_FORMAS, TAM_HEROE, WEAPON_ART_POOL, WEAPON_IMG, WEAPON_IMG_RAREZA, armaHiltTip, assetOK, leyendaArmaHiltTip, seleccionarImgEnemigo, spriteJugador } from "./sprites.js";
+import { AMULETO_FENIX_FRAME, AMULETO_FENIX_FRAMES_N, AMULETO_FENIX_IMG, ATTACK_DUR, cargarSpritesDeClase, CASCO_ATTACK, CASCO_ATTACK_TIN, CASCO_HURT, CASCO_HURT_MAGO_TIN, CASCO_HURT_PICARO_TIN, CASCO_IDLE, CASCO_IDLE_MAGO_TIN, CASCO_IDLE_PICARO_TIN, CASCO_MUERTE_MAGO_TIN, CASCO_MUERTE_PICARO_TIN, CASCO_RUN, CASCO_RUN_MAGO_TIN, CASCO_RUN_PICARO_TIN, CASCO_SPECIAL_TIN, CONFIG_ARMA, DAGA_CARGADA_FH, DAGA_CARGADA_FRAMES, DAGA_CARGADA_FW, DAGA_CARGADA_SHEET, DASH_ATTACK_DUR, DUMMY_HIT, ESC_FORMA, FROST_GUARDIAN, LEYENDA_ARMA_IMG, MARTILLO_FRHOR_IMG, MIRA_IZQUIERDA_POR_DEFECTO, MOB_RUN, MUERTE_DUR, OFFHAND_IMG, OFFHAND_IMG_RAREZA, PARRY_FX_FH, PARRY_FX_FRAMES, PARRY_FX_FW, PARRY_FX_SHEET, PETO_ATTACK, PETO_ATTACK_TIN, PETO_HURT, PETO_HURT_MAGO_TIN, PETO_HURT_PICARO_TIN, PETO_IDLE, PETO_IDLE_MAGO_TIN, PETO_IDLE_PICARO_TIN, PETO_MUERTE_MAGO_TIN, PETO_MUERTE_PICARO_TIN, PETO_RUN, PETO_RUN_MAGO_TIN, PETO_RUN_PICARO_TIN, PETO_SPECIAL_TIN, PIERNAS_ATTACK, PIERNAS_ATTACK_TIN, PIERNAS_HURT, PIERNAS_HURT_MAGO_TIN, PIERNAS_HURT_PICARO_TIN, PIERNAS_IDLE, PIERNAS_IDLE_MAGO_TIN, PIERNAS_IDLE_PICARO_TIN, PIERNAS_MUERTE_MAGO_TIN, PIERNAS_MUERTE_PICARO_TIN, PIERNAS_RUN, PIERNAS_RUN_MAGO_TIN, PIERNAS_RUN_PICARO_TIN, PIERNAS_SPECIAL_TIN, REAL_ATTACK, REAL_ATTACK_ANCLA, REAL_DASH, REAL_DASH_ANCLA, REAL_HURT, REAL_IDLE, REAL_IDLE_ANCLA, REAL_MUERTE, REAL_RUN, REAL_RUN_ANCLA, REAL_SPECIAL, REAL_SPECIAL_ANCLA, REAL_SPRITE_SCALE, SHEETS, SPECIAL_ATTACK_DUR, SPR, SPR_FORMAS, TAM_HEROE, WEAPON_ART_POOL, WEAPON_IMG, WEAPON_IMG_RAREZA, armaHiltTip, assetOK, leyendaArmaHiltTip, seleccionarImgEnemigo, spriteJugador } from "./sprites.js";
 import { CARGA_ARQ_MAX, CARGA_ARQ_ZONA, CARGA_CUCH_MAX, CARGA_CUCH_ZONA, groundTarget } from "../systems/abilities.js";
 import { masCercano, PARRY_FX_DUR } from "../systems/combat.js";
 import { mouse } from "../systems/input.js";
@@ -1132,8 +1132,8 @@ export function renderJugador(p) {
           } else {
             cx.translate(p.x, p.y + 3);
             // El bamboleo de swing (giro extra tipo "espadazo") no pega con un
-            // arco -- el arquero no gira el arma al atacar, tensa la cuerda (ver
-            // ARQUERO_BOW más abajo) -- ni con un cetro que apunta y dispara,
+            // arco -- el arquero no gira el arma al atacar, apunta y suelta --
+            // ni con un cetro que apunta y dispara,
             // el mago se queda quieto apuntando igual que el arquero, no
             // "espadea" (ver CONFIG_ARMA.bamboleo.sinBamboleo). Duración del
             // bamboleo tomada de ATTACK_DUR (por clase) en vez de un fijo
@@ -1170,34 +1170,18 @@ export function renderJugador(p) {
             cx.shadowColor = wcol;
             cx.shadowBlur = 3 + rarezaArma * 2;
           }
-          if (p.rol === "arquero") {
-            // Arco real de 3 frames (relajado/medio tensado/tensado del todo,
-            // ver ARQUERO_BOW en sprites.js): en reposo se queda relajado; al
-            // atacar (p.swingT cuenta atrás desde ARQUERO_BOW_DUR) avanza por
-            // los 3 frames tensando la cuerda, en vez de sprite fijo o del
-            // giro de "hoja" que no pega con un arco. Se sostiene con el eje
-            // perpendicular a la puntería (igual que el dibujo esquemático de
-            // antes, arc(bx,0,br,...) en vertical), sin el giro de 90° ni el
-            // desplazamiento hacia delante que sí necesitan las armas de hoja.
-            const frames = ARQUERO_BOW[rarezaArma] || ARQUERO_BOW[0];
-            if (frames && frames.length) {
-              const prog = p.swingT > 0 ? clamp(1 - p.swingT / ARQUERO_BOW_DUR, 0, 0.999) : 0;
-              const fr = frames[Math.floor(prog * frames.length)] || frames[0];
-              const ww0 = fr.naturalWidth || fr.width, wh0 = fr.naturalHeight || fr.height;
-              const s2 = 22 / Math.max(ww0, wh0);
-              const wDib = ww0 * s2, hDib = wh0 * s2;
-              // La mano (ancla real "m-d" de la hoja COMPARTIDA de idle/correr --
-              // ver REAL_IDLE_ANCLA en sprites.js, no hay marca específica de
-              // arquero para reposo) cae muy cerca del tobillo en varias
-              // direcciones. Centrar el arco ahí (mitad arriba/mitad abajo del
-              // pivote, como antes) lo hacía asomar por debajo de los pies --
-              // bug reportado: "el arco se dibuja debajo del personaje". Se
-              // ancla como una empuñadura real: la mayor parte del arco por
-              // ENCIMA de la mano y solo el limbo inferior por debajo.
-              cx.drawImage(fr, 8 - wDib / 2, -hDib * 0.82, wDib, hDib);
-            }
-            cx.shadowBlur = 0;
-          } else {
+          {
+            // Arquero: arte real por variante igual que guerrero/pícaro (ver
+            // WEAPON_ART_POOL/ARMA_HILT_TIP en sprites.js) -- antes tenía su
+            // propio camino aparte con solo 3 frames genéricos de tensado
+            // (relajado/medio/tensado), reteñidos por rareza pero SIN
+            // reflejar el arco concreto que cayó como loot (reportado: "no
+            // cambia el sprite del arma"). La barra de carga (ver
+            // dibujarBarraCarga() más abajo, p.cargaArqT) ya comunica el
+            // progreso de tensado por su cuenta, así que perder el frame-swap
+            // no deja un hueco de feedback -- y de hecho el frame-swap
+            // pasaba durante swingT (DESPUÉS de soltar la flecha), nunca
+            // durante la carga en sí, un desfase que ya se notaba raro.
             // Sprite real (ver WEAPON_IMG/WEAPON_IMG_RAREZA en sprites.js), recorte
             // individual limpio por clase (espada/dagas/varita/maza/báculo),
             // recoloreado según la rareza del arma equipada (mismo color que

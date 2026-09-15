@@ -1647,8 +1647,7 @@ export const CONFIG_ARMA = {
   // fallback sin ancla real): multiplicador de la curva y duración por
   // defecto si la clase no tiene ATTACK_DUR propio. `sinBamboleo` son las
   // clases que no deben recibir este giro -- apuntan y disparan/tensan en
-  // vez de "espadear" (arquero tensa la cuerda con su propio mecanismo,
-  // ARQUERO_BOW; mago apunta el cetro quieto, como el arco).
+  // vez de "espadear" (arquero y mago se quedan quietos apuntando).
   bamboleo: {
     multiplicador: 1.6,
     // Con ancla real (mano de verdad, ver REAL_ATTACK_ANCLA en
@@ -2350,8 +2349,10 @@ export function seleccionarImgEnemigo(e) {
 // generan las 5 variantes de RAREZAS recoloreando esta misma pieza por
 // código (ver teñirSprite() más abajo): mismo sombreado del pixel art
 // original, solo cambia el tono, más un halo de color para rareza alta.
-// arquero no está aquí: usa ARQUERO_BOW más abajo (3 frames animados, no un
-// sprite fijo) en vez de este mecanismo de imagen única.
+// arquero no está aquí: usa el pool de arte real por variante (ver
+// WEAPON_ART_POOL más abajo) en vez de este mecanismo de imagen única, con
+// el dibujo esquemático de render/character.js como fallback si aún no
+// cargó.
 const WEAPON_SRC = {
   guerrero: assetUrl("weapons/wood-weapons/sword-wood"),
   picaro: assetUrl("weapons/wood-weapons/dagger-wood"),
@@ -2421,8 +2422,8 @@ function teñirSpriteFuerte(img, color) {
 // Como teñirSprite(), pero para un ARRAY de fotogramas ya recortados
 // (el formato que devuelve capas.casco/peto/piernas de
 // cargarHojaConArmadura() -- un <canvas> por frame, no una tira única)
-// -- mismo criterio que ARQUERO_BOW más abajo, que ya tiñe frame a
-// frame dentro de un bucle. Devuelve un array de 5 posiciones (una por
+// -- tiñe frame a frame dentro de un bucle. Devuelve un array de 5
+// posiciones (una por
 // tier de RAREZAS); Común (índice 0) se queda con los frames
 // originales sin teñir, mismo criterio que las armas ("el tinte es
 // señal de que esto es especial"). Usado por la armadura de mago para
@@ -2489,26 +2490,6 @@ export let MARTILLO_FRHOR_IMG = null;
   };
   im.src = WEAPON_SRC.clerigo;
 })();
-
-// Arco del arquero: 3 frames (relajado / medio tensado / tensado del todo,
-// recortados de Weapons/Wood/Wood.png -- animación real "Bow", no un giro de
-// hoja) en vez de un sprite fijo. ARQUERO_BOW[tier][frame] -- cada uno de los
-// 3 frames se recolorea igual que el resto de armas por tier de rareza.
-export const ARQUERO_BOW = RAREZAS.map(() => []);
-
-// Carga perezosa por clase (ver cargarSpritesDeClase() más abajo): solo
-// hace falta si hay un arquero en la partida.
-function cargarArcoArquero() {
-  cargarHojaFrames(assetUrl("weapons/wood-weapons/bow-tension"), 32, (frames) => {
-    frames.forEach((frame, i) => {
-      RAREZAS.forEach((r, tier) => {
-        ARQUERO_BOW[tier][i] = tier === 0 ? frame : teñirSprite(frame, r.col);
-      });
-    });
-  });
-}
-
-export const ARQUERO_BOW_DUR = 0.35; // duración del gesto de tensar el arco al atacar
 
 // Pool de arte real por variante para el arma (pack "iron-weapons", ver
 // public/assets/sprites/weapons/iron-weapons/ y ARMA_ARTE_VARIANTES en
@@ -2591,7 +2572,6 @@ const CARGADORES_SPRITES_CLASE = {
   arquero: () => {
     cargarAtaqueClase("arquero");
     cargarFlechasArquero();
-    cargarArcoArquero();
     cargarArteHierroClase("arquero");
   },
   mago: () => {
@@ -2619,27 +2599,32 @@ export function cargarSpritesDeClase(rol) {
 }
 
 // Punto de mango y de punta (píxeles del PNG de 32x32 origen, medidos a
-// mano en Aseprite) por variante -- para orientar el arma en mano según su
-// propio dibujo real en vez de un ángulo fijo adivinado (ver render/
-// character.js: rotación = -atan2(punta-mango), confirmado con un barrido
-// numérico de ángulos, no solo a ojo). guerrero: las 6 variantes de
-// "sword" (incluye una hoz y un látigo, pero comparten la MISMA plantilla
-// de mango abajo-derecha / punta arriba-izquierda, confirmado comparando
-// las 6 en rejilla) usan el mismo punto. picaro: mismo criterio con
-// "daga", plantilla más corta. arquero no tiene entrada aquí a propósito
-// -- el arco en mano usa su propia animación de tensado (ARQUERO_BOW más
-// arriba), nunca pasa por este camino; el arco de iron-weapons solo se ve
-// en el suelo/inventario (iconoDrop), sin rotación que calibrar.
-// picaro: las variantes 1/4/5/6/7 comparten la plantilla diagonal de
-// siempre (mango abajo-derecha / punta arriba-izquierda). daga (2) rompe
-// el molde (arte propio vertical de 10x28, punta arriba / mango abajo,
-// ver public/assets/sprites/weapons/iron-weapons/daga (2).png) -- medido
-// a mano sobre ESE archivo en concreto, no reutiliza el punto compartido.
-// El índice sigue el ORDEN de IRON_WEAPON_NUMS.picaro ([1,2,4,5,6,7]), no
-// el número de archivo -- daga (2) es el índice 1, no el 2.
+// mano en Aseprite, o por bbox de alfa cuando no hay Aseprite a mano) por
+// variante -- para orientar el arma en mano según su propio dibujo real en
+// vez de un ángulo fijo adivinado (ver render/character.js: rotación =
+// -atan2(punta-mango), confirmado con un barrido numérico de ángulos, no
+// solo a ojo). guerrero: las 6 variantes de "sword" (incluye una hoz y un
+// látigo, pero comparten la MISMA plantilla de mango abajo-derecha / punta
+// arriba-izquierda, confirmado comparando las 6 en rejilla) usan el mismo
+// punto. picaro: las variantes 1/4/5/6/7 comparten esa misma plantilla
+// diagonal; daga (2) rompe el molde (arte propio vertical de 10x28, punta
+// arriba / mango abajo, ver public/assets/sprites/weapons/iron-weapons/
+// daga (2).png) -- medido a mano sobre ESE archivo en concreto, no
+// reutiliza el punto compartido. El índice sigue el ORDEN de
+// IRON_WEAPON_NUMS.picaro ([1,2,4,5,6,7]), no el número de archivo -- daga
+// (2) es el índice 1, no el 2. arquero: las 16 variantes de "arco" siguen
+// la misma plantilla diagonal que guerrero/picaro (confirmado: las 16
+// tienen el bbox de alfa simétrico respecto a la diagonal principal) --
+// un único punto compartido, con la MISMA tolerancia que guerrero (que ya
+// comparte un punto entre formas tan distintas como una hoz y un látigo).
+// Antes el arquero no tenía entrada aquí a propósito: el arco en mano
+// usaba su propia animación de tensado de 3 frames genéricos (ARQUERO_BOW,
+// ya retirado) en vez del arte real por variante -- ver el commit que
+// añadió esta entrada para el porqué del cambio.
 const HILT_TIP_DAGA_DIAGONAL = { hilt: [24, 24], tip: [7, 7] };
 const ARMA_HILT_TIP = {
   guerrero: Array(6).fill({ hilt: [25, 25], tip: [4, 4] }),
+  arquero: Array(16).fill({ hilt: [9, 9], tip: [28, 3] }),
   picaro: [
     HILT_TIP_DAGA_DIAGONAL, // daga (1)
     { hilt: [5, 21], tip: [6, 1] }, // daga (2) -- Daga de Bronce
