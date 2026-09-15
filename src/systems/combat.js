@@ -301,6 +301,13 @@ export function spawnEnemigo(f, tipo, esElite, posFija) {
 
 export function danoAEnemigo(e, raw, duenio, puedeCrit, kbx, kby, bonusCrit) {
         if (e.hp <= 0 && !e.dummy) return;
+        // Ancla invisible de un jefe multi-pieza (Caballero Espectral, ver
+        // spawnJefeCaballero() más abajo): nunca es objetivo válido por sí
+        // misma -- solo sus piezas (parteDeJefe) y, durante la ventana de
+        // vulnerabilidad, su arma (armaDeJefe) lo son. Sin este guard sería
+        // un enemigo normal más, golpeable e ignorando por completo la
+        // mecánica de romper piezas.
+        if (e.invulnerable) return;
         const t = statsTot(duenio);
         let dmg = raw * (0.9 + Math.random() * 0.2);
         // bonusCrit: puntos extra de probabilidad de crítico solo para ESTE
@@ -379,6 +386,24 @@ export function danoAEnemigo(e, raw, duenio, puedeCrit, kbx, kby, bonusCrit) {
       }
 
 export function matarEnemigo(e, duenio) {
+        // Pieza rota de un Caballero Espectral (ver spawnJefeCaballero()
+        // más abajo): NO pasa por el flujo normal de muerte (sin loot, sin
+        // sumar a "enemigos derrotados", sin la desintegración completa de
+        // un enemigo real) -- solo un estallido ligero + abrir la ventana
+        // de vulnerabilidad del arma. Se comprueba ANTES que cualquier otra
+        // cosa porque el resto de este flujo asume un enemigo "de verdad".
+        if (e.parteDeJefe) {
+          romperParteJefe(e, duenio);
+          return;
+        }
+        // Arma del Caballero Espectral, derrotada durante su ventana de
+        // vulnerabilidad -- ESTA es la muerte real del jefe (ver
+        // interactuar()/golpeArco() -- el arma es lo único que, al morir,
+        // debe contar como jefe derrotado de verdad).
+        if (e.armaDeJefe) {
+          derrotarJefeCaballero(e, duenio);
+          return;
+        }
         G.stats.derrotados++;
         if (duenio) duenio.statDerrotados = (duenio.statDerrotados || 0) + 1;
         // contador de kills del arma equipada -- solo las armas Míticas y
@@ -762,4 +787,113 @@ export function explotarBomber(e) {
             golpeObjeto(o, 99);
         }
         matarEnemigo(e);
+      }
+
+// ===== Caballero Espectral (jefe de prueba, portal rojo ?qa=1) =====
+// Flota sin piernas, sostiene su espada con el brazo izquierdo (ver
+// public/assets/sprites/enemies/caballero-espectral/). Sin vida propia
+// en el cuerpo: cabeza/hombros/manos son 5 PIEZAS independientes, cada
+// una un G.enemigos real con su propio hp (así reutilizan intactos el
+// hit-test de golpeArco()/proyectiles, sin tocar ese código) que solo
+// SIGUEN al ancla (ver el bucle de sincronización en core/loop.js) en
+// vez de moverse por su cuenta -- stunT descomunal para que la IA
+// genérica las salte por completo (ver el `if (e.stunT>0) continue;` de
+// core/loop.js). El "cuerpo" (ancla, e.invulnerable) nunca es un
+// objetivo válido; su ARMA sí lo es, pero solo mientras dura la ventana
+// de vulnerabilidad que se abre cada vez que se rompe una pieza -- y con
+// menos "defensa" cuantas más piezas ya se hayan roto.
+const PARTES_CABALLERO = [
+  { key: "head", nombre: "Cabeza", ox: 0, oy: -27, r: 11, hpMul: 0.22 },
+  { key: "l-shoulder", nombre: "Hombro Izquierdo", ox: 15, oy: -4, r: 9, hpMul: 0.16 },
+  { key: "l-hand", nombre: "Mano Izquierda", ox: 17, oy: 10, r: 8, hpMul: 0.16 },
+  { key: "r-shoulder", nombre: "Hombro Derecho", ox: -19, oy: -5, r: 9, hpMul: 0.16 },
+  { key: "r-hand", nombre: "Mano Derecha", ox: -20, oy: 10, r: 8, hpMul: 0.16 },
+];
+// Cuánta reducción de daño (0..1) quita cada pieza rota -- con las 5
+// piezas en pie el arma empieza con 0.8 (80% del daño absorbido, "gran
+// defensa"); sin ninguna, 0% (el arma recibe el golpe entero).
+const DEFENSA_POR_PARTE = 0.16;
+export const VENTANA_ARMA_DUR = 4.5; // segundos que el arma queda golpeable tras cada pieza rota
+
+export function spawnJefeCaballero(f, posFija) {
+  spawnEnemigo(f, "jefe", false, posFija);
+  const ancla = G.enemigos[G.enemigos.length - 1];
+  ancla.arquetipo = "caballero";
+  ancla.nombre = "Caballero Espectral";
+  ancla.invulnerable = true;
+  ancla.r = 30;
+  ancla.knockRes = 0;
+  ancla.atkCdJefe = 1.6;
+  ancla.atkT = 0;
+  ancla.atkTMax = 0.7;
+  ancla.moviendose = false;
+  ancla.partes = [];
+  ancla.armaHpMax = Math.round(ancla.hpMax * 1.1);
+  ancla.armaHp = ancla.armaHpMax;
+  ancla.armaDefensa = PARTES_CABALLERO.length * DEFENSA_POR_PARTE;
+  ancla.armaVentanaT = 0;
+  ancla.armaPlantX = ancla.x;
+  ancla.armaPlantY = ancla.y;
+  for (const pdef of PARTES_CABALLERO) {
+    spawnEnemigo(f, "melee", false, { x: ancla.x + pdef.ox, y: ancla.y + pdef.oy });
+    const parte = G.enemigos[G.enemigos.length - 1];
+    parte.parteDeJefe = ancla;
+    parte.parteKey = pdef.key;
+    parte.parteNombre = pdef.nombre;
+    parte.ox = pdef.ox;
+    parte.oy = pdef.oy;
+    parte.r = pdef.r;
+    parte.hp = parte.hpMax = Math.max(6, Math.round(ancla.hpMax * pdef.hpMul));
+    parte.atk = 0;
+    parte.stunT = 1e9;
+    parte.knockRes = 0;
+    ancla.partes.push(parte);
+  }
+  return ancla;
+}
+
+function romperParteJefe(parte, duenio) {
+        const ancla = parte.parteDeJefe;
+        fxParticulas(parte.x, parte.y, 10, "#8a94a8");
+        fxTexto(parte.x, parte.y - parte.r - 4, "¡" + parte.parteNombre + " rota!", "#e9b45c", true);
+        G.shake = Math.max(G.shake, 4);
+        const idx = G.enemigos.indexOf(parte);
+        if (idx >= 0) G.enemigos.splice(idx, 1);
+        if (ancla.partes) {
+          const pi = ancla.partes.indexOf(parte);
+          if (pi >= 0) ancla.partes.splice(pi, 1);
+        }
+        ancla.armaDefensa = Math.max(0, ancla.armaDefensa - DEFENSA_POR_PARTE);
+        ancla.armaVentanaT = VENTANA_ARMA_DUR;
+        const mano = ancla.partes.find((p) => p.parteKey === "l-hand");
+        ancla.armaPlantX = (mano ? mano.x : ancla.x) + (ancla._flip ? -16 : 16);
+        ancla.armaPlantY = ancla.y + 16;
+        banner(
+          (ancla.partes.length > 0
+            ? "¡" + parte.parteNombre + " destruida! El arma queda expuesta"
+            : "¡Todas las piezas destruidas! El arma no volverá a resguardarse"),
+          "#e9b45c",
+        );
+      }
+
+function derrotarJefeCaballero(arma, duenio) {
+        const ancla = arma.armaDeJefe;
+        G.stats.derrotados++;
+        if (duenio) duenio.statDerrotados = (duenio.statDerrotados || 0) + 1;
+        sfx("jefe");
+        fxParticulas(ancla.x, ancla.y, 12, "#8a94a8");
+        fxParticulas(arma.x, arma.y, 20, "#7fc9e8");
+        fxOnda(arma.x, arma.y, 60, "#7fc9e8");
+        G.shake = Math.max(G.shake, 10);
+        banner("¡" + ancla.nombre + " derrotado!", "#7fc9e8");
+        for (const parte of ancla.partes || []) {
+          const pi = G.enemigos.indexOf(parte);
+          if (pi >= 0) G.enemigos.splice(pi, 1);
+        }
+        const ai = G.enemigos.indexOf(ancla);
+        if (ai >= 0) G.enemigos.splice(ai, 1);
+        const wi = G.enemigos.indexOf(arma);
+        if (wi >= 0) G.enemigos.splice(wi, 1);
+        const pv = posDropValida(ancla.x, ancla.y);
+        dropItem(pv.x, pv.y, genItem(G.planta || 1, 3));
       }

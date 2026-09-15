@@ -9,7 +9,7 @@ import { ELEMENTOS, RAREZAS, SUPS } from "../core/constants.js";
 import { G } from "../core/state.js";
 import { fxParticulas } from "./effects.js";
 import { drawSprite, drawSpriteBottom } from "./spriteDraw.js";
-import { AMULETO_FENIX_FRAME, AMULETO_FENIX_FRAMES_N, AMULETO_FENIX_IMG, ATTACK_DUR, cargarSpritesDeClase, CASCO_ATTACK, CASCO_ATTACK_TIN, CASCO_HURT, CASCO_HURT_MAGO_TIN, CASCO_HURT_PICARO_TIN, CASCO_IDLE, CASCO_IDLE_MAGO_TIN, CASCO_IDLE_PICARO_TIN, CASCO_MUERTE_MAGO_TIN, CASCO_MUERTE_PICARO_TIN, CASCO_RUN, CASCO_RUN_MAGO_TIN, CASCO_RUN_PICARO_TIN, CASCO_SPECIAL_TIN, CONFIG_ARMA, DAGA_CARGADA_FH, DAGA_CARGADA_FRAMES, DAGA_CARGADA_FW, DAGA_CARGADA_SHEET, DASH_ATTACK_DUR, DUMMY_HIT, ESC_FORMA, FROST_GUARDIAN, LEYENDA_ARMA_IMG, MARTILLO_FRHOR_IMG, MIRA_IZQUIERDA_POR_DEFECTO, MOB_RUN, MUERTE_DUR, OFFHAND_IMG, OFFHAND_IMG_RAREZA, PARRY_FX_FH, PARRY_FX_FRAMES, PARRY_FX_FW, PARRY_FX_SHEET, PETO_ATTACK, PETO_ATTACK_TIN, PETO_HURT, PETO_HURT_MAGO_TIN, PETO_HURT_PICARO_TIN, PETO_IDLE, PETO_IDLE_MAGO_TIN, PETO_IDLE_PICARO_TIN, PETO_MUERTE_MAGO_TIN, PETO_MUERTE_PICARO_TIN, PETO_RUN, PETO_RUN_MAGO_TIN, PETO_RUN_PICARO_TIN, PETO_SPECIAL_TIN, PIERNAS_ATTACK, PIERNAS_ATTACK_TIN, PIERNAS_HURT, PIERNAS_HURT_MAGO_TIN, PIERNAS_HURT_PICARO_TIN, PIERNAS_IDLE, PIERNAS_IDLE_MAGO_TIN, PIERNAS_IDLE_PICARO_TIN, PIERNAS_MUERTE_MAGO_TIN, PIERNAS_MUERTE_PICARO_TIN, PIERNAS_RUN, PIERNAS_RUN_MAGO_TIN, PIERNAS_RUN_PICARO_TIN, PIERNAS_SPECIAL_TIN, REAL_ATTACK, REAL_ATTACK_ANCLA, REAL_DASH, REAL_DASH_ANCLA, REAL_HURT, REAL_IDLE, REAL_IDLE_ANCLA, REAL_MUERTE, REAL_RUN, REAL_RUN_ANCLA, REAL_SPECIAL, REAL_SPECIAL_ANCLA, REAL_SPRITE_SCALE, SHEETS, SPECIAL_ATTACK_DUR, SPR, SPR_FORMAS, TAM_HEROE, WEAPON_ART_POOL, WEAPON_IMG, WEAPON_IMG_RAREZA, armaHiltTip, assetOK, leyendaArmaHiltTip, seleccionarImgEnemigo, spriteJugador } from "./sprites.js";
+import { AMULETO_FENIX_FRAME, AMULETO_FENIX_FRAMES_N, AMULETO_FENIX_IMG, ATTACK_DUR, CABALLERO_IMG, CABALLERO_LIENZO, cargarSpritesDeClase, CASCO_ATTACK, metaCaballero, CASCO_ATTACK_TIN, CASCO_HURT, CASCO_HURT_MAGO_TIN, CASCO_HURT_PICARO_TIN, CASCO_IDLE, CASCO_IDLE_MAGO_TIN, CASCO_IDLE_PICARO_TIN, CASCO_MUERTE_MAGO_TIN, CASCO_MUERTE_PICARO_TIN, CASCO_RUN, CASCO_RUN_MAGO_TIN, CASCO_RUN_PICARO_TIN, CASCO_SPECIAL_TIN, CONFIG_ARMA, DAGA_CARGADA_FH, DAGA_CARGADA_FRAMES, DAGA_CARGADA_FW, DAGA_CARGADA_SHEET, DASH_ATTACK_DUR, DUMMY_HIT, ESC_FORMA, FROST_GUARDIAN, LEYENDA_ARMA_IMG, MARTILLO_FRHOR_IMG, MIRA_IZQUIERDA_POR_DEFECTO, MOB_RUN, MUERTE_DUR, OFFHAND_IMG, OFFHAND_IMG_RAREZA, PARRY_FX_FH, PARRY_FX_FRAMES, PARRY_FX_FW, PARRY_FX_SHEET, PETO_ATTACK, PETO_ATTACK_TIN, PETO_HURT, PETO_HURT_MAGO_TIN, PETO_HURT_PICARO_TIN, PETO_IDLE, PETO_IDLE_MAGO_TIN, PETO_IDLE_PICARO_TIN, PETO_MUERTE_MAGO_TIN, PETO_MUERTE_PICARO_TIN, PETO_RUN, PETO_RUN_MAGO_TIN, PETO_RUN_PICARO_TIN, PETO_SPECIAL_TIN, PIERNAS_ATTACK, PIERNAS_ATTACK_TIN, PIERNAS_HURT, PIERNAS_HURT_MAGO_TIN, PIERNAS_HURT_PICARO_TIN, PIERNAS_IDLE, PIERNAS_IDLE_MAGO_TIN, PIERNAS_IDLE_PICARO_TIN, PIERNAS_MUERTE_MAGO_TIN, PIERNAS_MUERTE_PICARO_TIN, PIERNAS_RUN, PIERNAS_RUN_MAGO_TIN, PIERNAS_RUN_PICARO_TIN, PIERNAS_SPECIAL_TIN, REAL_ATTACK, REAL_ATTACK_ANCLA, REAL_DASH, REAL_DASH_ANCLA, REAL_HURT, REAL_IDLE, REAL_IDLE_ANCLA, REAL_MUERTE, REAL_RUN, REAL_RUN_ANCLA, REAL_SPECIAL, REAL_SPECIAL_ANCLA, REAL_SPRITE_SCALE, SHEETS, SPECIAL_ATTACK_DUR, SPR, SPR_FORMAS, TAM_HEROE, WEAPON_ART_POOL, WEAPON_IMG, WEAPON_IMG_RAREZA, armaHiltTip, assetOK, leyendaArmaHiltTip, seleccionarImgEnemigo, spriteJugador } from "./sprites.js";
 import { CARGA_ARQ_MAX, CARGA_ARQ_ZONA, CARGA_CUCH_MAX, CARGA_CUCH_ZONA, groundTarget } from "../systems/abilities.js";
 import { masCercano, PARRY_FX_DUR } from "../systems/combat.js";
 import { mouse } from "../systems/input.js";
@@ -1744,6 +1744,13 @@ export function renderJugador(p) {
       }
 
 export function renderEnemigo(e) {
+        // Piezas y arma del Caballero Espectral (ver systems/combat.js:
+        // spawnJefeCaballero()): son G.enemigos reales para reutilizar el
+        // hit-test normal (golpeArco()/proyectiles) tal cual, pero NO se
+        // dibujan por su cuenta -- todo el compuesto (cuerpo + piezas
+        // vivas + arma en mano o plantada) lo pinta de una vez la rama
+        // `e.arquetipo === "caballero"` de más abajo, a partir del ancla.
+        if (e.parteDeJefe || e.armaDeJefe) return;
         // tragado por el portal arcano: remolino en su lugar
         if (e.portalT > 0) {
           const k = e.portalT / 0.7;
@@ -1773,7 +1780,7 @@ export function renderEnemigo(e) {
         // pensada para el dibujo procedural por defecto de los mobs) más la
         // suya, centrada en sus pies -- la de abajo asomaba como una sombra
         // extra y flotante.
-        if (!(e.cerdo || e.arquetipo === "hielo")) {
+        if (!(e.cerdo || e.arquetipo === "hielo" || e.arquetipo === "caballero")) {
           cx.fillStyle = "rgba(0,0,0,.35)";
           cx.beginPath();
           cx.ellipse(e.x, e.y + e.r * 0.9, e.r * 0.8, e.r * 0.3, 0, 0, TAU);
@@ -1941,6 +1948,131 @@ export function renderEnemigo(e) {
             cx.font = "700 11px Alegreya Sans";
             cx.fillText("🧊 Destruye los pilares (" + nVivos + " restantes)", e.x, e.y - e.r * 2.7 - 14);
           }
+          return;
+        }
+        // Caballero Espectral (jefe de prueba, ver systems/combat.js:
+        // spawnJefeCaballero()): compuesto por capas SUELTAS (CABALLERO_IMG,
+        // ver render/sprites.js), no una hoja de animación -- cada capa se
+        // dibuja en su posición NATIVA dentro del lienzo 128x128 original
+        // (metaCaballero(), medida a mano sobre el .aseprite), sumada a
+        // (e.x,e.y) tomado como el CENTRO de ese lienzo. Sin piernas: flota,
+        // con un balanceo vertical suave. Las piezas rotas (ya fuera de
+        // e.partes, ver romperParteJefe()) sencillamente se omiten -- el
+        // "hueco" en el cuerpo ES el indicador de qué se ha destruido, sin
+        // arte de rotura dedicado.
+        if (e.arquetipo === "caballero") {
+          const flipK = !!e._flip;
+          const signoK = flipK ? -1 : 1;
+          const bobK = Math.sin(animGlobal * 2 + e.x) * 2.5;
+          const cxK = e.x, cyK = e.y + bobK;
+          const mitad = CABALLERO_LIENZO / 2;
+          const tienePieza = (key) => (e.partes || []).some((p) => p.parteKey === key);
+          const armaEnt = G.enemigos.find((en) => en.armaDeJefe === e);
+
+          // sombra propia (esta rama queda excluida de la sombra genérica
+          // de más arriba, ver el `!(e.cerdo || ...)` de la cabecera)
+          cx.fillStyle = "rgba(0,0,0,.35)";
+          cx.beginPath();
+          cx.ellipse(e.x, e.y + 30, 22, 8, 0, 0, TAU);
+          cx.fill();
+
+          function dibujarCapaK(key, ox = 0, oy = 0) {
+            const img = CABALLERO_IMG[key];
+            const meta = metaCaballero(key);
+            if (!img || !meta) return;
+            cx.save();
+            cx.translate(cxK, cyK);
+            if (flipK) cx.scale(-1, 1);
+            cx.translate(ox, oy);
+            cx.drawImage(img, meta.x - mitad, meta.y - mitad, meta.w, meta.h);
+            cx.restore();
+          }
+
+          if (e.hurtT > 0) cx.globalAlpha = 0.82;
+          // cuerpo (siempre) + cabeza/hombro-derecho/mano-derecha (si su
+          // pieza sigue viva)
+          dibujarCapaK("body");
+          if (tienePieza("head")) dibujarCapaK("head");
+          if (tienePieza("r-shoulder")) dibujarCapaK("r-shoulder");
+          if (tienePieza("r-hand")) dibujarCapaK("r-hand");
+
+          // Brazo/mano izquierdos + arma EN MANO: grupo que gira durante el
+          // golpe (e.atkT, ver core/loop.js: arq==="caballero") alrededor
+          // del hombro -- "rotando y girando se podrá crear animaciones de
+          // ataque", pedido expreso. Solo se dibuja el arma aquí cuando NO
+          // hay ventana de vulnerabilidad abierta (si la hay, se dibuja
+          // más abajo plantada en el suelo en su lugar).
+          const metaHombroI = metaCaballero("l-shoulder");
+          if ((tienePieza("l-shoulder") || tienePieza("l-hand")) && metaHombroI) {
+            const progAtk = e.atkT > 0 ? 1 - e.atkT / (e.atkTMax || 0.7) : 0;
+            const giro = e.atkT > 0 ? Math.sin(progAtk * Math.PI) * 1.1 : 0;
+            const pivX = metaHombroI.x + metaHombroI.w * 0.5 - mitad;
+            const pivY = metaHombroI.y + metaHombroI.h * 0.3 - mitad;
+            cx.save();
+            cx.translate(cxK, cyK);
+            if (flipK) cx.scale(-1, 1);
+            cx.translate(pivX, pivY);
+            cx.rotate(giro * signoK);
+            cx.translate(-pivX, -pivY);
+            if (tienePieza("l-shoulder")) {
+              const m = metaCaballero("l-shoulder");
+              cx.drawImage(CABALLERO_IMG["l-shoulder"], m.x - mitad, m.y - mitad, m.w, m.h);
+            }
+            if (tienePieza("l-hand")) {
+              const m = metaCaballero("l-hand");
+              cx.drawImage(CABALLERO_IMG["l-hand"], m.x - mitad, m.y - mitad, m.w, m.h);
+            }
+            if (!armaEnt && CABALLERO_IMG.weapon) {
+              const m = metaCaballero("weapon");
+              cx.drawImage(CABALLERO_IMG.weapon, m.x - mitad, m.y - mitad, m.w, m.h);
+            }
+            cx.restore();
+          }
+          cx.globalAlpha = 1;
+
+          // Arma PLANTADA (ventana de vulnerabilidad abierta, ver
+          // core/loop.js): objetivo real aparte, clavada vertical en el
+          // suelo con un contorno pulsante para que se lea claramente como
+          // "golpea aquí ahora" -- y su propia barra de vida (a diferencia
+          // del resto del compuesto, que no la lleva).
+          if (armaEnt && CABALLERO_IMG.weapon) {
+            const m = metaCaballero("weapon");
+            const escArma = 0.9;
+            const pulsoArma = 0.6 + Math.sin(animGlobal * 6) * 0.4;
+            cx.save();
+            cx.translate(armaEnt.x, armaEnt.y);
+            cx.shadowColor = "#7fc9e8";
+            cx.shadowBlur = 6 + pulsoArma * 6;
+            cx.rotate(Math.PI / 2);
+            cx.drawImage(CABALLERO_IMG.weapon, -m.w * escArma * 0.5, -m.h * escArma * 0.65, m.w * escArma, m.h * escArma);
+            cx.restore();
+            cx.strokeStyle = "rgba(127,201,232," + (0.5 + pulsoArma * 0.4) + ")";
+            cx.lineWidth = 2;
+            cx.beginPath();
+            cx.arc(armaEnt.x, armaEnt.y, 16 + pulsoArma * 3, 0, TAU);
+            cx.stroke();
+            const wArma = 54;
+            cx.fillStyle = "#0d0b15";
+            cx.fillRect(armaEnt.x - wArma / 2, armaEnt.y - 34, wArma, 5);
+            cx.fillStyle = "#7fc9e8";
+            cx.fillRect(armaEnt.x - wArma / 2, armaEnt.y - 34, (wArma * Math.max(0, armaEnt.hp)) / armaEnt.hpMax, 5);
+            cx.fillStyle = "#eaf6ff";
+            cx.font = "700 10px Alegreya Sans";
+            cx.textAlign = "center";
+            cx.fillText("⚔ ¡golpea el arma!", armaEnt.x, armaEnt.y - 38);
+          }
+
+          // Barra de vida "real" del jefe (la del arma, ver
+          // spawnJefeCaballero()) + nombre, siempre visible.
+          const w4 = 96;
+          cx.fillStyle = "#0d0b15";
+          cx.fillRect(e.x - w4 / 2, e.y - 62, w4, 6);
+          cx.fillStyle = "#c9a35a";
+          cx.fillRect(e.x - w4 / 2, e.y - 62, (w4 * Math.max(0, e.armaHp)) / e.armaHpMax, 6);
+          cx.fillStyle = "#e9e3d5";
+          cx.font = "800 12px Alegreya Sans";
+          cx.textAlign = "center";
+          cx.fillText("👻 " + e.nombre, e.x, e.y - 68);
           return;
         }
         // Sprite/escala base (ver seleccionarImgEnemigo en render/sprites.js

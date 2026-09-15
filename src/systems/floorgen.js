@@ -10,7 +10,7 @@ import { NOMBRE_CLIMA, SALA_H as H, SALA_W as W } from "../core/constants.js";
 import { G } from "../core/state.js";
 import { detenerMusicaJefe, iniciarMusicaJefe } from "./audio.js";
 import { DESC_ARQ, arquetipoJefe, esJefe, nombreJefe } from "./bosses.js";
-import { spawnClon, spawnEnemigo, statsTot, tipoAleatorio } from "./combat.js";
+import { spawnClon, spawnEnemigo, spawnJefeCaballero, statsTot, tipoAleatorio } from "./combat.js";
 import { CUSTOM_ROOMS } from "./customRooms.js";
 import { banner, toast } from "../ui/notifications.js";
 import { az, clamp, ri, rnd } from "../utils/helpers.js";
@@ -838,6 +838,7 @@ export function iniciarPlanta() {
         // "pegado" en pantalla al entrar a cualquier planta (mismo bug
         // que ya evitan mercader/skinNpc/arenaNpc/nivelNpc de arriba).
         G.jefeNpcQA = null;
+        G.caballeroNpcQA = null;
         // Hogueras de alivio del Guardián de Hielo (ver debuff de
         // congelación en core/loop.js) -- solo existen en su sala, se
         // limpian aquí para no arrastrarse a otras plantas.
@@ -889,7 +890,17 @@ export function iniciarPlanta() {
           ponPilares(f, ri(1, 2));
           ponHazardsYObjetos(f);
           const arq = arquetipoJefe(f);
-          if (MAGNATE_ACTIVO && f === 5) {
+          if (G.forzarCaballeroQA && f === 5) {
+            // JEFE DE PRUEBA: Caballero Espectral -- ver
+            // spawnJefeCaballero() en systems/combat.js (piezas rompibles
+            // + ventana de vulnerabilidad del arma), core/loop.js (rama
+            // arq==="caballero" para el ataque + la sincronización de
+            // piezas/arma cada fotograma), render/character.js (dibujo
+            // compuesto por capas). Misma sala/planta ya usada por el
+            // Guardián de Hielo, solo cambia QUÉ jefe aparece en ella.
+            G.forzarCaballeroQA = false;
+            spawnJefeCaballero(f);
+          } else if (MAGNATE_ACTIVO && f === 5) {
             // JEFE SECRETO: El Magnate (cerdo presidencial) — en standby,
             // ver MAGNATE_ACTIVO arriba.
             spawnEnemigo(f, "jefe");
@@ -1012,9 +1023,15 @@ export function iniciarPlanta() {
         const formaTxt = NOMBRE_FORMA[G.forma]
           ? " · " + NOMBRE_FORMA[G.forma]
           : "";
+        // f===5 puede traer 3 jefes distintos según la partida (Guardián
+        // de Hielo por defecto, El Magnate en standby, o el Caballero
+        // Espectral de prueba vía el portal QA) -- se comprueba el
+        // enemigo real ya spawneado en vez de MAGNATE_ACTIVO/un flag que
+        // spawnJefeCaballero() ya limpió, así el texto no se desincroniza.
+        const esCaballeroQA = f === 5 && G.enemigos.some((e) => e.arquetipo === "caballero");
         const nombreJ = esJefe(f)
           ? f === 5
-            ? (MAGNATE_ACTIVO ? "El Magnate" : "Guardián de Hielo")
+            ? (esCaballeroQA ? "Caballero Espectral" : MAGNATE_ACTIVO ? "El Magnate" : "Guardián de Hielo")
             : nombreJefe(f)
           : "";
         banner(
@@ -1027,7 +1044,9 @@ export function iniciarPlanta() {
         if (esJefe(f))
           toast(
             f === 5
-              ? (MAGNATE_ACTIVO
+              ? (esCaballeroQA
+                  ? "👻 El Caballero Espectral despierta… rompe sus piezas para exponer el arma"
+                  : MAGNATE_ACTIVO
                   ? "⭐ JEFE SECRETO: El Magnate ha aparecido…"
                   : "❄ El Guardián de Hielo despierta… destruye sus pilares para evitar que se regenere")
               : "Arquetipo: " + DESC_ARQ[arquetipoJefe(f)],

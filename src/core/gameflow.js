@@ -299,6 +299,14 @@ export function iniciarLobby() {
           // Guardián de Hielo) sin tener que bajar 4 plantas primero. Ver
           // el disparador de proximidad en core/loop.js.
           G.jefeNpcQA = { x: 250, y: 160 };
+          // Portal de pruebas (QA), rojo: salta a la planta 5 igual que el
+          // de arriba, pero marca G.forzarCaballeroQA para que
+          // systems/floorgen.js aparezca el Caballero Espectral (jefe
+          // multi-pieza de prueba, ver systems/combat.js:
+          // spawnJefeCaballero()) en vez del Guardián de Hielo -- misma
+          // sala/planta ya probada, sin tocar la generación de mazmorra.
+          // Ver el disparador de proximidad en core/loop.js.
+          G.caballeroNpcQA = { x: 250, y: 230 };
           // Segundo cofre de pruebas (QA), brillo lila: suelta el set
           // completo de la Armadura de Mago T1 (casco+peto+piernas) para
           // probarla sin tener que fabricarla/farmearla -- ver

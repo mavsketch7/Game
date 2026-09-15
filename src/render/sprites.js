@@ -2211,6 +2211,44 @@ cargarFramesSueltosTrim(
   (frames) => { DUMMY_HIT.push(...frames); },
 );
 
+// Caballero Espectral (jefe de prueba, portal rojo ?qa=1, ver
+// systems/combat.js: spawnJefeCaballero()): 7 capas SUELTAS de un único
+// .aseprite (public/assets/sprites/enemies/caballero-espectral/), cada
+// una su propio PNG con la posición nativa dentro del lienzo 128x128
+// original (CABALLERO_META, medida a mano exportando el .aseprite) --
+// sin animación de frames como el Guardián de Hielo, un boceto estático
+// por capa que se recompone entero en render/character.js sumando cada
+// posición nativa a (e.x,e.y). Sin capa "piernas" (flota, sin piernas)
+// ni "Layer 1" (guía de referencia oculta en el propio archivo).
+export const CABALLERO_IMG = {};
+const CABALLERO_META = {
+  head: { x: 37, y: 5, w: 37, h: 32 },
+  body: { x: 40, y: 33, w: 43, h: 64 },
+  "l-shoulder": { x: 71, y: 32, w: 16, h: 20 },
+  "l-hand": { x: 78, y: 54, w: 15, h: 26 },
+  "r-shoulder": { x: 37, y: 31, w: 20, h: 19 },
+  "r-hand": { x: 32, y: 55, w: 14, h: 27 },
+  weapon: { x: 78, y: 65, w: 48, h: 49 },
+};
+export const CABALLERO_LIENZO = 128;
+export function metaCaballero(capa) {
+  return CABALLERO_META[capa] || null;
+}
+for (const capaCab in CABALLERO_META) {
+  const imCab = new Image();
+  imCab.onload = () => {
+    const c = document.createElement("canvas");
+    c.width = imCab.naturalWidth;
+    c.height = imCab.naturalHeight;
+    const g = c.getContext("2d");
+    g.imageSmoothingEnabled = false;
+    g.drawImage(imCab, 0, 0);
+    CABALLERO_IMG[capaCab] = c;
+  };
+  imCab.onerror = () => console.warn("No se pudo cargar capa del Caballero Espectral: " + imCab.src);
+  imCab.src = assetUrl(`enemies/caballero-espectral/${capaCab}`);
+}
+
 // Destello de impacto (torre-vespero-assets/Dummy/Impact-Vfx, misma entrega
 // que el muñeco de pruebas de arriba): chispazo genérico al golpear un
 // objeto del escenario (barriles, pilares destructibles -- ver fxImpacto en
@@ -2330,7 +2368,7 @@ cargarHojaFramesGrid(assetUrl("pilar-hielo-frames"), 4, 2, 160, (frames) => {
 export function seleccionarImgEnemigo(e) {
   if (e.dummy) return { img: SPR.dummy, esc: 1, mobKey: null };
   if (e.clonRol) return { img: SPR[e.clonRol], esc: 1, mobKey: null };
-  if (e.cerdo || e.portalT > 0 || e.arquetipo === "hielo") return null;
+  if (e.cerdo || e.portalT > 0 || e.arquetipo === "hielo" || e.arquetipo === "caballero" || e.parteDeJefe || e.armaDeJefe || e.invulnerable) return null;
   if (e.jefe) return { img: SPR.brutoB, esc: G.planta >= 90 ? 2.4 : 2, mobKey: null };
   if (e.mini) return { img: SPR.slime, esc: 1.7, mobKey: null };
   if (e.tipo === "tank") return { img: SPR.golem, esc: e.elite ? 1.5 : 1.25, mobKey: "golem" };

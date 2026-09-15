@@ -1281,6 +1281,29 @@ export function render() {
           cx.fillText("PORTAL AL JEFE (QA) — acércate", mj.x, mj.y + 34);
         }
 
+        // Portal de pruebas (QA, ?qa=1), ROJO: misma planta 5 de arriba,
+        // pero para el Caballero Espectral (jefe multi-pieza de prueba,
+        // ver systems/combat.js: spawnJefeCaballero()) en vez del
+        // Guardián de Hielo -- mismo dibujo que el portal azul de arriba,
+        // solo cambia el color/icono.
+        if (G.caballeroNpcQA) {
+          const mc = G.caballeroNpcQA;
+          for (let k = 0; k < 3; k++) {
+            cx.strokeStyle = "rgba(232,90,90," + (0.9 - k * 0.28) + ")";
+            cx.lineWidth = 3;
+            cx.beginPath();
+            cx.arc(mc.x, mc.y, 22 - k * 6 + Math.sin(animGlobal * 3 + k) * 2, 0, TAU);
+            cx.stroke();
+          }
+          cx.fillStyle = "#f7bfbf";
+          cx.font = "700 13px Alegreya Sans";
+          cx.textAlign = "center";
+          cx.fillText("👻", mc.x, mc.y + 5);
+          cx.fillStyle = "#e85a5a";
+          cx.font = "700 10px Alegreya Sans";
+          cx.fillText("PORTAL AL CABALLERO (QA) — acércate", mc.x, mc.y + 34);
+        }
+
         // drops
         for (const dr of G.drops) {
           const bob = Math.sin(animGlobal * 4 + dr.x) * 3;

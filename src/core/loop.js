@@ -9,7 +9,7 @@ import { fxOnda, fxParticulas, fxTexto } from "../render/effects.js";
 import { CARGA_ARQ_MAX, CARGA_ARQ_ZONA, CARGA_CUCH_MAX, CARGA_CUCH_ZONA, actualizarSendaElemental, actualizarSombraPicaro, aplicarImbuido, atacar, danoPilar, dispararArcano, dispararFlechaCargada, golpeObjeto, lanzarCuchillo } from "../systems/abilities.js";
 import { sfx, sfxAterrizaje, sfxCargaArcano, sfxCargaCuchillo, sfxCargaLista, sfxFuegoBolaImpacto, sfxGolpeAire, sfxGolpeCritico, sfxImpactoGuerrero, sfxImpactoProyectil, sfxMoneda, sfxPaso, sfxTensarArco } from "../systems/audio.js";
 import { esJefe, escalaEnemigo } from "../systems/bosses.js";
-import { curarP, danoAEnemigo, danoAlJugador, explotarBomber, ganarXP, masCercano, matarEnemigo, spawnClon, spawnEnemigo, statsTot, tipoAleatorio, vivos } from "../systems/combat.js";
+import { curarP, danoAEnemigo, danoAlJugador, explotarBomber, ganarXP, masCercano, matarEnemigo, spawnClon, spawnEnemigo, spawnJefeCaballero, statsTot, tipoAleatorio, vivos } from "../systems/combat.js";
 import { JUICE, actualizarEstilo } from "../systems/juice.js";
 import { RADIO_HOGUERA_JEFE, aplicarLimites, colisionaMuro, cruzarPuerta, dentroForma, iniciarPlanta, ponPilares, salaActual } from "../systems/floorgen.js";
 import { leerInput } from "../systems/input.js";
@@ -1405,6 +1405,45 @@ export function update(dt) {
               continue;
             }
 
+            // --- Caballero Espectral: se acerca y golpea con la espada
+            // real (ver systems/combat.js: spawnJefeCaballero()) -- mismo
+            // esqueleto windup/golpe/cooldown que el Guardián de Hielo de
+            // arriba, sin ataques a distancia (solo melé, jefe de prueba
+            // más sencillo). e.atkT impulsa también la animación de giro
+            // del brazo/espada en render/character.js.
+            if (arq === "caballero") {
+              e.atkCdJefe -= dt;
+              if (e.atkT > 0) {
+                e.atkT -= dt;
+                const prog = 1 - e.atkT / e.atkTMax;
+                if (prog >= 0.55 && !e.atkGolpeo) {
+                  e.atkGolpeo = true;
+                  for (const p of vivos())
+                    if (Math.hypot(p.x - e.x, p.y - e.y) < e.r + p.r + 26)
+                      danoAlJugador(p, e.atk, { melee: e });
+                  fxOnda(e.x, e.y, e.r + 24, "#7fc9e8");
+                  G.shake = Math.max(G.shake, 3);
+                }
+                e.moviendose = false;
+              } else if (d > e.r + obj.r + 14) {
+                e.x += Math.cos(dirMov) * velF * dt;
+                e.y += Math.sin(dirMov) * velF * dt;
+                e.moviendose = true;
+              } else {
+                e.moviendose = false;
+                if (e.atkCdJefe <= 0) {
+                  e.atkT = e.atkTMax;
+                  e.atkGolpeo = false;
+                  e.atkCdJefe = 1.7;
+                }
+              }
+              e.x = clamp(e.x, e.r, SALA_W - e.r);
+              e.y = clamp(e.y, e.r, SALA_H - e.r);
+              aplicarLimites(e);
+              e.hurtT = Math.max(0, e.hurtT - dt);
+              continue;
+            }
+
             // --- teletransporte + siega del Segador ---
             if ((arq === "segador" || arq === "eterno") && e.segT > 0) {
               e.segT -= dt;
@@ -1800,6 +1839,57 @@ export function update(dt) {
           if (G.enemigos[i].hp <= 0 && !G.enemigos[i].dummy)
             G.enemigos.splice(i, 1);
 
+        // Caballero Espectral (jefe de prueba, ver systems/combat.js:
+        // spawnJefeCaballero()): sincroniza piezas (siguen al ancla, sin
+        // IA propia -- stunT descomunal las excluyó del bucle de arriba)
+        // y el arma (en mano o plantada durante su ventana de
+        // vulnerabilidad). Pasada APARTE, después del bucle de IA (que ya
+        // movió el ancla este fotograma) y de la purga de cadáveres, para
+        // no competir con el resto de lógica por enemigo.
+        for (const ancla of G.enemigos) {
+          if (ancla.arquetipo !== "caballero") continue;
+          const obj = masCercano(ancla.x, ancla.y);
+          ancla._flip = obj ? obj.x < ancla.x : false;
+          const signo = ancla._flip ? -1 : 1;
+          for (const parte of ancla.partes) {
+            parte.x = ancla.x + parte.ox * signo;
+            parte.y = ancla.y + parte.oy;
+          }
+          if (ancla.armaVentanaT > 0) {
+            // Sin piezas que la protejan, el arma ya no vuelve a
+            // resguardarse -- la ventana no se cierra nunca (pedido
+            // implícito: sin brazo/cuerpo que la sostenga no hay a dónde
+            // volver).
+            if (ancla.partes.length === 0) ancla.armaVentanaT = 999;
+            else ancla.armaVentanaT -= dt;
+            let arma = G.enemigos.find((e) => e.armaDeJefe === ancla);
+            if (!arma) {
+              arma = {
+                x: ancla.armaPlantX,
+                y: ancla.armaPlantY,
+                r: 12,
+                hp: ancla.armaHp,
+                hpMax: ancla.armaHpMax,
+                atk: 0,
+                knockRes: 0,
+                stunT: 1e9,
+                hurtT: 0,
+                hitFlashT: 0,
+                kx: 0,
+                ky: 0,
+                armaDeJefe: ancla,
+              };
+              G.enemigos.push(arma);
+            }
+            if (ancla.armaVentanaT <= 0) {
+              ancla.armaHp = arma.hp;
+              const wi = G.enemigos.indexOf(arma);
+              if (wi >= 0) G.enemigos.splice(wi, 1);
+              banner(ancla.nombre + " protege de nuevo su arma", "#9a93ab");
+            }
+          }
+        }
+
         // Arena PvP: comprueba si sólo queda un aspirante en pie
         if (G.escena === "pvp" && G.activo) {
           if (G.pvpFinT > 0) {
@@ -2009,6 +2099,23 @@ export function update(dt) {
             iniciarPlanta();
           }
           if (!cercaJefeQA) G.jefeQALock = false;
+        }
+
+        // Portal de pruebas (QA, ?qa=1), rojo: misma planta 5 de arriba,
+        // pero marca G.forzarCaballeroQA para que aparezca el Caballero
+        // Espectral (jefe multi-pieza de prueba) en vez del Guardián de
+        // Hielo -- ver systems/floorgen.js.
+        if (G.escena === "lobby" && G.caballeroNpcQA) {
+          const cercaCabQA = vivos().some(
+            (q) => Math.hypot(G.caballeroNpcQA.x - q.x, G.caballeroNpcQA.y - q.y) < 50,
+          );
+          if (cercaCabQA && !G.caballeroQALock && !G.pausa) {
+            G.caballeroQALock = true;
+            G.forzarCaballeroQA = true;
+            G.planta = 5;
+            iniciarPlanta();
+          }
+          if (!cercaCabQA) G.caballeroQALock = false;
         }
 
         // fogata
