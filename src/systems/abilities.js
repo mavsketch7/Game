@@ -192,6 +192,25 @@ export const CARGA_ARQ_MAX = 0.9;
 export const CARGA_ARQ_UMBRAL = 0.2;
 export const CARGA_ARQ_ZONA = [0.5, 0.8];
 
+// Test de impacto de un golpe en arco (golpeArco(), ver los 4 usos más
+// abajo: enemigos, fuego amigo, pilares, barriles) -- CÁPSULA en vez de
+// CONO puro. Un cono de ángulo fijo tiene un ancho en píxeles que se
+// encoge con la distancia: a bocajarro, un objetivo levemente
+// descentrado del apuntado exacto cae fuera del arco aunque esté
+// literalmente pegado al jugador (reportado: "los ataques meleé fallan
+// con los enemigos pegados"). El ancho de la cápsula sale del cono
+// ORIGINAL medido en su punto más lejano (rango*sin(arco/2)) -- el
+// alcance máximo se comporta igual que antes, solo deja de estrecharse
+// a cero cerca del jugador.
+function dentroDelArco(p, dir, rango, arco, ox, oy, radioObj) {
+        const dx = ox - p.x, dy = oy - p.y;
+        const cosD = Math.cos(dir), sinD = Math.sin(dir);
+        const proy = dx * cosD + dy * sinD; // a lo largo del golpe
+        const perp = -dx * sinD + dy * cosD; // perpendicular al golpe
+        const anchoMitad = rango * Math.sin(Math.min(arco, Math.PI) / 2);
+        return proy >= -radioObj && proy <= rango + radioObj && Math.abs(perp) <= anchoMitad + radioObj;
+      }
+
 function golpeArco(p, dir, rango, arco, dmgBase, esPicaro) {
         // Pícaro: línea recta de puñalada (fxEstocada), no el barrido en
         // media luna de fxTajo -- una daga apuñala, no siega (ver
@@ -213,12 +232,7 @@ function golpeArco(p, dir, rango, arco, dmgBase, esPicaro) {
           huboCrit = false;
         for (const e of G.enemigos) {
           if (e.hp <= 0 && !e.dummy) continue;
-          const d = Math.hypot(e.x - p.x, e.y - p.y);
-          if (d < rango + e.r) {
-            let da = Math.atan2(e.y - p.y, e.x - p.x) - dir;
-            while (da > Math.PI) da -= TAU;
-            while (da < -Math.PI) da += TAU;
-            if (Math.abs(da) < arco / 2) {
+          if (dentroDelArco(p, dir, rango, arco, e.x, e.y, e.r)) {
               let dmg = dmgBase;
               if (p.imbuido === "arcano") dmg *= 1.15; // sinergia arcana
               // pícaro: puñalada por la espalda si el enemigo está centrado en otro
@@ -258,7 +272,6 @@ function golpeArco(p, dir, rango, arco, dmgBase, esPicaro) {
               // pasan por aquí.
               if (!e.dummy && tieneEfecto(p, "congela_frhor"))
                 e.stunT = Math.max(e.stunT, 4);
-            }
           }
         }
         // fuego amigo: el tajo alcanza a los compañeros en el arco (50% de daño;
@@ -267,12 +280,7 @@ function golpeArco(p, dir, rango, arco, dmgBase, esPicaro) {
           const multFF = G.escena === "pvp" ? 1 : 0.5;
           for (const q of vivos()) {
             if (q === p || q.invulT > 0) continue;
-            const dq = Math.hypot(q.x - p.x, q.y - p.y);
-            if (dq < rango + q.r) {
-              let da = Math.atan2(q.y - p.y, q.x - p.x) - dir;
-              while (da > Math.PI) da -= TAU;
-              while (da < -Math.PI) da += TAU;
-              if (Math.abs(da) < arco / 2) {
+            if (dentroDelArco(p, dir, rango, arco, q.x, q.y, q.r)) {
                 danoAlJugador(q, dmgBase * multFF, { ff: p });
                 if (G.escena !== "pvp")
                   fxTexto(
@@ -281,28 +289,17 @@ function golpeArco(p, dir, rango, arco, dmgBase, esPicaro) {
                     "¡fuego amigo!",
                     "#ff9d3d",
                   );
-              }
             }
           }
         }
         // pilares destructibles y objetos
         for (const pl of G.pilares) {
           if (!pl.destructible) continue;
-          if (Math.hypot(pl.x - p.x, pl.y - p.y) < rango + pl.r) {
-            let da = Math.atan2(pl.y - p.y, pl.x - p.x) - dir;
-            while (da > Math.PI) da -= TAU;
-            while (da < -Math.PI) da += TAU;
-            if (Math.abs(da) < arco / 2) danoPilar(pl, dmgBase * 0.7);
-          }
+          if (dentroDelArco(p, dir, rango, arco, pl.x, pl.y, pl.r)) danoPilar(pl, dmgBase * 0.7);
         }
         for (const o of G.objetos) {
           if (o.tipo !== "barril") continue;
-          if (Math.hypot(o.x - p.x, o.y - p.y) < rango + 12) {
-            let da = Math.atan2(o.y - p.y, o.x - p.x) - dir;
-            while (da > Math.PI) da -= TAU;
-            while (da < -Math.PI) da += TAU;
-            if (Math.abs(da) < arco / 2) golpeObjeto(o, dmgBase);
-          }
+          if (dentroDelArco(p, dir, rango, arco, o.x, o.y, 12)) golpeObjeto(o, dmgBase);
         }
         // Sonido de impacto/fallo REAL (torre-vespero-assets/sounds-fx), UNA
         // vez por golpe (no una por enemigo alcanzado) -- se decide aquí, ya
