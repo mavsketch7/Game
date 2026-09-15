@@ -2612,19 +2612,22 @@ export function cargarSpritesDeClase(rol) {
 // daga (2).png) -- medido a mano sobre ESE archivo en concreto, no
 // reutiliza el punto compartido. El índice sigue el ORDEN de
 // IRON_WEAPON_NUMS.picaro ([1,2,4,5,6,7]), no el número de archivo -- daga
-// (2) es el índice 1, no el 2. arquero: las 16 variantes de "arco" siguen
-// la misma plantilla diagonal que guerrero/picaro (confirmado: las 16
-// tienen el bbox de alfa simétrico respecto a la diagonal principal) --
-// un único punto compartido, con la MISMA tolerancia que guerrero (que ya
-// comparte un punto entre formas tan distintas como una hoz y un látigo).
-// Antes el arquero no tenía entrada aquí a propósito: el arco en mano
-// usaba su propia animación de tensado de 3 frames genéricos (ARQUERO_BOW,
-// ya retirado) en vez del arte real por variante -- ver el commit que
-// añadió esta entrada para el porqué del cambio.
+// (2) es el índice 1, no el 2. arquero: SIN entrada aquí a propósito --
+// a diferencia de espadas/dagas (donde mango->punta = dirección real de
+// la hoja, tiene sentido rotar para que "apunte" a la puntería), un arco
+// es una media luna sin un extremo claramente "delantero": cualquier
+// punto de mango/punta que se probó (incluida una medida a mano sobre el
+// PNG) hacía que el arco quedara encogido/pegado al cuerpo o mirando
+// hacia el lado contrario a la puntería -- reportado: "los arcos los
+// toma el arquero al revés". Al no calibrar mango/punta,
+// armaHiltTip("arquero",...) devuelve null y el arco cae al fallback
+// genérico de icono (ver el `else if (esIconoArma)` en
+// render/character.js: -45° fijo, centrado en la mano), igual que
+// cualquier arma de icono sin calibrar -- se ve bien girando con la
+// puntería sin el efecto "encogido" del ajuste mango->punta.
 const HILT_TIP_DAGA_DIAGONAL = { hilt: [24, 24], tip: [7, 7] };
 const ARMA_HILT_TIP = {
   guerrero: Array(6).fill({ hilt: [25, 25], tip: [4, 4] }),
-  arquero: Array(16).fill({ hilt: [9, 9], tip: [28, 3] }),
   picaro: [
     HILT_TIP_DAGA_DIAGONAL, // daga (1)
     { hilt: [5, 21], tip: [6, 1] }, // daga (2) -- Daga de Bronce
