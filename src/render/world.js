@@ -1372,15 +1372,18 @@ export function render() {
             cx.stroke();
             cx.restore();
 
-            // hebras onduladas (solo épico+): dos cintas de energía que
-            // suben en espiral junto al núcleo, como el vídeo de
-            // referencia (Diablo 4, alijos míticos) -- un simple rayo recto
-            // se queda corto para transmitir "esto es importante".
-            if (rareza >= 2) {
+            // hebras onduladas (Raro+, antes solo Épico+ -- pedido expreso:
+            // "en los azules morados dorados y míticos"): dos cintas de
+            // energía que suben en espiral junto al núcleo, como el vídeo
+            // de referencia (Diablo 4, alijos míticos) -- un simple rayo
+            // recto se queda corto para transmitir "esto es importante".
+            // Más segmentos que antes (14->22) para una curva más lisa,
+            // menos poligonal -- pedido expreso: "añádele curvatura".
+            if (rareza >= 1) {
               cx.save();
               for (let hebra = 0; hebra < 2; hebra++) {
                 cx.beginPath();
-                const nSeg = 14;
+                const nSeg = 22;
                 for (let i = 0; i <= nSeg; i++) {
                   const t2 = i / nSeg;
                   const hy = dr.y - t2 * beamH;
@@ -1448,11 +1451,49 @@ export function render() {
               }
             }
 
-            cx.globalAlpha = 0.35;
-            cx.fillStyle = col;
+            // Resplandor de base: antes un círculo plano de color sólido
+            // (cx.arc + fill a alpha fijo) -- se veía como un disco pegado
+            // debajo del icono, sin relación con el resto del efecto
+            // (rayo/hebras/chispas, todo con degradados suaves). Pedido
+            // expreso: "el círculo queda raro". Degradado radial (opaco en
+            // el centro, se apaga hacia el borde) en vez de un relleno
+            // plano -- mismo criterio visual que el núcleo/las hebras.
+            const gBase = cx.createRadialGradient(dr.x, dr.y + bob, 0, dr.x, dr.y + bob, 14);
+            gBase.addColorStop(0, hexRgba(col, 0.4 * pulso));
+            gBase.addColorStop(0.7, hexRgba(col, 0.16 * pulso));
+            gBase.addColorStop(1, hexRgba(col, 0));
+            cx.fillStyle = gBase;
             cx.beginPath();
             cx.arc(dr.x, dr.y + bob, 14, 0, TAU);
             cx.fill();
+            // Llamita ambiental subiendo desde la base (Raro+, mismo
+            // umbral que las hebras) -- pedido expreso: "desde el objeto
+            // una especie de llama hacia arriba". 3 lenguas cortas que se
+            // balancean con un seno propio (fase distinta cada una) y se
+            // afinan en punta, MUCHO más corta que el rayo principal (no
+            // compite con él, es un acompañamiento a ras de suelo).
+            if (rareza >= 1) {
+              cx.save();
+              const nLlamas = 3;
+              for (let li = 0; li < nLlamas; li++) {
+                const fase = animGlobal * 3.1 + li * 2.1;
+                const alto = 10 + rareza * 2 + Math.sin(fase) * 2.5;
+                const balanceo = Math.sin(fase * 1.7 + li) * (2 + rareza * 0.4);
+                const bx = dr.x + (li - 1) * 4.5;
+                const by = dr.y + bob;
+                cx.beginPath();
+                cx.moveTo(bx - 2, by);
+                cx.quadraticCurveTo(bx + balanceo, by - alto * 0.6, bx + balanceo * 1.3, by - alto);
+                cx.quadraticCurveTo(bx + balanceo, by - alto * 0.6, bx + 2, by);
+                cx.closePath();
+                const gLlama = cx.createLinearGradient(bx, by, bx, by - alto);
+                gLlama.addColorStop(0, hexRgba(col, 0.6));
+                gLlama.addColorStop(1, hexRgba(col, 0));
+                cx.fillStyle = gLlama;
+                cx.fill();
+              }
+              cx.restore();
+            }
             cx.globalAlpha = 1;
             drawSprite(iconoDrop(dr.item), dr.x, dr.y + bob);
 
