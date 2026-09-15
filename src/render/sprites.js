@@ -2650,22 +2650,27 @@ export function cargarSpritesDeClase(rol) {
 // daga (2).png) -- medido a mano sobre ESE archivo en concreto, no
 // reutiliza el punto compartido. El índice sigue el ORDEN de
 // IRON_WEAPON_NUMS.picaro ([1,2,4,5,6,7]), no el número de archivo -- daga
-// (2) es el índice 1, no el 2. arquero: SIN entrada aquí a propósito --
-// a diferencia de espadas/dagas (donde mango->punta = dirección real de
-// la hoja, tiene sentido rotar para que "apunte" a la puntería), un arco
-// es una media luna sin un extremo claramente "delantero": cualquier
-// punto de mango/punta que se probó (incluida una medida a mano sobre el
-// PNG) hacía que el arco quedara encogido/pegado al cuerpo o mirando
-// hacia el lado contrario a la puntería -- reportado: "los arcos los
-// toma el arquero al revés". Al no calibrar mango/punta,
-// armaHiltTip("arquero",...) devuelve null y el arco cae al fallback
-// genérico de icono (ver el `else if (esIconoArma)` en
-// render/character.js: -45° fijo, centrado en la mano), igual que
-// cualquier arma de icono sin calibrar -- se ve bien girando con la
-// puntería sin el efecto "encogido" del ajuste mango->punta.
+// (2) es el índice 1, no el 2. arquero: a diferencia de espadas/dagas
+// (mango->punta = dirección real de la hoja, apuntar con la puntería
+// tiene sentido físico), un arco es una media luna SIN un extremo
+// delantero -- usar un limbo real como "punta" giraba el arco entero
+// para señalar con un limbo, dejando el otro colgando en un ángulo raro
+// (reportado dos veces: "al revés"/"encogido"). Punto "punta" VIRTUAL en
+// vez de un píxel real: mango = centroide del agarre (medido por color,
+// script de un solo uso) = (9.5, 9); punta = mango + 15px en la
+// PERPENDICULAR al eje limbo-a-limbo (135°, medido por bbox de alfa -- de
+// (2,2) a (28,28) en las 16 variantes, confirmado simétrico) en vez de
+// hacia un limbo -- rotar mango->punta con la puntería así deja el EJE
+// DE LOS LIMBOS perpendicular a la puntería (arco "abierto" de perfil,
+// como sujetado de verdad) en vez de un limbo señalando y el otro
+// colgando. Confirmado con un barrido de las 4 direcciones cardinales +
+// mango anclado a la mano (ya no un canto del cuadro 32x32): el hueco del
+// arco (por donde volaría la flecha) queda mirando siempre hacia la
+// puntería, nunca hacia el propio cuerpo.
 const HILT_TIP_DAGA_DIAGONAL = { hilt: [24, 24], tip: [7, 7] };
 const ARMA_HILT_TIP = {
   guerrero: Array(6).fill({ hilt: [25, 25], tip: [4, 4] }),
+  arquero: Array(16).fill({ hilt: [9.5, 9], tip: [20.1, 19.6] }),
   picaro: [
     HILT_TIP_DAGA_DIAGONAL, // daga (1)
     { hilt: [5, 21], tip: [6, 1] }, // daga (2) -- Daga de Bronce
