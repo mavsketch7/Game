@@ -1310,9 +1310,36 @@ function cargarHojaConArmadura(bodyUrl, armorUrls, destSize, sinAmpliar, onListo
           }
         }
 
-        onListo(bodyFrames, anclas, capas, { bboxesUnion, escala });
+        onListo(bodyFrames, anclas, capas, { bboxesUnion, escala, frameSize });
       });
   }
+}
+
+// Agranda cada bbox de una unión ya calculada (ver `unionExterna` más
+// arriba) en `pad` píxeles por lado, recortado a los límites del frame de
+// origen. Puramente ADITIVO -- solo puede recuperar píxeles que se
+// estuvieran perdiendo, nunca reduce nada. Hace falta porque la armadura
+// de una clase concreta (mago/pícaro) puede sobresalir un poco más que la
+// armadura POR DEFECTO cuyo recorte se está reutilizando (reportado: "la
+// capucha del ladrón se corta arriba" -- la unión reutilizada, calculada
+// con la armadura por defecto, era unos píxeles más baja que la capucha
+// real). El lienzo destino ya tiene margen de sobra (la unión real mide
+// ~31-34px de alto con un presupuesto de 41px, destSize*0.86), así que
+// unos pocos píxeles de más caben sin que `escala` dejara de estar topada
+// en 1 ni el recorte se salga del lienzo.
+function expandirUnion(union, pad) {
+  const { frameSize } = union;
+  return {
+    escala: union.escala,
+    frameSize,
+    bboxesUnion: union.bboxesUnion.map((b) => {
+      const x = Math.max(0, b.x - pad);
+      const y = Math.max(0, b.y - pad);
+      const xEnd = Math.min(frameSize, b.x + b.w + pad);
+      const yEnd = Math.min(frameSize, b.y + b.h + pad);
+      return { x, y, w: xEnd - x, h: yEnd - y };
+    }),
+  };
 }
 
 // Como cargarHojaFrames(), pero para una hoja en REJILLA (cols x rows,
@@ -1798,14 +1825,14 @@ function cargarArmaduraTinIdleRunMago() {
       CASCO_IDLE_MAGO_TIN[dirIdle] = tenirFramesPorRareza(capas.casco);
       PETO_IDLE_MAGO_TIN[dirIdle] = tenirFramesPorRareza(capas.peto);
       PIERNAS_IDLE_MAGO_TIN[dirIdle] = tenirFramesPorRareza(capas.piernas);
-    }, UNION_IDLE[dirIdle]);
+    }, expandirUnion(UNION_IDLE[dirIdle], 6));
   }
   for (const dirRun in REAL_RUN_SRC) {
     cargarHojaConArmadura(REAL_RUN_SRC[dirRun], armorUrlsDe(ARMOR_BASE_RUN_MAGO[dirRun]), TAM_HEROE, true, (frames, anclas, capas) => {
       CASCO_RUN_MAGO_TIN[dirRun] = tenirFramesPorRareza(capas.casco);
       PETO_RUN_MAGO_TIN[dirRun] = tenirFramesPorRareza(capas.peto);
       PIERNAS_RUN_MAGO_TIN[dirRun] = tenirFramesPorRareza(capas.piernas);
-    }, UNION_RUN[dirRun]);
+    }, expandirUnion(UNION_RUN[dirRun], 6));
   }
 }
 
@@ -1830,14 +1857,14 @@ function cargarArmaduraTinIdleRunPicaro() {
       CASCO_IDLE_PICARO_TIN[dirIdle] = tenirFramesPorRareza(capas.casco);
       PETO_IDLE_PICARO_TIN[dirIdle] = tenirFramesPorRareza(capas.peto);
       PIERNAS_IDLE_PICARO_TIN[dirIdle] = tenirFramesPorRareza(capas.piernas);
-    }, UNION_IDLE[dirIdle]);
+    }, expandirUnion(UNION_IDLE[dirIdle], 6));
   }
   for (const dirRun in REAL_RUN_SRC) {
     cargarHojaConArmadura(REAL_RUN_SRC[dirRun], armorUrlsDe(ARMOR_BASE_RUN_PICARO[dirRun]), TAM_HEROE, true, (frames, anclas, capas) => {
       CASCO_RUN_PICARO_TIN[dirRun] = tenirFramesPorRareza(capas.casco);
       PETO_RUN_PICARO_TIN[dirRun] = tenirFramesPorRareza(capas.peto);
       PIERNAS_RUN_PICARO_TIN[dirRun] = tenirFramesPorRareza(capas.piernas);
-    }, UNION_RUN[dirRun]);
+    }, expandirUnion(UNION_RUN[dirRun], 6));
   }
 }
 
@@ -1891,7 +1918,7 @@ function cargarArmaduraTinHurtMago() {
     CASCO_HURT_MAGO_TIN.push(...tenirFramesPorRareza(capas.casco));
     PETO_HURT_MAGO_TIN.push(...tenirFramesPorRareza(capas.peto));
     PIERNAS_HURT_MAGO_TIN.push(...tenirFramesPorRareza(capas.piernas));
-  }, UNION_HURT);
+  }, expandirUnion(UNION_HURT, 6));
 }
 // Unión cuerpo+armadura-de-mago de MUERTE, capturada aquí para que la
 // llamada perezosa de pícaro (más abajo) la reutilice -- ver comentario
@@ -1937,14 +1964,14 @@ function cargarArmaduraTinHurtPicaro() {
     CASCO_HURT_PICARO_TIN.push(...tenirFramesPorRareza(capas.casco));
     PETO_HURT_PICARO_TIN.push(...tenirFramesPorRareza(capas.peto));
     PIERNAS_HURT_PICARO_TIN.push(...tenirFramesPorRareza(capas.piernas));
-  }, UNION_HURT);
+  }, expandirUnion(UNION_HURT, 6));
 }
 function cargarArmaduraTinMuertePicaro() {
   cargarHojaConArmadura(REAL_MUERTE_SRC, armorUrlsDe(ARMOR_BASE_MUERTE_PICARO), TAM_HEROE, true, (frames, anclas, capas) => {
     CASCO_MUERTE_PICARO_TIN.push(...tenirFramesPorRareza(capas.casco));
     PETO_MUERTE_PICARO_TIN.push(...tenirFramesPorRareza(capas.peto));
     PIERNAS_MUERTE_PICARO_TIN.push(...tenirFramesPorRareza(capas.piernas));
-  }, UNION_MUERTE);
+  }, expandirUnion(UNION_MUERTE, 6));
 }
 
 // Duración del colapso hasta quedarse tumbado del todo -- después se
