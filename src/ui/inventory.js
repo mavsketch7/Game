@@ -109,6 +109,12 @@ const LIBRO_MARCAPAGINA_INACTIVO_POS = [
 ];
 // objeto de la bolsa seleccionado en la pestaña Equipamiento (-1 = ninguno)
 let idxSel = -1;
+// slot de equipo seleccionado (null = ninguno) -- toque/clic en un slot ya
+// puesto, para ver sus stats y poder desequiparlo sin arrastrar (el
+// arrastrar-y-soltar de siempre no existe en táctil, ver selEquipoSlot()
+// más abajo). Mutuamente excluyente con idxSel: seleccionar uno limpia el
+// otro, un único panel de acción a la vez.
+let eqSel = null;
 // uid del fragmento de la bolsa de Alma elegido para colocar (null = ninguno)
 let fragSel = null;
 
@@ -117,6 +123,7 @@ export function cambiarPestanaInv(dir) {
         const n = PESTANAS_INV.length;
         invTab = PESTANAS_INV[(((i + dir) % n) + n) % n].id;
         idxSel = -1;
+        eqSel = null;
         fragSel = null;
         abrirInv();
       }
@@ -124,12 +131,27 @@ export function cambiarPestanaInv(dir) {
 export function irPestanaInv(id) {
         invTab = id;
         idxSel = -1;
+        eqSel = null;
         fragSel = null;
         abrirInv();
       }
 
 function selItemInv(idx) {
         idxSel = idxSel === idx ? -1 : idx;
+        eqSel = null;
+        abrirInv();
+      }
+
+// Selecciona/deselecciona un slot de equipo ya puesto (toque o clic, ver
+// celdaSlotLibro() más abajo) -- muestra sus stats/efecto y un botón para
+// desequiparlo (panelAccionEquipo()). Antes la ÚNICA forma de desequipar
+// era arrastrar el icono fuera del slot (ondragstart="arrastrarEquipoInicio"),
+// que no existe en pantallas táctiles -- pedido expreso: "en móvil no deja
+// desequipar". Mismo criterio que selItemInv(): mutuamente excluyente con
+// la selección de la bolsa, un panel de acción a la vez.
+function selEquipoSlot(slot) {
+        eqSel = eqSel === slot ? null : slot;
+        idxSel = -1;
         abrirInv();
       }
 
@@ -273,6 +295,7 @@ function filtrarBolsa(slot) {
         const p = G.players[G.invSel] || G.players[0];
         p.filtroBolsa = slot;
         idxSel = -1;
+        eqSel = null;
         abrirInv();
       }
 
@@ -294,6 +317,7 @@ function ordenarBolsa(crit) {
           );
         else p.bolsa.sort((a, b) => suma(b) - suma(a));
         idxSel = -1;
+        eqSel = null;
         abrirInv();
       }
 
@@ -432,8 +456,13 @@ function celdaSlotLibro(slot, p) {
           ' draggable="true" ondragstart="arrastrarEquipoInicio(event,\'' +
           slot +
           '\')" ondragend="arrastrarEquipoFin(event)"';
+        // Toque/clic (ver selEquipoSlot() más arriba): alternativa al
+        // arrastre para pantallas táctiles, donde ni el drag&drop ni el
+        // tooltip por :hover funcionan.
+        const clickAttrs = ' onclick="selEquipoSlot(\'' + slot + '\')"';
+        const seleccionado = slot === eqSel;
         return (
-          '<div class="eq-slot hoja-slot" style="' + style + '"' + dropAttrs + dragAttrs + ">" +
+          '<div class="eq-slot hoja-slot' + (seleccionado ? " seleccionada" : "") + '" style="' + style + '"' + dropAttrs + dragAttrs + clickAttrs + ">" +
           '<img class="eq-slot-ico" src="' + iconoUrl(it) + '" alt="" />' +
           '<div class="item-tooltip">' +
           '<div class="tt-nombre ' + rar.cls + '">' + escHtml(it.nombre) + "</div>" +
@@ -739,7 +768,7 @@ function tabPersonaje(p, t, b) {
           "</div>" +
           '<h3 class="libro-subtitulo">Ordenar la bolsa</h3>' +
           ordCtrlHtml(p) +
-          panelAccionItem(p) +
+          (eqSel ? panelAccionEquipo(p) : panelAccionItem(p)) +
           rankingSesion()
         );
       }
@@ -1095,6 +1124,52 @@ function panelAccionItem(p) {
         );
       }
 
+// Igual que panelAccionItem() pero para un slot de equipo YA PUESTO (ver
+// selEquipoSlot() más arriba) -- sin "comparativo" (el objeto seleccionado
+// ES lo equipado, no hay nada con qué compararlo) y con un único botón,
+// "Quitar" en vez de Equipar/Vender/Tirar/dar: mismo criterio que
+// desequiparSlot(), que hasta ahora solo se podía disparar arrastrando el
+// icono fuera del slot.
+function panelAccionEquipo(p) {
+        const it = p.equipo[eqSel];
+        if (!it) return "";
+        const rar = RAREZAS[it.rareza];
+        return (
+          '<div class="panel-item-sel" style="border-color:' +
+          rar.col +
+          '">' +
+          '<div class="panel-item-cab">' +
+          '<div class="panel-item-nombre ' +
+          rar.cls +
+          '">' +
+          escHtml(it.nombre) +
+          "</div>" +
+          '<div class="panel-item-slot">' +
+          (SLOT_LABEL[it.slot] || it.slot) +
+          ' · <span class="' +
+          rar.cls +
+          '">' +
+          rar.n +
+          "</span></div>" +
+          "</div>" +
+          (it.efectoDesc
+            ? '<div class="item-efecto">✦ ' + escHtml(it.efectoDesc) + "</div>"
+            : "") +
+          (typeof it.kills === "number"
+            ? '<div class="item-efecto">🗡 ' + it.kills + " kills con esta arma</div>"
+            : "") +
+          '<div class="panel-item-stats">' +
+          fmtStats(it.stats) +
+          "</div>" +
+          '<div class="item-acciones">' +
+          '<button class="btn" onclick="desequiparSlot(\'' +
+          eqSel +
+          '\')">Quitar</button>' +
+          "</div>" +
+          "</div>"
+        );
+      }
+
 // Ajustes: antes overlay aparte (#ajustes, accesible con el botón ⚙ incluso
 // antes de tener partida) -- ahora pestaña del libro, solo alcanzable con
 // partida activa. "Lobby del grupo"/"Fuego amigo" (antes aquí, solo
@@ -1274,6 +1349,7 @@ export function abrirInv() {
 export function invSel(i) {
         G.invSel = i;
         idxSel = -1;
+        eqSel = null;
         abrirInv();
       }
 
@@ -1421,6 +1497,7 @@ function equipar(idx) {
         if (ant) p.bolsa.push(ant);
         p.hp = clamp(p.hp, 1, statsTot(p).hpMax);
         idxSel = -1;
+        eqSel = null;
         toast(p.nombre + " equipa " + it.nombre, RAREZAS[it.rareza].col);
         abrirInv();
       }
@@ -1430,6 +1507,7 @@ function tirarItem(idx) {
         if (p.bolsa[idx]) {
           p.bolsa.splice(idx, 1);
           idxSel = -1;
+          eqSel = null;
           abrirInv();
         }
       }
@@ -1446,6 +1524,7 @@ function venderItem(idx) {
         p.bolsa.splice(idx, 1);
         G.oroRun += oro;
         idxSel = -1;
+        eqSel = null;
         toast("Vendido " + it.nombre + " por " + oro + " 🪙", "#ffd27f");
         abrirInv();
       }
@@ -1458,6 +1537,7 @@ function darItem(idx, targetIdx) {
         p.bolsa.splice(idx, 1);
         q.bolsa.push(it);
         idxSel = -1;
+        eqSel = null;
         toast(
           p.nombre + " da " + it.nombre + " a " + q.nombre,
           RAREZAS[it.rareza].col,
@@ -1490,6 +1570,7 @@ window.invSel = invSel;
 window.irPestanaInv = irPestanaInv;
 window.ordenarBolsa = ordenarBolsa;
 window.quitarFragmentoAlma = quitarFragmentoAlma;
+window.selEquipoSlot = selEquipoSlot;
 window.selItemInv = selItemInv;
 window.seleccionarFragAlma = seleccionarFragAlma;
 window.tirarItem = tirarItem;

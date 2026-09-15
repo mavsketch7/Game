@@ -2223,6 +2223,14 @@ img.hoja-pieza {
 .hoja-slot.vacio {
   opacity: 1;
 }
+/* Slot seleccionado (toque/clic, ver selEquipoSlot() en inventory.js) --
+   mismo criterio visual que .item-cell-libro.seleccionada, el borde ya
+   está pintado por RAREZAS[].col vía `style`, así que aquí solo hace
+   falta el contorno adicional. */
+.hoja-slot.seleccionada {
+  outline: 2px solid var(--vespero);
+  outline-offset: 1px;
+}
 .hoja-slot-tipo-ico {
   width: 52%;
   opacity: 0.55;
