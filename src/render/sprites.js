@@ -2650,27 +2650,16 @@ export function cargarSpritesDeClase(rol) {
 // daga (2).png) -- medido a mano sobre ESE archivo en concreto, no
 // reutiliza el punto compartido. El índice sigue el ORDEN de
 // IRON_WEAPON_NUMS.picaro ([1,2,4,5,6,7]), no el número de archivo -- daga
-// (2) es el índice 1, no el 2. arquero: a diferencia de espadas/dagas
-// (mango->punta = dirección real de la hoja, apuntar con la puntería
-// tiene sentido físico), un arco es una media luna SIN un extremo
-// delantero -- usar un limbo real como "punta" giraba el arco entero
-// para señalar con un limbo, dejando el otro colgando en un ángulo raro
-// (reportado dos veces: "al revés"/"encogido"). Punto "punta" VIRTUAL en
-// vez de un píxel real: mango = centroide del agarre (medido por color,
-// script de un solo uso) = (9.5, 9); punta = mango + 15px en la
-// PERPENDICULAR al eje limbo-a-limbo (135°, medido por bbox de alfa -- de
-// (2,2) a (28,28) en las 16 variantes, confirmado simétrico) en vez de
-// hacia un limbo -- rotar mango->punta con la puntería así deja el EJE
-// DE LOS LIMBOS perpendicular a la puntería (arco "abierto" de perfil,
-// como sujetado de verdad) en vez de un limbo señalando y el otro
-// colgando. Confirmado con un barrido de las 4 direcciones cardinales +
-// mango anclado a la mano (ya no un canto del cuadro 32x32): el hueco del
-// arco (por donde volaría la flecha) queda mirando siempre hacia la
-// puntería, nunca hacia el propio cuerpo.
+// (2) es el índice 1, no el 2. arquero NO está aquí -- ver ARQUERO_MANGO
+// más abajo: a diferencia de una hoja (mango->punta = dirección real,
+// girar para "apuntar" tiene sentido físico), varios intentos de darle al
+// arco una rotación propia calculada (limbo real como punta, punta
+// virtual perpendicular al eje de los limbos) salieron espejados o mal
+// encajados según el usuario -- pedido expreso: "solo tienes que pegarlo
+// al punto de ancla de la mano", sin ningún giro propio del dibujo.
 const HILT_TIP_DAGA_DIAGONAL = { hilt: [24, 24], tip: [7, 7] };
 const ARMA_HILT_TIP = {
   guerrero: Array(6).fill({ hilt: [25, 25], tip: [4, 4] }),
-  arquero: Array(16).fill({ hilt: [9.5, 9], tip: [20.1, 19.6] }),
   picaro: [
     HILT_TIP_DAGA_DIAGONAL, // daga (1)
     { hilt: [5, 21], tip: [6, 1] }, // daga (2) -- Daga de Bronce
@@ -2684,6 +2673,16 @@ export function armaHiltTip(clase, arteIdx) {
   const arr = ARMA_HILT_TIP[clase];
   return arr ? arr[arteIdx % arr.length] : null;
 }
+
+// Punto de mango del arco (centroide del agarre marrón/tostado, medido a
+// mano sobre el PNG de 32x32 -- compartido por las 16 variantes,
+// confirmado simétrico por bbox de alfa). A diferencia de ARMA_HILT_TIP
+// (mango+punta, con rotación propia calculada), el arco SOLO se ancla por
+// este punto -- ver render/character.js: se dibuja sin cx.rotate()/
+// cx.scale(-1,1) propios, el giro lo aporta por completo la rotación
+// general del personaje (pedido expreso, ver el comentario de
+// ARMA_HILT_TIP más arriba).
+export const ARQUERO_MANGO = [10, 10];
 
 // Armas legendarias (Mítico) con arte propio -- ver OBJETOS_MITICOS en
 // systems/objetosMiticos.js. Mismo criterio que MARTILLO_FRHOR_IMG (id

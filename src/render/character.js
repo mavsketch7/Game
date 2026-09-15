@@ -9,7 +9,7 @@ import { ELEMENTOS, RAREZAS, SUPS } from "../core/constants.js";
 import { G } from "../core/state.js";
 import { fxParticulas } from "./effects.js";
 import { drawSprite, drawSpriteBottom } from "./spriteDraw.js";
-import { AMULETO_FENIX_FRAME, AMULETO_FENIX_FRAMES_N, AMULETO_FENIX_IMG, ATTACK_DUR, CABALLERO_IMG, CABALLERO_LIENZO, cargarSpritesDeClase, CASCO_ATTACK, metaCaballero, CASCO_ATTACK_TIN, CASCO_HURT, CASCO_HURT_MAGO_TIN, CASCO_HURT_PICARO_TIN, CASCO_IDLE, CASCO_IDLE_MAGO_TIN, CASCO_IDLE_PICARO_TIN, CASCO_MUERTE_MAGO_TIN, CASCO_MUERTE_PICARO_TIN, CASCO_RUN, CASCO_RUN_MAGO_TIN, CASCO_RUN_PICARO_TIN, CASCO_SPECIAL_TIN, CONFIG_ARMA, DAGA_CARGADA_FH, DAGA_CARGADA_FRAMES, DAGA_CARGADA_FW, DAGA_CARGADA_SHEET, DASH_ATTACK_DUR, DUMMY_HIT, ESC_FORMA, FROST_GUARDIAN, LEYENDA_ARMA_IMG, MARTILLO_FRHOR_IMG, MIRA_IZQUIERDA_POR_DEFECTO, MOB_RUN, MUERTE_DUR, OFFHAND_IMG, OFFHAND_IMG_RAREZA, PARRY_FX_FH, PARRY_FX_FRAMES, PARRY_FX_FW, PARRY_FX_SHEET, PETO_ATTACK, PETO_ATTACK_TIN, PETO_HURT, PETO_HURT_MAGO_TIN, PETO_HURT_PICARO_TIN, PETO_IDLE, PETO_IDLE_MAGO_TIN, PETO_IDLE_PICARO_TIN, PETO_MUERTE_MAGO_TIN, PETO_MUERTE_PICARO_TIN, PETO_RUN, PETO_RUN_MAGO_TIN, PETO_RUN_PICARO_TIN, PETO_SPECIAL_TIN, PIERNAS_ATTACK, PIERNAS_ATTACK_TIN, PIERNAS_HURT, PIERNAS_HURT_MAGO_TIN, PIERNAS_HURT_PICARO_TIN, PIERNAS_IDLE, PIERNAS_IDLE_MAGO_TIN, PIERNAS_IDLE_PICARO_TIN, PIERNAS_MUERTE_MAGO_TIN, PIERNAS_MUERTE_PICARO_TIN, PIERNAS_RUN, PIERNAS_RUN_MAGO_TIN, PIERNAS_RUN_PICARO_TIN, PIERNAS_SPECIAL_TIN, REAL_ATTACK, REAL_ATTACK_ANCLA, REAL_DASH, REAL_DASH_ANCLA, REAL_HURT, REAL_IDLE, REAL_IDLE_ANCLA, REAL_MUERTE, REAL_RUN, REAL_RUN_ANCLA, REAL_SPECIAL, REAL_SPECIAL_ANCLA, REAL_SPRITE_SCALE, SHEETS, SPECIAL_ATTACK_DUR, SPR, SPR_FORMAS, TAM_HEROE, WEAPON_ART_POOL, WEAPON_IMG, WEAPON_IMG_RAREZA, armaHiltTip, assetOK, leyendaArmaHiltTip, seleccionarImgEnemigo, spriteJugador } from "./sprites.js";
+import { AMULETO_FENIX_FRAME, AMULETO_FENIX_FRAMES_N, AMULETO_FENIX_IMG, ARQUERO_MANGO, ATTACK_DUR, CABALLERO_IMG, CABALLERO_LIENZO, cargarSpritesDeClase, CASCO_ATTACK, metaCaballero, CASCO_ATTACK_TIN, CASCO_HURT, CASCO_HURT_MAGO_TIN, CASCO_HURT_PICARO_TIN, CASCO_IDLE, CASCO_IDLE_MAGO_TIN, CASCO_IDLE_PICARO_TIN, CASCO_MUERTE_MAGO_TIN, CASCO_MUERTE_PICARO_TIN, CASCO_RUN, CASCO_RUN_MAGO_TIN, CASCO_RUN_PICARO_TIN, CASCO_SPECIAL_TIN, CONFIG_ARMA, DAGA_CARGADA_FH, DAGA_CARGADA_FRAMES, DAGA_CARGADA_FW, DAGA_CARGADA_SHEET, DASH_ATTACK_DUR, DUMMY_HIT, ESC_FORMA, FROST_GUARDIAN, LEYENDA_ARMA_IMG, MARTILLO_FRHOR_IMG, MIRA_IZQUIERDA_POR_DEFECTO, MOB_RUN, MUERTE_DUR, OFFHAND_IMG, OFFHAND_IMG_RAREZA, PARRY_FX_FH, PARRY_FX_FRAMES, PARRY_FX_FW, PARRY_FX_SHEET, PETO_ATTACK, PETO_ATTACK_TIN, PETO_HURT, PETO_HURT_MAGO_TIN, PETO_HURT_PICARO_TIN, PETO_IDLE, PETO_IDLE_MAGO_TIN, PETO_IDLE_PICARO_TIN, PETO_MUERTE_MAGO_TIN, PETO_MUERTE_PICARO_TIN, PETO_RUN, PETO_RUN_MAGO_TIN, PETO_RUN_PICARO_TIN, PETO_SPECIAL_TIN, PIERNAS_ATTACK, PIERNAS_ATTACK_TIN, PIERNAS_HURT, PIERNAS_HURT_MAGO_TIN, PIERNAS_HURT_PICARO_TIN, PIERNAS_IDLE, PIERNAS_IDLE_MAGO_TIN, PIERNAS_IDLE_PICARO_TIN, PIERNAS_MUERTE_MAGO_TIN, PIERNAS_MUERTE_PICARO_TIN, PIERNAS_RUN, PIERNAS_RUN_MAGO_TIN, PIERNAS_RUN_PICARO_TIN, PIERNAS_SPECIAL_TIN, REAL_ATTACK, REAL_ATTACK_ANCLA, REAL_DASH, REAL_DASH_ANCLA, REAL_HURT, REAL_IDLE, REAL_IDLE_ANCLA, REAL_MUERTE, REAL_RUN, REAL_RUN_ANCLA, REAL_SPECIAL, REAL_SPECIAL_ANCLA, REAL_SPRITE_SCALE, SHEETS, SPECIAL_ATTACK_DUR, SPR, SPR_FORMAS, TAM_HEROE, WEAPON_ART_POOL, WEAPON_IMG, WEAPON_IMG_RAREZA, armaHiltTip, assetOK, leyendaArmaHiltTip, seleccionarImgEnemigo, spriteJugador } from "./sprites.js";
 import { CARGA_ARQ_MAX, CARGA_ARQ_ZONA, CARGA_CUCH_MAX, CARGA_CUCH_ZONA, groundTarget } from "../systems/abilities.js";
 import { ESCALA_CABALLERO, masCercano, PARRY_FX_DUR } from "../systems/combat.js";
 import { mouse } from "../systems/input.js";
@@ -1231,19 +1231,7 @@ export function renderJugador(p) {
               const boostLeyenda = imgLeyenda && wimg === imgLeyenda ? 1.6 : 1;
               const s = ((REACH - GRIP) / Math.max(ww0, wh0)) * boostLeyenda;
               const ww = ww0 * s, wh = wh0 * s;
-              // El arco (ver ARMA_HILT_TIP.arquero más abajo) tiene el
-              // mango en el CENTRO del dibujo, no en un extremo como una
-              // hoja -- con ancla real (gripDibujo=0, mismo criterio que
-              // el resto) queda literalmente encima del pecho durante el
-              // reposo (mismo síntoma que el bastón del mago más abajo,
-              // "aplastado contra la cara", pero ahí escalar más grande
-              // basta porque el mango SÍ está en un extremo). Reportado
-              // dos veces: "sigue cogiendo el arco al revés"/"punto de
-              // anclaje" -- no era el ángulo, era que no se separaba del
-              // cuerpo. Empuja el arco hacia fuera en la dirección de la
-              // puntería, igual que GRIP hace para las armas sin ancla
-              // real.
-              const gripDibujo = anclaMano ? (p.rol === "arquero" ? 22 : 0) : GRIP;
+              const gripDibujo = anclaMano ? 0 : GRIP;
               // El pack "wood-weapons" no es consistente en cómo recortó cada
               // pieza: espada/daga/maza/báculo vienen en vertical (más alto
               // que ancho, punta arriba -- p.ej. sword-wood.png 10x41), pero
@@ -1273,7 +1261,23 @@ export function renderJugador(p) {
                 : esIconoArma
                 ? armaHiltTip(eq.arma.clase, eq.arma.arteIdx)
                 : null;
-              if (datosHiltTip) {
+              // Arco: a diferencia de una hoja (mango→punta = dirección
+              // real de la hoja, tiene sentido girar para "enderezarla"),
+              // un arco es una media luna sin un extremo delantero --
+              // tras 3 intentos con una rotación propia calculada (que el
+              // usuario reportó repetidamente como espejada/mal
+              // colocada), pedido expreso: "solo tienes que pegarlo al
+              // punto de ancla de la mano". Sin cx.rotate()/cx.scale(-1,1)
+              // propios aquí -- el giro ya lo aporta POR COMPLETO la
+              // rotación general del personaje (cx.rotate(p.aim+...) más
+              // arriba en esta función), así que el arco simplemente
+              // queda pegado por el mango y gira con ella, con su
+              // inclinación diagonal nativa del PNG en cualquier
+              // dirección (sin intentar verse "de perfil").
+              const esArqueroIcono = esIconoArma && p.rol === "arquero";
+              if (esArqueroIcono) {
+                cx.drawImage(wimg, -ARQUERO_MANGO[0] * s, -ARQUERO_MANGO[1] * s, ww, wh);
+              } else if (datosHiltTip) {
                 const { hilt, tip } = datosHiltTip;
                 const refAngle = Math.atan2(tip[1] - hilt[1], tip[0] - hilt[0]);
                 // El giro puro (alinear mango->punta con la puntería) no
