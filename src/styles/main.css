@@ -3297,6 +3297,31 @@ img.hoja-pieza {
 .eq-slot:hover .item-tooltip {
   display: block;
 }
+/* Las celdas de la bolsa del libro (.item-cell-libro) viven dentro de
+   .hoja-grid-inv-wrap, que hace scroll (overflow:auto) -- un tooltip
+   posicionado ahí dentro (position:absolute de siempre) queda recortado
+   por el propio scroll casi siempre: hacia arriba se sale por encima del
+   wrap en la fila 1, y a los lados el wrap es más estrecho (195px) que
+   el propio tooltip (190px+), así que también se recorta en horizontal
+   salvo en la columna central. Confirmado con Playwright: display:block
+   pero con rect.y por encima del contenedor -> invisible. Por eso NO se
+   usa la regla anterior aquí -- en su lugar, un único tooltip flotante
+   compartido (#item-tooltip-flotante, ver ui/inventory.js) se saca del
+   flujo con position:fixed sobre <body> y se posiciona por JS al pasar
+   el cursor, escapando así de cualquier overflow ancestro. */
+.item-tooltip-flotante {
+  display: none;
+  position: fixed;
+  z-index: 500;
+  width: 220px;
+  background: #120d08;
+  border: 1px solid var(--vespero);
+  border-radius: 8px;
+  padding: 10px 12px;
+  text-align: left;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.55);
+  pointer-events: none;
+}
 /* Los eq-slot viven en la columna estrecha de la izquierda -- centrar el
    tooltip sobre ellos (como hace .item-cell, pensado para una rejilla
    ancha) lo saca de la pantalla por el borde izquierdo. Se abre a la

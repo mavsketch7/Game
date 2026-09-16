@@ -290,6 +290,59 @@ function iconoUrl(it) {
         return iconoDrop(it).toDataURL();
       }
 
+// Tooltip flotante compartido para las celdas de la bolsa del libro
+// (.item-cell-libro, ver celdaItemLibro() más abajo) -- esas celdas
+// viven dentro de .hoja-grid-inv-wrap, que hace scroll (overflow:auto),
+// y un tooltip posicionado con position:absolute DENTRO de una celda
+// queda recortado por ese scroll casi siempre (hacia arriba se sale del
+// wrap en la fila 1, a los lados el wrap es más estrecho que el propio
+// tooltip) -- confirmado con Playwright: el CSS de por sí correcto
+// (display:block) no bastaba, el rect quedaba fuera del contenedor.
+// Por eso este único nodo vive suelto en <body> (position:fixed, ver
+// .item-tooltip-flotante en main.css) y se reposiciona por JS al pasar
+// el cursor, escapando así de cualquier overflow ancestro -- mismo
+// contenido (innerHTML clonado de la celda) que antes, solo cambia
+// DÓNDE se pinta. Los .eq-slot/.hoja-slot (equipo ya puesto) NO tienen
+// este problema -- viven sueltos en .hoja-libro, sin wrapper con
+// scroll -- así que siguen con su tooltip de :hover en CSS de siempre.
+let tooltipFlotante = null;
+function tooltipFlotanteEl() {
+        if (!tooltipFlotante) {
+          tooltipFlotante = document.createElement("div");
+          tooltipFlotante.className = "item-tooltip-flotante";
+          document.body.appendChild(tooltipFlotante);
+        }
+        return tooltipFlotante;
+      }
+function ocultarTooltipFlotante() {
+        if (tooltipFlotante) tooltipFlotante.style.display = "none";
+      }
+document.addEventListener("mouseover", (e) => {
+        const celda = e.target.closest(".item-cell-libro");
+        if (!celda) return;
+        const origen = celda.querySelector(".item-tooltip");
+        if (!origen) return;
+        const el = tooltipFlotanteEl();
+        el.innerHTML = origen.innerHTML;
+        el.style.display = "block";
+        const r = celda.getBoundingClientRect();
+        const w = el.offsetWidth,
+          h = el.offsetHeight;
+        let left = r.left + r.width / 2 - w / 2;
+        left = Math.max(8, Math.min(left, window.innerWidth - w - 8));
+        // se abre hacia arriba por defecto (igual que el resto de
+        // tooltips); si no hay sitio, se abre hacia abajo en su lugar.
+        let top = r.top - h - 8;
+        if (top < 8) top = r.bottom + 8;
+        el.style.left = left + "px";
+        el.style.top = top + "px";
+      });
+document.addEventListener("mouseout", (e) => {
+        const celda = e.target.closest(".item-cell-libro");
+        if (!celda || celda.contains(e.relatedTarget)) return;
+        ocultarTooltipFlotante();
+      });
+
 
 function filtrarBolsa(slot) {
         const p = G.players[G.invSel] || G.players[0];
@@ -1326,6 +1379,14 @@ function toggleControlTactil() {
 export function abrirInv() {
         if (!G || !G.activo) return;
         G.pausa = true;
+        // El re-render de #inv-inner de más abajo destruye y recrea las
+        // celdas -- si había un tooltip flotante abierto sobre una celda
+        // que ya no existe (p.ej. tras ordenar/filtrar/equipar mientras
+        // el cursor seguía encima), no llega ningún mouseout que lo
+        // cierre solo: se queda "pegado" en pantalla. Se oculta aquí,
+        // antes de repintar, y el propio mouseover lo vuelve a mostrar
+        // si el cursor sigue sobre una celda válida.
+        ocultarTooltipFlotante();
         const p = G.players[G.invSel] || G.players[0];
         const t = statsTot(p),
           b = ROLES[p.rol];
@@ -1355,6 +1416,7 @@ export function invSel(i) {
 
 export function cerrarInv() {
         detenerRetratoAnimado();
+        ocultarTooltipFlotante();
         ocultar("inv");
         if (G) {
           G.pausa = false;

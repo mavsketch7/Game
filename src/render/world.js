@@ -1,12 +1,13 @@
 // Auto-generated during the modularization refactor (2026-07-23).
 import { H, TAU, W, animGlobal, avanzarAnimGlobal, cx } from "../core/canvas.js";
-import { ELEMENTOS, MAX_PLANTA, PILAR_ROTO_DUR, RAREZAS, SALA_H, SALA_W, SUPS } from "../core/constants.js";
+import { ELEMENTOS, ETQ, MAX_PLANTA, PILAR_ROTO_DUR, RAREZAS, SALA_H, SALA_W, SLOT_LABEL, SUPS } from "../core/constants.js";
 import { G } from "../core/state.js";
 import { renderHUD } from "./hud.js";
 import { CAMPFIRE_CELDA, FIRE_COLUMN, FIREBALL_FH, FIREBALL_FRAMES, FIREBALL_FW, FIREBALL_SHEET, FIRE_EXPLOSION_FH, FIRE_EXPLOSION_FRAMES, FIRE_EXPLOSION_FW, FIRE_EXPLOSION_INICIO, FIRE_EXPLOSION_SHEET, FROST_GUARDIAN, ICE_BURST, IMPACT_VFX, KENNEY_TILE, PILAR_HIELO_FRAMES, SANGRE_ANIM, SANGRE_DUR, SHEETS, SPR, assetOK, campfireFrame, iconoDrop, remateMuroPatron, wallPatron } from "./sprites.js";
 import { drawSprite, drawSpriteBottom } from "./spriteDraw.js";
 import { renderEnemigo, renderJugador, renderMira } from "./character.js";
 import { EXPLOSION_BURST_DUR, EXPLOSION_FADE_DUR } from "../systems/abilities.js";
+import { mouse } from "../systems/input.js";
 import { clamp, hexRgba, ri, rnd } from "../utils/helpers.js";
 
 // Icono estático (frame 0, reposo) del mismo sprite del yunque animado
@@ -209,6 +210,60 @@ function dibujarAvisoTecla(x, y, letra) {
         cx.textAlign = "center";
         cx.textBaseline = "middle";
         cx.fillText(letra, 0, 1);
+        cx.restore();
+      }
+
+// Tooltip completo al pasar el cursor por encima de un drop ya asentado
+// -- para CUALQUIER rareza, no solo épico+ como la etiqueta flotante de
+// más abajo (que solo lleva el nombre): pedido expreso, "las armaduras
+// no se previsualizan al caer". Antes solo había un rayo de luz de color
+// + (épico+) un nombre flotante, sin stats ni efecto -- acercar el
+// cursor ahora muestra lo mismo que ya se ve en el tooltip del
+// inventario (nombre/tipo/rareza/efecto/stats). Solo funciona con
+// ratón real (mouse.x/y de systems/input.js no se actualiza con mando
+// ni táctil, igual que el resto de mecánicas basadas en cursor).
+function dibujarTooltipDropHover(it, x, y, col, rareza) {
+        const rar = RAREZAS[rareza];
+        const lineas = [
+          { t: it.nombre, col: rar.col, font: "800 12px Alegreya Sans" },
+          {
+            t: (SLOT_LABEL[it.slot] || it.slot) + " · " + rar.n,
+            col: "#b9ada0",
+            font: "600 10px Alegreya Sans",
+          },
+        ];
+        if (it.efectoDesc)
+          lineas.push({ t: "✦ " + it.efectoDesc, col: "#ff9a5a", font: "600 10px Alegreya Sans" });
+        const statTxt = Object.entries(it.stats || {})
+          .map(([k, v]) => "+" + v + " " + (ETQ[k] || k))
+          .join("  ·  ");
+        if (statTxt) lineas.push({ t: statTxt, col: "#e8dfce", font: "600 10px Alegreya Sans" });
+        cx.save();
+        cx.textAlign = "center";
+        let maxW = 0;
+        for (const l of lineas) {
+          cx.font = l.font;
+          maxW = Math.max(maxW, cx.measureText(l.t).width);
+        }
+        const padX = 12,
+          padY = 8,
+          lh = 15;
+        const boxW = maxW + padX * 2;
+        const boxH = lineas.length * lh + padY * 2;
+        const bx = x,
+          by = y - 46 - boxH;
+        cx.fillStyle = "rgba(10,8,17,.92)";
+        cx.beginPath();
+        cx.roundRect(bx - boxW / 2, by, boxW, boxH, 8);
+        cx.fill();
+        cx.strokeStyle = hexRgba(col, 0.85);
+        cx.lineWidth = 1.5;
+        cx.stroke();
+        lineas.forEach((l, i) => {
+          cx.font = l.font;
+          cx.fillStyle = l.col;
+          cx.fillText(l.t, x, by + padY + lh * (i + 0.72));
+        });
         cx.restore();
       }
 
@@ -1305,6 +1360,13 @@ export function render() {
         }
 
         // drops
+        // Posición del ratón en coordenadas de MUNDO (mismo cálculo que
+        // leerInput() en systems/input.js: mouse.x/y son de PANTALLA, hay
+        // que sumar el desplazamiento de cámara) -- se usa más abajo para
+        // el tooltip de hover de cada drop (ver dibujarTooltipDropHover()).
+        const camOfDrops = G.cam || { x: 0, y: 0 };
+        const mundoXDrops = mouse.x + camOfDrops.x,
+          mundoYDrops = mouse.y + camOfDrops.y;
         for (const dr of G.drops) {
           const bob = Math.sin(animGlobal * 4 + dr.x) * 3;
           if (dr.tipo === "vial") drawSprite(SPR.vial, dr.x, dr.y + bob);
@@ -1520,10 +1582,18 @@ export function render() {
             cx.globalAlpha = 1;
             drawSprite(iconoDrop(dr.item), dr.x, dr.y + bob);
 
-            // etiqueta flotante con el nombre (épico+, para no saturar con
-            // objetos comunes) -- mismo espíritu que las etiquetas
-            // "Nombre (Ancestral)" del vídeo de referencia
-            if (rareza >= 2) {
+            // Hover con el ratón: tooltip completo (nombre/tipo/efecto/
+            // stats) para CUALQUIER rareza -- ver dibujarTooltipDropHover()
+            // más arriba. Si no está en hover, épico+ sigue mostrando su
+            // etiqueta compacta de solo-nombre de siempre (para no saturar
+            // la pantalla con comunes/mágicos todo el rato); al pasar el
+            // cursor por encima, esa etiqueta se sustituye por el tooltip
+            // completo en vez de duplicarse con él.
+            const enHover =
+              Math.hypot(mundoXDrops - dr.x, mundoYDrops - (dr.y + bob)) < 26;
+            if (enHover) {
+              dibujarTooltipDropHover(dr.item, dr.x, dr.y + bob, col, rareza);
+            } else if (rareza >= 2) {
               const etiqueta = dr.item.nombre + " [" + RAREZAS[rareza].n + "]";
               cx.font = "700 11px Alegreya Sans";
               cx.textAlign = "center";
