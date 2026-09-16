@@ -1276,24 +1276,41 @@ export function renderJugador(p) {
                 : null;
               // Arco: "solo pégalo a la mano, sin girar el dibujo" (sin
               // rotación propia) dejaba el arco con su inclinación
-              // diagonal NATIVA tal cual a cualquier puntería -- el
-              // usuario confirmó que solo apuntando a la izquierda se
-              // leía como "sujetado de verdad" (por pura coincidencia:
-              // la rotación general del personaje, 180°, giraba esa
-              // diagonal nativa lo bastante como para parecer vertical),
-              // en el resto de direcciones seguía viéndose "tumbado"
-              // sobre la línea de puntería en vez de "abierto" hacia
-              // ella. Confirmado con un barrido aislado de las 4
-              // cardinales: una corrección FIJA de -45° (mismo ángulo
-              // que ya usa el fallback genérico de abajo para cualquier
-              // icono sin calibrar) endereza la media luna a perfil
-              // vertical en CUALQUIER dirección -- pero, a diferencia de
-              // un giro continuo, hay que completarla con un espejado
-              // (mismo criterio que el cuerpo, `Math.cos(p.aim)<0`) para
-              // que no se vea "boca abajo" al apuntar a la izquierda.
+              // diagonal NATIVA tal cual a cualquier puntería -- en la
+              // mayoría de direcciones se veía "tumbado" sobre la línea de
+              // puntería en vez de "abierto" hacia ella. Confirmado con un
+              // barrido aislado de las 4 cardinales: una corrección FIJA de
+              // -45° (mismo ángulo que ya usa el fallback genérico de abajo
+              // para cualquier icono sin calibrar) endereza la media luna a
+              // perfil vertical en CUALQUIER dirección.
+              //
+              // Un intento anterior completaba esto con un espejado
+              // (`cx.scale(-1,1)` cuando `Math.cos(p.aim)<0`, MISMO
+              // criterio que usa el cuerpo) para que no se viera "boca
+              // abajo" apuntando a la izquierda -- pero reportado real:
+              // "al mirar a la derecha el arco sigue volteado... cuando
+              // mira a la izquierda el arco va bien". Diagnosticado con
+              // una rejilla aislada (mismo arte, mismo `s`, sin cuerpo/
+              // anillo de por medio que distraiga) comparando el resultado
+              // en las 8 direcciones: ese espejado NO produce un reflejo
+              // horizontal de verdad -- por cómo se POST-multiplican
+              // rotate()/scale() (la última llamada se aplica PRIMERO al
+              // punto, ver el aviso ya existente sobre esto en la rama
+              // `datosHiltTip` más abajo), reflejar DESPUÉS de rotar -45°
+              // no reflaje el arte fuente sino el resultado ya girado --
+              // el resultado observado en la rejilla: apuntando a la
+              // derecha (0°) y a la izquierda (180°) el arco salía
+              // EXACTAMENTE IGUAL (mismo lado de la cuerda), en vez de
+              // reflejado. Probando el mismo giro fijo de -45° pero SIN
+              // ningún espejado (pura rotación continua, igual que ya
+              // aplica el `cx.rotate(p.aim+swingAncla)` de más arriba) la
+              // rejilla de 8 direcciones sale limpia y consistente en
+              // todas -- la cuerda sigue la puntería sin ningún salto ni
+              // "boca abajo" (la preocupación original no se materializaba
+              // en la práctica): girar de verdad, sin espejar, es
+              // suficiente y es lo que se queda.
               const esArqueroIcono = esIconoArma && p.rol === "arquero";
               if (esArqueroIcono) {
-                if (Math.cos(p.aim) < 0) cx.scale(-1, 1);
                 cx.rotate(-Math.PI / 4);
                 cx.drawImage(wimg, -ARQUERO_MANGO[0] * s, -ARQUERO_MANGO[1] * s, ww, wh);
               } else if (datosHiltTip) {

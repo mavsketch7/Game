@@ -12,6 +12,7 @@ import {
   initAudio,
   reanudarAudio,
 } from "../systems/audio.js";
+import { cargarSpritesDeClase } from "../render/sprites.js";
 import { statsTot } from "../systems/combat.js";
 import { M } from "../systems/input.js";
 import { armaBasica } from "../systems/loot.js";
@@ -33,6 +34,19 @@ export function nuevaPartida() {
           if (!s.activo) return;
           const rol = ORDEN_ROLES[s.rolIdx],
             b = ROLES[rol];
+          // Arranca YA la carga perezosa del arte real por variante de esa
+          // clase (pack "iron-weapons", ver WEAPON_ART_POOL en
+          // render/sprites.js) -- antes solo se disparaba desde el primer
+          // renderJugador() de ESE jugador, que para un invitado en red
+          // puede tardar más de un frame en llegar (sync de red) y para
+          // cualquiera deja una ventana real (red/CDN en producción, no
+          // solo localhost) en la que el primer drop/preview de esa clase
+          // cae al icono procedural genérico en vez del real -- reportado:
+          // "con el arquero no se ve la preview de los objetos, si no el
+          // default hecho con píxeles". Se llama aquí, para TODOS los
+          // jugadores de la partida (local y en red), en el instante en
+          // que se sabe la composición del grupo -- lo antes posible.
+          cargarSpritesDeClase(rol);
           players.push({
             idx: players.length,
             color: COLORES_J[i],
