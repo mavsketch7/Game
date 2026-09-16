@@ -2603,16 +2603,22 @@ img.hoja-pieza {
 /* Mesa de Trabajo (yunque) y Fragua (fusión): pedido expreso -- popup
    centrado a media pantalla con marco dorado, no la pantalla entera
    como el resto de overlays. Reutiliza --ux-panel (mismo marco ya
-   usado en #hero-titulo/.grupo-sel) en vez de un asset nuevo. */
+   usado en #hero-titulo/.grupo-sel) en vez de un asset nuevo. El tope
+   de 640px se quedaba corto de verdad en un monitor grande (pedido
+   expreso: "en pantalla grande, la tienda y forja se ven pequeños en
+   relación con la pantalla, tanto marcos como texto") -- sigue siendo
+   un popup, no la pantalla entera, pero con más margen para crecer.
+   Ver más abajo (.herreria-yunque/.fusion-slot/etc) el resto del
+   contenido escalado a juego. */
 #yunque.overlay,
 #fusion.overlay {
   justify-content: center;
 }
 #yunque .overlay-inner,
 #fusion .overlay-inner {
-  width: min(50vw, 640px);
-  max-width: 92%;
-  max-height: 82vh;
+  width: min(56vw, 900px);
+  max-width: 94%;
+  max-height: 86vh;
   overflow-y: auto;
   background: rgba(20, 14, 8, 0.94);
   border-style: solid;
@@ -2634,16 +2640,25 @@ img.hoja-pieza {
 }
 
 /* ===== Tienda del mercader ===== */
+/* El tope genérico de .overlay-inner (min(860px,100%), pensado para la
+   caja pequeña del lienzo de antes) se queda corto en una pantalla
+   grande para una lista de filas horizontales como esta -- más ancho
+   aquí para que cada fila (mejora + precio) respire, a juego con el
+   resto de texto ya agrandado más abajo (pedido expreso: "en pantalla
+   grande la tienda... se ve pequeña, tanto marcos como texto"). */
+#tienda .overlay-inner {
+  width: min(1100px, 94%);
+}
 .tienda-cab {
   text-align: center;
   margin-bottom: 12px;
 }
 .tienda-cab h2 {
   color: var(--vespero);
-  font-size: 1.2rem;
+  font-size: 1.5rem;
 }
 .tienda-oro {
-  font-size: 1rem;
+  font-size: 1.2rem;
   color: #ffd27f;
   font-weight: 800;
   margin-top: 4px;
@@ -2656,8 +2671,8 @@ img.hoja-pieza {
   background: var(--piedra);
   border: 1px solid var(--borde);
   border-radius: 10px;
-  padding: 10px 13px;
-  margin-top: 8px;
+  padding: 12px 16px;
+  margin-top: 10px;
   flex-wrap: wrap;
 }
 .mejora-info {
@@ -2665,10 +2680,10 @@ img.hoja-pieza {
   min-width: 200px;
 }
 .mejora-info h4 {
-  font-size: 0.92rem;
+  font-size: 1.1rem;
 }
 .mejora-info .m-desc {
-  font-size: 0.76rem;
+  font-size: 0.92rem;
   color: var(--ceniza);
 }
 .mejora-niv {
@@ -2704,7 +2719,7 @@ img.hoja-pieza {
    quietas en su estado final hasta el siguiente re-render. */
 .herreria-escena {
   position: relative;
-  height: 150px;
+  height: 188px;
   margin-bottom: 6px;
   display: flex;
   align-items: flex-end;
@@ -2714,16 +2729,21 @@ img.hoja-pieza {
   /* Rejilla real del sprite: 32x32 por frame, 17 frames con contenido
      (ver anvil-forja-strip.png, recortado de anvil.png -- la rejilla NO
      es 4x40px como parecía a ojo, es 5 columnas de 32px, confirmado
-     escaneando el canal alfa). */
-  width: 120px;
-  height: 120px;
+     escaneando el canal alfa). Escalado x1.25 respecto al tamaño
+     nativo de siempre (120px) a juego con el resto del popup, ya más
+     grande (pedido expreso, ver #yunque/#fusion .overlay-inner más
+     arriba) -- factor exacto para no desincronizar el frame-stepping
+     de .golpea (ver background-size/keyframes más abajo, todos
+     escalados por el mismo 1.25). */
+  width: 150px;
+  height: 150px;
   /* Aire arriba (pedido expreso): el frame ya trae el martillo dentro,
      antes quedaba pegado al borde superior de la escena -- con esto
-     queda ~30px de margen antes del borde de .herreria-escena. */
-  margin-top: 30px;
+     queda margen antes del borde de .herreria-escena (30px nativos x1.25). */
+  margin-top: 38px;
   background-image: url("/assets/ui/ui-ingame/anvil-forja-strip.png");
   background-repeat: no-repeat;
-  background-size: 2040px 120px;
+  background-size: 2550px 150px;
   background-position: 0 0;
   image-rendering: pixelated;
   filter: drop-shadow(0 6px 10px rgba(0, 0, 0, 0.6));
@@ -2736,15 +2756,15 @@ img.hoja-pieza {
     background-position-x: 0;
   }
   to {
-    background-position-x: -1920px;
+    background-position-x: -2400px;
   }
 }
 .fusion-slots-forja {
   position: absolute;
-  /* Alineado a la superficie del yunque nuevo (antes 74px, con el yunque
-     de 104px de alto sin margen superior) -- ajustar junto con
-     .herreria-yunque si se recalibra el sprite. */
-  bottom: 58px;
+  /* Alineado a la superficie del yunque nuevo (mismo 1.25 que el resto
+     de .herreria-yunque -- ajustar junto con ella si se recalibra el
+     sprite). */
+  bottom: 73px;
   left: 50%;
   transform: translateX(-50%);
   display: flex;
@@ -2752,15 +2772,15 @@ img.hoja-pieza {
   z-index: 1;
 }
 .fusion-slots-forja .fusion-slot {
-  width: 92px;
-  min-height: 40px;
-  font-size: 0.62rem;
+  width: 115px;
+  min-height: 50px;
+  font-size: 0.76rem;
   background: rgba(10, 8, 17, 0.75);
 }
 .chispa-forja {
   position: absolute;
   left: 50%;
-  bottom: 60px;
+  bottom: 75px;
   width: 3px;
   height: 3px;
   border-radius: 50%;
@@ -2806,12 +2826,12 @@ img.hoja-pieza {
   margin-top: 8px;
 }
 .fusion-slot {
-  width: 120px;
-  min-height: 56px;
+  width: 150px;
+  min-height: 68px;
   border: 1px dashed var(--borde);
   border-radius: 8px;
-  padding: 6px 8px;
-  font-size: 0.7rem;
+  padding: 8px 10px;
+  font-size: 0.86rem;
   color: var(--ceniza);
   display: flex;
   align-items: center;
@@ -2827,16 +2847,16 @@ img.hoja-pieza {
 .fusion-slot.resultado {
   border-color: var(--vespero);
   color: var(--vespero);
-  font-size: 1.3rem;
+  font-size: 1.6rem;
   font-weight: 800;
 }
 .fusion-flecha {
   color: var(--ceniza);
-  font-size: 1.1rem;
+  font-size: 1.35rem;
   flex-shrink: 0;
 }
 .fusion-aviso {
-  font-size: 0.72rem;
+  font-size: 0.88rem;
   color: var(--sangre);
   margin-top: 6px;
 }
