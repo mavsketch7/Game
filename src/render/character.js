@@ -1231,7 +1231,20 @@ export function renderJugador(p) {
               const boostLeyenda = imgLeyenda && wimg === imgLeyenda ? 1.6 : 1;
               const s = ((REACH - GRIP) / Math.max(ww0, wh0)) * boostLeyenda;
               const ww = ww0 * s, wh = wh0 * s;
-              const gripDibujo = anclaMano ? 0 : GRIP;
+              // El arco (a diferencia de una hoja) tiene el mango en el
+              // CENTRO del propio dibujo, no en un extremo -- con ancla
+              // real puro (gripDibujo=0, mismo criterio que el resto)
+              // queda bien en correr/atacar (el brazo ya se extiende en
+              // esas poses) pero se solapa con el torso en reposo (brazo
+              // relajado, ancla más cerca del cuerpo) -- confirmado
+              // comparando reposo vs. andando con capturas reales, la
+              // rotación (arreglada aparte, ver más abajo) no tenía nada
+              // que ver. Empuje pequeño en la dirección de la puntería,
+              // menor que el que se probó y se quitó antes (22px, cuando
+              // la rotación TODAVÍA estaba mal) -- ahora que el ángulo ya
+              // es correcto, un empuje moderado alcanza sin volver a
+              // alejarlo demasiado en correr/atacar.
+              const gripDibujo = anclaMano ? (p.rol === "arquero" ? 10 : 0) : GRIP;
               // El pack "wood-weapons" no es consistente en cómo recortó cada
               // pieza: espada/daga/maza/báculo vienen en vertical (más alto
               // que ancho, punta arriba -- p.ej. sword-wood.png 10x41), pero
