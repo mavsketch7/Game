@@ -299,14 +299,31 @@ body.pantalla-completa #hint {
 }
 
 /* ===== Overlays ===== */
+/* TODOS los overlays (menú, inventario, tienda, tarjetas de nivel...)
+   vivían dentro de #marco (position:absolute;inset:0), así que quedaban
+   encajonados al tamaño del lienzo (min(980px,100%) de ancho, con su
+   alto derivado de esa misma caja) en vez de ocupar la pantalla entera
+   -- en un monitor grande, con la ventana del navegador más ancha que
+   esos ~980px, se veían pequeños y descentrados respecto al propio
+   monitor. Pedido expreso: "más grandes y centradas vertical y
+   horizontal, también con los otros menús, que se ven pequeños en
+   pantallas grandes". position:fixed;inset:0 (mismo tratamiento que ya
+   usaba #menu, el único que se había sacado de esa caja hasta ahora)
+   los libera para centrarse de verdad contra el viewport.
+   `justify-content: safe center` centra también en vertical cuando el
+   contenido cabe, sin el bug clásico de flexbox+overflow ("safe" cae a
+   alineación al principio en vez de recortar por arriba si el
+   contenido no cabe, así que el overflow-y:auto de abajo sigue
+   pudiendo desplazarse hasta el principio de verdad). */
 .overlay {
-  position: absolute;
+  position: fixed;
   inset: 0;
   background: rgba(10, 8, 17, 0.99);
-  border-radius: 10px;
+  border-radius: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: safe center;
   overflow-y: auto;
   padding: 8px 16px;
   z-index: 10;
@@ -314,18 +331,7 @@ body.pantalla-completa #hint {
 .overlay.oculto {
   display: none;
 }
-/* El menú de selección vive dentro de #marco (position:absolute;
-         inset:0), así que su alto quedaba limitado a la altura del lienzo
-         960x560 en vez de a la ventana — con todas sus secciones (aspirantes,
-         lobby, nombre, jugar online...) eso obligaba a scroll casi siempre.
-         Se saca a pantalla completa (position:fixed) igual que la intro, y
-         de paso se aprovecha para ponerle el mismo fondo de la torre (el
-         degradado + la imagen se fijan desde ui/menu.js). */
 #menu {
-  position: fixed;
-  inset: 0;
-  border-radius: 0;
-  z-index: 10;
   background-color: #0c0805;
 }
 .overlay-inner {
@@ -1369,22 +1375,7 @@ body.pantalla-completa #hint {
 }
 
 /* ===== Tarjetas de mejora (v2, más chulas) ===== */
-/* Sube de nivel de en medio de una partida real (no un menú de selección
-   de personaje) -- a diferencia de #menu, vivía SOLO dentro de #marco
-   (position:absolute;inset:0, heredado de .overlay), así que quedaba
-   encajonado al tamaño del lienzo (min(980px,100%) de ancho, con su
-   alto derivado de esa misma caja) en vez de ocupar la pantalla entera
-   -- pedido expreso: "debería salir en mitad de la pantalla y un
-   tamaño más grande, es ilegible". Mismo tratamiento que ya usa #menu
-   más arriba (position:fixed;inset:0) para escapar de esa caja y
-   centrarse de verdad en el viewport, con más margen para agrandar el
-   contenido de dentro (ver #cartas-overlay .overlay-inner/.carta-mejora
-   más abajo).
-   */
 #cartas-overlay {
-  position: fixed;
-  inset: 0;
-  border-radius: 0;
   backdrop-filter: blur(3px);
   background: radial-gradient(
     ellipse at center,
