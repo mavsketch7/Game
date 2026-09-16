@@ -1282,35 +1282,34 @@ export function renderJugador(p) {
               // barrido aislado de las 4 cardinales: una corrección FIJA de
               // -45° (mismo ángulo que ya usa el fallback genérico de abajo
               // para cualquier icono sin calibrar) endereza la media luna a
-              // perfil vertical en CUALQUIER dirección.
+              // perfil vertical en CUALQUIER dirección -- pero sin más,
+              // apuntando a la izquierda se veía "boca abajo" (girado de
+              // más), así que hace falta completarlo con un espejado.
               //
-              // Un intento anterior completaba esto con un espejado
-              // (`cx.scale(-1,1)` cuando `Math.cos(p.aim)<0`, MISMO
-              // criterio que usa el cuerpo) para que no se viera "boca
-              // abajo" apuntando a la izquierda -- pero reportado real:
-              // "al mirar a la derecha el arco sigue volteado... cuando
-              // mira a la izquierda el arco va bien". Diagnosticado con
-              // una rejilla aislada (mismo arte, mismo `s`, sin cuerpo/
-              // anillo de por medio que distraiga) comparando el resultado
-              // en las 8 direcciones: ese espejado NO produce un reflejo
-              // horizontal de verdad -- por cómo se POST-multiplican
-              // rotate()/scale() (la última llamada se aplica PRIMERO al
-              // punto, ver el aviso ya existente sobre esto en la rama
-              // `datosHiltTip` más abajo), reflejar DESPUÉS de rotar -45°
-              // no reflaje el arte fuente sino el resultado ya girado --
-              // el resultado observado en la rejilla: apuntando a la
-              // derecha (0°) y a la izquierda (180°) el arco salía
-              // EXACTAMENTE IGUAL (mismo lado de la cuerda), en vez de
-              // reflejado. Probando el mismo giro fijo de -45° pero SIN
-              // ningún espejado (pura rotación continua, igual que ya
-              // aplica el `cx.rotate(p.aim+swingAncla)` de más arriba) la
-              // rejilla de 8 direcciones sale limpia y consistente en
-              // todas -- la cuerda sigue la puntería sin ningún salto ni
-              // "boca abajo" (la preocupación original no se materializaba
-              // en la práctica): girar de verdad, sin espejar, es
-              // suficiente y es lo que se queda.
+              // El espejado (`cx.scale(-1,1)`) SÍ funciona -- confirmado
+              // aislándolo en una rejilla (mismo arte, mismo `s`, sin
+              // cuerpo/anillo que distraiga): a un ÁNGULO FIJO, activarlo o
+              // no cambia claramente a qué lado queda la panza del arco
+              // (forzarlo en 0° da el reflejo horizontal exacto de cómo
+              // sale 180° sin forzarlo). El bug real NO era el orden de
+              // rotate()/scale() (un intento anterior lo cambió por pura
+              // rotación sin espejo, pensando que ESE era el problema --
+              // regresión real: rompió la izquierda, que ya iba bien, y
+              // sin arreglar la derecha) -- era la CONDICIÓN: con
+              // `Math.cos(p.aim)<0` el espejado saltaba mirando a la
+              // IZQUIERDA, dejando la derecha (el caso realmente al
+              // revés, con la cuerda cayendo al lado que no toca) sin
+              // corregir. Invertida (`>=0`, espeja mirando a la DERECHA en
+              // vez de a la izquierda) dan resultados espejados correctos
+              // entre sí en las 8 direcciones, con la izquierda intacta
+              // (nunca se tocó su condición) y la derecha ahora sí
+              // corregida -- reportado: "al mirar a la derecha el arco
+              // sigue volteado... cuando mira a la izquierda el arco va
+              // bien" (o sea, exactamente los papeles cambiados respecto a
+              // la condición original).
               const esArqueroIcono = esIconoArma && p.rol === "arquero";
               if (esArqueroIcono) {
+                if (Math.cos(p.aim) >= 0) cx.scale(-1, 1);
                 cx.rotate(-Math.PI / 4);
                 cx.drawImage(wimg, -ARQUERO_MANGO[0] * s, -ARQUERO_MANGO[1] * s, ww, wh);
               } else if (datosHiltTip) {
