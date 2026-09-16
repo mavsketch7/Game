@@ -1369,13 +1369,36 @@ body.pantalla-completa #hint {
 }
 
 /* ===== Tarjetas de mejora (v2, más chulas) ===== */
+/* Sube de nivel de en medio de una partida real (no un menú de selección
+   de personaje) -- a diferencia de #menu, vivía SOLO dentro de #marco
+   (position:absolute;inset:0, heredado de .overlay), así que quedaba
+   encajonado al tamaño del lienzo (min(980px,100%) de ancho, con su
+   alto derivado de esa misma caja) en vez de ocupar la pantalla entera
+   -- pedido expreso: "debería salir en mitad de la pantalla y un
+   tamaño más grande, es ilegible". Mismo tratamiento que ya usa #menu
+   más arriba (position:fixed;inset:0) para escapar de esa caja y
+   centrarse de verdad en el viewport, con más margen para agrandar el
+   contenido de dentro (ver #cartas-overlay .overlay-inner/.carta-mejora
+   más abajo).
+   */
 #cartas-overlay {
+  position: fixed;
+  inset: 0;
+  border-radius: 0;
   backdrop-filter: blur(3px);
   background: radial-gradient(
     ellipse at center,
     rgba(20, 15, 35, 0.88),
     rgba(8, 6, 14, 0.97)
   );
+}
+/* Con el overlay ya libre de la caja del lienzo, el límite genérico de
+   .overlay-inner (min(860px,100%), pensado para encajar en esa caja
+   pequeña) se queda corto de verdad en una pantalla grande -- más
+   ancho aquí para que las cartas (ver .carta-mejora más abajo) puedan
+   crecer con él en vez de quedarse siempre a su max-width de tope. */
+#cartas-overlay .overlay-inner {
+  width: min(1180px, 94%);
 }
 .cartas-titulo {
   text-align: center;
@@ -1393,13 +1416,13 @@ body.pantalla-completa #hint {
   }
 }
 .cartas-titulo h2 {
-  font-size: 1.25rem;
+  font-size: 1.7rem;
   color: var(--vespero);
   text-shadow: 0 0 18px rgba(233, 180, 92, 0.4);
 }
 .cartas-titulo p {
   color: var(--ceniza);
-  font-size: 0.85rem;
+  font-size: 1.05rem;
   margin-top: 4px;
 }
 .cartas-titulo canvas {
@@ -1409,15 +1432,15 @@ body.pantalla-completa #hint {
 }
 .cartas-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(215px, 1fr));
-  gap: 14px;
-  margin-top: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 22px;
+  margin-top: 18px;
   perspective: 900px;
 }
 .carta-mejora {
   aspect-ratio: 500 / 630;
   width: 100%;
-  max-width: 260px;
+  max-width: 340px;
   margin: 0 auto;
   background-color: transparent;
   background-image: none;
@@ -1515,7 +1538,7 @@ body.pantalla-completa #hint {
   left: 0;
   right: 0;
   text-align: center;
-  font-size: 0.6rem;
+  font-size: 0.72rem;
   font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 0.12em;
@@ -1528,7 +1551,7 @@ body.pantalla-completa #hint {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.8rem;
+  font-size: 2.4rem;
   transition: transform 0.18s;
 }
 .carta-mejora .carta-icono-img {
@@ -1540,19 +1563,19 @@ body.pantalla-completa #hint {
   transform: scale(1.08) rotate(-4deg);
 }
 .carta-mejora h3 {
-  font-size: 0.92rem;
+  font-size: 1.2rem;
   font-family: "Dungeon Font", "Cinzel", serif;
   text-align: center;
   color: var(--vespero);
   margin-bottom: 4px;
 }
 .carta-mejora .carta-desc {
-  font-size: 0.72rem;
+  font-size: 0.92rem;
   opacity: 0.9;
   line-height: 1.4;
 }
 .carta-mejora .carta-val {
-  font-size: 0.68rem;
+  font-size: 0.86rem;
   margin-top: 8%;
   font-weight: 800;
   letter-spacing: 0.03em;
