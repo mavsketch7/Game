@@ -53,10 +53,10 @@ export const ROLES = {
           crit: 22,
           vel: 172,
           skill: {
-            nombre: "Multidisparo",
-            desc: "Abanico de 5 flechas",
-            cd: 5,
-            coste: 30,
+            nombre: "Lluvia de Flechas",
+            desc: "Zona de flechas donde apuntes: daño continuo y ralentización durante 4 s",
+            cd: 6,
+            coste: 40,
           },
         },
         mago: {
@@ -206,6 +206,18 @@ export const ELEMENTOS = {
           slow: 0.5,
           healPS: 0,
           ttl: 3,
+        },
+        // Lluvia de Flechas (ulti arquero, ver lanzarUlti() en
+        // systems/abilities.js): mismo mecanismo de área que el resto
+        // (crearArea/tick de daño+ralentización en core/loop.js), color
+        // madera/latón para distinguirla del resto de zonas elementales.
+        flechas: {
+          nombre: "Flechas",
+          color: "#c9a35a",
+          dps: 14,
+          slow: 0.4,
+          healPS: 0,
+          ttl: 4,
         },
       };
 

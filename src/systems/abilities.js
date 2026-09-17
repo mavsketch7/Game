@@ -1066,15 +1066,15 @@ export function habilidad(p) {
               }
             }
           } else if (p.rol === "arquero") {
-            for (let i = -2; i <= 2; i++)
-              dispararProy(
-                p,
-                p.aim + i * 0.16,
-                t.atk * 0.9,
-                "flecha",
-                "#e9e3d5",
-                480,
-              );
+            // Lluvia de Flechas: zona a distancia (como el Cataclismo del
+            // mago o la Ira Salvaje del druida) en vez del abanico puntual
+            // de antes -- daño continuo + ralentización mientras dura (ver
+            // ELEMENTOS.flechas en core/constants.js y el tick de área en
+            // core/loop.js, mismo mecanismo que zarzas/hielo).
+            const g = groundTarget(p, 300);
+            crearArea(g.x, g.y, 100, "flechas", 1, p);
+            fxTexto(g.x, g.y - 20, "¡Lluvia de Flechas!", ELEMENTOS.flechas.color, true);
+            G.shake = Math.max(G.shake, 3);
           } else if (p.rol === "mago") {
             // Casteo real (ver p.castUltT en core/gameflow.js/loop.js y la
             // rama nueva en calcularPoseHeroe, render/character.js) --

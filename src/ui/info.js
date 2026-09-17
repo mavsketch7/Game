@@ -93,10 +93,10 @@ const INFO_CLASE = {
               desc: "Dash con 0.24 s de invulnerabilidad. Deja una estela visual que confunde a los enemigos.",
             },
             {
-              ico: "🌟",
-              nombre: "Multidisparo (ulti)",
+              ico: "🌧️",
+              nombre: "Lluvia de Flechas (ulti)",
               tec: "E · Y",
-              desc: "Lanza un abanico de 5 flechas en arco. Perfecto para grupos densos o cuando necesitas cubrir área.",
+              desc: "Invoca una zona de flechas de radio 100 px donde apuntes: daño continuo + ralentización durante 4 s.",
             },
             {
               ico: "🃏",
