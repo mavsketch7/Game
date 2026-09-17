@@ -618,6 +618,41 @@ export function interactuar(p) {
           toast("🧪 Cofre de pruebas: Armadura de Pícaro, las 5 rarezas", "#4a9d4a");
           return;
         }
+        if (cofre.qaArquero) {
+          // Cuarto cofre de pruebas (?qa=1, brillo naranja): mismo patrón
+          // que qaMago/qaPicaro, para la Armadura de Arquero -- con una
+          // diferencia: el casco tiene 2 diseños reales (ver
+          // CASCO_IDLE_ARQUERO_TIN/CASCO_IDLE_ARQUERO_TIN2 en
+          // render/sprites.js), así que aquí se sueltan AMBOS por cada
+          // rareza (cascoVariante forzado a mano en vez de dejarlo al azar
+          // de genItem()) para poder compararlos sin depender del RNG.
+          const PIEZAS_ARMADURA_ARQUERO = {
+            casco: { nombre: "Capucha de Explorador", id: "casco_arquero" },
+            peto: { nombre: "Gambesón de Explorador", id: "peto_arquero" },
+            piernas: { nombre: "Grebas de Explorador", id: "piernas_arquero" },
+          };
+          RAREZAS.forEach((r, rareza) => {
+            for (const slotArm of ["casco", "peto", "piernas"]) {
+              const variantes = slotArm === "casco" ? [0, 1] : [null];
+              for (const variante of variantes) {
+                const pieza = genItem(G.planta || 1, rareza, slotArm);
+                const base = PIEZAS_ARMADURA_ARQUERO[slotArm];
+                const sufNombre = variante === null ? "" : variante === 0 ? " I" : " II";
+                pieza.nombre = (rareza === 0 ? base.nombre : `${base.nombre} [${r.n}]`) + sufNombre;
+                pieza.id = base.id + "_r" + rareza + (variante === null ? "" : "_v" + variante);
+                pieza.clase = "arquero";
+                if (variante !== null) pieza.cascoVariante = variante;
+                const pv = posDropValida(
+                  cofre.x + rnd(-40, 40),
+                  cofre.y + rnd(-40, 40),
+                );
+                dropItem(pv.x, pv.y, pieza);
+              }
+            }
+          });
+          toast("🧪 Cofre de pruebas: Armadura de Arquero, las 5 rarezas (2 cascos)", "#e08a3c");
+          return;
+        }
         const pv1 = posDropValida(cofre.x, cofre.y - 14);
         dropItem(pv1.x, pv1.y, genItem(G.planta || 1));
         const pv2 = posDropValida(cofre.x + 14, cofre.y);

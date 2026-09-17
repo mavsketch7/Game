@@ -347,6 +347,18 @@ export function iniciarLobby() {
             abriendoT: 0,
             qaPicaro: true,
           });
+          // Cuarto cofre de pruebas (QA), brillo naranja: mismo patrón que
+          // los de arriba, para la Armadura de Arquero (2 diseños de
+          // casco -- ver el bloque `cofre.qaArquero` en interactuar(),
+          // abilities.js).
+          G.objetos.push({
+            tipo: "cofre",
+            x: W / 2,
+            y: H - 280,
+            abierto: false,
+            abriendoT: 0,
+            qaArquero: true,
+          });
         }
         G.tiendaLock = false;
         G.skinLock = false;

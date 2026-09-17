@@ -345,6 +345,39 @@ function iconoArmaduraPicaro(item) {
   return iconoPicaroCache[clave];
 }
 
+// Armadura de Arquero -- mismo criterio que iconoArmaduraMago()/
+// iconoArmaduraPicaro() de arriba, con la salvedad del casco: hay 2
+// diseños (ver CASCO_IDLE_ARQUERO_TIN/CASCO_IDLE_ARQUERO_TIN2 más abajo)
+// y el objeto ya lleva fijo cuál le tocó al generarse (item.cascoVariante,
+// ver genItem() en systems/loot.js) -- se cachea aparte por variante para
+// no mezclar los dos diseños bajo la misma clave.
+const iconoArqueroCache = {};
+function iconoArmaduraArquero(item) {
+  if (item.clase !== "arquero") return null;
+  const setTin =
+    item.slot === "casco" ? (item.cascoVariante === 1 ? CASCO_IDLE_ARQUERO_TIN2.down : CASCO_IDLE_ARQUERO_TIN.down) :
+    item.slot === "peto" ? PETO_IDLE_ARQUERO_TIN.down :
+    item.slot === "piernas" ? PIERNAS_IDLE_ARQUERO_TIN.down :
+    null;
+  if (!setTin) return null;
+  const rareza = Math.max(0, Math.min(item.rareza || 0, RAREZAS.length - 1));
+  const frame = setTin[rareza] && setTin[rareza][0];
+  if (!frame) return null;
+  const clave = item.slot + "|" + rareza + "|" + (item.cascoVariante || 0);
+  if (!iconoArqueroCache[clave]) {
+    const b = bboxAlfa(frame.getContext("2d"), frame.width, frame.height) ||
+      { x: 0, y: 0, w: frame.width, h: frame.height };
+    const c = document.createElement("canvas");
+    c.width = b.w;
+    c.height = b.h;
+    const g = c.getContext("2d");
+    g.imageSmoothingEnabled = false;
+    g.drawImage(frame, b.x, b.y, b.w, b.h, 0, 0, b.w, b.h);
+    iconoArqueroCache[clave] = c;
+  }
+  return iconoArqueroCache[clave];
+}
+
 export function iconoDrop(item) {
         // Martillo de Frhor: icono real (azul zafiro, ver MARTILLO_FRHOR_IMG
         // más abajo) en vez del icono procedural genérico de "arma" -- si
@@ -363,6 +396,8 @@ export function iconoDrop(item) {
         if (imgMago) return imgMago;
         const imgPicaro = iconoArmaduraPicaro(item);
         if (imgPicaro) return imgPicaro;
+        const imgArquero = iconoArmaduraArquero(item);
+        if (imgArquero) return imgArquero;
         // Arma con arte real por variante (pack "iron-weapons", ver
         // WEAPON_ART_POOL más abajo y genItem() en systems/loot.js, que
         // asigna `arteIdx` de forma ESTABLE al generarse) -- se muestra tal
@@ -1328,6 +1363,18 @@ function cargarHojaConArmadura(bodyUrl, armorUrls, destSize, sinAmpliar, onListo
 // unos pocos píxeles de más caben sin que `escala` dejara de estar topada
 // en 1 ni el recorte se salga del lienzo.
 function expandirUnion(union, pad) {
+  // Defensivo: `union` puede ser todavía null si esta llamada se dispara
+  // antes de que termine de cargar la armadura POR DEFECTO de la que
+  // reutiliza el recorte (carga asíncrona, ver cargarHojaConArmadura) --
+  // por ejemplo, un arquero/mago/pícaro visible en los primerísimos
+  // frames de una partida, en una red lenta. Sin esto, cargarHojaConArmadura(
+  // ..., null) reventaba al desestructurar (reportado al probar en frío,
+  // sin esperar a que cargase nada primero). Devolver null hace que la
+  // llamada de más arriba caiga a calcular su PROPIA unión (mismo camino
+  // que cuando no se pasa unionExterna en absoluto) en vez de romper --
+  // el recorte de esos primeros frames puede salir un pelín distinto del
+  // resto, pero eso ya es preferible a un error real.
+  if (!union) return null;
   const { frameSize } = union;
   return {
     escala: union.escala,
@@ -1734,6 +1781,14 @@ const ARMOR_BASE_ATTACK_MAGO = { side: "heroB_attack_mago_side" };
 // Puñalada (ataque básico de pícaro, sustituye al de un solo frame lateral
 // de antes) -- mismo hueco que REAL_ATTACK_SRC.picaro más abajo.
 const ARMOR_BASE_ATTACK_PICARO = { side: "heroB_attack_picaro_side" };
+// Disparo básico de arquero -- 3 direcciones reales (arriba/abajo/lateral,
+// mismo hueco que REAL_ATTACK_SRC.arquero más abajo), a diferencia de
+// mago/pícaro que solo tienen lateral todavía.
+const ARMOR_BASE_ATTACK_ARQUERO = {
+  side: "heroB_attack_arquero_side",
+  down: "heroB_attack_arquero_down",
+  up: "heroB_attack_arquero_up",
+};
 const ARMOR_BASE_HURT = "heroB_hurt_down";
 
 export const CASCO_IDLE = { side: [], down: [], up: [] };
@@ -1742,9 +1797,9 @@ export const PIERNAS_IDLE = { side: [], down: [], up: [] };
 export const CASCO_RUN = { side: [], down: [], up: [] };
 export const PETO_RUN = { side: [], down: [], up: [] };
 export const PIERNAS_RUN = { side: [], down: [], up: [] };
-export const CASCO_ATTACK = { guerrero: {}, mago: {}, picaro: {} };
-export const PETO_ATTACK = { guerrero: {}, mago: {}, picaro: {} };
-export const PIERNAS_ATTACK = { guerrero: {}, mago: {}, picaro: {} };
+export const CASCO_ATTACK = { guerrero: {}, mago: {}, picaro: {}, arquero: {} };
+export const PETO_ATTACK = { guerrero: {}, mago: {}, picaro: {}, arquero: {} };
+export const PIERNAS_ATTACK = { guerrero: {}, mago: {}, picaro: {}, arquero: {} };
 export const CASCO_HURT = [];
 export const PETO_HURT = [];
 export const PIERNAS_HURT = [];
@@ -1973,6 +2028,97 @@ function cargarArmaduraTinMuertePicaro() {
   }, expandirUnion(UNION_MUERTE, 6));
 }
 
+// Armadura T1 de Arquero -- mismo criterio exacto que mago/pícaro arriba
+// (cuerpo heroB compartido, solo cambian las capas superpuestas), con UNA
+// diferencia: el .aseprite de origen trae DOS diseños de casco completos
+// ("casco" y "casco-2", capas independientes, mismo peto/piernas para
+// ambos) -- pedido expreso, "para crear otro diseño de casco". Cuál de
+// los dos lleva un objeto de casco concreto se decide al generarse (ver
+// CASCO_VARIANTES/genItem() en core/constants.js y systems/loot.js,
+// mismo patrón que arteIdx de las armas) y queda fijo para ese objeto de
+// por vida -- por eso hace falta un segundo set de constantes _TIN2
+// completo, no una dimensión más dentro del mismo array: capaPorRareza()
+// sigue indexando solo por [rareza][frameIdx], sin tocar esa función.
+// El segundo casco reutiliza la MISMA unión ya calculada por la llamada
+// del primero (mismo motivo que unionExterna en cargarHojaConArmadura:
+// sin esto, el cuerpo saldría recortado un pelín distinto según qué
+// casco lleve puesto el objeto, y el personaje "temblaría" un píxel al
+// cambiar de variante).
+function casco2UrlDe(baseName) {
+  return assetUrl(`characters/armor/${baseName}_casco2`);
+}
+const ARMOR_BASE_IDLE_ARQUERO = { side: "heroB_idle_side_arquero", down: "heroB_idle_down_arquero", up: "heroB_idle_up_arquero" };
+const ARMOR_BASE_RUN_ARQUERO = { side: "heroB_run_side_arquero", down: "heroB_run_down_arquero", up: "heroB_run_up_arquero" };
+export const CASCO_IDLE_ARQUERO_TIN = { side: null, down: null, up: null };
+export const CASCO_IDLE_ARQUERO_TIN2 = { side: null, down: null, up: null };
+export const PETO_IDLE_ARQUERO_TIN = { side: null, down: null, up: null };
+export const PIERNAS_IDLE_ARQUERO_TIN = { side: null, down: null, up: null };
+export const CASCO_RUN_ARQUERO_TIN = { side: null, down: null, up: null };
+export const CASCO_RUN_ARQUERO_TIN2 = { side: null, down: null, up: null };
+export const PETO_RUN_ARQUERO_TIN = { side: null, down: null, up: null };
+export const PIERNAS_RUN_ARQUERO_TIN = { side: null, down: null, up: null };
+
+function cargarArmaduraTinIdleRunArquero() {
+  for (const dirIdle in REAL_IDLE_SRC) {
+    const union = expandirUnion(UNION_IDLE[dirIdle], 6);
+    const base = ARMOR_BASE_IDLE_ARQUERO[dirIdle];
+    cargarHojaConArmadura(REAL_IDLE_SRC[dirIdle], armorUrlsDe(base), TAM_HEROE, true, (frames, anclas, capas) => {
+      CASCO_IDLE_ARQUERO_TIN[dirIdle] = tenirFramesPorRareza(capas.casco);
+      PETO_IDLE_ARQUERO_TIN[dirIdle] = tenirFramesPorRareza(capas.peto);
+      PIERNAS_IDLE_ARQUERO_TIN[dirIdle] = tenirFramesPorRareza(capas.piernas);
+    }, union);
+    cargarHojaConArmadura(REAL_IDLE_SRC[dirIdle], { casco: casco2UrlDe(base) }, TAM_HEROE, true, (frames, anclas, capas) => {
+      CASCO_IDLE_ARQUERO_TIN2[dirIdle] = tenirFramesPorRareza(capas.casco);
+    }, union);
+  }
+  for (const dirRun in REAL_RUN_SRC) {
+    const union = expandirUnion(UNION_RUN[dirRun], 6);
+    const base = ARMOR_BASE_RUN_ARQUERO[dirRun];
+    cargarHojaConArmadura(REAL_RUN_SRC[dirRun], armorUrlsDe(base), TAM_HEROE, true, (frames, anclas, capas) => {
+      CASCO_RUN_ARQUERO_TIN[dirRun] = tenirFramesPorRareza(capas.casco);
+      PETO_RUN_ARQUERO_TIN[dirRun] = tenirFramesPorRareza(capas.peto);
+      PIERNAS_RUN_ARQUERO_TIN[dirRun] = tenirFramesPorRareza(capas.piernas);
+    }, union);
+    cargarHojaConArmadura(REAL_RUN_SRC[dirRun], { casco: casco2UrlDe(base) }, TAM_HEROE, true, (frames, anclas, capas) => {
+      CASCO_RUN_ARQUERO_TIN2[dirRun] = tenirFramesPorRareza(capas.casco);
+    }, union);
+  }
+}
+
+const ARMOR_BASE_HURT_ARQUERO = "heroB_hurt_down_arquero";
+const ARMOR_BASE_MUERTE_ARQUERO = "heroB_dead_down_arquero";
+export const CASCO_HURT_ARQUERO_TIN = [];
+export const CASCO_HURT_ARQUERO_TIN2 = [];
+export const PETO_HURT_ARQUERO_TIN = [];
+export const PIERNAS_HURT_ARQUERO_TIN = [];
+export const CASCO_MUERTE_ARQUERO_TIN = [];
+export const CASCO_MUERTE_ARQUERO_TIN2 = [];
+export const PETO_MUERTE_ARQUERO_TIN = [];
+export const PIERNAS_MUERTE_ARQUERO_TIN = [];
+
+function cargarArmaduraTinHurtArquero() {
+  const union = expandirUnion(UNION_HURT, 6);
+  cargarHojaConArmadura(REAL_HURT_SRC, armorUrlsDe(ARMOR_BASE_HURT_ARQUERO), TAM_HEROE, true, (frames, anclas, capas) => {
+    CASCO_HURT_ARQUERO_TIN.push(...tenirFramesPorRareza(capas.casco));
+    PETO_HURT_ARQUERO_TIN.push(...tenirFramesPorRareza(capas.peto));
+    PIERNAS_HURT_ARQUERO_TIN.push(...tenirFramesPorRareza(capas.piernas));
+  }, union);
+  cargarHojaConArmadura(REAL_HURT_SRC, { casco: casco2UrlDe(ARMOR_BASE_HURT_ARQUERO) }, TAM_HEROE, true, (frames, anclas, capas) => {
+    CASCO_HURT_ARQUERO_TIN2.push(...tenirFramesPorRareza(capas.casco));
+  }, union);
+}
+function cargarArmaduraTinMuerteArquero() {
+  const union = expandirUnion(UNION_MUERTE, 6);
+  cargarHojaConArmadura(REAL_MUERTE_SRC, armorUrlsDe(ARMOR_BASE_MUERTE_ARQUERO), TAM_HEROE, true, (frames, anclas, capas) => {
+    CASCO_MUERTE_ARQUERO_TIN.push(...tenirFramesPorRareza(capas.casco));
+    PETO_MUERTE_ARQUERO_TIN.push(...tenirFramesPorRareza(capas.peto));
+    PIERNAS_MUERTE_ARQUERO_TIN.push(...tenirFramesPorRareza(capas.piernas));
+  }, union);
+  cargarHojaConArmadura(REAL_MUERTE_SRC, { casco: casco2UrlDe(ARMOR_BASE_MUERTE_ARQUERO) }, TAM_HEROE, true, (frames, anclas, capas) => {
+    CASCO_MUERTE_ARQUERO_TIN2.push(...tenirFramesPorRareza(capas.casco));
+  }, union);
+}
+
 // Duración del colapso hasta quedarse tumbado del todo -- después se
 // mantiene fijo en el último fotograma (ver p.koAnimT en core/loop.js y
 // el bloque `if (p.ko)` en render/character.js) mientras dura el K.O., no
@@ -2018,14 +2164,18 @@ export const REAL_ATTACK_ANCLA = { guerrero: {}, arquero: {}, picaro: {}, mago: 
 // Bases de armadura del ataque básico por clase -- cada nueva clase con
 // arte de armadura propio (mago ahora, antes solo guerrero) solo necesita
 // una entrada aquí, ver ARMOR_BASE_ATTACK_GUERRERO/ARMOR_BASE_ATTACK_MAGO.
-const ARMOR_BASE_ATTACK_POR_CLASE = { guerrero: ARMOR_BASE_ATTACK_GUERRERO, mago: ARMOR_BASE_ATTACK_MAGO, picaro: ARMOR_BASE_ATTACK_PICARO };
+const ARMOR_BASE_ATTACK_POR_CLASE = { guerrero: ARMOR_BASE_ATTACK_GUERRERO, mago: ARMOR_BASE_ATTACK_MAGO, picaro: ARMOR_BASE_ATTACK_PICARO, arquero: ARMOR_BASE_ATTACK_ARQUERO };
 
-// Variantes por rareza -- mago y pícaro (el set Frhor del guerrero es un
-// objeto único siempre Épico, no tiene sentido re-teñirlo). Mismo
-// shape que CASCO_ATTACK: [dir][rareza][frameIdx].
-export const CASCO_ATTACK_TIN = { mago: {}, picaro: {} };
-export const PETO_ATTACK_TIN = { mago: {}, picaro: {} };
-export const PIERNAS_ATTACK_TIN = { mago: {}, picaro: {} };
+// Variantes por rareza -- mago, pícaro y arquero (el set Frhor del
+// guerrero es un objeto único siempre Épico, no tiene sentido
+// re-teñirlo). Mismo shape que CASCO_ATTACK: [dir][rareza][frameIdx].
+export const CASCO_ATTACK_TIN = { mago: {}, picaro: {}, arquero: {} };
+export const PETO_ATTACK_TIN = { mago: {}, picaro: {}, arquero: {} };
+export const PIERNAS_ATTACK_TIN = { mago: {}, picaro: {}, arquero: {} };
+// Segundo diseño de casco del arquero (ver CASCO_IDLE_ARQUERO_TIN2 más
+// arriba) -- solo casco tiene 2 variantes, peto/piernas comparten el
+// único diseño de siempre.
+export const CASCO_ATTACK_TIN2 = { arquero: {} };
 
 // Carga perezosa por clase (ver cargarSpritesDeClase() más abajo): cada
 // clase pide solo su propia entrada de REAL_ATTACK_SRC.
@@ -2039,12 +2189,25 @@ function cargarAtaqueClase(rolAtk) {
         CASCO_ATTACK[rolAtk][dirAtk] = capas.casco;
         PETO_ATTACK[rolAtk][dirAtk] = capas.peto;
         PIERNAS_ATTACK[rolAtk][dirAtk] = capas.piernas;
-        if (rolAtk === "mago" || rolAtk === "picaro") {
+        if (rolAtk === "mago" || rolAtk === "picaro" || rolAtk === "arquero") {
           CASCO_ATTACK_TIN[rolAtk][dirAtk] = tenirFramesPorRareza(capas.casco);
           PETO_ATTACK_TIN[rolAtk][dirAtk] = tenirFramesPorRareza(capas.peto);
           PIERNAS_ATTACK_TIN[rolAtk][dirAtk] = tenirFramesPorRareza(capas.piernas);
         }
       });
+      // Segundo diseño de casco del arquero (capa "casco-2" del mismo
+      // .aseprite) -- llamada aparte, sin unionExterna: el ataque nunca
+      // reutiliza una unión compartida entre clases (cada clase ya tiene
+      // su propia hoja dedicada), así que este segundo casco calcula la
+      // suya igual que el primero -- ambos parten del mismo cuerpo+bbox
+      // de la propia silueta del casco, diferencia imperceptible en la
+      // práctica (mismo criterio ya aceptado en MUERTE de mago, ver
+      // comentario ahí).
+      if (rolAtk === "arquero") {
+        cargarHojaConArmadura(REAL_ATTACK_SRC.arquero[dirAtk], { casco: casco2UrlDe(baseArmaduraAtk) }, TAM_HEROE, true, (frames, anclas, capas) => {
+          CASCO_ATTACK_TIN2.arquero[dirAtk] = tenirFramesPorRareza(capas.casco);
+        });
+      }
     } else {
       // Resto de clases: sin arte de armadura para el ataque básico
       // todavía -- loader simple de siempre, sin capas.
@@ -2611,6 +2774,9 @@ const CARGADORES_SPRITES_CLASE = {
     cargarAtaqueClase("arquero");
     cargarFlechasArquero();
     cargarArteHierroClase("arquero");
+    cargarArmaduraTinIdleRunArquero();
+    cargarArmaduraTinHurtArquero();
+    cargarArmaduraTinMuerteArquero();
   },
   mago: () => {
     cargarAtaqueClase("mago");

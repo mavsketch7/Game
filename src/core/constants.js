@@ -256,6 +256,19 @@ export const SLOTS = ["arma", "escudo", "casco", "peto", "piernas", "collar", "a
 // pack de variantes.
 export const ARMA_ARTE_VARIANTES = { guerrero: 6, arquero: 16, picaro: 6 };
 
+// Nº de diseños de casco disponibles por clase (arte real, ver
+// CASCO_IDLE_ARQUERO_TIN/CASCO_IDLE_ARQUERO_TIN2 en render/sprites.js) --
+// mismo criterio que ARMA_ARTE_VARIANTES de arriba, con una diferencia:
+// los objetos de casco NO están restringidos por clase (a diferencia del
+// arma, cualquier personaje puede equipar cualquier casco), así que
+// genItem() no puede consultar esto por `clase` (los objetos de armadura
+// no la llevan) -- en su lugar sortea siempre un índice entre 0 y
+// CASCO_VARIANTES_MAX-1 (item.cascoVariante), y cada clase con más de un
+// diseño (por ahora, solo arquero) decide qué hacer con ese número; el
+// resto simplemente lo ignora.
+export const CASCO_VARIANTES = { arquero: 2 };
+export const CASCO_VARIANTES_MAX = Math.max(1, ...Object.values(CASCO_VARIANTES));
+
 // Etiqueta visible en la ficha de personaje -- "arma"/"escudo"
 // internamente siguen siendo las mismas claves de siempre (restricción
 // por clase, pivote de dibujo del arma en render/character.js, etc.),
