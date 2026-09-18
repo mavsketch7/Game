@@ -388,9 +388,54 @@ export function ponPilares(f, nPil) {
             hp: dest ? 60 + f * 3 : 0,
             hpMax: dest ? 60 + f * 3 : 0,
             hurtT: 0,
+            // 3 diseños del pack de mazmorra (ver render/world.js) --
+            // variedad dentro de la misma sala, no todos clonados.
+            disenio: ri(0, 2),
           });
         }
       }
+
+// Estandartes/cadenas colgados del tramo de muro más ancho de la sala
+// (casi siempre el borde norte o sur del perímetro) -- a diferencia de
+// ponObjeto() (punto aleatorio de SUELO), esto ancla la pieza al propio
+// muro, tal como se ve en el tileset de origen. Pedido expreso del
+// usuario: nada de puntos flotantes en mitad de la sala, con sentido.
+// Se llama desde poblarSala(), con G.muros ya generado para esa sala.
+function decorarMuros() {
+  // OJO: el muro de perímetro estándar (agregarMurosPerimetro) mide solo
+  // GROSOR_MURO_BORDE=24 de grosor -- exigir una altura mínima alta aquí
+  // dejaba SIEMPRE fuera el muro más común y ancho de cualquier sala
+  // (bug real, visto al verificar: ninguna sala mostraba nada). Un
+  // estandarte corto sobresaliendo un poco por debajo de un muro fino
+  // es normal en este estilo (mismo criterio que el remate, que ya se
+  // pinta sobre muros finos sin problema).
+  const candidatos = G.muros
+    .filter((m) => m.w >= 90 && m.w > m.h)
+    .sort((a, b) => b.w - a.w);
+  if (!candidatos.length) return;
+  const colocados = [];
+  const colocar = (m) => {
+    colocados.push(m);
+    // la cadena sí necesita un muro interior notablemente alto (no el
+    // perímetro fino) para no salirse por debajo de su base -- si no
+    // llega, siempre estandarte.
+    const puedeCadena = m.h >= 90;
+    G.objetos.push({
+      tipo: puedeCadena && Math.random() < 0.4 ? "cadena" : "estandarte",
+      x: m.x + m.w / 2,
+      y: m.y,
+      variante: Math.random() < 0.5 ? 0 : 1,
+    });
+  };
+  colocar(candidatos[0]);
+  // segundo tramo ancho independiente (no solapado en Y con el primero,
+  // p.ej. el borde opuesto norte/sur) -- así una sala grande no se queda
+  // con un único adorno perdido.
+  const segundo = candidatos.find(
+    (m) => !colocados.includes(m) && Math.abs(m.y - candidatos[0].y) > 60,
+  );
+  if (segundo && Math.random() < 0.7) colocar(segundo);
+}
 
 // hazardMult/objMult (por defecto 1) escalan las probabilidades según el
 // "perfil" sorteado para la sala en poblarSala() -- las plantas de jefe
@@ -420,6 +465,8 @@ function ponHazardsYObjetos(f, hazardMult, objMult) {
           ponObjeto({ tipo: "escombros", x: 0, y: 0 });
         if (Math.random() < po(0.25))
           ponObjeto({ tipo: "barrilRacimo", x: 0, y: 0 });
+        if (Math.random() < po(0.15))
+          ponObjeto({ tipo: "llave", x: 0, y: 0 });
       }
 
 // ---- mazmorra multi-sala (plantas normales; las de jefe siguen siendo una
@@ -654,6 +701,7 @@ function poblarSala(sala, f) {
         if (colocarContenidoFijo(sala, f)) return;
         const perfil = az(PERFILES_SALA);
         ponPilares(f, ri(perfil.pilares[0], perfil.pilares[1]));
+        decorarMuros();
         if (sala.tipo === "reto_parry") {
           // sala de reto: sin hazards/objetos que distraigan, solo enemigos
           const nEn = ri(2, 3) + Math.floor((N - 1) / 2);

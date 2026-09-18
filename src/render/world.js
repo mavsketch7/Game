@@ -995,7 +995,11 @@ export function render() {
             }
             cx.restore();
           } else if (assetOK("pilar")) {
-            const src = SHEETS["pilar"];
+            // 3 diseños del pack (ver pl.disenio en floorgen.js:
+            // ponPilares()) -- variedad visual dentro de una misma sala
+            // de columnas en vez de clonar siempre el mismo pilar.
+            const claveDisenio = pl.disenio === 1 ? "pilarRostro" : pl.disenio === 2 ? "pilarEstriado" : "pilar";
+            const src = (assetOK(claveDisenio) && SHEETS[claveDisenio]) || SHEETS["pilar"];
             const ph = pl.r * 3.4,
               pw = (ph * src.naturalWidth) / src.naturalHeight;
             cx.save();
@@ -1247,6 +1251,27 @@ export function render() {
             cx.fill();
             cx.imageSmoothingEnabled = false;
             cx.drawImage(SHEETS.barril_racimo, o.x - 38, o.y - 44, 75, 66);
+          } else if (o.tipo === "estandarte") {
+            // Colgado del muro (ver decorarMuros() en floorgen.js: o.x/o.y
+            // ya vienen centrados en el tramo de muro más ancho de la
+            // sala, o.y es el borde SUPERIOR de ese muro) -- nunca un
+            // punto suelto de suelo.
+            const clave = o.variante === 0 ? "estandarte_azul" : "estandarte_rojo";
+            if (assetOK(clave)) {
+              cx.imageSmoothingEnabled = false;
+              cx.drawImage(SHEETS[clave], o.x - 16, o.y + 2, 32, 40);
+            }
+          } else if (o.tipo === "cadena" && assetOK("cadena")) {
+            cx.imageSmoothingEnabled = false;
+            cx.drawImage(SHEETS.cadena, o.x - 13, o.y + 2, 26, 78);
+          } else if (o.tipo === "llave" && assetOK("llave")) {
+            const bob = Math.sin(animGlobal * 2.5 + o.x) * 2;
+            cx.fillStyle = "rgba(0,0,0,.3)";
+            cx.beginPath();
+            cx.ellipse(o.x, o.y + 6, 8, 3, 0, 0, TAU);
+            cx.fill();
+            cx.imageSmoothingEnabled = false;
+            cx.drawImage(SHEETS.llave, o.x - 9, o.y - 4 + bob, 18, 15);
           }
         }
 

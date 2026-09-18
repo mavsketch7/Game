@@ -31,9 +31,22 @@ const ASSET_SRC = {
         // "pilar" real: sustituye al fallback procedural morado de
         // G.pilares (sala "columnas", ver floorgen.js: ponPilares()).
         pilar: assetUrl("dungeon/pillar_liso"),
+        // 2 diseños extra de pilar (ver ponPilares() en floorgen.js:
+        // pl.disenio) -- variedad dentro de la misma sala de columnas, en
+        // vez de repetir siempre el mismo.
+        pilarRostro: assetUrl("dungeon/pillar_rostro"),
+        pilarEstriado: assetUrl("dungeon/pillar_estriado"),
         torch_pie: assetUrl("dungeon/torch_pie"),
         barril_racimo: assetUrl("dungeon/barril_racimo"),
         escombros: assetUrl("dungeon/escombros"),
+        // Colgado de PARED, no puntos sueltos de suelo (ver decorarMuros()
+        // en floorgen.js: se ancla siempre al tramo de muro más ancho de
+        // la sala) -- pedido expreso del usuario, "que no estén ubicados
+        // de forma aleatoria, si no con sentido".
+        estandarte_azul: assetUrl("dungeon/estandarte_azul"),
+        estandarte_rojo: assetUrl("dungeon/estandarte_rojo"),
+        cadena: assetUrl("dungeon/cadena"),
+        llave: assetUrl("dungeon/llave"),
       };
 
 export const SHEETS = {};
