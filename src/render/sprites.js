@@ -1286,6 +1286,40 @@ function cargarHojaConArmadura(bodyUrl, armorUrls, destSize, sinAmpliar, onListo
             : (destSize * 0.86) / altoMax;
         }
 
+        // Ancla vertical ESTABLE para todo el recorte (ver dyDeFrame más
+        // abajo) -- reportado: "al andar hacia arriba/abajo/lados, el
+        // casco se eleva un par de píxeles". Con dy = destSize - h (el
+        // alto de ESE frame, de siempre), CUALQUIER cambio de alto entre
+        // frames desplaza el compuesto entero para mantener el borde
+        // INFERIOR pegado al lienzo -- correcto cuando ese cambio de alto
+        // viene de la cabeza moviéndose (el borde inferior, los pies,
+        // está quieto de verdad: lateral/abajo) pero al revés cuando
+        // viene de los PIES (el andar "de espaldas" tiene una zancada que
+        // cambia el borde inferior de un frame a otro, con la cabeza
+        // perfectamente quieta) -- ahí el gorro/casco "hereda" un
+        // desplazamiento que en realidad es solo el pie moviéndose,
+        // aunque sus propios píxeles no se muevan nada. bottomRef (el
+        // borde inferior más repetido de toda la animación) ancla dy
+        // contra un punto FIJO en vez del borde inferior de CADA frame:
+        // si el borde inferior de esta animación ya es constante (el
+        // caso normal, lateral/abajo de siempre), bottomRef coincide con
+        // ese valor en todos los frames y esto es un no-op exacto (mismo
+        // resultado que antes); si no lo es (la zancada de espaldas), la
+        // cabeza deja de "heredar" el vaivén de los pies.
+        const bottomRef = (() => {
+          const cuenta = new Map();
+          for (const b of bboxesUnion) {
+            const fondo = b.y + b.h;
+            cuenta.set(fondo, (cuenta.get(fondo) || 0) + 1);
+          }
+          let mejor = null, mejorN = -1;
+          for (const [v, n] of cuenta) if (n > mejorN) { mejor = v; mejorN = n; }
+          return mejor;
+        })();
+        function dyDeFrame(i) {
+          return destSize - (bottomRef - bboxesUnion[i].y) * escala;
+        }
+
         function recortarSerie(im) {
           if (!im) return [];
           const frames = [];
@@ -1305,7 +1339,7 @@ function cargarHojaConArmadura(bodyUrl, armorUrls, destSize, sinAmpliar, onListo
             // del bbox de la armadura es impar. Coordenadas y tamaño
             // enteros para que caiga siempre en la rejilla de píxeles.
             const w = Math.round(b.w * escala), h = Math.round(b.h * escala);
-            const dx = Math.round((destSize - w) / 2), dy = destSize - h;
+            const dx = Math.round((destSize - w) / 2), dy = Math.round(dyDeFrame(i));
             g.drawImage(im, i * frameSize + b.x, b.y, b.w, b.h, dx, dy, w, h);
             frames.push(c);
           }
@@ -1337,10 +1371,10 @@ function cargarHojaConArmadura(bodyUrl, armorUrls, destSize, sinAmpliar, onListo
             const b = bboxesUnion[i];
             const sx = bounds.x + bounds.width / 2;
             const sy = bounds.y + bounds.height / 2;
-            const w = b.w * escala, h = b.h * escala;
+            const w = b.w * escala;
             anclas[i] = {
               x: (destSize - w) / 2 + (sx - b.x) * escala,
-              y: destSize - h + (sy - b.y) * escala,
+              y: dyDeFrame(i) + (sy - b.y) * escala,
             };
           }
         }
