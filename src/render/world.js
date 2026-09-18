@@ -1192,6 +1192,28 @@ export function render() {
             cx.globalAlpha = 1;
             drawSprite(SPR.cristal, o.x, o.y + bob);
           } else if (o.tipo === "brasero") {
+            if (assetOK("torch_pie")) {
+              // Antorcha real del rework del tileset de mazmorra (ver
+              // ASSET_SRC en sprites.js) en vez del brasero 100%
+              // vectorial de antes -- se conserva el resplandor pulsante
+              // (mismo criterio que dibujarMarcadorBanderin) como única
+              // parte animada, ya que el sprite trae la llama pintada.
+              const pulso = 0.4 + 0.2 * (0.5 + 0.5 * Math.sin(animGlobal * 6 + o.x));
+              const grad = cx.createRadialGradient(o.x, o.y - 10, 2, o.x, o.y - 10, 22);
+              grad.addColorStop(0, `rgba(255,157,77,${pulso})`);
+              grad.addColorStop(1, "rgba(255,157,77,0)");
+              cx.fillStyle = grad;
+              cx.beginPath();
+              cx.arc(o.x, o.y - 10, 22, 0, TAU);
+              cx.fill();
+              cx.fillStyle = "rgba(0,0,0,.3)";
+              cx.beginPath();
+              cx.ellipse(o.x, o.y + 9, 9, 3, 0, 0, TAU);
+              cx.fill();
+              cx.imageSmoothingEnabled = false;
+              cx.drawImage(SHEETS.torch_pie, o.x - 20, o.y - 46, 40, 55);
+              continue;
+            }
             cx.fillStyle = "#3a3453";
             cx.fillRect(o.x - 6, o.y - 2, 12, 8);
             cx.fillStyle = "#2a2440";
@@ -1211,6 +1233,20 @@ export function render() {
             cx.lineTo(o.x + 3, o.y - 1);
             cx.closePath();
             cx.fill();
+          } else if (o.tipo === "escombros" && assetOK("escombros")) {
+            cx.fillStyle = "rgba(0,0,0,.3)";
+            cx.beginPath();
+            cx.ellipse(o.x, o.y + 10, 20, 5, 0, 0, TAU);
+            cx.fill();
+            cx.imageSmoothingEnabled = false;
+            cx.drawImage(SHEETS.escombros, o.x - 34, o.y - 38, 68, 48);
+          } else if (o.tipo === "barrilRacimo" && assetOK("barril_racimo")) {
+            cx.fillStyle = "rgba(0,0,0,.3)";
+            cx.beginPath();
+            cx.ellipse(o.x, o.y + 22, 26, 6, 0, 0, TAU);
+            cx.fill();
+            cx.imageSmoothingEnabled = false;
+            cx.drawImage(SHEETS.barril_racimo, o.x - 38, o.y - 44, 75, 66);
           }
         }
 

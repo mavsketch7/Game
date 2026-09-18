@@ -412,6 +412,14 @@ function ponHazardsYObjetos(f, hazardMult, objMult) {
           ponObjeto({ tipo: "cofre", x: 0, y: 0, hp: 1, abierto: false });
         if (Math.random() < po(0.5)) ponObjeto({ tipo: "cristal", x: 0, y: 0 });
         if (Math.random() < po(0.6)) ponObjeto({ tipo: "brasero", x: 0, y: 0 });
+        // Props puramente decorativos del rework del tileset de mazmorra
+        // (ver ASSET_SRC en render/sprites.js y su dibujado en world.js) --
+        // sin hp/colisión, solo visten la sala. Probabilidad baja para no
+        // saturar visualmente junto a barriles/cofres/braseros ya existentes.
+        if (Math.random() < po(0.35))
+          ponObjeto({ tipo: "escombros", x: 0, y: 0 });
+        if (Math.random() < po(0.25))
+          ponObjeto({ tipo: "barrilRacimo", x: 0, y: 0 });
       }
 
 // ---- mazmorra multi-sala (plantas normales; las de jefe siguen siendo una

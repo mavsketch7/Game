@@ -25,13 +25,15 @@ const ASSET_SRC = {
         // juego (el descanso de G.fogata y las de alivio de la sala del
         // Guardián de Hielo, ver G.hoguerasJefe en systems/floorgen.js).
         campfire_sheet: `${import.meta.env.BASE_URL}assets/ui/seleccion/campfire-sheet.png`,
-        // "pilar" quitado: el archivo que usaba (pilar.png) resultó ser en
-        // realidad un fragmento de pared, no una columna independiente --
-        // ver conversación. assetOK("pilar") en world.js sigue devolviendo
-        // false con seguridad (sin este archivo no hay nada que cargar),
-        // así que los pilares caen de vuelta al procedural de siempre sin
-        // romper nada; en cuanto haya un sprite de columna real se puede
-        // volver a añadir aquí.
+        // Rework del tileset de mazmorra (pack "Dungeon tileset" aportado
+        // por el usuario, recortado a mano en public/assets/sprites/
+        // dungeon/ -- ver world.js para dónde se dibuja cada uno).
+        // "pilar" real: sustituye al fallback procedural morado de
+        // G.pilares (sala "columnas", ver floorgen.js: ponPilares()).
+        pilar: assetUrl("dungeon/pillar_liso"),
+        torch_pie: assetUrl("dungeon/torch_pie"),
+        barril_racimo: assetUrl("dungeon/barril_racimo"),
+        escombros: assetUrl("dungeon/escombros"),
       };
 
 export const SHEETS = {};
@@ -1041,8 +1043,15 @@ function cargarFlechasArquero() {
 }
 
 const KENNEY_TILE_SRC = {
-        wall: assetUrl("wall"),
-        wallRemate: assetUrl("wallRemate"),
+        wall: assetUrl("dungeon/wall_fill"),
+        wallRemate: assetUrl("dungeon/wall_top"),
+        // floorA/floorB (ver patronSuelo() en world.js): antes sin
+        // poblar -- patronSuelo() caía siempre a suelo1/suelo2. Dos
+        // variantes lisa/agrietada del mismo pack para conservar la
+        // distinción por forma de sala (TEMA_SUELO_FORMA) que ya hacía
+        // suelo1/suelo2.
+        floorA: assetUrl("dungeon/floor_fill"),
+        floorB: assetUrl("dungeon/floor_fill2"),
         door2: assetUrl("door2"),
         door1: assetUrl("door1"),
       };
