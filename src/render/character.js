@@ -1759,20 +1759,29 @@ export function renderJugador(p) {
           );
         }
 
-        // retícula de suelo (ulti del mago / sanación del clérigo / zarzas del druida humano)
+        // retícula de suelo (ulti del mago / sanación del clérigo / zarzas
+        // del druida humano / Lluvia de Flechas del arquero)
         if (
           p.rol === "mago" ||
           p.rol === "clerigo" ||
+          p.rol === "arquero" ||
           (p.rol === "druida" && p.forma === "humano")
         ) {
-          const maxR = p.rol === "mago" ? 300 : p.rol === "druida" ? 280 : 240;
+          const maxR =
+            p.rol === "mago" || p.rol === "arquero"
+              ? 300
+              : p.rol === "druida"
+                ? 280
+                : 240;
           const g = groundTarget(p, maxR);
           const col =
             p.rol === "mago"
               ? ELEMENTOS[p.elemento].color
               : p.rol === "druida"
                 ? ELEMENTOS.zarzas.color
-                : SUPS[0].color;
+                : p.rol === "arquero"
+                  ? ELEMENTOS.flechas.color
+                  : SUPS[0].color;
           const radUlti =
             p.rol === "mago"
               ? p.elemento === "fuego"
@@ -1782,7 +1791,9 @@ export function renderJugador(p) {
                   : 90
               : p.rol === "druida"
                 ? 100
-                : 64;
+                : p.rol === "arquero"
+                  ? 100
+                  : 64;
           cx.strokeStyle = col;
           cx.globalAlpha = 0.45;
           cx.lineWidth = 1.5;

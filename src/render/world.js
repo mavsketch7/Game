@@ -736,38 +736,6 @@ export function render() {
             cx.fillRect(a.x - 2, a.y - 7, 4, 14);
             cx.fillRect(a.x - 7, a.y - 2, 14, 4);
           }
-          // Lluvia de Flechas (ulti arquero, ver ELEMENTOS.flechas en
-          // core/constants.js): unas cuantas flechas cayendo en bucle
-          // dentro del círculo -- posiciones cacheadas en la propia área
-          // (mismo patrón que a._frost del estallido de hielo más arriba)
-          // para que no salten de sitio cada frame.
-          if (a.elemento === "flechas") {
-            if (!a._flechasCayendo) {
-              a._flechasCayendo = [];
-              for (let k = 0; k < 7; k++) {
-                a._flechasCayendo.push({
-                  dx: rnd(-rr * 0.8, rr * 0.8),
-                  fase: Math.random(),
-                  vel: 1.1 + Math.random() * 0.5,
-                });
-              }
-            }
-            cx.globalAlpha = alfa * 0.9;
-            cx.strokeStyle = "#f2e9d4";
-            cx.lineWidth = 2;
-            for (const fl of a._flechasCayendo) {
-              const ciclo = (animGlobal * fl.vel + fl.fase) % 1;
-              const fx3 = a.x + fl.dx;
-              const fy3 = a.y - rr * 0.9 + ciclo * rr * 1.3;
-              cx.beginPath();
-              cx.moveTo(fx3, fy3 - 7);
-              cx.lineTo(fx3, fy3 + 7);
-              cx.moveTo(fx3 - 2.5, fy3 + 3);
-              cx.lineTo(fx3, fy3 + 7);
-              cx.lineTo(fx3 + 2.5, fy3 + 3);
-              cx.stroke();
-            }
-          }
           cx.globalAlpha = 1;
         }
 
@@ -2111,6 +2079,31 @@ export function render() {
                 cx.globalAlpha = 1;
               }
             }
+          } else if (f.tipo === "flechaLluvia") {
+            // Lluvia de Flechas (ulti arquero, ver lanzarUlti() en
+            // systems/abilities.js): sprite real de la flecha (SPR.flecha,
+            // el mismo que el proyectil normal más arriba), cayendo desde
+            // f.y0 hasta f.y1 según transcurre su propio tiempo de vida --
+            // cada una nace/impacta en su momento propio, programado junto
+            // al sonido real en abilities.js; esto solo la dibuja. Una
+            // sombra en el punto de aterrizaje que crece según se acerca
+            // vende la caída sin necesitar una trayectoria en arco.
+            const caida = 1 - k;
+            const yNow = f.y0 + (f.y1 - f.y0) * caida;
+            cx.globalAlpha = 0.3 * caida;
+            cx.fillStyle = "#0a0812";
+            cx.beginPath();
+            cx.ellipse(f.x, f.y1 + 2, 6 * caida, 2.5 * caida, 0, 0, TAU);
+            cx.fill();
+            cx.globalAlpha = Math.min(1, k * 4);
+            if (SPR.flecha) {
+              cx.save();
+              cx.translate(f.x, yNow);
+              cx.rotate(Math.PI / 2 + f.jitter);
+              cx.drawImage(SPR.flecha, -11, -11, 22, 22);
+              cx.restore();
+            }
+            cx.globalAlpha = 1;
           }
         }
 

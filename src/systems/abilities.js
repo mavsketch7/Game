@@ -5,7 +5,7 @@ import { TAU } from "../core/canvas.js";
 import { ELEMENTOS, ELEM_MAGO, FORMAS_DRUIDA, FORMAS_INFO, PILAR_ROTO_DUR, RAREZAS, ROLES, SALA_H as H, SALA_W as W, SENDA_ELEMENTAL, SUPS } from "../core/constants.js";
 import { G } from "../core/state.js";
 import { fxEstocada, fxImpacto, fxOnda, fxParticulas, fxTajo, fxTexto, fxViento } from "../render/effects.js";
-import { detenerSendaFuegoAudio, iniciarSendaFuegoAudio, sfx, sfxDisparoArco, sfxFuegoBolaLanzamiento, sfxFuegoUltiCast, sfxFuegoUltiExplosion, sfxGolpeAire, sfxGolpeCritico, sfxImpactoFrhor, sfxImpactoGuerrero, sfxImpactoPicaro, sfxMoneda, sfxRompeBarril, sfxRompeHielo, sfxSwingFrhor } from "./audio.js";
+import { detenerSendaFuegoAudio, iniciarSendaFuegoAudio, sfx, sfxDisparoArco, sfxFuegoBolaLanzamiento, sfxFuegoUltiCast, sfxFuegoUltiExplosion, sfxGolpeAire, sfxGolpeCritico, sfxImpactoFrhor, sfxImpactoGuerrero, sfxImpactoPicaro, sfxImpactoProyectil, sfxMoneda, sfxRompeBarril, sfxRompeHielo, sfxSwingFrhor } from "./audio.js";
 import { curarP, danoAEnemigo, danoAlJugador, masCercano, matarEnemigo, statsTot, vivos } from "./combat.js";
 import { posDropValida } from "./floorgen.js";
 import { JUICE } from "./juice.js";
@@ -1070,11 +1070,49 @@ export function habilidad(p) {
             // mago o la Ira Salvaje del druida) en vez del abanico puntual
             // de antes -- daño continuo + ralentización mientras dura (ver
             // ELEMENTOS.flechas en core/constants.js y el tick de área en
-            // core/loop.js, mismo mecanismo que zarzas/hielo).
+            // core/loop.js, mismo mecanismo que zarzas/hielo). El área en
+            // sí es instantánea; lo que se VE caer es un puñado de
+            // flechas programadas aparte (sprite real -- ver
+            // f.tipo==="flechaLluvia" en render/world.js, mismo SPR.flecha
+            // que el proyectil normal, ver render/world.js), cada una con
+            // su propio disparo (sfxDisparoArco, igual que el ataque
+            // básico) y su impacto (sfxImpactoProyectil) al aterrizar --
+            // pedido expreso ("por qué no usas el sprite... más flechas...
+            // sonido por cada una e impacto"). setTimeout con guarda
+            // `G && G.activo`, mismo patrón que el retardo de la
+            // explosión ígnea del mago más abajo, por si la partida ya
+            // terminó para cuando le toque a una flecha tardía.
             const g = groundTarget(p, 300);
             crearArea(g.x, g.y, 100, "flechas", 1, p);
             fxTexto(g.x, g.y - 20, "¡Lluvia de Flechas!", ELEMENTOS.flechas.color, true);
             G.shake = Math.max(G.shake, 3);
+            const N_FLECHAS_LLUVIA = 10;
+            const CAIDA_FLECHA_DUR = 0.32;
+            for (let i = 0; i < N_FLECHAS_LLUVIA; i++) {
+              const retardo = Math.max(0, i * 330 + rnd(-90, 90));
+              setTimeout(() => {
+                if (!G || !G.activo) return;
+                const ang = Math.random() * TAU;
+                const rad = Math.sqrt(Math.random()) * 85;
+                const lx = g.x + Math.cos(ang) * rad;
+                const ly = g.y + Math.sin(ang) * rad;
+                sfxDisparoArco();
+                G.fx.push({
+                  tipo: "flechaLluvia",
+                  x: lx,
+                  y0: ly - 90,
+                  y1: ly,
+                  jitter: rnd(-0.25, 0.25),
+                  t: CAIDA_FLECHA_DUR,
+                  t0: CAIDA_FLECHA_DUR,
+                });
+                setTimeout(() => {
+                  if (!G || !G.activo) return;
+                  sfxImpactoProyectil();
+                  fxImpacto(lx, ly);
+                }, CAIDA_FLECHA_DUR * 1000);
+              }, retardo);
+            }
           } else if (p.rol === "mago") {
             // Casteo real (ver p.castUltT en core/gameflow.js/loop.js y la
             // rama nueva en calcularPoseHeroe, render/character.js) --
