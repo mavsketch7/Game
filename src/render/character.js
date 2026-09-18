@@ -2145,8 +2145,54 @@ export function renderEnemigo(e) {
               cx.drawImage(CABALLERO_IMG.weapon, m.x - mitad, m.y - mitad, m.w, m.h);
             }
             cx.restore();
+          } else if (!armaEnt && CABALLERO_IMG.weapon) {
+            // Brazo izquierdo completo destruido (ni hombro ni mano) y
+            // el arma no está plantada (ventana ya cerrada) -- antes esto
+            // dejaba la espada SIN NINGÚN dibujo hasta que se rompiera
+            // otra pieza (hueco real, reportado). Ahora levita espectral
+            // en su sitio natural de la mano, sin el grupo de rotación
+            // del brazo (ya no hay brazo que la gire) -- encaja con el
+            // tema del jefe: un caballero ESPECTRAL no necesita una mano
+            // física para sostener su espada.
+            const m = metaCaballero("weapon");
+            const flotK = Math.sin(animGlobal * 3 + e.x) * 2;
+            const pulsoK = 0.55 + Math.sin(animGlobal * 4) * 0.25;
+            cx.save();
+            cx.translate(cxK, cyK + flotK);
+            if (flipK) cx.scale(-1, 1);
+            cx.scale(ESCALA_CABALLERO, ESCALA_CABALLERO);
+            cx.globalAlpha = pulsoK + 0.3;
+            cx.shadowColor = "#7fc9e8";
+            cx.shadowBlur = 5 + pulsoK * 6;
+            cx.drawImage(CABALLERO_IMG.weapon, m.x - mitad, m.y - mitad, m.w, m.h);
+            cx.restore();
           }
           cx.globalAlpha = 1;
+
+          // Telegrafiado de la embestida anti-kiteo (ver core/loop.js:
+          // e.embisteTelegT) -- anillo de aviso creciente justo antes de
+          // que arranque el tramo recto, para que se pueda esquivar.
+          if (e.embisteTelegT > 0) {
+            const kTeleg = 1 - e.embisteTelegT / 0.35;
+            cx.strokeStyle = "rgba(233,180,92," + (0.4 + kTeleg * 0.5) + ")";
+            cx.lineWidth = 3;
+            cx.beginPath();
+            cx.arc(e.x, e.y, (e.r + 6) * ESCALA_CABALLERO * (0.7 + kTeleg * 0.4), 0, TAU);
+            cx.stroke();
+          }
+          // Aura del golpe espectral final (piezas a 0, ver
+          // core/loop.js: e.golpeFinalActivo) -- distingue el windup más
+          // largo del golpe normal para que se lea como "el grande,
+          // esquiva más lejos" durante todo el tiempo de carga, no solo
+          // en el instante del impacto.
+          if (e.golpeFinalActivo && e.atkT > 0) {
+            const pulsoF = 0.35 + Math.sin(animGlobal * 10) * 0.25;
+            cx.strokeStyle = "rgba(192,132,240," + pulsoF + ")";
+            cx.lineWidth = 3;
+            cx.beginPath();
+            cx.arc(e.x, e.y, (e.r + 14) * ESCALA_CABALLERO, 0, TAU);
+            cx.stroke();
+          }
 
           // Arma PLANTADA (ventana de vulnerabilidad abierta, ver
           // core/loop.js): objetivo real aparte, clavada vertical en el

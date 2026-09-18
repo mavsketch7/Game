@@ -1409,42 +1409,158 @@ export function update(dt) {
               continue;
             }
 
-            // --- Caballero Espectral: se acerca y golpea con la espada
-            // real (ver systems/combat.js: spawnJefeCaballero()) -- mismo
-            // esqueleto windup/golpe/cooldown que el Guardián de Hielo de
-            // arriba, sin ataques a distancia (solo melé, jefe de prueba
-            // más sencillo). e.atkT impulsa también la animación de giro
-            // del brazo/espada en render/character.js.
+            // --- Caballero Espectral (ver systems/combat.js:
+            // spawnJefeCaballero()): golpe base + combo de seguimiento,
+            // embestida anti-kiteo, defiende su arma expuesta en vez de
+            // ignorarla, y un golpe espectral final una vez rotas las 5
+            // piezas. e.atkT impulsa también la animación de giro del
+            // brazo/espada en render/character.js.
             if (arq === "caballero") {
-              // Sin la espada en la mano (ventana de vulnerabilidad
-              // abierta, ver systems/combat.js: romperParteJefe()) no
-              // puede atacar -- pero SIGUE persiguiendo (pedido expreso:
-              // "que sea más agresivo", no se le regala un respiro
-              // completo mientras se decide si rematar el arma).
+              const piezasTotal = e.partesTotal || 5;
+              const piezasVivas = e.partes ? e.partes.length : 0;
+              // 0..1: cuantas más piezas rotas, más rápido/agresivo --
+              // "un caballero herido lucha más desesperado".
+              const agresivo = (piezasTotal - piezasVivas) / piezasTotal;
               const sinArma = e.armaVentanaT > 0;
+              const golpeFinalDisp = piezasVivas === 0;
+              const velJefe = velF * (1 + agresivo * 0.25);
               e.atkCdJefe -= dt;
+              e.embisteCd -= dt;
+              e.golpeFinalCd -= dt;
+
+              // Embestida en marcha: recto en la dirección fijada al
+              // lanzarla, daña una vez a cada jugador que atraviesa
+              // (mismo patrón que la Estocada del guerrero -- ver
+              // p.dashAtkT/p._dashAtkVictims más arriba en este archivo).
+              if (e.embisteT > 0) {
+                e.embisteT -= dt;
+                e.x += e.embisteDirX * 380 * dt;
+                e.y += e.embisteDirY * 380 * dt;
+                e.moviendose = true;
+                if (!e._embisteVictims) e._embisteVictims = new Set();
+                for (const p of vivos())
+                  if (
+                    !e._embisteVictims.has(p) &&
+                    Math.hypot(p.x - e.x, p.y - e.y) < e.r + p.r + 6
+                  ) {
+                    e._embisteVictims.add(p);
+                    danoAlJugador(p, Math.round(e.atk * 0.8), { melee: e });
+                  }
+                e.x = clamp(e.x, e.r, SALA_W - e.r);
+                e.y = clamp(e.y, e.r, SALA_H - e.r);
+                aplicarLimites(e);
+                e.hurtT = Math.max(0, e.hurtT - dt);
+                continue;
+              }
+              // Telegrafiado de la embestida: quieto un instante (ver
+              // render/character.js: brillo de aviso con e.embisteTelegT)
+              // y al terminar fija dirección y arranca el tramo de arriba.
+              if (e.embisteTelegT > 0) {
+                e.embisteTelegT -= dt;
+                e.moviendose = false;
+                if (e.embisteTelegT <= 0) {
+                  const n = Math.hypot(obj.x - e.x, obj.y - e.y) || 1;
+                  e.embisteDirX = (obj.x - e.x) / n;
+                  e.embisteDirY = (obj.y - e.y) / n;
+                  e.embisteT = 0.4;
+                  e._embisteVictims = new Set();
+                  e.embisteCd = 3.5;
+                  fxOnda(e.x, e.y, e.r + 10, "#7fc9e8");
+                }
+                e.x = clamp(e.x, e.r, SALA_W - e.r);
+                e.y = clamp(e.y, e.r, SALA_H - e.r);
+                aplicarLimites(e);
+                e.hurtT = Math.max(0, e.hurtT - dt);
+                continue;
+              }
+
               if (e.atkT > 0) {
                 e.atkT -= dt;
                 const prog = 1 - e.atkT / e.atkTMax;
                 if (prog >= 0.55 && !e.atkGolpeo) {
                   e.atkGolpeo = true;
+                  const radioGolpe = e.r + (e.golpeFinalActivo ? 46 : 26);
+                  const dmgGolpe = e.golpeFinalActivo
+                    ? Math.round(e.atk * 1.6)
+                    : e.atk;
                   for (const p of vivos())
-                    if (Math.hypot(p.x - e.x, p.y - e.y) < e.r + p.r + 26)
-                      danoAlJugador(p, e.atk, { melee: e });
-                  fxOnda(e.x, e.y, e.r + 24, "#7fc9e8");
-                  G.shake = Math.max(G.shake, 3);
+                    if (Math.hypot(p.x - e.x, p.y - e.y) < radioGolpe + p.r)
+                      danoAlJugador(p, dmgGolpe, { melee: e });
+                  fxOnda(e.x, e.y, radioGolpe, e.golpeFinalActivo ? "#c084f0" : "#7fc9e8");
+                  G.shake = Math.max(G.shake, e.golpeFinalActivo ? 6 : 3);
                 }
                 e.moviendose = false;
+                // Al terminar, probabilidad de encadenar un 2º golpe más
+                // rápido (combo) en vez de volver a enfriamiento -- crece
+                // con las piezas perdidas. Nunca sobre el golpe final ni
+                // mientras el arma sigue expuesta, y nunca más de 2 en
+                // cadena (el propio combo no vuelve a tirar la moneda).
+                if (
+                  e.atkT <= 0 &&
+                  !e.comboPend &&
+                  !sinArma &&
+                  !e.golpeFinalActivo &&
+                  Math.random() < 0.35 + agresivo * 0.4
+                ) {
+                  e.comboPend = true;
+                  e.atkT = e.atkTMax = 0.4;
+                  e.atkGolpeo = false;
+                } else if (e.atkT <= 0) {
+                  e.comboPend = false;
+                  e.golpeFinalActivo = false;
+                }
+              } else if (sinArma) {
+                // Defiende el arma expuesta: vuelve corriendo a plantarse
+                // sobre ella en vez de perseguir a ciegas, y SÍ puede
+                // golpear a quien se acerque a rematarla (antes no
+                // atacaba nada mientras duraba la ventana -- "respiro
+                // gratis"). Línea recta: calcularRumboEnjambre solo sabe
+                // guiar hacia jugadores, no hacia un punto cualquiera.
+                const dArma = Math.hypot(e.armaPlantX - e.x, e.armaPlantY - e.y);
+                if (dArma > e.r + 10) {
+                  const dirArma = Math.atan2(e.armaPlantY - e.y, e.armaPlantX - e.x);
+                  e.x += Math.cos(dirArma) * velJefe * dt;
+                  e.y += Math.sin(dirArma) * velJefe * dt;
+                  e.moviendose = true;
+                } else {
+                  e.moviendose = false;
+                }
+                if (e.atkCdJefe <= 0 && d < e.r + obj.r + 14) {
+                  e.atkT = e.atkTMax = 0.55;
+                  e.atkGolpeo = false;
+                  e.comboPend = false;
+                  e.atkCdJefe = 1.0 * (1 - agresivo * 0.3);
+                }
               } else if (d > e.r + obj.r + 14) {
-                e.x += Math.cos(dirMov) * velF * dt;
-                e.y += Math.sin(dirMov) * velF * dt;
+                e.x += Math.cos(dirMov) * velJefe * dt;
+                e.y += Math.sin(dirMov) * velJefe * dt;
                 e.moviendose = true;
+                // Anti-kiteo: fuera de alcance con el golpe ya listo
+                // durante demasiado tiempo seguido -- en vez de perseguir
+                // para siempre, telegrafía y embiste en línea recta.
+                if (e.atkCdJefe <= 0) {
+                  e.fueraAlcanceT += dt;
+                  if (e.fueraAlcanceT > 1.8 && e.embisteCd <= 0) {
+                    e.fueraAlcanceT = 0;
+                    e.embisteTelegT = 0.35;
+                    e.moviendose = false;
+                  }
+                } else {
+                  e.fueraAlcanceT = 0;
+                }
               } else {
                 e.moviendose = false;
-                if (e.atkCdJefe <= 0 && !sinArma) {
-                  e.atkT = e.atkTMax;
+                e.fueraAlcanceT = 0;
+                if (e.atkCdJefe <= 0) {
+                  const golpeFinalAhora = golpeFinalDisp && e.golpeFinalCd <= 0;
+                  e.atkT = e.atkTMax = golpeFinalAhora ? 0.85 : 0.55;
                   e.atkGolpeo = false;
-                  e.atkCdJefe = 1.0;
+                  e.comboPend = false;
+                  if (golpeFinalAhora) {
+                    e.golpeFinalActivo = true;
+                    e.golpeFinalCd = 5.5;
+                  }
+                  e.atkCdJefe = 1.0 * (1 - agresivo * 0.3);
                 }
               }
               e.x = clamp(e.x, e.r, SALA_W - e.r);

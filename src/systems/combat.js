@@ -318,6 +318,14 @@ export function danoAEnemigo(e, raw, duenio, puedeCrit, kbx, kby, bonusCrit) {
         if (crit) dmg *= 1.7;
         if (e.hpMax && e.hp / e.hpMax < 0.25 && tieneEfecto(duenio, "ejecutor"))
           dmg *= 1.5;
+        // Arma expuesta del Caballero Espectral: cuantas más piezas siga
+        // teniendo el ancla, más protegida está (armaDefensa, ver
+        // spawnJefeCaballero()/romperParteJefe() más abajo) -- con las 5
+        // piezas en pie absorbe el 80% del golpe, a 0 piezas el 0%. Antes
+        // este campo se llevaba la cuenta pero nunca se leía en ningún
+        // sitio -- el arma recibía siempre el golpe entero.
+        if (e.armaDeJefe)
+          dmg *= 1 - clamp(e.armaDeJefe.armaDefensa || 0, 0, 0.95);
         dmg = Math.max(1, Math.round(dmg));
         e.hurtT = 0.12;
         // "Juice" de combate (hit-stop + destello) -- ver systems/juice.js.
@@ -849,6 +857,21 @@ export function spawnJefeCaballero(f, posFija) {
   ancla.armaVentanaT = 0;
   ancla.armaPlantX = ancla.x;
   ancla.armaPlantY = ancla.y;
+  // Rework de mecánicas (ver core/loop.js: arq==="caballero") -- combo
+  // de seguimiento, embestida anti-kiteo y golpe final con las 5
+  // piezas rotas. ancla.partesTotal se guarda aparte (en vez de leer
+  // PARTES_CABALLERO.length desde loop.js) porque esa tabla no se
+  // exporta fuera de este archivo.
+  ancla.partesTotal = PARTES_CABALLERO.length;
+  ancla.comboPend = false;
+  ancla.embisteTelegT = 0;
+  ancla.embisteT = 0;
+  ancla.embisteCd = 3;
+  ancla.embisteDirX = 0;
+  ancla.embisteDirY = 0;
+  ancla.fueraAlcanceT = 0;
+  ancla.golpeFinalCd = 4;
+  ancla.golpeFinalActivo = false;
   for (const pdef of PARTES_CABALLERO) {
     const ox = pdef.ox * ESCALA_CABALLERO, oy = pdef.oy * ESCALA_CABALLERO;
     spawnEnemigo(f, "melee", false, { x: ancla.x + ox, y: ancla.y + oy });
