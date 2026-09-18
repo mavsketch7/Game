@@ -140,19 +140,6 @@ function selItemInv(idx) {
         idxSel = idxSel === idx ? -1 : idx;
         eqSel = null;
         abrirInv();
-        if (idxSel !== -1) desplazarAPanelAccion();
-      }
-
-// El panel de acción (Equipar/Vender/Tirar o Quitar, ver panelAccionItem/
-// panelAccionEquipo) se pinta DEBAJO de la imagen del libro, fuera de su
-// recuadro -- en pantallas donde el libro ya ocupa buena parte del alto
-// (móvil, sobre todo) el panel queda fuera de la vista tras seleccionar
-// un objeto, y había que buscarlo bajando a mano (reportado). "nearest"
-// no mueve nada si el panel ya está a la vista (p.ej. en escritorio, con
-// sitio de sobra), así que en desktop no cambia nada.
-function desplazarAPanelAccion() {
-        const panel = document.querySelector(".panel-item-sel");
-        if (panel) panel.scrollIntoView({ behavior: "smooth", block: "nearest" });
       }
 
 // Selecciona/deselecciona un slot de equipo ya puesto (toque o clic, ver
@@ -166,7 +153,17 @@ function selEquipoSlot(slot) {
         eqSel = eqSel === slot ? null : slot;
         idxSel = -1;
         abrirInv();
-        if (eqSel !== null) desplazarAPanelAccion();
+      }
+
+// Cierra la ventanita emergente de acción (ver .panel-item-backdrop en
+// tabPersonaje() y .panel-item-sel en main.css, ahora position:fixed y
+// centrada -- pedido expreso: "no quiero scroll que se salga del libro",
+// nada de desplazar la página para alcanzarla). Un solo punto de cierre,
+// usado por el fondo oscurecido y por el botón "×" de cada panel.
+function cerrarPanelAccion() {
+        idxSel = -1;
+        eqSel = null;
+        abrirInv();
       }
 
 // Ranking en vivo de la sesión actual (punto 5 de la mejora de UX
@@ -893,8 +890,16 @@ function tabPersonaje(p, t, b) {
           "</div>" +
           '<h3 class="libro-subtitulo">Ordenar la bolsa</h3>' +
           ordCtrlHtml(p) +
-          (eqSel ? panelAccionEquipo(p) : panelAccionItem(p)) +
-          rankingSesion()
+          rankingSesion() +
+          // Ventanita emergente (no un panel en el flujo normal de la
+          // página, ver .panel-item-sel en main.css: position:fixed +
+          // centrada) -- pedido expreso: "no quiero scroll que se salga
+          // del libro". El fondo oscurecido cierra al tocar fuera, igual
+          // que el resto de popovers/overlays del juego.
+          (idxSel !== -1 || eqSel !== null
+            ? '<div class="panel-item-backdrop" onclick="cerrarPanelAccion()"></div>' +
+              (eqSel ? panelAccionEquipo(p) : panelAccionItem(p))
+            : "")
         );
       }
 
@@ -1213,6 +1218,7 @@ function panelAccionItem(p) {
           '">' +
           rar.n +
           "</span></div>" +
+          '<button class="panel-item-cerrar" onclick="cerrarPanelAccion()" aria-label="Cerrar">×</button>' +
           "</div>" +
           (it.efectoDesc
             ? '<div class="item-efecto">✦ ' + escHtml(it.efectoDesc) + "</div>"
@@ -1272,6 +1278,7 @@ function panelAccionEquipo(p) {
           '">' +
           rar.n +
           "</span></div>" +
+          '<button class="panel-item-cerrar" onclick="cerrarPanelAccion()" aria-label="Cerrar">×</button>' +
           "</div>" +
           (it.efectoDesc
             ? '<div class="item-efecto">✦ ' + escHtml(it.efectoDesc) + "</div>"
@@ -1694,6 +1701,7 @@ window.toggleSilencio = toggleSilencio;
 window.toggleControlTactil = toggleControlTactil;
 window.equipar = equipar;
 window.ocultarTooltipFlotante = ocultarTooltipFlotante;
+window.cerrarPanelAccion = cerrarPanelAccion;
 window.filtrarBolsa = filtrarBolsa;
 window.intentarColocarAlma = intentarColocarAlma;
 window.intentarDesbloquearAlma = intentarDesbloquearAlma;
