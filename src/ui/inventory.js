@@ -140,6 +140,19 @@ function selItemInv(idx) {
         idxSel = idxSel === idx ? -1 : idx;
         eqSel = null;
         abrirInv();
+        if (idxSel !== -1) desplazarAPanelAccion();
+      }
+
+// El panel de acción (Equipar/Vender/Tirar o Quitar, ver panelAccionItem/
+// panelAccionEquipo) se pinta DEBAJO de la imagen del libro, fuera de su
+// recuadro -- en pantallas donde el libro ya ocupa buena parte del alto
+// (móvil, sobre todo) el panel queda fuera de la vista tras seleccionar
+// un objeto, y había que buscarlo bajando a mano (reportado). "nearest"
+// no mueve nada si el panel ya está a la vista (p.ej. en escritorio, con
+// sitio de sobra), así que en desktop no cambia nada.
+function desplazarAPanelAccion() {
+        const panel = document.querySelector(".panel-item-sel");
+        if (panel) panel.scrollIntoView({ behavior: "smooth", block: "nearest" });
       }
 
 // Selecciona/deselecciona un slot de equipo ya puesto (toque o clic, ver
@@ -153,6 +166,7 @@ function selEquipoSlot(slot) {
         eqSel = eqSel === slot ? null : slot;
         idxSel = -1;
         abrirInv();
+        if (eqSel !== null) desplazarAPanelAccion();
       }
 
 // Ranking en vivo de la sesión actual (punto 5 de la mejora de UX
@@ -276,6 +290,13 @@ function fmtStatsComparativo(it, actual) {
           .join(" · ");
       }
 
+// Compartido entre panelAccionItem() y celdaItemLibro(): la única
+// restricción real para equipar algo de la bolsa es un arma de otra
+// clase (el resto de slots no están restringidos por rol).
+function puedeEquiparItem(it, p) {
+        return !(it.slot === "arma" && it.clase && it.clase !== p.rol);
+      }
+
 function totalPoder(st) {
         return Object.values(st || {}).reduce((a, b) => a + b, 0);
       }
@@ -314,33 +335,70 @@ function tooltipFlotanteEl() {
         }
         return tooltipFlotante;
       }
+// Temporizador de cierre con retardo (ver los dos listeners de abajo):
+// la celda de origen y el tooltip flotante NO son adyacentes de verdad
+// (el CSS deja 8px de separación -- bottom:calc(100% + 8px) -- para que
+// no tape la propia celda), así que un mouseout INSTANTÁNEO cerraba el
+// tooltip en cuanto el ratón cruzaba ese hueco de camino al botón
+// "Equipar", antes de llegar a pulsarlo (confirmado con Playwright: el
+// botón se veía perfectamente pero nunca llegaba a ser clicable). Con
+// un pequeño margen (180ms) de por medio, cruzar el hueco ya no lo
+// cierra -- solo se cierra si el ratón de verdad no vuelve a entrar en
+// ninguno de los dos nodos en ese tiempo.
+let tooltipHideTimer = null;
 function ocultarTooltipFlotante() {
+        if (tooltipHideTimer) {
+          clearTimeout(tooltipHideTimer);
+          tooltipHideTimer = null;
+        }
         if (tooltipFlotante) tooltipFlotante.style.display = "none";
+      }
+function programarCierreTooltip() {
+        if (tooltipHideTimer) clearTimeout(tooltipHideTimer);
+        tooltipHideTimer = setTimeout(() => {
+          tooltipHideTimer = null;
+          if (tooltipFlotante) tooltipFlotante.style.display = "none";
+        }, 180);
       }
 document.addEventListener("mouseover", (e) => {
         const celda = e.target.closest(".item-cell-libro");
-        if (!celda) return;
-        const origen = celda.querySelector(".item-tooltip");
-        if (!origen) return;
-        const el = tooltipFlotanteEl();
-        el.innerHTML = origen.innerHTML;
-        el.style.display = "block";
-        const r = celda.getBoundingClientRect();
-        const w = el.offsetWidth,
-          h = el.offsetHeight;
-        let left = r.left + r.width / 2 - w / 2;
-        left = Math.max(8, Math.min(left, window.innerWidth - w - 8));
-        // se abre hacia arriba por defecto (igual que el resto de
-        // tooltips); si no hay sitio, se abre hacia abajo en su lugar.
-        let top = r.top - h - 8;
-        if (top < 8) top = r.bottom + 8;
-        el.style.left = left + "px";
-        el.style.top = top + "px";
+        if (celda) {
+          if (tooltipHideTimer) {
+            clearTimeout(tooltipHideTimer);
+            tooltipHideTimer = null;
+          }
+          const origen = celda.querySelector(".item-tooltip");
+          if (!origen) return;
+          const el = tooltipFlotanteEl();
+          el.innerHTML = origen.innerHTML;
+          el.style.display = "block";
+          const r = celda.getBoundingClientRect();
+          const w = el.offsetWidth,
+            h = el.offsetHeight;
+          let left = r.left + r.width / 2 - w / 2;
+          left = Math.max(8, Math.min(left, window.innerWidth - w - 8));
+          // se abre hacia arriba por defecto (igual que el resto de
+          // tooltips); si no hay sitio, se abre hacia abajo en su lugar.
+          let top = r.top - h - 8;
+          if (top < 8) top = r.bottom + 8;
+          el.style.left = left + "px";
+          el.style.top = top + "px";
+          return;
+        }
+        // Entrar en el propio tooltip flotante (p.ej. de camino al botón
+        // "Equipar"): no lo vuelve a rellenar/reposicionar, solo cancela
+        // cualquier cierre programado para que se quede donde está.
+        if (e.target.closest(".item-tooltip-flotante") && tooltipHideTimer) {
+          clearTimeout(tooltipHideTimer);
+          tooltipHideTimer = null;
+        }
       });
 document.addEventListener("mouseout", (e) => {
-        const celda = e.target.closest(".item-cell-libro");
-        if (!celda || celda.contains(e.relatedTarget)) return;
-        ocultarTooltipFlotante();
+        const enZona = e.target.closest(".item-cell-libro") || e.target.closest(".item-tooltip-flotante");
+        if (!enZona) return;
+        const destino = e.relatedTarget;
+        if (destino && destino.closest && (destino.closest(".item-cell-libro") || destino.closest(".item-tooltip-flotante"))) return;
+        programarCierreTooltip();
       });
 
 
@@ -535,6 +593,8 @@ function celdaSlotLibro(slot, p) {
 function celdaItemLibro(it, idx, p) {
         const rar = RAREZAS[it.rareza];
         const seleccionada = idx === idxSel;
+        const actual = p.equipo[it.slot];
+        const puedeEquipar = puedeEquiparItem(it, p);
         return (
           '<div class="item-cell-libro' + (seleccionada ? " seleccionada" : "") + '" style="border-color:' + rar.col + '"' +
           ' draggable="true" ondragstart="arrastrarItemInicio(event,' + idx + ')" ondragend="arrastrarItemFin(event)" onclick="selItemInv(' + idx + ')">' +
@@ -542,6 +602,18 @@ function celdaItemLibro(it, idx, p) {
           '<div class="item-tooltip">' +
           '<div class="tt-nombre ' + rar.cls + '">' + escHtml(it.nombre) + "</div>" +
           '<div class="tt-slot">' + (SLOT_LABEL[it.slot] || it.slot) + ' · <span class="' + rar.cls + '">' + rar.n + "</span></div>" +
+          (it.efectoDesc
+            ? '<div class="tt-efecto">✦ ' + escHtml(it.efectoDesc) + "</div>"
+            : "") +
+          (typeof it.kills === "number"
+            ? '<div class="tt-efecto">🗡 ' + it.kills + " kills con esta arma</div>"
+            : "") +
+          '<div class="tt-stat-linea">' + fmtStatsComparativo(it, actual) + "</div>" +
+          '<div class="tt-acciones">' +
+          (puedeEquipar
+            ? '<button class="tt-btn-equipar" onclick="event.stopPropagation();ocultarTooltipFlotante();equipar(' + idx + ')">Equipar</button>'
+            : '<button class="tt-btn-equipar" disabled title="Arma de otra clase">Solo ' + ROLES[it.clase].nombre.split(" ")[0] + "</button>") +
+          "</div>" +
           "</div>" +
           "</div>"
         );
@@ -1107,11 +1179,7 @@ function panelAccionItem(p) {
         if (!it) return "";
         const rar = RAREZAS[it.rareza];
         const actual = p.equipo[it.slot];
-        const puedeEquipar = !(
-          it.slot === "arma" &&
-          it.clase &&
-          it.clase !== p.rol
-        );
+        const puedeEquipar = puedeEquiparItem(it, p);
         let transf = "";
         if (G.players.length > 1) {
           transf = G.players
@@ -1625,6 +1693,7 @@ window.soltarEnSlot = soltarEnSlot;
 window.toggleSilencio = toggleSilencio;
 window.toggleControlTactil = toggleControlTactil;
 window.equipar = equipar;
+window.ocultarTooltipFlotante = ocultarTooltipFlotante;
 window.filtrarBolsa = filtrarBolsa;
 window.intentarColocarAlma = intentarColocarAlma;
 window.intentarDesbloquearAlma = intentarDesbloquearAlma;
