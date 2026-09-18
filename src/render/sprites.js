@@ -1415,9 +1415,20 @@ function expandirUnion(union, pad) {
     frameSize,
     bboxesUnion: union.bboxesUnion.map((b) => {
       const x = Math.max(0, b.x - pad);
-      const y = Math.max(0, b.y - pad);
       const xEnd = Math.min(frameSize, b.x + b.w + pad);
-      const yEnd = Math.min(frameSize, b.y + b.h + pad);
+      // Borde inferior SIN TOCAR (a diferencia de x/xEnd, que son
+      // simétricos): dyDeFrame ancla verticalmente contra bottomRef, el
+      // borde inferior de esta misma unión (ver cargarHojaConArmadura).
+      // Si aquí se sumara `pad` también abajo (como se hacía antes),
+      // bottomRef se movería `pad` px hacia abajo y todo lo recortado
+      // con esta unión expandida saldría `pad*escala` px más ARRIBA de
+      // lo que le toca respecto al cuerpo (que se recorta con la unión
+      // SIN expandir) -- el desplazamiento del casco reportado. Todo el
+      // margen extra va arriba, que es el único caso real que motiva
+      // expandirUnion (capuchas/sombreros que sobresalen por ARRIBA del
+      // yelmo por defecto).
+      const yEnd = b.y + b.h;
+      const y = Math.max(0, b.y - pad * 2);
       return { x, y, w: xEnd - x, h: yEnd - y };
     }),
   };
