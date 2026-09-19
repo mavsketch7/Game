@@ -76,6 +76,15 @@ const CUSTOM_ROOMS_ORGANICAS = Object.keys(CUSTOM_ROOMS).filter(
   (id) => id !== "arsenal",
 );
 
+// QA (?qa=1, mismo interruptor que el arsenal/cofre de pruebas de
+// gameflow.js): en vez de fiarse del azar, recorre las salas propias
+// EN ORDEN, una por sala, para poder probarlas todas seguidas en una
+// sola exploración -- pedido expreso del usuario. Sigue sumando entre
+// plantas (no se resetea por planta) para que, si una planta no tiene
+// hueco para las 6, la siguiente continúe donde se quedó en vez de
+// repetir desde el principio.
+let qaSalaIdx = 0;
+
 // Pedido expreso del usuario ("que aparezcan de verdad"): con
 // selección uniforme sobre FORMAS_MAPA (12 procedurales + las propias)
 // cada sala propia salía diluida a ~1/(12+n) -- casi invisible en una
@@ -83,6 +92,12 @@ const CUSTOM_ROOMS_ORGANICAS = Object.keys(CUSTOM_ROOMS).filter(
 // con bastante peso hacia lo propio (si hay alguna cargada) ANTES de
 // caer al sorteo uniforme de siempre.
 function elegirForma() {
+  if (
+    CUSTOM_ROOMS_ORGANICAS.length &&
+    new URLSearchParams(location.search).get("qa") === "1"
+  ) {
+    return CUSTOM_ROOMS_ORGANICAS[qaSalaIdx++ % CUSTOM_ROOMS_ORGANICAS.length];
+  }
   if (CUSTOM_ROOMS_ORGANICAS.length && Math.random() < 0.5) {
     return az(CUSTOM_ROOMS_ORGANICAS);
   }
@@ -571,6 +586,11 @@ function generarGrafoPlanta() {
           new URLSearchParams(location.search).get("qa") === "1"
         ) {
           actual.forma = "arsenal";
+          // La entrada de planta 1 ya venía de elegirForma() (dentro de
+          // nuevaSala()) antes de sobreescribirla arriba -- sin este
+          // "devolver" el turno, esa llamada desperdiciada adelantaría en 1
+          // el recorrido en orden de las salas propias (ver qaSalaIdx).
+          if (CUSTOM_ROOMS_ORGANICAS.length) qaSalaIdx--;
         }
         let intentos = 0;
         while (salas.length < nSalas && intentos++ < 60) {
