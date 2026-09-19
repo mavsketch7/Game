@@ -69,6 +69,26 @@ const FORMAS_MAPA = [
         ...Object.keys(CUSTOM_ROOMS),
       ];
 
+// Salas propias reales -- "arsenal" queda fuera: es contenido FIJO de
+// la entrada de planta 1 (ver colocarContenidoFijo()/poblarSala()),
+// no una forma más a repartir en cualquier sala de cualquier planta.
+const CUSTOM_ROOMS_ORGANICAS = Object.keys(CUSTOM_ROOMS).filter(
+  (id) => id !== "arsenal",
+);
+
+// Pedido expreso del usuario ("que aparezcan de verdad"): con
+// selección uniforme sobre FORMAS_MAPA (12 procedurales + las propias)
+// cada sala propia salía diluida a ~1/(12+n) -- casi invisible en una
+// sesión corta, aunque hubiera muchas. En vez de eso, tirada aparte
+// con bastante peso hacia lo propio (si hay alguna cargada) ANTES de
+// caer al sorteo uniforme de siempre.
+function elegirForma() {
+  if (CUSTOM_ROOMS_ORGANICAS.length && Math.random() < 0.5) {
+    return az(CUSTOM_ROOMS_ORGANICAS);
+  }
+  return az(FORMAS_MAPA);
+}
+
 const NOMBRE_FORMA = {
         sala: "",
         cruz: "Sala en cruz",
@@ -497,7 +517,7 @@ function nuevaSala(id, gx, gy, esInicial) {
           id,
           gx,
           gy,
-          forma: az(FORMAS_MAPA),
+          forma: elegirForma(),
           tipo: "normal", // "normal" | "reto_parry"
           visitada: false,
           poblada: false,
@@ -525,7 +545,11 @@ function conectar(a, b, dirDesdeA) {
 // Paseo aleatorio simple sobre una cuadrícula 3x3: basta para 3-5 salas,
 // no hace falta nada más sofisticado (BSP, etc.) para el alcance actual.
 function generarGrafoPlanta() {
-        const nSalas = ri(3, 5);
+        // 3-5 -> 4-6: una sala más de media por planta -- pedido
+        // expreso del usuario tras ver planos de mazmorra con muchas
+        // más salas; no hace falta tocar el resto del paseo aleatorio,
+        // ya soporta cualquier nSalas dentro de la cuadrícula 3x3.
+        const nSalas = ri(4, 6);
         const ocupadas = new Map();
         const gxInicial = ri(0, GRID - 1),
           gyInicial = GRID - 1; // entrada en la fila inferior
