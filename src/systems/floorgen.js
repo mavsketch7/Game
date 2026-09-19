@@ -640,10 +640,16 @@ const PERFILES_SALA = [
 // Objetos con campos extra fijos según su tipo, iguales a los que pone
 // ponHazardsYObjetos() aleatoriamente -- se usan al colocar el contenido
 // EXACTO que se diseñó a mano en el editor (ver colocarContenidoFijo()).
-function crearObjetoFijo(tipo, x, y) {
+function crearObjetoFijo(o) {
+        const { tipo, x, y } = o;
         if (tipo === "barril") return { tipo, x, y, hp: 10 };
         if (tipo === "cofre") return { tipo, x, y, hp: 1, abierto: false };
-        return { tipo, x, y }; // cristal, brasero
+        // estandarte (azul/rojo, ver decorarMuros() más abajo y
+        // render/world.js): la variante viaja en el propio punto
+        // exportado por el editor (tools/level-editor/js/config.js:
+        // TIPOS), no se sortea aquí a diferencia del sembrado aleatorio.
+        if (tipo === "estandarte") return { tipo, x, y, variante: o.variante ?? 0 };
+        return { tipo, x, y }; // cristal, brasero, escombros, barrilRacimo, cadena, llave
       }
 
 // Si la sala es una CUSTOM_ROOM con objetos/enemigos/pilares definidos en su
@@ -662,7 +668,7 @@ function colocarContenidoFijo(sala, f) {
         if (!hayContenido) return false;
 
         for (const o of datos.objetos || [])
-          G.objetos.push(crearObjetoFijo(o.tipo, o.x, o.y));
+          G.objetos.push(crearObjetoFijo(o));
         for (const e of datos.enemigos || [])
           spawnEnemigo(f, e.tipo, false, { x: e.x, y: e.y });
         for (const p of datos.pilares || []) {
@@ -675,6 +681,9 @@ function colocarContenidoFijo(sala, f) {
             hp: dest ? 60 + f * 3 : 0,
             hpMax: dest ? 60 + f * 3 : 0,
             hurtT: 0,
+            // 3 diseños del pack de mazmorra (ver render/world.js) --
+            // el editor deja elegir cuál con el pincel de pilar usado.
+            disenio: p.disenio ?? 0,
           });
         }
         return true;

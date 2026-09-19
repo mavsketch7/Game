@@ -51,8 +51,13 @@ function puntosDeContenido(grid) {
       if (!t || t.capaExport !== "punto") continue;
 
       const punto = { tipo: t.motorTipo, x: c * CELL + CELL / 2, y: r * CELL + CELL / 2 };
+      // variante (estandarte azul/rojo) y disenio (los 3 diseños de
+      // pilar) viven en la propia definición del pincel (config.js:
+      // TIPOS), no en la celda -- se copian al punto exportado tal
+      // cual si el pincel los define.
+      if (t.variante !== undefined) punto.variante = t.variante;
       if (t.categoria === "enemigo") puntos.enemigos.push(punto);
-      else if (t.categoria === "pilar") puntos.pilares.push({ x: punto.x, y: punto.y, destructible: true });
+      else if (t.categoria === "pilar") puntos.pilares.push({ x: punto.x, y: punto.y, destructible: true, disenio: t.disenio ?? 0 });
       else puntos.objetos.push(punto);
     }
   }

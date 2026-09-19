@@ -1,9 +1,29 @@
 // --- Renderizado del Lienzo ---
-import { COLS, ROWS, CELL, MARGEN, ANCLAS_PUERTA, POR_ID } from "./config.js";
+import { COLS, ROWS, CELL, MARGEN, ANCLAS_PUERTA, POR_ID, ASSETS } from "./config.js";
 import { estado, salaActiva } from "./state.js";
 
 export function varColor(name) {
   return getComputedStyle(document.body).getPropertyValue(name).trim();
+}
+
+// Suelo/muro: patrón continuo real (createPattern), NO una imagen
+// "contenida" dentro de cada celda -- antes cada celda de suelo/muro
+// dibujaba una copia entera y encogida de la textura completa (pensada
+// para repetirse, no para caber en un tile), así ni con el tileset
+// viejo ni con el nuevo se veía como una pared/suelo de verdad. Mismo
+// criterio que wallPatron()/patronSuelo() en render/world.js: un único
+// patrón cacheado por imagen, celdas vecinas quedan seamless entre sí
+// porque un patrón de canvas se ancla al origen del lienzo, no de cada
+// fillRect() individual.
+const cachePatrones = new Map();
+function patronDe(ctx, img) {
+  if (!img || !img.complete || img.naturalWidth === 0) return null;
+  let p = cachePatrones.get(img);
+  if (!p) {
+    p = ctx.createPattern(img, "repeat");
+    cachePatrones.set(img, p);
+  }
+  return p;
 }
 
 // Dibuja `img` (o una región sx,sy,sw,sh de ella) centrada en el rectángulo
@@ -31,6 +51,21 @@ export function dibujarTile(ctx, idTipo, x, y, ancho, alto, sinFondo) {
     // Relleno de fondo (siempre para tapar huecos)
     ctx.fillStyle = (t.id === "vacio") ? t.color : "#1d1929";
     ctx.fillRect(x, y, ancho, alto);
+  }
+
+  // Suelo/muro real: relleno de patrón, no imagen contenida (ver
+  // patronDe() más arriba). "secreta" se deja con su imagen propia
+  // (Pared-intermedia) a propósito -- en el juego un muro secreto es
+  // visualmente IDÉNTICO a uno normal, pero en el editor conviene que
+  // quien diseña SÍ lo distinga a simple vista.
+  if (t.id === "suelo" || t.id === "muro") {
+    const patron = patronDe(ctx, t.img);
+    if (patron) {
+      ctx.fillStyle = patron;
+      ctx.fillRect(x, y, ancho, alto);
+      return;
+    }
+    // Sin imagen cargada todavía: cae al fallback de color+letra de más abajo.
   }
 
   // Pincel animado (ver "Modo animación" en picker.js): elige el frame según el reloj
@@ -75,6 +110,27 @@ export function dibujar(cv, cx) {
       const celda = g[r][c];
       dibujarTile(cx, celda.base, c * CELL, r * CELL, CELL, CELL);
       if (celda.elem) dibujarTile(cx, celda.elem, c * CELL, r * CELL, CELL, CELL, true);
+    }
+  }
+
+  // Remate (almenas) del muro: se pinta en pasada aparte, por CELDA con
+  // el borde superior expuesto (la celda de arriba no es muro), igual
+  // que wallRemate en el juego (render/world.js: solo en el borde
+  // superior de cada tramo, no en cada celda del bloque). Se salta
+  // tramos de 1 sola celda de alto (20px) -- mismo criterio que
+  // `m.h >= 26` en el juego, para no saturar obstáculos chiquitos.
+  const patronRemate = patronDe(cx, ASSETS.wallRemate);
+  if (patronRemate) {
+    for (let r = 0; r < ROWS; r++) {
+      for (let c = 0; c < COLS; c++) {
+        if (g[r][c].elem !== "muro") continue;
+        if (r > 0 && g[r - 1][c].elem === "muro") continue; // no es el borde de arriba
+        let alto = 0;
+        while (r + alto < ROWS && g[r + alto][c].elem === "muro") alto++;
+        if (alto < 2) continue; // tramo de 1 celda: sin remate, mismo criterio que el juego
+        cx.fillStyle = patronRemate;
+        cx.fillRect(c * CELL, r * CELL, CELL, CELL);
+      }
     }
   }
 

@@ -1,5 +1,14 @@
 // --- CONFIGURACIÓN BASE Y CARGA DE ASSETS ---
-export const COLS = 40, ROWS = 25, CELL = 40;
+// CELL bajado de 40 a 20px (COLS/ROWS duplicados a la par: 80x50, mismo
+// lienzo de 1600x1000 de siempre) -- pedido expreso del usuario tras ver
+// un plano de mazmorra con salas de forma orgánica (circulares/diagonales
+// hechas de bloques pequeños, "al final son píxeles"): a 40px por celda un
+// círculo razonable salía como un diamante de 3-4 escalones; a 20px salen
+// 2x más escalones por eje (4x más resolución de borde) y se lee como
+// curva de verdad. 20px además coincide EXACTO con CELDA en
+// systems/navegacion.js (el flow field del motor), cero desalineación con
+// el pathfinding real del juego.
+export const COLS = 80, ROWS = 50, CELL = 20;
 export const MARGEN = 28;
 
 // Rutas absolutas (sirven desde public/, ver vite.config.js) a los sprites REALES del
@@ -7,16 +16,35 @@ export const MARGEN = 28;
 // aquí no hay spritesheets: cada archivo es un sprite suelto completo (ver dibujarTile()
 // en render.js: sw/sh en 0 => se usa el tamaño natural de la imagen, sin recorte).
 export const ASSETS_PATHS = {
-  suelo1: "/assets/sprites/suelo1.png",
-  suelo2: "/assets/sprites/suelo2.png",
-  wall: "/assets/sprites/wall.png",
-  wallRemate: "/assets/sprites/wallRemate.png",
+  // Suelo/pared: el tileset real del rework de mazmorra (antes apuntaban a
+  // suelo1/suelo2/wall.png, los sprites VIEJOS -- por eso el editor nunca
+  // llegó a mostrar el tileset nuevo, aunque el juego en vivo ya lo usa
+  // bien desde ese rework, ver wallPatron()/patronSuelo() en
+  // render/world.js). Mismos archivos que KENNEY_TILE en render/sprites.js.
+  suelo1: "/assets/sprites/dungeon/floor_fill.png",
+  suelo2: "/assets/sprites/dungeon/floor_fill2.png",
+  wall: "/assets/sprites/dungeon/wall_fill.png",
+  wallRemate: "/assets/sprites/dungeon/wall_top.png",
   paredIntermedia: "/assets/sprites/Pared-intermedia.png",
   door1: "/assets/sprites/door1.png",
   door2: "/assets/sprites/door2.png",
   escaleras: "/assets/sprites/escaleras.png",
   cofre: "/assets/sprites/cofre_f0.png",
   barril: "/assets/sprites/barril.png",
+  // Props nuevos del rework de mazmorra (ver G.objetos en render/world.js
+  // y pl.disenio en systems/floorgen.js: ponPilares()) -- mismos archivos
+  // que ASSET_SRC en render/sprites.js, para que lo pintado aquí sea
+  // exactamente lo que aparece en el juego.
+  torchPie: "/assets/sprites/dungeon/torch_pie.png",
+  barrilRacimo: "/assets/sprites/dungeon/barril_racimo.png",
+  escombros: "/assets/sprites/dungeon/escombros.png",
+  estandarteAzul: "/assets/sprites/dungeon/estandarte_azul.png",
+  estandarteRojo: "/assets/sprites/dungeon/estandarte_rojo.png",
+  cadena: "/assets/sprites/dungeon/cadena.png",
+  llave: "/assets/sprites/dungeon/llave.png",
+  pilarLiso: "/assets/sprites/dungeon/pillar_liso.png",
+  pilarRostro: "/assets/sprites/dungeon/pillar_rostro.png",
+  pilarEstriado: "/assets/sprites/dungeon/pillar_estriado.png",
 };
 
 export const ASSETS = {};
@@ -94,10 +122,29 @@ export const TIPOS = [
   { id: "cofre",   ch: "C", color: "#ffa502", label: "Cofre del tesoro", tecla: "7", img: ASSETS.cofre, sx: 0, sy: 0, sw: 0, sh: 0, capa: "elemento", capaExport: "punto", categoria: "objeto", motorTipo: "cofre" },
   { id: "barril",  ch: "B", color: "#8a6a45", label: "Barril",           tecla: "9", img: ASSETS.barril, sx: 0, sy: 0, sw: 0, sh: 0, capa: "elemento", capaExport: "punto", categoria: "objeto", motorTipo: "barril" },
   { id: "cristal", ch: "Y", color: "#70a1ff", label: "Cristal",          tecla: "", img: null, sx: 0, sy: 0, sw: 0, sh: 0, capa: "elemento", capaExport: "punto", categoria: "objeto", motorTipo: "cristal" },
-  { id: "brasero", ch: "F", color: "#ff7f50", label: "Brasero",         tecla: "", img: null, sx: 0, sy: 0, sw: 0, sh: 0, capa: "elemento", capaExport: "punto", categoria: "objeto", motorTipo: "brasero" },
+  // brasero (motorTipo "brasero") ahora dibuja la antorcha real del
+  // rework de mazmorra en el juego (ver world.js) -- el icono del editor
+  // usa el mismo sprite para que sea WYSIWYG.
+  { id: "brasero", ch: "F", color: "#ff7f50", label: "Antorcha",         tecla: "", img: ASSETS.torchPie, sx: 0, sy: 0, sw: 0, sh: 0, capa: "elemento", capaExport: "punto", categoria: "objeto", motorTipo: "brasero" },
+  // --- Props nuevos del rework de mazmorra (mismo motorTipo que ya
+  // entiende el render de G.objetos en render/world.js) ---
+  { id: "escombros",       ch: "R", color: "#8a7ba0", label: "Escombros",              tecla: "", img: ASSETS.escombros,      sx: 0, sy: 0, sw: 0, sh: 0, capa: "elemento", capaExport: "punto", categoria: "objeto", motorTipo: "escombros" },
+  { id: "barril_racimo",   ch: "K", color: "#a9782f", label: "Racimo de barriles",     tecla: "", img: ASSETS.barrilRacimo,   sx: 0, sy: 0, sw: 0, sh: 0, capa: "elemento", capaExport: "punto", categoria: "objeto", motorTipo: "barrilRacimo" },
+  { id: "llave",           ch: "L", color: "#e9b45c", label: "Llave",                  tecla: "", img: ASSETS.llave,          sx: 0, sy: 0, sw: 0, sh: 0, capa: "elemento", capaExport: "punto", categoria: "objeto", motorTipo: "llave" },
+  // estandarte/cadena: pensados para colocarse PEGADOS a un muro (mismo
+  // criterio "con sentido" que decorarMuros() en floorgen.js, no al
+  // azar) -- x,y caen en el centro de la celda igual que cualquier otro
+  // punto, así que hay que colocarlos a mano justo sobre el tramo de
+  // muro deseado.
+  { id: "estandarte_azul", ch: "N", color: "#5470c0", label: "Estandarte azul (muro)", tecla: "", img: ASSETS.estandarteAzul, sx: 0, sy: 0, sw: 0, sh: 0, capa: "elemento", capaExport: "punto", categoria: "objeto", motorTipo: "estandarte", variante: 0 },
+  { id: "estandarte_rojo", ch: "M", color: "#c0505a", label: "Estandarte rojo (muro)", tecla: "", img: ASSETS.estandarteRojo, sx: 0, sy: 0, sw: 0, sh: 0, capa: "elemento", capaExport: "punto", categoria: "objeto", motorTipo: "estandarte", variante: 1 },
+  { id: "cadena",          ch: "H", color: "#7a8290", label: "Cadena (muro)",          tecla: "", img: ASSETS.cadena,         sx: 0, sy: 0, sw: 0, sh: 0, capa: "elemento", capaExport: "punto", categoria: "objeto", motorTipo: "cadena" },
 
-  // --- Pilares (floorgen.js: ponPilares / G.pilares) ---
-  { id: "pilar",   ch: "O", color: "#576574", label: "Pilar",           tecla: "", img: null, sx: 0, sy: 0, sw: 0, sh: 0, capa: "elemento", capaExport: "punto", categoria: "pilar", motorTipo: "pilar" },
+  // --- Pilares (floorgen.js: ponPilares / G.pilares) -- 3 diseños reales
+  // (pl.disenio: 0 liso / 1 rostro / 2 estriado, ver render/world.js) ---
+  { id: "pilar",          ch: "O", color: "#576574", label: "Pilar (liso)",     tecla: "", img: ASSETS.pilarLiso,     sx: 0, sy: 0, sw: 0, sh: 0, capa: "elemento", capaExport: "punto", categoria: "pilar", motorTipo: "pilar", disenio: 0 },
+  { id: "pilar_rostro",   ch: "Q", color: "#576574", label: "Pilar (rostro)",   tecla: "", img: ASSETS.pilarRostro,   sx: 0, sy: 0, sw: 0, sh: 0, capa: "elemento", capaExport: "punto", categoria: "pilar", motorTipo: "pilar", disenio: 1 },
+  { id: "pilar_estriado", ch: "W", color: "#576574", label: "Pilar (estriado)", tecla: "", img: ASSETS.pilarEstriado, sx: 0, sy: 0, sw: 0, sh: 0, capa: "elemento", capaExport: "punto", categoria: "pilar", motorTipo: "pilar", disenio: 2 },
 ];
 
 export const TAM_MAX_RECORTE = 32; // máx. ancho/alto (px) de un recorte de sprite, = tamaño de tile
