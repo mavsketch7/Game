@@ -1058,6 +1058,18 @@ function cargarFlechasArquero() {
 const KENNEY_TILE_SRC = {
         wall: assetUrl("dungeon/wall_fill"),
         wallRemate: assetUrl("dungeon/wall_top"),
+        // Piezas de borde/esquina reales del tileset (recortadas de
+        // "Dungeon tileset-sheet.png", el Tileset exportado desde Aseprite
+        // -- no un autotiling genérico: el propio usuario nombró estas
+        // piezas concretas en el Artifact de pruebas y pintó a mano cómo
+        // casan, ver dibujarMuroConBorde() en world.js). Sustituyen el "remate
+        // liso en todo el ancho" de wallRemate por una cara de muro con
+        // esquina real en los extremos donde de verdad hay esquina.
+        wallCornerL: assetUrl("dungeon/wall_corner_left"),
+        wallCornerR: assetUrl("dungeon/wall_corner_right"),
+        wallEdgeTop: assetUrl("dungeon/wall_top_edge"),
+        wallEdgeBase: assetUrl("dungeon/wall_base_edge"),
+        wallEdgeSide: assetUrl("dungeon/wall_side_edge"),
         // floorA/floorB (ver patronSuelo() en world.js): antes sin
         // poblar -- patronSuelo() caía siempre a suelo1/suelo2. Dos
         // variantes lisa/agrietada del mismo pack para conservar la
@@ -1108,6 +1120,24 @@ export function remateMuroPatron() {
           return remateMuroPatternKenney;
         }
         return null;
+      }
+
+// Cara de muro con esquina real (ver dibujarMuroConBorde() en world.js): tres
+// patrones repetibles (hilada superior, hilada base, canto lateral) más
+// dos imágenes sueltas para las esquinas -- igual criterio de caché
+// perezosa por patrón que wallPatron()/remateMuroPatron() de arriba.
+const patronesBordeMuro = {};
+function patronBordeMuro(clave, imgKey) {
+        if (!KENNEY_TILE[imgKey]) return null;
+        if (!patronesBordeMuro[clave])
+          patronesBordeMuro[clave] = cx.createPattern(KENNEY_TILE[imgKey], "repeat");
+        return patronesBordeMuro[clave];
+      }
+export function muroBordeSuperiorPatron() { return patronBordeMuro("top", "wallEdgeTop"); }
+export function muroBordeBasePatron() { return patronBordeMuro("base", "wallEdgeBase"); }
+export function muroBordeLateralPatron() { return patronBordeMuro("side", "wallEdgeSide"); }
+export function muroEsquinaImg(lado) {
+        return lado === "izq" ? KENNEY_TILE.wallCornerL || null : KENNEY_TILE.wallCornerR || null;
       }
 
 // Puerta real entre salas (ver render/world.js: dibuja KENNEY_TILE.door2

@@ -3,7 +3,7 @@ import { H, TAU, W, animGlobal, avanzarAnimGlobal, cx } from "../core/canvas.js"
 import { ELEMENTOS, ETQ, MAX_PLANTA, PILAR_ROTO_DUR, RAREZAS, SALA_H, SALA_W, SLOT_LABEL, SUPS } from "../core/constants.js";
 import { G } from "../core/state.js";
 import { renderHUD } from "./hud.js";
-import { CAMPFIRE_CELDA, FIRE_COLUMN, FIREBALL_FH, FIREBALL_FRAMES, FIREBALL_FW, FIREBALL_SHEET, FIRE_EXPLOSION_FH, FIRE_EXPLOSION_FRAMES, FIRE_EXPLOSION_FW, FIRE_EXPLOSION_INICIO, FIRE_EXPLOSION_SHEET, FROST_GUARDIAN, ICE_BURST, IMPACT_VFX, KENNEY_TILE, PILAR_HIELO_FRAMES, SANGRE_ANIM, SANGRE_DUR, SHEETS, SPR, assetOK, campfireFrame, iconoDrop, remateMuroPatron, wallPatron } from "./sprites.js";
+import { CAMPFIRE_CELDA, FIRE_COLUMN, FIREBALL_FH, FIREBALL_FRAMES, FIREBALL_FW, FIREBALL_SHEET, FIRE_EXPLOSION_FH, FIRE_EXPLOSION_FRAMES, FIRE_EXPLOSION_FW, FIRE_EXPLOSION_INICIO, FIRE_EXPLOSION_SHEET, FROST_GUARDIAN, ICE_BURST, IMPACT_VFX, KENNEY_TILE, PILAR_HIELO_FRAMES, SANGRE_ANIM, SANGRE_DUR, SHEETS, SPR, assetOK, campfireFrame, iconoDrop, muroBordeBasePatron, muroBordeLateralPatron, muroBordeSuperiorPatron, muroEsquinaImg, remateMuroPatron, wallPatron } from "./sprites.js";
 import { drawSprite, drawSpriteBottom } from "./spriteDraw.js";
 import { renderEnemigo, renderJugador, renderMira } from "./character.js";
 import { EXPLOSION_BURST_DUR, EXPLOSION_FADE_DUR } from "../systems/abilities.js";
@@ -298,6 +298,103 @@ function dibujarHogueraReal(x, y, tam) {
         }
       }
 
+// Cara de muro con esquina/borde real (piezas del tileset real nombradas
+// y ensayadas a mano por el usuario en el Artifact de pruebas -- ver
+// dibujarMuroConBorde() más abajo) en vez del remate liso de antes. Solo
+// se aplica a rectángulos de G.muros "de verdad largos" (perímetro de
+// sala clásico); las salas orgánicas con docenas de rectángulos diminutos
+// tipo escalera (torreón circular, diamante, zigzag...) se quedan con el
+// remate liso original -- detectar esquina real en esas formas por
+// contacto rectángulo-a-rectángulo daría un patchwork, no una mejora.
+const UMBRAL_LARGO_BORDE = 80;
+// Tolerancia en px para decidir si dos rectángulos de G.muros "se tocan"
+// en una esquina -- G.muros no guarda ninguna relación de vecindad (ver
+// systems/floorgen.js), así que la única forma de saber si el extremo de
+// un muro horizontal es una esquina real (y no un hueco de puerta) es
+// comprobar si hay un muro VERTICAL pegado justo ahí.
+const TOQUE_BORDE_TOL = 4;
+let cacheMurosRefBordes = null;
+let metaBordes = new Map();
+function calcularMetaBordes(muros) {
+        metaBordes = new Map();
+        for (const m of muros) {
+          const horizontal = m.w >= m.h;
+          if (!horizontal) { metaBordes.set(m, { horizontal }); continue; }
+          let esqIzq = false, esqDer = false;
+          for (const o of muros) {
+            if (o === m || o.w >= o.h) continue; // solo cuenta un muro vertical
+            // Solape/contacto en Y en CUALQUIER punto de la altura de m, no
+            // solo en su fila superior: un muro horizontal que hace de
+            // borde INFERIOR de una sala se junta con su vertical por la
+            // fila de ARRIBA de m (m.y), pero uno que hace de borde
+            // SUPERIOR se junta por la fila de ABAJO (m.y+m.h) -- sin saber
+            // cuál es cuál, comprobar el rango completo cubre los dos casos.
+            if (o.y > m.y + m.h + TOQUE_BORDE_TOL || o.y + o.h < m.y - TOQUE_BORDE_TOL) continue;
+            // El vertical no siempre está pegado por fuera (abutment puro,
+            // sin solape) -- lo normal en las formas de este juego es que
+            // el bloque en L comparta la esquina (el vertical arranca en la
+            // MISMA x que el borde de m, no justo después). Así que basta
+            // con que el rango en X del vertical CUBRA la columna del
+            // borde de m, no que termine exactamente ahí.
+            if (o.x <= m.x + TOQUE_BORDE_TOL && o.x + o.w >= m.x + TOQUE_BORDE_TOL) esqIzq = true;
+            if (o.x <= m.x + m.w - TOQUE_BORDE_TOL && o.x + o.w >= m.x + m.w - TOQUE_BORDE_TOL) esqDer = true;
+          }
+          metaBordes.set(m, { horizontal, esqIzq, esqDer });
+        }
+        cacheMurosRefBordes = muros;
+      }
+// Alto en pantalla de cada hilada (hilada superior / zócalo / esquina) --
+// las piezas nuevas son de 16px nativos, ×3 igual que el resto de
+// KENNEY_TILE (ver sprites.js).
+const ALTO_HILADA_BORDE = 48;
+function dibujarMuroConBorde(m, meta, wallPat, rematePat) {
+        const pTop = muroBordeSuperiorPatron();
+        if (!pTop) {
+          // piezas nuevas aún sin cargar: cae al remate liso de siempre,
+          // sin dejar el muro sin dibujar mientras tanto.
+          cx.fillStyle = wallPat;
+          cx.fillRect(m.x, m.y, m.w, m.h);
+          if (rematePat) {
+            cx.fillStyle = rematePat;
+            cx.fillRect(m.x, m.y, m.w, 16);
+          }
+          cx.strokeStyle = "rgba(10,8,17,.6)";
+          cx.lineWidth = 2;
+          cx.strokeRect(m.x + 1, m.y + 1, m.w - 2, m.h - 2);
+          return;
+        }
+        // cuerpo: relleno de siempre para todo el rectángulo, así un
+        // bloque mucho más alto que 2 hiladas sigue viéndose como pared
+        // por debajo de la hilada superior/zócalo.
+        cx.fillStyle = wallPat;
+        cx.fillRect(m.x, m.y, m.w, m.h);
+        const altoTop = Math.min(ALTO_HILADA_BORDE, m.h);
+        cx.fillStyle = pTop;
+        cx.fillRect(m.x, m.y, m.w, altoTop);
+        const pBase = muroBordeBasePatron();
+        if (pBase && m.h >= ALTO_HILADA_BORDE * 2) {
+          cx.fillStyle = pBase;
+          cx.fillRect(m.x, m.y + ALTO_HILADA_BORDE, m.w, Math.min(ALTO_HILADA_BORDE, m.h - ALTO_HILADA_BORDE));
+        }
+        // esquinas reales -- solo en los extremos donde de verdad hay otro
+        // muro perpendicular tocando (calcularMetaBordes()); si no, el
+        // extremo se queda con la hilada superior lisa (hueco de puerta,
+        // o final suelto de un tramo).
+        const imgIzq = meta.esqIzq ? muroEsquinaImg("izq") : null;
+        const imgDer = meta.esqDer ? muroEsquinaImg("der") : null;
+        if (imgIzq) {
+          const w = Math.min(imgIzq.width, m.w);
+          cx.drawImage(imgIzq, m.x, m.y, w, altoTop);
+        }
+        if (imgDer) {
+          const w = Math.min(imgDer.width, m.w);
+          cx.drawImage(imgDer, m.x + m.w - w, m.y, w, altoTop);
+        }
+        cx.strokeStyle = "rgba(10,8,17,.6)";
+        cx.lineWidth = 2;
+        cx.strokeRect(m.x + 1, m.y + 1, m.w - 2, m.h - 2);
+      }
+
 export function render() {
         avanzarAnimGlobal(0.016);
         if (window._sueloDirty) {
@@ -351,17 +448,32 @@ export function render() {
 
         const wallPat = wallPatron();
         const rematePat = remateMuroPatron();
+        if (G.muros !== cacheMurosRefBordes) calcularMetaBordes(G.muros);
         for (const m of G.muros) {
+          const metaB = metaBordes.get(m);
+          if (wallPat && metaB && metaB.horizontal && m.w >= UMBRAL_LARGO_BORDE && m.h >= 26) {
+            dibujarMuroConBorde(m, metaB, wallPat, rematePat);
+            continue;
+          }
+          if (wallPat && metaB && !metaB.horizontal && m.h >= UMBRAL_LARGO_BORDE) {
+            const pLado = muroBordeLateralPatron();
+            if (pLado) {
+              cx.fillStyle = pLado;
+              cx.fillRect(m.x, m.y, m.w, m.h);
+              cx.strokeStyle = "rgba(10,8,17,.6)";
+              cx.lineWidth = 2;
+              cx.strokeRect(m.x + 1, m.y + 1, m.w - 2, m.h - 2);
+              continue;
+            }
+          }
           if (wallPat) {
             cx.fillStyle = wallPat;
             cx.fillRect(m.x, m.y, m.w, m.h);
             // remate (almenas) en el borde superior de los muros grandes:
-            // el pack de sprites no trae piezas de esquina/borde por
-            // bitmask (ver systems/floorgen.js), así que en vez de un
-            // autotiling de 4/8 vecinos esto le da a cada rectángulo un
-            // acabado "coronado" en vez de un corte plano. Se omite en
-            // obstáculos pequeños (ej. los bloques de "columnas", 22px)
-            // porque saturaría visualmente una pieza tan chica.
+            // fallback liso para lo que no calificó arriba (obstáculos
+            // pequeños, tramos sueltos de las salas orgánicas con muchos
+            // rectángulos diminutos tipo "escalera") -- mismo criterio de
+            // siempre, sin esquina real.
             if (rematePat && m.h >= 26) {
               cx.fillStyle = rematePat;
               cx.fillRect(m.x, m.y, m.w, 16);
