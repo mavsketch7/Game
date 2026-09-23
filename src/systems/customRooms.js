@@ -1,6 +1,12 @@
 // --- Registro de salas diseñadas a mano en tools/level-editor/ ---
 // Cada archivo en ./customRooms/*.json es el JSON que exporta el editor (botón
-// "Exportar JSON (motor)"): { id, nombre, muros, objetos, enemigos, pilares }.
+// "Exportar JSON (motor)"): { id, nombre, muros, vacios, objetos, enemigos, pilares, fondo }.
+// `vacios` (opcional): rects que no son ni suelo ni pared -- bloquean el paso
+// como un muro pero no se dibujan como pared (colisionaMuro()/aplicarLimites()
+// en floorgen.js, render() en render/world.js). `fondo` (opcional): ruta a una
+// imagen horneada de suelo+pared+decoración que sustituye al render procedural
+// (libertad total de forma -- botón "Exportar TODO lo pintado" del Telar de
+// Mazmorras, el artefacto de Claude).
 // Se cargan automáticamente con import.meta.glob de Vite -- añadir una sala nueva
 // diseñada a mano es soltar el archivo en esa carpeta, sin tocar floorgen.js.
 // Ver generarMapa() (usa CUSTOM_ROOMS[forma].muros) y poblarSala() (contenido fijo,

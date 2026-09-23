@@ -100,6 +100,25 @@ function dibujarMarcadorBanderin(m, { color, colorClaro, icono, etiqueta, sprite
 export let sueloPat = null,
         sueloClave = "";
 
+// Fondo horneado de una sala diseñada en el Telar de Mazmorras (G.fondo,
+// ver customRooms/*.json + generarMapa() en floorgen.js) -- una imagen
+// EXACTA de suelo+pared+decoración que sustituye al suelo uniforme + muros
+// auto-rematados de siempre, para libertad total de forma. Caché por ruta
+// (no por sala: la misma imagen puede reutilizarse si dos salas comparten
+// forma) -- nunca se limpia, son pocas y pesan poco frente al resto de
+// assets del juego.
+const fondoImgs = {};
+function fondoImg(ruta) {
+        if (!ruta) return null;
+        let im = fondoImgs[ruta];
+        if (!im) {
+          im = new Image();
+          im.src = ruta;
+          fondoImgs[ruta] = im;
+        }
+        return im.complete && im.naturalWidth ? im : null;
+      }
+
 // tema de suelo preferido por forma de sala -- así al cruzar una puerta
 // entre dos salas de formas distintas la textura cambia con ellas, en vez
 // de depender solo del número de planta (ver claveSuelo en render())
@@ -440,63 +459,91 @@ export function render() {
           return;
         }
         cx.translate(-camX, -camY);
-        cx.fillStyle = sueloPat;
-        cx.fillRect(0, 0, SALA_W, SALA_H);
-        cx.strokeStyle = "#3a3453";
-        cx.lineWidth = 8;
-        cx.strokeRect(10, 10, SALA_W - 20, SALA_H - 20);
 
-        const wallPat = wallPatron();
-        const rematePat = remateMuroPatron();
-        if (G.muros !== cacheMurosRefBordes) calcularMetaBordes(G.muros);
-        for (const m of G.muros) {
-          const metaB = metaBordes.get(m);
-          if (wallPat && metaB && metaB.horizontal && m.w >= UMBRAL_LARGO_BORDE && m.h >= 26) {
-            dibujarMuroConBorde(m, metaB, wallPat, rematePat);
-            continue;
+        // Sala con fondo horneado (G.fondo, ver Telar de Mazmorras/
+        // customRooms/*.json): una imagen EXACTA de suelo+pared+decoración
+        // sustituye al suelo uniforme + muros auto-rematados de abajo --
+        // libertad total de forma. G.muros/G.vacios SIGUEN existiendo y
+        // bloqueando el paso (ver floorgen.js) para que la colisión
+        // coincida con lo que se ve, solo dejan de DIBUJARSE aquí. Si la
+        // imagen aún no ha terminado de cargar, cae al render procedural de
+        // siempre en vez de dejar la sala en negro un instante.
+        const imgFondo = fondoImg(G.fondo);
+        if (imgFondo) {
+          cx.drawImage(imgFondo, 0, 0, SALA_W, SALA_H);
+          cx.strokeStyle = "#3a3453";
+          cx.lineWidth = 8;
+          cx.strokeRect(10, 10, SALA_W - 20, SALA_H - 20);
+        } else {
+          cx.fillStyle = sueloPat;
+          cx.fillRect(0, 0, SALA_W, SALA_H);
+          cx.strokeStyle = "#3a3453";
+          cx.lineWidth = 8;
+          cx.strokeRect(10, 10, SALA_W - 20, SALA_H - 20);
+
+          // Huecos vacíos (sala.vacios, ver customRooms/*.json): ni suelo
+          // ni pared -- el "~void" del Telar de Mazmorras. Se pintan
+          // ENCIMA del suelo uniforme de arriba con el mismo tono oscuro
+          // de fondo, sin ningún remate de pared (bloquean el paso igual
+          // que un muro, ver colisionaMuro()/aplicarLimites() en
+          // systems/floorgen.js, pero no deben LEERSE como pared).
+          if (G.vacios && G.vacios.length) {
+            cx.fillStyle = "#0a0806";
+            for (const v of G.vacios) cx.fillRect(v.x, v.y, v.w, v.h);
           }
-          if (wallPat && metaB && !metaB.horizontal && m.h >= UMBRAL_LARGO_BORDE) {
-            const pLado = muroBordeLateralPatron();
-            if (pLado) {
-              cx.fillStyle = pLado;
+
+          const wallPat = wallPatron();
+          const rematePat = remateMuroPatron();
+          if (G.muros !== cacheMurosRefBordes) calcularMetaBordes(G.muros);
+          for (const m of G.muros) {
+            const metaB = metaBordes.get(m);
+            if (wallPat && metaB && metaB.horizontal && m.w >= UMBRAL_LARGO_BORDE && m.h >= 26) {
+              dibujarMuroConBorde(m, metaB, wallPat, rematePat);
+              continue;
+            }
+            if (wallPat && metaB && !metaB.horizontal && m.h >= UMBRAL_LARGO_BORDE) {
+              const pLado = muroBordeLateralPatron();
+              if (pLado) {
+                cx.fillStyle = pLado;
+                cx.fillRect(m.x, m.y, m.w, m.h);
+                cx.strokeStyle = "rgba(10,8,17,.6)";
+                cx.lineWidth = 2;
+                cx.strokeRect(m.x + 1, m.y + 1, m.w - 2, m.h - 2);
+                continue;
+              }
+            }
+            if (wallPat) {
+              cx.fillStyle = wallPat;
               cx.fillRect(m.x, m.y, m.w, m.h);
+              // remate (almenas) en el borde superior de los muros grandes:
+              // fallback liso para lo que no calificó arriba (obstáculos
+              // pequeños, tramos sueltos de las salas orgánicas con muchos
+              // rectángulos diminutos tipo "escalera") -- mismo criterio de
+              // siempre, sin esquina real.
+              if (rematePat && m.h >= 26) {
+                cx.fillStyle = rematePat;
+                cx.fillRect(m.x, m.y, m.w, 16);
+              }
               cx.strokeStyle = "rgba(10,8,17,.6)";
               cx.lineWidth = 2;
               cx.strokeRect(m.x + 1, m.y + 1, m.w - 2, m.h - 2);
               continue;
             }
-          }
-          if (wallPat) {
-            cx.fillStyle = wallPat;
+            cx.fillStyle = "#0a0812";
             cx.fillRect(m.x, m.y, m.w, m.h);
-            // remate (almenas) en el borde superior de los muros grandes:
-            // fallback liso para lo que no calificó arriba (obstáculos
-            // pequeños, tramos sueltos de las salas orgánicas con muchos
-            // rectángulos diminutos tipo "escalera") -- mismo criterio de
-            // siempre, sin esquina real.
-            if (rematePat && m.h >= 26) {
-              cx.fillStyle = rematePat;
-              cx.fillRect(m.x, m.y, m.w, 16);
-            }
-            cx.strokeStyle = "rgba(10,8,17,.6)";
+            cx.fillStyle = "#221d36";
+            cx.fillRect(m.x, m.y, m.w, 6);
+            cx.strokeStyle = "#3a3453";
             cx.lineWidth = 2;
             cx.strokeRect(m.x + 1, m.y + 1, m.w - 2, m.h - 2);
-            continue;
-          }
-          cx.fillStyle = "#0a0812";
-          cx.fillRect(m.x, m.y, m.w, m.h);
-          cx.fillStyle = "#221d36";
-          cx.fillRect(m.x, m.y, m.w, 6);
-          cx.strokeStyle = "#3a3453";
-          cx.lineWidth = 2;
-          cx.strokeRect(m.x + 1, m.y + 1, m.w - 2, m.h - 2);
-          cx.strokeStyle = "rgba(58,52,83,.35)";
-          cx.lineWidth = 1;
-          for (let yy = m.y + 14; yy < m.y + m.h; yy += 14) {
-            cx.beginPath();
-            cx.moveTo(m.x + 2, yy);
-            cx.lineTo(m.x + m.w - 2, yy);
-            cx.stroke();
+            cx.strokeStyle = "rgba(58,52,83,.35)";
+            cx.lineWidth = 1;
+            for (let yy = m.y + 14; yy < m.y + m.h; yy += 14) {
+              cx.beginPath();
+              cx.moveTo(m.x + 2, yy);
+              cx.lineTo(m.x + m.w - 2, yy);
+              cx.stroke();
+            }
           }
         }
 

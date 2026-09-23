@@ -40,6 +40,7 @@ const VY = [0, 0, 1, -1, 1, -1, 1, -1];
 let cacheMurosRef = null;
 let cacheNMuros = -1;
 let cacheNPilares = -1;
+let cacheNVacios = -1;
 
 function marcarRect(x, y, w, h) {
   const cx0 = clamp(Math.floor(x / CELDA), 0, COLS - 1);
@@ -70,10 +71,12 @@ function marcarCirculo(x, y, r) {
 function rejillaDesactualizada() {
   const muros = G.muros || [];
   const pilares = G.pilares || [];
+  const vacios = G.vacios || [];
   return (
     muros !== cacheMurosRef ||
     muros.length !== cacheNMuros ||
-    pilares.length !== cacheNPilares
+    pilares.length !== cacheNPilares ||
+    vacios.length !== cacheNVacios
   );
 }
 
@@ -82,9 +85,14 @@ function construirRejilla() {
   for (const m of G.muros || [])
     marcarRect(m.x - MARGEN, m.y - MARGEN, m.w + MARGEN * 2, m.h + MARGEN * 2);
   for (const pl of G.pilares || []) marcarCirculo(pl.x, pl.y, pl.r + MARGEN);
+  // huecos vacíos: bloquean la ruta de los enemigos igual que un muro (ver
+  // colisionaMuro()/aplicarLimites() en floorgen.js).
+  for (const v of G.vacios || [])
+    marcarRect(v.x - MARGEN, v.y - MARGEN, v.w + MARGEN * 2, v.h + MARGEN * 2);
   cacheMurosRef = G.muros;
   cacheNMuros = (G.muros || []).length;
   cacheNPilares = (G.pilares || []).length;
+  cacheNVacios = (G.vacios || []).length;
 }
 
 function diagonalLibre(cx, cy, nx, ny) {

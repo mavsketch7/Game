@@ -183,6 +183,12 @@ function agregarMurosPerimetro(direcciones) {
 export function generarMapa(forma, direccionesConPuerta) {
         G.forma = forma;
         G.muros = [];
+        // Huecos vacíos y fondo horneado -- SOLO los rellenan las salas
+        // diseñadas a mano (ver más abajo); ninguna de las formas
+        // procedurales de aquí arriba los usa, así que no hace falta
+        // vaciarlos entre ellas aparte de esto.
+        G.vacios = [];
+        G.fondo = null;
         if (forma === "cruz") {
           const mw = W * 0.24,
             mh = H * 0.26;
@@ -301,6 +307,21 @@ export function generarMapa(forma, direccionesConPuerta) {
           // acercándose y pulsando E (ver p.secretoParedObj en
           // core/loop.js e interactuar() en systems/abilities.js).
           for (const m of CUSTOM_ROOMS[forma].muros) G.muros.push({ ...m });
+          // "vacios": huecos que no son ni suelo ni pared (el "~void" del
+          // Telar de Mazmorras) -- bloquean el paso como un muro (ver
+          // colisionaMuro() más abajo y la rejilla de systems/navegacion.js)
+          // pero se pintan como un simple hueco oscuro, sin textura de
+          // pared (ver render() en render/world.js). Opcional -- las salas
+          // creadas antes de que existiera este campo simplemente no lo traen.
+          for (const v of CUSTOM_ROOMS[forma].vacios || []) G.vacios.push({ ...v });
+          // "fondo": ruta a una imagen horneada (suelo+pared+decoración
+          // exactos, ver el botón "Exportar JSON (motor)" del Telar de
+          // Mazmorras) que sustituye al suelo uniforme + muros auto-
+          // rematados de siempre -- libertad total de forma, sin depender
+          // de lo que el motor sepa dibujar. Los muros/vacios de arriba
+          // SIGUEN existiendo para la colisión, solo dejan de dibujarse
+          // (ver render() en render/world.js).
+          G.fondo = CUSTOM_ROOMS[forma].fondo || null;
         }
         agregarMurosPerimetro(direccionesConPuerta || []);
       }
@@ -319,6 +340,18 @@ export function colisionaMuro(x, y, r) {
             y - r < m.y + m.h
           )
             return m;
+        // huecos vacíos (sala.vacios): bloquean el paso exactamente igual
+        // que un muro -- ver render() en render/world.js para por qué NO
+        // están mezclados en G.muros (así no interfieren con el remate/
+        // esquinas/estandartes, que sí esperan que cada rect sea pared real).
+        if (G.vacios) for (const v of G.vacios)
+          if (
+            x + r > v.x &&
+            x - r < v.x + v.w &&
+            y + r > v.y &&
+            y - r < v.y + v.h
+          )
+            return v;
         return null;
       }
 
@@ -350,6 +383,25 @@ export function aplicarLimites(ent) {
               dx2 = ent.x + ent.r - m.x;
             const dy1 = m.y + m.h - (ent.y - ent.r),
               dy2 = ent.y + ent.r - m.y;
+            if (Math.min(dx1, dx2) < Math.min(dy1, dy2))
+              ent.x += dx1 < dx2 ? dx1 : -dx2;
+            else ent.y += dy1 < dy2 ? dy1 : -dy2;
+          }
+        }
+        // huecos vacíos: mismo empuje que un muro (ver colisionaMuro más
+        // arriba) -- sin esto el jugador podía cruzarlos caminando aunque
+        // proyectiles/drops sí los respetaran.
+        if (G.vacios) for (const v of G.vacios) {
+          if (
+            ent.x + ent.r > v.x &&
+            ent.x - ent.r < v.x + v.w &&
+            ent.y + ent.r > v.y &&
+            ent.y - ent.r < v.y + v.h
+          ) {
+            const dx1 = v.x + v.w - (ent.x - ent.r),
+              dx2 = ent.x + ent.r - v.x;
+            const dy1 = v.y + v.h - (ent.y - ent.r),
+              dy2 = ent.y + ent.r - v.y;
             if (Math.min(dx1, dx2) < Math.min(dy1, dy2))
               ent.x += dx1 < dx2 ? dx1 : -dx2;
             else ent.y += dy1 < dy2 ? dy1 : -dy2;
@@ -541,6 +593,8 @@ function nuevaSala(id, gx, gy, esInicial) {
           esInicial: !!esInicial,
           esFinal: false,
           muros: [],
+          vacios: [],
+          fondo: null,
           pilares: [],
           objetos: [],
           hazards: [],
@@ -831,11 +885,15 @@ function cargarSala(sala) {
           generarMapa(
             sala.forma,
             sala.puertas.map((pu) => pu.dir),
-          ); // deja el resultado en G.forma/G.muros
+          ); // deja el resultado en G.forma/G.muros/G.vacios/G.fondo
           sala.muros = G.muros;
+          sala.vacios = G.vacios;
+          sala.fondo = G.fondo;
         } else {
           G.forma = sala.forma;
           G.muros = sala.muros;
+          G.vacios = sala.vacios || [];
+          G.fondo = sala.fondo || null;
         }
         G.pilares = sala.pilares;
         G.objetos = sala.objetos;
