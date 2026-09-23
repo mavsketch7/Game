@@ -12,6 +12,7 @@ import { detenerMusicaJefe, iniciarMusicaJefe } from "./audio.js";
 import { DESC_ARQ, arquetipoJefe, esJefe, nombreJefe } from "./bosses.js";
 import { spawnClon, spawnEnemigo, spawnJefeCaballero, statsTot, tipoAleatorio } from "./combat.js";
 import { CUSTOM_ROOMS } from "./customRooms.js";
+import { SEED1_EDGES, SEED1_ROOMS } from "./seed1Layout.js";
 import { banner, toast } from "../ui/notifications.js";
 import { az, clamp, ri, rnd } from "../utils/helpers.js";
 
@@ -70,10 +71,15 @@ const FORMAS_MAPA = [
       ];
 
 // Salas propias reales -- "arsenal" queda fuera: es contenido FIJO de
-// la entrada de planta 1 (ver colocarContenidoFijo()/poblarSala()),
-// no una forma más a repartir en cualquier sala de cualquier planta.
+// la entrada de planta 1 (ver colocarContenidoFijo()/poblarSala()), no una
+// forma más a repartir en cualquier sala de cualquier planta. Las 29
+// "semilla1_NN" tampoco: son el contenido FIJO del grafo de la semilla
+// 4141891232 (ver generarGrafoPlantaSemilla1() más abajo) -- si se
+// repartieran también al azar en otras plantas, su geometría (con huecos
+// de puerta tallados para posiciones concretas del grafo de la semilla)
+// podría no coincidir con las puertas reales que le tocaran allí.
 const CUSTOM_ROOMS_ORGANICAS = Object.keys(CUSTOM_ROOMS).filter(
-  (id) => id !== "arsenal",
+  (id) => id !== "arsenal" && !id.startsWith("semilla1_"),
 );
 
 // QA (?qa=1, mismo interruptor que el arsenal/cofre de pruebas de
@@ -557,9 +563,44 @@ function conectar(a, b, dirDesdeA) {
         b.puertas.push({ x: pb.x, y: pb.y, r: 30, dir: dirDesdeB, destino: a.id });
       }
 
+// Grafo FIJO (sin azar) de la planta 1 bajo ?qa=1: las 29 salas de la
+// semilla 4141891232 del "Telar de Mazmorras", convertidas offline a un
+// grafo de cuadrícula compatible con este motor (max. 4 puertas por sala,
+// una por dirección cardinal -- ver src/systems/seed1Layout.js para cómo
+// se derivó). Sustituye por completo al paseo aleatorio de
+// generarGrafoPlanta() SOLO en este caso -- pedido expreso del usuario
+// ("hazlo completo, 29 salas conectadas") tras aceptar que los pasillos de
+// la semilla no tienen equivalente real (aquí una puerta cruza al instante
+// a la sala vecina) y que haría falta una cuadrícula mayor que la 3x3
+// normal, solo para este caso.
+function generarGrafoPlantaSemilla1() {
+        const salas = SEED1_ROOMS.map((r) =>
+          nuevaSala(r.id, r.gx, r.gy, r.esInicial),
+        );
+        for (const s of salas) {
+          const datos = SEED1_ROOMS.find((r) => r.id === s.id);
+          s.forma = "semilla1_" + String(s.id).padStart(2, "0");
+          s.esFinal = datos.esFinal;
+        }
+        const porId = (id) => salas.find((s) => s.id === id);
+        for (const e of SEED1_EDGES) conectar(porId(e.a), porId(e.b), e.dir);
+        const inicial = salas.find((s) => s.esInicial);
+        return { salas, salaActualId: inicial.id };
+      }
+
 // Paseo aleatorio simple sobre una cuadrícula 3x3: basta para 3-5 salas,
 // no hace falta nada más sofisticado (BSP, etc.) para el alcance actual.
 function generarGrafoPlanta() {
+        // Planta 1 bajo ?qa=1: grafo fijo de la semilla (ver arriba), no el
+        // paseo aleatorio de siempre -- mismo interruptor que ya usaba el
+        // "arsenal" como sala de entrada fija, ahora sustituido por las 29
+        // salas completas.
+        if (
+          G.planta === 1 &&
+          new URLSearchParams(location.search).get("qa") === "1"
+        ) {
+          return generarGrafoPlantaSemilla1();
+        }
         // 3-5 -> 4-6: una sala más de media por planta -- pedido
         // expreso del usuario tras ver planos de mazmorra con muchas
         // más salas; no hace falta tocar el resto del paseo aleatorio,
@@ -576,22 +617,6 @@ function generarGrafoPlanta() {
           return s;
         };
         let actual = crear(gxInicial, gyInicial, true);
-        // QA (?qa=1 en la URL, mismo interruptor que el cofre de pruebas en
-        // core/gameflow.js): la sala de entrada de la planta 1 (justo al
-        // subir las escaleras desde el lobby) es siempre "arsenal" -- la
-        // primera sala diseñada a mano con tools/level-editor/ (index.html) -- para
-        // poder probarla sin esperar a que el sorteo la saque por azar.
-        if (
-          G.planta === 1 &&
-          new URLSearchParams(location.search).get("qa") === "1"
-        ) {
-          actual.forma = "arsenal";
-          // La entrada de planta 1 ya venía de elegirForma() (dentro de
-          // nuevaSala()) antes de sobreescribirla arriba -- sin este
-          // "devolver" el turno, esa llamada desperdiciada adelantaría en 1
-          // el recorrido en orden de las salas propias (ver qaSalaIdx).
-          if (CUSTOM_ROOMS_ORGANICAS.length) qaSalaIdx--;
-        }
         let intentos = 0;
         while (salas.length < nSalas && intentos++ < 60) {
           const libres = Object.entries(DIR_VEC)
