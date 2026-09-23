@@ -69,11 +69,12 @@ const FORMAS_MAPA = [
         ...Object.keys(CUSTOM_ROOMS),
       ];
 
-// Salas propias reales -- "arsenal" queda fuera: es contenido FIJO de
-// la entrada de planta 1 (ver colocarContenidoFijo()/poblarSala()),
-// no una forma más a repartir en cualquier sala de cualquier planta.
+// Salas propias reales -- "arsenal"/"sala_sin_nombre" quedan fuera: son
+// contenido FIJO de la entrada de planta 1 (ver colocarContenidoFijo()/
+// poblarSala()), no una forma más a repartir en cualquier sala de
+// cualquier planta.
 const CUSTOM_ROOMS_ORGANICAS = Object.keys(CUSTOM_ROOMS).filter(
-  (id) => id !== "arsenal",
+  (id) => id !== "arsenal" && id !== "sala_sin_nombre",
 );
 
 // QA (?qa=1, mismo interruptor que el arsenal/cofre de pruebas de
@@ -578,14 +579,17 @@ function generarGrafoPlanta() {
         let actual = crear(gxInicial, gyInicial, true);
         // QA (?qa=1 en la URL, mismo interruptor que el cofre de pruebas en
         // core/gameflow.js): la sala de entrada de la planta 1 (justo al
-        // subir las escaleras desde el lobby) es siempre "arsenal" -- la
-        // primera sala diseñada a mano con tools/level-editor/ (index.html) -- para
-        // poder probarla sin esperar a que el sorteo la saque por azar.
+        // subir las escaleras desde el lobby) es siempre esta -- para poder
+        // probarla sin esperar a que el sorteo la saque por azar. Exportada
+        // desde el Telar de Mazmorras (artefacto, botón "Exportar TODO lo
+        // pintado" -- ver src/systems/customRooms/sala_sin_nombre.json),
+        // mismo flujo pintar-a-mano -> exportar JSON -> usar en el juego que
+        // ya se usaba con tools/level-editor/ para "arsenal" antes de esta.
         if (
           G.planta === 1 &&
           new URLSearchParams(location.search).get("qa") === "1"
         ) {
-          actual.forma = "arsenal";
+          actual.forma = "sala_sin_nombre";
           // La entrada de planta 1 ya venía de elegirForma() (dentro de
           // nuevaSala()) antes de sobreescribirla arriba -- sin este
           // "devolver" el turno, esa llamada desperdiciada adelantaría en 1
