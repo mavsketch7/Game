@@ -6,7 +6,11 @@
 // en floorgen.js, render() en render/world.js). `fondo` (opcional): ruta a una
 // imagen horneada de suelo+pared+decoración que sustituye al render procedural
 // (libertad total de forma -- botón "Exportar TODO lo pintado" del Telar de
-// Mazmorras, el artefacto de Claude).
+// Mazmorras, el artefacto de Claude). `w`/`h` (opcionales): tamaño real de
+// la sala; sin ellos son los 1600x1000 de siempre (ver setSalaDims en
+// core/constants.js). `portal`/`escalera` (opcionales, {x,y}): dónde va la
+// salida a la planta siguiente y la de vuelta -- si no vienen, el motor usa
+// su posición fija de siempre (ver cargarSala en floorgen.js).
 // Se cargan automáticamente con import.meta.glob de Vite -- añadir una sala nueva
 // diseñada a mano es soltar el archivo en esa carpeta, sin tocar floorgen.js.
 // Ver generarMapa() (usa CUSTOM_ROOMS[forma].muros) y poblarSala() (contenido fijo,

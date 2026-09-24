@@ -378,6 +378,35 @@ export function puntoValido(x, y, r) {
         return dentroForma(x, y, r) && !colisionaMuro(x, y, r || 10);
       }
 
+// Aparta un punto "de utilidad" (portal de fin de planta, escalera de
+// vuelta) si la posición propuesta ha caído dentro de un muro, de un hueco
+// vacío o de un pilar: busca en anillos cada vez más amplios alrededor y
+// devuelve el primer sitio libre. Antes estas dos cosas se colocaban en
+// coordenadas fijas a ciegas, y en una sala con geometría propia podían
+// acabar en un punto inalcanzable (bug real). Si no encuentra nada libre
+// -- prácticamente imposible -- devuelve el punto original en vez de
+// dejar la sala sin salida.
+function puntoAccesible(x, y, r) {
+        const radio = r || 24;
+        // ...y además lejos de cualquier puerta: sus zonas de captura se
+        // solapan (r+12 del portal contra r=30 de la puerta) y entonces
+        // cruzar la puerta cuenta como entrar en el portal -- bug ya visto
+        // antes, ver el comentario de G.portal en cargarSala().
+        const lejosDePuertas = (px, py) =>
+          !(G.puertas || []).some((pu) => Math.hypot(px - pu.x, py - pu.y) < 96);
+        const ok = (px, py) => puntoValido(px, py, radio) && lejosDePuertas(px, py);
+        if (ok(x, y)) return { x, y };
+        for (let d = 28; d <= Math.max(W, H); d += 28) {
+          for (let i = 0; i < 24; i++) {
+            const a = (i / 24) * Math.PI * 2;
+            const px = clamp(x + Math.cos(a) * d, radio + 30, W - radio - 30);
+            const py = clamp(y + Math.sin(a) * d, radio + 30, H - radio - 30);
+            if (ok(px, py)) return { x: Math.round(px), y: Math.round(py) };
+          }
+        }
+        return { x, y };
+      }
+
 // Corrige una posición propuesta para un drop (botín, moneda...) que podría
 // caer dentro de un muro o fuera de la forma de la sala -- por ejemplo el
 // knockback de un enemigo justo antes de morir, o el jitter aleatorio que se
@@ -949,17 +978,47 @@ function cargarSala(sala) {
         // jugador siempre al mismo sitio. Se separa en X (bien lejos de
         // las 4 posiciones de puerta) manteniendo la Y original, que ya
         // está verificada libre de muros en las 6 formas de sala.
+        // Posición: la que haya marcado quien diseñó la sala (pieza "portal
+        // de fin de planta" del Telar de Mazmorras -> campo `portal` del
+        // JSON) y, si no, la de siempre. En ambos casos pasa por
+        // puntoAccesible(), que la aparta si ha quedado dentro de un muro,
+        // de un hueco vacío o de un pilar -- antes era una posición fija a
+        // ciegas y en una sala con geometría propia podía salir en un sitio
+        // al que no se llega (bug real reportado).
+        const disenio = CUSTOM_ROOMS[sala.forma];
+        const marcaPortal = disenio && disenio.portal;
         G.portal =
           sala.esFinal && sala.despejada
-            ? { x: W / 2 + 160, y: 64, r: 24, t: 0 }
+            ? {
+                ...puntoAccesible(
+                  marcaPortal ? marcaPortal.x : W / 2 + 160,
+                  marcaPortal ? marcaPortal.y : 64,
+                  24,
+                ),
+                r: 24,
+                t: 0,
+                // `propio`: lo colocó quien diseñó la sala, así que el arte
+                // ya está pintado en el fondo -- render/world.js no le
+                // encima su sprite de escalera (de otro estilo).
+                propio: !!marcaPortal,
+              }
             : null;
         // Escalera para volver a la planta anterior (o al lobby si esto
         // era la planta 1): vive en la sala de ENTRADA de la planta, no
         // hace falta despejarla primero -- es una vía de retirada, no una
-        // recompensa. Espejo del portal de arriba (mismo Y, X al otro
-        // lado del centro) para no solapar con ninguna puerta.
+        // recompensa. Mismo criterio que el portal.
+        const marcaEscalera = disenio && disenio.escalera;
         G.escaleraAbajo = sala.esInicial
-          ? { x: W / 2 - 160, y: 64, r: 24, t: 0 }
+          ? {
+              ...puntoAccesible(
+                marcaEscalera ? marcaEscalera.x : W / 2 - 160,
+                marcaEscalera ? marcaEscalera.y : 64,
+                24,
+              ),
+              r: 24,
+              t: 0,
+              propio: !!marcaEscalera,
+            }
           : null;
         if (!sala.poblada) {
           poblarSala(sala, G.planta);

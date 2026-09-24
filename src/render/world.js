@@ -700,7 +700,13 @@ export function render() {
             );
             cx.stroke();
           }
-          if (SPR.escaleras) drawSprite(SPR.escaleras, po.x, po.y, false, 0.8);
+          // `propio`: la salida la colocó quien diseñó la sala (pieza del
+          // Telar de Mazmorras), así que su arte ya viene pintado en el
+          // fondo horneado -- encimarle este sprite de escalera, que es de
+          // otro estilo (gris suave, no el pixel art del tileset actual),
+          // es justo lo que desencajaba. Solo se dibuja en las salas
+          // procedurales, que no tienen arte propio para la salida.
+          if (!po.propio && SPR.escaleras) drawSprite(SPR.escaleras, po.x, po.y, false, 0.8);
           cx.fillStyle = "#e9b45c";
           cx.font = "700 11px Alegreya Sans";
           cx.textAlign = "center";
@@ -733,7 +739,9 @@ export function render() {
             );
             cx.stroke();
           }
-          if (SPR.escalerasAbajo)
+          // mismo criterio que el portal de arriba: si la colocó el diseño
+          // de la sala, su arte ya está pintado en el fondo.
+          if (!ea.propio && SPR.escalerasAbajo)
             drawSprite(SPR.escalerasAbajo, ea.x, ea.y, false, 0.8);
           cx.fillStyle = "#8fd3ff";
           cx.font = "700 11px Alegreya Sans";
