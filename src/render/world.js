@@ -471,15 +471,9 @@ export function render() {
         const imgFondo = fondoImg(G.fondo);
         if (imgFondo) {
           cx.drawImage(imgFondo, 0, 0, SALA_W, SALA_H);
-          cx.strokeStyle = "#3a3453";
-          cx.lineWidth = 8;
-          cx.strokeRect(10, 10, SALA_W - 20, SALA_H - 20);
         } else {
           cx.fillStyle = sueloPat;
           cx.fillRect(0, 0, SALA_W, SALA_H);
-          cx.strokeStyle = "#3a3453";
-          cx.lineWidth = 8;
-          cx.strokeRect(10, 10, SALA_W - 20, SALA_H - 20);
 
           // Huecos vacíos (sala.vacios, ver customRooms/*.json): ni suelo
           // ni pared -- el "~void" del Telar de Mazmorras. Se pintan

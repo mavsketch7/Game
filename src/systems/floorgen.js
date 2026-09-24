@@ -1151,9 +1151,24 @@ export function iniciarPlanta() {
         G.clima = climaAleatorio();
 
         function reposicionarJugadores() {
+          // Punto de aparición: el que haya marcado el diseño de la sala
+          // (pieza "punto de aparición" del Telar -> campo `spawn`) y, si
+          // no, el de siempre (abajo al centro). Pasa por puntoAccesible()
+          // igual que el portal: en una sala de geometría libre la posición
+          // fija puede caer dentro de un muro o de un hueco.
+          const disenioEntrada = CUSTOM_ROOMS[G.forma];
+          const marcaSpawn = disenioEntrada && disenioEntrada.spawn;
+          const base = puntoAccesible(
+            marcaSpawn ? marcaSpawn.x : W / 2,
+            marcaSpawn ? marcaSpawn.y : H - 70,
+            20,
+          );
           G.players.forEach((p, i) => {
-            p.x = W / 2 + (i - (N - 1) / 2) * 46;
-            p.y = H - 70;
+            p.x = base.x + (i - (N - 1) / 2) * 46;
+            p.y = base.y;
+            // el reparto lateral entre varios jugadores puede dejar a
+            // alguno metido en un muro -- esto lo empuja fuera
+            aplicarLimites(p);
             p.trail = [];
             p.safeX = p.x;
             p.safeY = p.y;
