@@ -1,6 +1,6 @@
 // Auto-generated during the modularization refactor (2026-07-23).
 import { H, W } from "./canvas.js";
-import { COLORES_J, ORDEN_ROLES, ROLES, SLOTS, XP_TABLA } from "./constants.js";
+import { COLORES_J, ORDEN_ROLES, ROLES, SALA_H_BASE, SALA_W_BASE, SLOTS, XP_TABLA, setSalaDims } from "./constants.js";
 import { META } from "./save.js";
 import { AJ } from "./settings.js";
 import { G, setG } from "./state.js";
@@ -255,6 +255,12 @@ export function iniciarLobby() {
         // por si se abandona la partida estando en la sala de un jefe
         // (ver abandonarPartida() más abajo) -- no-op si no estaba sonando.
         detenerMusicaJefe();
+        // El vestíbulo siempre usa la medida base: una sala propia de la
+        // mazmorra puede haber dejado SALA_W/SALA_H en otro tamaño (ver
+        // setSalaDims en core/constants.js).
+        setSalaDims(SALA_W_BASE, SALA_H_BASE);
+        G.salaW = SALA_W_BASE;
+        G.salaH = SALA_H_BASE;
         G.escena = "lobby";
         G.planta = 0;
         G.estilo = { puntos: 0, rango: 0, rangoT: 0, decayT: 0 };

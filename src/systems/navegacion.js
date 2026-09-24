@@ -16,9 +16,13 @@ import { clamp } from "../utils/helpers.js";
 import { vivos } from "./combat.js";
 
 const CELDA = 20;
-const COLS = SALA_W / CELDA; // 80
-const FILAS = SALA_H / CELDA; // 50
-const N = COLS * FILAS;
+// La sala ya no mide siempre 1600x1000 (una sala propia trae su tamaño,
+// ver setSalaDims en core/constants.js), así que la rejilla se
+// redimensiona sola cuando cambia -- los buffers se reasignan solo en ese
+// momento (una vez por sala), nunca por fotograma.
+let COLS = Math.ceil(SALA_W / CELDA);
+let FILAS = Math.ceil(SALA_H / CELDA);
+let N = COLS * FILAS;
 
 // Margen de inflado de obstáculo: el hueco intencional más estrecho del
 // generador de salas es 52-60px (formas "partida"/"pasilloDoble", ver
@@ -26,9 +30,25 @@ const N = COLS * FILAS;
 // cruzarlo sin dejar de detectar el obstáculo con margen razonable.
 const MARGEN = 8;
 
-const bloqueado = new Uint8Array(N);
-const dist = new Int32Array(N);
-const cola = new Int32Array(N);
+let bloqueado = new Uint8Array(N);
+let dist = new Int32Array(N);
+let cola = new Int32Array(N);
+
+// Reasigna los buffers si la sala actual tiene otro tamaño que la anterior.
+// Devuelve true si hubo cambio (la rejilla queda sucia y hay que
+// reconstruirla, ver rejillaDesactualizada).
+function ajustarTamanoRejilla() {
+  const c = Math.ceil(SALA_W / CELDA),
+    f = Math.ceil(SALA_H / CELDA);
+  if (c === COLS && f === FILAS) return false;
+  COLS = c;
+  FILAS = f;
+  N = COLS * FILAS;
+  bloqueado = new Uint8Array(N);
+  dist = new Int32Array(N);
+  cola = new Int32Array(N);
+  return true;
+}
 
 // Vecinos 0-3: ortogonales (E,O,S,N). 4-7: diagonales -- el corte de
 // esquina se evita exigiendo que AMBOS vecinos ortogonales de la
@@ -72,7 +92,11 @@ function rejillaDesactualizada() {
   const muros = G.muros || [];
   const pilares = G.pilares || [];
   const vacios = G.vacios || [];
+  // ojo al orden: ajustarTamanoRejilla() tiene efecto (reasigna buffers),
+  // así que va SIEMPRE, no detrás de un || que pueda cortocircuitar.
+  const cambioTam = ajustarTamanoRejilla();
   return (
+    cambioTam ||
     muros !== cacheMurosRef ||
     muros.length !== cacheNMuros ||
     pilares.length !== cacheNPilares ||

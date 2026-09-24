@@ -9,8 +9,24 @@
 // las fórmulas de generarMapa()/posPuerta()/etc. -- escritas en su día
 // asumiendo "la sala es la pantalla" -- sigan funcionando igual, solo
 // que ahora a la escala de sala real en vez de a la de viewport.
-export const SALA_W = 1600;
-export const SALA_H = 1000;
+// Ya NO son constantes: una sala diseñada en el Telar de Mazmorras puede
+// tener EL TAMAÑO QUE SE PINTE (campo `w`/`h` en customRooms/*.json) --
+// pedido expreso del usuario ("que las fases sean de las dimensiones que
+// se pintan ahí, para tener libertad creativa"). Son `let` + setter a
+// propósito: los imports de ES modules son enlaces VIVOS, así que todos
+// los archivos que ya hacían `import { SALA_W }` (loop.js, world.js,
+// peer.js, floorgen.js con alias W/H...) ven el valor nuevo sin tocar
+// ni una de sus fórmulas. setSalaDims() lo llama generarMapa()/
+// cargarSala() al entrar en cada sala, y iniciarLobby() para volver a la
+// medida base.
+export const SALA_W_BASE = 1600;
+export const SALA_H_BASE = 1000;
+export let SALA_W = SALA_W_BASE;
+export let SALA_H = SALA_H_BASE;
+export function setSalaDims(w, h) {
+  SALA_W = Math.max(320, Math.round(w || SALA_W_BASE));
+  SALA_H = Math.max(240, Math.round(h || SALA_H_BASE));
+}
 
 export const COLORES_J = ["#e9b45c", "#7fd4c1", "#c084f0", "#e06070"];
 

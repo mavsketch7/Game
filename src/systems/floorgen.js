@@ -6,7 +6,7 @@ import { TAU } from "../core/canvas.js";
 // con alias evita tener que tocar cada fórmula de generarMapa()/
 // posPuerta()/límites de una por una: siguen escritas igual, ahora a
 // escala de sala real.
-import { NOMBRE_CLIMA, SALA_H as H, SALA_W as W } from "../core/constants.js";
+import { NOMBRE_CLIMA, SALA_H as H, SALA_H_BASE, SALA_W as W, SALA_W_BASE, setSalaDims } from "../core/constants.js";
 import { G } from "../core/state.js";
 import { detenerMusicaJefe, iniciarMusicaJefe } from "./audio.js";
 import { DESC_ARQ, arquetipoJefe, esJefe, nombreJefe } from "./bosses.js";
@@ -129,8 +129,12 @@ const NOMBRE_FORMA = {
 // ya usan fracciones de W/H y por tanto escalan solas con el alias de
 // arriba. Estas 4 necesitan un factor de escala explícito para no quedar
 // como detalles diminutos perdidos en una sala ahora mucho más grande.
-const ESC_X = W / 960,
-      ESC_Y = H / 560;
+// `let` + recálculo en generarMapa(): W/H ya no son fijos (una sala propia
+// puede traer su propio tamaño, ver setSalaDims en core/constants.js), así
+// que estos factores tienen que seguir a la sala actual en vez de quedarse
+// con el valor que tuvieran al cargar el módulo.
+let ESC_X = W / 960,
+    ESC_Y = H / 560;
 
 // Grosor del muro de borde y ancho del hueco que deja libre una puerta --
 // ver agregarMurosPerimetro(). El hueco tiene que ser cómodo de cruzar
@@ -182,6 +186,21 @@ function agregarMurosPerimetro(direcciones) {
 
 export function generarMapa(forma, direccionesConPuerta) {
         G.forma = forma;
+        // Tamaño de ESTA sala: las propias pueden traer el suyo (`w`/`h` en
+        // el JSON, tal cual se pintaron en el Telar de Mazmorras); el resto
+        // usa la medida base de siempre. Se aplica ANTES de calcular nada:
+        // W/H, ESC_X/ESC_Y, posPuerta() y agregarMurosPerimetro() de aquí
+        // abajo leen ya el tamaño correcto (W/H son enlaces vivos, ver
+        // setSalaDims en core/constants.js).
+        const propia = CUSTOM_ROOMS[forma];
+        setSalaDims(
+          propia && propia.w ? propia.w : SALA_W_BASE,
+          propia && propia.h ? propia.h : SALA_H_BASE,
+        );
+        ESC_X = W / 960;
+        ESC_Y = H / 560;
+        G.salaW = W;
+        G.salaH = H;
         G.muros = [];
         // Huecos vacíos y fondo horneado -- SOLO los rellenan las salas
         // diseñadas a mano (ver más abajo); ninguna de las formas
@@ -595,6 +614,8 @@ function nuevaSala(id, gx, gy, esInicial) {
           muros: [],
           vacios: [],
           fondo: null,
+          salaW: 0, // tamaño real de la sala, se fija al generarla (ver cargarSala)
+          salaH: 0,
           pilares: [],
           objetos: [],
           hazards: [],
@@ -889,11 +910,18 @@ function cargarSala(sala) {
           sala.muros = G.muros;
           sala.vacios = G.vacios;
           sala.fondo = G.fondo;
+          sala.salaW = G.salaW;
+          sala.salaH = G.salaH;
         } else {
           G.forma = sala.forma;
           G.muros = sala.muros;
           G.vacios = sala.vacios || [];
           G.fondo = sala.fondo || null;
+          // al volver a una sala ya visitada hay que devolver el tamaño que
+          // tenía: si no, se quedaría el de la sala de la que se viene.
+          setSalaDims(sala.salaW || SALA_W_BASE, sala.salaH || SALA_H_BASE);
+          G.salaW = W;
+          G.salaH = H;
         }
         G.pilares = sala.pilares;
         G.objetos = sala.objetos;
