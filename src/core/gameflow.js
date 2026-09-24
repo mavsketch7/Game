@@ -251,16 +251,41 @@ export function nuevaPartida() {
         if (NET.modo === "host") netBroadcast({ t: "inicio" });
       }
 
+// Vestíbulo del Gremio -- diseñado a mano en el Telar de Mazmorras (mismo
+// flujo pintar -> exportar JSON -> aplicar que una sala de mazmorra),
+// tamaño propio 900x520 en vez de los 1600x1000 de siempre (ver
+// setSalaDims en core/constants.js). Los `muros` y el fondo horneado son
+// tal cual salieron del editor; el resto de posiciones (mercader, yunque,
+// muñecos de prueba, portal de arena, cofres/portales QA) se repartieron a
+// mano dentro de esta forma nueva -- antes vivían sueltas por todo un
+// lienzo de 1600 de ancho sin ninguna sala real detrás.
+const LOBBY_MUROS = [
+  { x: 0, y: 0, w: 380, h: 20 },
+  { x: 520, y: 0, w: 380, h: 20 },
+  { x: 0, y: 20, w: 180, h: 20 },
+  { x: 720, y: 20, w: 180, h: 20 },
+  { x: 0, y: 40, w: 20, h: 140 },
+  { x: 880, y: 40, w: 20, h: 140 },
+  { x: 0, y: 340, w: 20, h: 180 },
+  { x: 880, y: 340, w: 20, h: 180 },
+  { x: 20, y: 480, w: 360, h: 40 },
+  { x: 520, y: 480, w: 360, h: 40 },
+];
+const LOBBY_W = 900, LOBBY_H = 520;
+const LOBBY_FONDO = "/assets/sprites/dungeon/lobby/vestibulo.png";
+const LOBBY_PORTAL = { x: 450, y: 30 };
+const LOBBY_SPAWN = { x: 450, y: 210 };
+
 export function iniciarLobby() {
         // por si se abandona la partida estando en la sala de un jefe
         // (ver abandonarPartida() más abajo) -- no-op si no estaba sonando.
         detenerMusicaJefe();
-        // El vestíbulo siempre usa la medida base: una sala propia de la
-        // mazmorra puede haber dejado SALA_W/SALA_H en otro tamaño (ver
-        // setSalaDims en core/constants.js).
-        setSalaDims(SALA_W_BASE, SALA_H_BASE);
-        G.salaW = SALA_W_BASE;
-        G.salaH = SALA_H_BASE;
+        // Tamaño y forma propios del vestíbulo (ver LOBBY_MUROS arriba) --
+        // ya no la medida base de una sala de mazmorra cualquiera.
+        setSalaDims(LOBBY_W, LOBBY_H);
+        G.salaW = LOBBY_W;
+        G.salaH = LOBBY_H;
+        G.fondo = LOBBY_FONDO;
         G.escena = "lobby";
         G.planta = 0;
         G.estilo = { puntos: 0, rango: 0, rangoT: 0, decayT: 0 };
@@ -277,16 +302,22 @@ export function iniciarLobby() {
         G.wx = [];
         G.rayos = [];
         G.forma = "sala";
-        G.muros = [];
+        G.muros = LOBBY_MUROS.map((m) => ({ ...m }));
+        G.vacios = [];
         G.mazmorra = null;
         G.puertas = [];
         G.salaTipo = "normal";
         G.salaEsFinal = false;
-        G.portal = { x: W / 2, y: 64, r: 24, t: 0 };
+        G.portal = { x: LOBBY_PORTAL.x, y: LOBBY_PORTAL.y, r: 24, t: 0 };
         G.fogata = null;
         G.fogataUsada = true;
         G.pilares = [];
-        G.mercader = { x: W - 130, y: H / 2 - 40 };
+        // Reparto dentro de la forma nueva (900x520, ver LOBBY_MUROS): fila
+        // media (y=280) con el yunque y el mercader a los lados y los 3
+        // muñecos de prueba en el centro; fila de portales (y=380) con la
+        // arena PvP en medio; fila de cofres (y=450) pegada a la pared de
+        // abajo -- pedido expreso: "los portales y cofres, ubícalos abajo".
+        G.mercader = { x: LOBBY_W / 2 + 330, y: 280 };
         // Sastre de skins: quitado del lobby a petición expresa del usuario
         // (dejaba de tener sentido con el nuevo sistema de armadura visual
         // real). Se deja `null` en vez de borrar todo ui/skins.js -- el
@@ -294,18 +325,21 @@ export function iniciarLobby() {
         // `if (G.skinNpc)`, así que no aparece ni es interactuable sin tocar
         // nada más.
         G.skinNpc = null;
-        G.arenaNpc = { x: W / 2, y: H - 130 };
-        G.yunqueNpc = { x: W - 130, y: 90 };
+        G.arenaNpc = { x: LOBBY_W / 2, y: 380 };
+        G.yunqueNpc = { x: LOBBY_W / 2 - 330, y: 280 };
         // Cofre de pruebas (QA): solo aparece con ?qa=1 en la URL -- a
         // propósito NO depende de import.meta.env.DEV para que se pueda
         // activar también en el build de producción sin tener que montar
         // un entorno de desarrollo aparte. Suelta el set completo de
         // objetos Míticos al abrirse (ver interactuar() en abilities.js).
         if (new URLSearchParams(location.search).get("qa") === "1") {
+          // Fila de cofres, pegada a la pared de abajo (y=450, la pared
+          // real empieza en y=480 -- ver LOBBY_MUROS): mago / dorado /
+          // pícaro / arquero de izquierda a derecha.
           G.objetos.push({
             tipo: "cofre",
-            x: W / 2,
-            y: H - 220,
+            x: LOBBY_W / 2 - 100,
+            y: 450,
             abierto: false,
             abriendoT: 0,
             qa: true,
@@ -313,12 +347,15 @@ export function iniciarLobby() {
           // NPC de pruebas (QA): sube un nivel a todo el grupo cada vez que
           // te acercas (y otra vez si te alejas y vuelves) -- para probar
           // las tarjetas de mejora sin tener que jugar plantas enteras. Ver
-          // el disparador de proximidad en core/loop.js.
-          G.nivelNpc = { x: 250, y: 90 };
+          // el disparador de proximidad en core/loop.js. No es un portal ni
+          // un cofre -- se queda arriba, junto a los braseros de la entrada.
+          G.nivelNpc = { x: 150, y: 110 };
           // Portal de pruebas (QA): salta directo a la planta 5 (el
           // Guardián de Hielo) sin tener que bajar 4 plantas primero. Ver
-          // el disparador de proximidad en core/loop.js.
-          G.jefeNpcQA = { x: 250, y: 160 };
+          // el disparador de proximidad en core/loop.js. Junto al portal de
+          // la arena PvP en la fila de portales (y=380) -- pedido expreso:
+          // "los portales... ubícalos abajo".
+          G.jefeNpcQA = { x: LOBBY_W / 2 + 180, y: 380 };
           // Portal de pruebas (QA), rojo: salta a la planta 5 igual que el
           // de arriba, pero marca G.forzarCaballeroQA para que
           // systems/floorgen.js aparezca el Caballero Espectral (jefe
@@ -326,7 +363,7 @@ export function iniciarLobby() {
           // spawnJefeCaballero()) en vez del Guardián de Hielo -- misma
           // sala/planta ya probada, sin tocar la generación de mazmorra.
           // Ver el disparador de proximidad en core/loop.js.
-          G.caballeroNpcQA = { x: 250, y: 230 };
+          G.caballeroNpcQA = { x: LOBBY_W / 2 - 180, y: 380 };
           // Segundo cofre de pruebas (QA), brillo lila: suelta el set
           // completo de la Armadura de Mago T1 (casco+peto+piernas) para
           // probarla sin tener que fabricarla/farmearla -- ver
@@ -336,8 +373,8 @@ export function iniciarLobby() {
           // de prueba en un único cofre.
           G.objetos.push({
             tipo: "cofre",
-            x: W / 2 - 200,
-            y: H - 220,
+            x: LOBBY_W / 2 - 250,
+            y: 450,
             abierto: false,
             abriendoT: 0,
             qaMago: true,
@@ -347,8 +384,8 @@ export function iniciarLobby() {
           // ver el bloque `cofre.qaPicaro` en interactuar() (abilities.js).
           G.objetos.push({
             tipo: "cofre",
-            x: W / 2 + 200,
-            y: H - 220,
+            x: LOBBY_W / 2 + 150,
+            y: 450,
             abierto: false,
             abriendoT: 0,
             qaPicaro: true,
@@ -359,8 +396,8 @@ export function iniciarLobby() {
           // abilities.js).
           G.objetos.push({
             tipo: "cofre",
-            x: W / 2,
-            y: H - 280,
+            x: LOBBY_W / 2 + 300,
+            y: 450,
             abierto: false,
             abriendoT: 0,
             qaArquero: true,
@@ -373,8 +410,8 @@ export function iniciarLobby() {
         G.yunqueLock = false;
         const N = G.players.length;
         G.players.forEach((p, i) => {
-          p.x = W / 2 + (i - (N - 1) / 2) * 46;
-          p.y = H - 80;
+          p.x = LOBBY_SPAWN.x + (i - (N - 1) / 2) * 46;
+          p.y = LOBBY_SPAWN.y;
           p.trail = [];
           p.hp = statsTot(p).hpMax;
           p.res = ROLES[p.rol].res;
@@ -384,14 +421,15 @@ export function iniciarLobby() {
           p.safeY = p.y;
           p.fusionSel = [];
         });
-        // muñecos de prueba (no mueren, muestran DPS)
+        // muñecos de prueba (no mueren, muestran DPS) -- fila media (y=280,
+        // ver reparto arriba), entre el yunque y el mercader.
         for (let i = 0; i < 3; i++) {
           G.enemigos.push({
             dummy: true,
             tipo: "dummy",
             nombre: "Muñeco",
-            x: 150 + i * 110,
-            y: H / 2 + 30,
+            x: LOBBY_W / 2 + (i - 1) * 120,
+            y: 280,
             r: 15,
             hp: 99999,
             hpMax: 99999,
@@ -409,10 +447,10 @@ export function iniciarLobby() {
             dmgLog: [],
           });
         }
-        // braseros decorativos
+        // braseros decorativos, flanqueando la arcada de entrada
         G.objetos.push(
-          { tipo: "brasero", x: 80, y: 100 },
-          { tipo: "brasero", x: W - 80, y: 100 },
+          { tipo: "brasero", x: 220, y: 70 },
+          { tipo: "brasero", x: LOBBY_W - 220, y: 70 },
         );
         banner("Vestíbulo del Gremio — probad, comprad y entrad al portal");
         toast(
