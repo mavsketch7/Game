@@ -12,6 +12,7 @@ import { detenerMusicaJefe, iniciarMusicaJefe } from "./audio.js";
 import { DESC_ARQ, arquetipoJefe, esJefe, nombreJefe } from "./bosses.js";
 import { spawnClon, spawnEnemigo, spawnJefeCaballero, statsTot, tipoAleatorio } from "./combat.js";
 import { CUSTOM_ROOMS } from "./customRooms.js";
+import { faseDePlanta } from "./customFloors.js";
 import { banner, toast } from "../ui/notifications.js";
 import { az, clamp, ri, rnd } from "../utils/helpers.js";
 
@@ -662,9 +663,44 @@ function conectar(a, b, dirDesdeA) {
         b.puertas.push({ x: pb.x, y: pb.y, r: 30, dir: dirDesdeB, destino: a.id });
       }
 
+// Planta montada a mano en el Telar de Mazmorras (ver customFloors.js): en
+// vez del paseo aleatorio de abajo, las salas y las puertas vienen dadas.
+// Devuelve lo mismo que generarGrafoPlanta() para que el resto del motor
+// (cargarSala, cruzarPuerta, el portal de fin de planta...) no note nada.
+function generarGrafoPlantaFija(fase) {
+        const salas = fase.salas.map((s, i) =>
+          Object.assign(nuevaSala(i, s.gx, s.gy, !!s.esInicial), {
+            forma: s.sala,
+            esFinal: !!s.esFinal,
+          }),
+        );
+        const porNombre = {};
+        fase.salas.forEach((s, i) => { porNombre[s.sala] = salas[i]; });
+        for (const pu of fase.puertas || []) {
+          const a = porNombre[pu.a], b = porNombre[pu.b];
+          // una puerta a una sala que no está en la fase no se monta, en vez
+          // de reventar la planta entera
+          if (a && b && DIR_VEC[pu.dir]) conectar(a, b, pu.dir);
+        }
+        let inicial = salas.find((s) => s.esInicial);
+        if (!inicial) { inicial = salas[0]; if (inicial) inicial.esInicial = true; }
+        if (!salas.some((s) => s.esFinal) && salas.length > 1) {
+          // sin sala final marcada, la más lejos de la entrada, igual que en
+          // el paseo aleatorio
+          const lejos = salas.reduce((a, b) =>
+            Math.abs(b.gx - inicial.gx) + Math.abs(b.gy - inicial.gy) >
+            Math.abs(a.gx - inicial.gx) + Math.abs(a.gy - inicial.gy) ? b : a, salas[0]);
+          lejos.esFinal = true;
+        }
+        return { salas, salaActualId: inicial ? inicial.id : 0 };
+      }
+
 // Paseo aleatorio simple sobre una cuadrícula 3x3: basta para 3-5 salas,
 // no hace falta nada más sofisticado (BSP, etc.) para el alcance actual.
 function generarGrafoPlanta() {
+        // Si esta planta tiene un plano hecho a mano, manda ese.
+        const fase = faseDePlanta(G.planta);
+        if (fase && fase.salas.length) return generarGrafoPlantaFija(fase);
         // 3-5 -> 4-6: una sala más de media por planta -- pedido
         // expreso del usuario tras ver planos de mazmorra con muchas
         // más salas; no hace falta tocar el resto del paseo aleatorio,
@@ -951,6 +987,17 @@ function cargarSala(sala) {
           setSalaDims(sala.salaW || SALA_W_BASE, sala.salaH || SALA_H_BASE);
           G.salaW = W;
           G.salaH = H;
+        }
+        // Recolocar las puertas de ESTA sala con SU tamaño. conectar() las
+        // fijó al crear el grafo, cuando todavía no se sabía cuánto mide
+        // cada sala (ahora cada una puede tener el suyo, ver setSalaDims):
+        // sin esto, en una sala más grande que la base el hueco del muro
+        // salía en el centro real (W/2 de la sala) pero el punto de paso se
+        // quedaba en el centro de 1600x1000, es decir, dentro del muro.
+        for (const pu of sala.puertas) {
+          const p = posPuerta(pu.dir);
+          pu.x = p.x;
+          pu.y = p.y;
         }
         G.pilares = sala.pilares;
         G.objetos = sala.objetos;
