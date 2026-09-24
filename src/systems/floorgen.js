@@ -75,7 +75,7 @@ const FORMAS_MAPA = [
 // poblarSala()), no una forma más a repartir en cualquier sala de
 // cualquier planta.
 const CUSTOM_ROOMS_ORGANICAS = Object.keys(CUSTOM_ROOMS).filter(
-  (id) => id !== "arsenal" && id !== "sala_sin_nombre",
+  (id) => id !== "arsenal" && id !== "sala_sin_nombre" && id !== "fase_1",
 );
 
 // QA (?qa=1, mismo interruptor que el arsenal/cofre de pruebas de
@@ -729,7 +729,7 @@ function generarGrafoPlanta() {
           G.planta === 1 &&
           new URLSearchParams(location.search).get("qa") === "1"
         ) {
-          actual.forma = "sala_sin_nombre";
+          actual.forma = "fase_1";
           // La entrada de planta 1 ya venía de elegirForma() (dentro de
           // nuevaSala()) antes de sobreescribirla arriba -- sin este
           // "devolver" el turno, esa llamada desperdiciada adelantaría en 1
