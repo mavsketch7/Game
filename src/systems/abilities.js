@@ -530,8 +530,20 @@ export function golpeObjeto(o, dmg) {
 // detección de "hay un cofre cerca" corre cada frame en core/loop.js
 // (p.cofreObj), que también es lo que usa render/world.js para dibujar el
 // aviso de tecla sobre el cofre antes de pulsar nada.
+// Abre el diálogo de una estación del vestíbulo ("agua"/"fuego", ver
+// p.npcObj en core/loop.js y ui/dialogoAlmas.js) -- lo registra loop.js para
+// no importar la UI desde aquí (ciclo de módulos).
+let abrirNpcVestibulo = null;
+export function registrarAbrirNpc(fn) {
+        abrirNpcVestibulo = fn;
+      }
+
 export function interactuar(p) {
         if (p.atrapado || p.ko) return;
+        if (p.npcObj && abrirNpcVestibulo) {
+          abrirNpcVestibulo(p.npcObj);
+          return;
+        }
         const cofre = p.cofreObj;
         if (!cofre || cofre.abierto) {
           // sin cofre cerca: ¿hay un objeto (arma/armadura/accesorio) en el

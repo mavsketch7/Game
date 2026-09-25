@@ -19,6 +19,9 @@
 // ni una de sus fórmulas. setSalaDims() lo llama generarMapa()/
 // cargarSala() al entrar en cada sala, y iniciarLobby() para volver a la
 // medida base.
+// Distancia a la que se puede hablar con Alma de Agua/Alma de Fuego (tecla de
+// acción, ver p.npcObj en core/loop.js) y sale el aviso de tecla (render/world.js).
+export const NPC_RADIO_HABLAR = 60;
 export const SALA_W_BASE = 1600;
 export const SALA_H_BASE = 1000;
 export let SALA_W = SALA_W_BASE;

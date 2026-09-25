@@ -1,12 +1,12 @@
 // Auto-generated during the modularization refactor (2026-07-23).
 import { H, TAU, W } from "./canvas.js";
-import { ELEMENTOS, MAX_PLANTA, RAREZAS, ROLES, SALA_H, SALA_W, XP_POR_PLANTA } from "./constants.js";
+import { ELEMENTOS, MAX_PLANTA, NPC_RADIO_HABLAR, RAREZAS, ROLES, SALA_H, SALA_W, XP_POR_PLANTA } from "./constants.js";
 import { iniciarLobby } from "./gameflow.js";
 import { META } from "./save.js";
 import { G } from "./state.js";
 import { NET, netAplicarInputs } from "../net/peer.js";
 import { fxOnda, fxParticulas, fxTexto } from "../render/effects.js";
-import { CARGA_ARQ_MAX, CARGA_ARQ_ZONA, CARGA_CUCH_MAX, CARGA_CUCH_ZONA, actualizarSendaElemental, actualizarSombraPicaro, aplicarImbuido, atacar, danoPilar, dispararArcano, dispararFlechaCargada, ejecutarGolpeCombo, golpeObjeto, lanzarCuchillo } from "../systems/abilities.js";
+import { registrarAbrirNpc, CARGA_ARQ_MAX, CARGA_ARQ_ZONA, CARGA_CUCH_MAX, CARGA_CUCH_ZONA, actualizarSendaElemental, actualizarSombraPicaro, aplicarImbuido, atacar, danoPilar, dispararArcano, dispararFlechaCargada, ejecutarGolpeCombo, golpeObjeto, lanzarCuchillo } from "../systems/abilities.js";
 import { sfx, sfxAterrizaje, sfxCargaArcano, sfxCargaCuchillo, sfxCargaLista, sfxFuegoBolaImpacto, sfxGolpeAire, sfxGolpeCritico, sfxImpactoGuerrero, sfxImpactoProyectil, sfxMoneda, sfxPaso, sfxTensarArco } from "../systems/audio.js";
 import { esJefe, escalaEnemigo } from "../systems/bosses.js";
 import { curarP, danoAEnemigo, danoAlJugador, explotarBomber, ganarXP, masCercano, matarEnemigo, spawnClon, spawnEnemigo, spawnJefeCaballero, statsTot, tipoAleatorio, vivos } from "../systems/combat.js";
@@ -26,6 +26,8 @@ import { az, clamp, rnd } from "../utils/helpers.js";
 // Cooldowns simples que decrecen linealmente con dt cada frame para cada
 // jugador vivo -- hoisted fuera de update() para no crear un array nuevo
 // por jugador y por frame.
+registrarAbrirNpc((k) => (k === "agua" ? abrirAlmaAgua() : abrirAlmaFuego()));
+
 const CDS_LINEALES = [
   "atkCd",
   "castCd",
@@ -596,6 +598,14 @@ export function update(dt) {
               const dy = Math.max(m.y - p.y, 0, p.y - (m.y + m.h));
               return Math.hypot(dx, dy) < 46;
             }) || null;
+          // Alma de Agua / Alma de Fuego cercanas (solo lobby): se habla con
+          // ellas con la tecla de acción (E / A / ✋, ver interactuar() en
+          // abilities.js), ya no se abre el diálogo solo al acercarse.
+          p.npcObj = null;
+          if (G.escena === "lobby") {
+            if (G.mercader && Math.hypot(G.mercader.x - p.x, G.mercader.y - p.y) < NPC_RADIO_HABLAR) p.npcObj = "agua";
+            else if (G.yunqueNpc && Math.hypot(G.yunqueNpc.x - p.x, G.yunqueNpc.y - p.y) < NPC_RADIO_HABLAR) p.npcObj = "fuego";
+          }
           for (let i = p.trail.length - 1; i >= 0; i--) {
             p.trail[i].t -= dt;
             if (p.trail[i].t <= 0) p.trail.splice(i, 1);
@@ -2145,16 +2155,6 @@ export function update(dt) {
           }
         }
 
-        // Alma de Agua (solo en lobby): abrir diálogo por proximidad
-        if (G.escena === "lobby" && G.mercader) {
-          const cerca = vivos().some(
-            (q) => Math.hypot(G.mercader.x - q.x, G.mercader.y - q.y) < 50,
-          );
-          if (cerca && !G.tiendaLock && !G.pausa) {
-            abrirAlmaAgua();
-          }
-          if (!cerca) G.tiendaLock = false;
-        }
         // sastre de skins (solo en lobby)
         if (G.escena === "lobby" && G.skinNpc) {
           const cerca = vivos().some(
@@ -2164,17 +2164,6 @@ export function update(dt) {
             abrirSkins();
           }
           if (!cerca) G.skinLock = false;
-        }
-        // Alma de Fuego (solo en lobby): abrir diálogo por proximidad --
-        // ver ui/dialogoAlmas.js (reparte a ui/workbench.js/forjaFusion.js).
-        if (G.escena === "lobby" && G.yunqueNpc) {
-          const cerca = vivos().some(
-            (q) => Math.hypot(G.yunqueNpc.x - q.x, G.yunqueNpc.y - q.y) < 50,
-          );
-          if (cerca && !G.yunqueLock && !G.pausa) {
-            abrirAlmaFuego();
-          }
-          if (!cerca) G.yunqueLock = false;
         }
         // Fragua de fusión: aparece por sorpresa en la mazmorra (ver
         // systems/floorgen.js) -- a diferencia del yunque de arriba, esta

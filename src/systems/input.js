@@ -193,7 +193,7 @@ export function pollPads() {
                   // el clic del stick izquierdo (botón 10), un mando poco
                   // descubrible -- se mantiene como alternativa, esto no
                   // lo quita.
-                  if (p.cofreObj || p.dropObj || p.secretoObj || p.secretoParedObj)
+                  if (p.cofreObj || p.dropObj || p.secretoObj || p.secretoParedObj || p.npcObj)
                     interactuar(p);
                   else esquivar(p);
                 }

@@ -1,6 +1,6 @@
 // Auto-generated during the modularization refactor (2026-07-23).
 import { H, TAU, W, animGlobal, avanzarAnimGlobal, cx } from "../core/canvas.js";
-import { ELEMENTOS, ETQ, MAX_PLANTA, PILAR_ROTO_DUR, RAREZAS, SALA_H, SALA_W, SLOT_LABEL, SUPS } from "../core/constants.js";
+import { ELEMENTOS, ETQ, MAX_PLANTA, NPC_RADIO_HABLAR, PILAR_ROTO_DUR, RAREZAS, SALA_H, SALA_W, SLOT_LABEL, SUPS } from "../core/constants.js";
 import { G } from "../core/state.js";
 import { renderHUD } from "./hud.js";
 import { CAMPFIRE_CELDA, FIRE_COLUMN, FIREBALL_FH, FIREBALL_FRAMES, FIREBALL_FW, FIREBALL_SHEET, FIRE_EXPLOSION_FH, FIRE_EXPLOSION_FRAMES, FIRE_EXPLOSION_FW, FIRE_EXPLOSION_INICIO, FIRE_EXPLOSION_SHEET, FROST_GUARDIAN, ICE_BURST, IMPACT_VFX, KENNEY_TILE, PILAR_HIELO_FRAMES, SANGRE_ANIM, SANGRE_DUR, SHEETS, SPR, assetOK, campfireFrame, iconoDrop, muroBordeBasePatron, muroBordeLateralPatron, muroBordeSuperiorPatron, muroEsquinaImg, remateMuroPatron, wallPatron } from "./sprites.js";
@@ -72,7 +72,11 @@ function framePortalV2(t) {
     if (ms < FASE_V2_DUR[i]) return 2 + i;
     ms -= FASE_V2_DUR[i];
   }
-  return 14 + (Math.floor(ms / FASE_V2_BUCLE) % 6);
+  // El bucle del .aseprite trae 6 fotogramas (14..19) pero 18 y 19 repiten
+  // 14 y 15 (comprobado comparando píxeles: el ciclo real son 4) -- con 6,
+  // el remolino retrocedía un paso al volver a empezar ("gira y comienza de
+  // nuevo"). Con 4 gira sin saltos.
+  return 14 + (Math.floor(ms / FASE_V2_BUCLE) % 4);
 }
 // Mesa: 0 = reposo, 1..4 = martilleo en bucle (tag "uso").
 const MESA_V2_DUR = [90, 110, 70, 160];
@@ -838,7 +842,9 @@ export function render() {
           if (!po.propio && spriteFase) {
             // Puerta de fase v2 (48x48 a x2): se activa y abre al aparecer
             // el portal (po.t arranca en 0) y luego queda en bucle.
-            const E = 2;
+            // En el vestíbulo a x1: la arcada del fondo mide ~40px de alto,
+            // a x2 la puerta (96px) se salía por arriba de la sala.
+            const E = G.escena === "lobby" ? 1 : 2;
             dibujarFrameTira(
               spriteFase, framePortalV2(po.t || 0), 48, 48,
               po.x - 24 * E,
@@ -1591,11 +1597,12 @@ export function render() {
           cx.ellipse(m.x, m.y + 16, 12, 4, 0, 0, TAU);
           cx.fill();
           if (ALMA_NPC.agua) {
-            const E = 2, s = 48 * E;
+            // A tamaño del personaje (48x48 nativo, x1) -- a x2 era el triple
+            // de alto que los jugadores.
             dibujarFrameTira(
               ALMA_NPC.agua, frameAlmaIdle("agua"), 48, 48,
-              m.x - s / 2, m.y - 6 - s + Math.sin(animGlobal * 2) * 1.5,
-              E,
+              m.x - 24, m.y + 16 - 48,
+              1,
             );
           } else {
             drawSprite(SPR.mercader, m.x, m.y - 6 + Math.sin(animGlobal * 2) * 1.5);
@@ -1603,7 +1610,10 @@ export function render() {
           cx.fillStyle = "#6fc9e8";
           cx.font = "700 10px Alegreya Sans";
           cx.textAlign = "center";
-          cx.fillText("ALMA DE AGUA — acércate", m.x, m.y + 34);
+          cx.fillText("ALMA DE AGUA", m.x, m.y + 30);
+          if (G.players.some((p) => !p.ko && Math.hypot(p.x - m.x, p.y - m.y) < NPC_RADIO_HABLAR)) {
+            dibujarAvisoTecla(m.x, m.y - 40, "E");
+          }
         }
         // sastre de skins (lobby)
         if (G.skinNpc) {
@@ -1663,14 +1673,13 @@ export function render() {
           // Yunque de hierro: decorativo, desplazado al lado del espíritu
           // (antes era el propio marcador, en m.x).
           if (yunqueIcoListo) {
-            cx.drawImage(imYunqueIco, 0, 0, 32, 32, m.x - s / 2 + 46, m.y + 18 - s, s, s);
+            cx.drawImage(imYunqueIco, 0, 0, 32, 32, m.x + 24, m.y + 18 - 36, 36, 36);
           }
           if (ALMA_NPC.fuego) {
-            const E = 2, sE = 48 * E;
             dibujarFrameTira(
               ALMA_NPC.fuego, frameAlmaIdle("fuego"), 48, 48,
-              m.x - sE / 2 - 24, m.y + 18 - sE,
-              E,
+              m.x - 24, m.y + 16 - 48,
+              1,
             );
           } else if (!yunqueIcoListo) {
             cx.fillStyle = "#e9c98a";
@@ -1681,7 +1690,10 @@ export function render() {
           cx.fillStyle = "#ff9d6a";
           cx.font = "700 10px Alegreya Sans";
           cx.textAlign = "center";
-          cx.fillText("ALMA DE FUEGO — acércate", m.x, m.y + 34);
+          cx.fillText("ALMA DE FUEGO", m.x, m.y + 30);
+          if (G.players.some((p) => !p.ko && Math.hypot(p.x - m.x, p.y - m.y) < NPC_RADIO_HABLAR)) {
+            dibujarAvisoTecla(m.x, m.y - 40, "E");
+          }
         }
         // Fragua de fusión: aparece por sorpresa en una sala normal de la
         // planta (ver systems/floorgen.js, sala.fraguaNpc/poblarSala) --
