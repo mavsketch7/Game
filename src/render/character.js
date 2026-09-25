@@ -28,22 +28,77 @@ function direccionDesdeAim(aim) {
 }
 
 // Giro de la espada del guerrero en cada golpe del combo, en radianes
-// respecto a la puntería [inicio, fin] (mirando a la derecha; se espeja al
-// mirar a la izquierda): hasta el frame de impacto la hoja se prepara hacia
-// `inicio`, y a partir del impacto barre hasta `fin` en BARRIDO_COMBO s.
-// 1º de arriba abajo, 2º de vuelta (abajo arriba), 3º un barrido más amplio.
-// Las dagas del pícaro no barren: apuntan recto, la estocada ya la hace la
-// mano en el propio arte.
-const ARCOS_COMBO_GUERRERO = [[-1.3, 0.9], [1.0, -1.2], [-2.0, 1.3]];
-const BARRIDO_COMBO = 0.12;
+// respecto a la puntería (mirando a la derecha; se espeja al mirar a la
+// izquierda). Ángulos medidos a ojo sobre la propia capa de fx ya
+// exportada (PCA + centroide por frame + renders compuestos ampliados de
+// cada golpe -- ver conversación) para que el arma acompañe al tajo real
+// en vez de una dirección inventada:
+//  - Atack (1º): luna ascendente, un único tajo que sube en diagonal de
+//    abajo-izquierda a arriba-derecha -- casi sin anticipación (el impacto
+//    es casi inmediato), se apaga en 1-2 frames.
+//  - Combo2 (2º): hachazo desde arriba -- el brazo se alza ANTES del
+//    impacto, el arco cruza por encima de la cabeza en el impacto y
+//    termina abajo-derecha con la chispa en el suelo.
+//  - Combo3 (3º, el remate): barrido horizontal amplio -- el brazo se
+//    arma hacia atrás, el tajo recorre horizontal por delante del cuerpo y
+//    termina cruzado a la derecha. El más amplio de los tres, a propósito.
+// 3 fases (arregla que antes se quedara clavada en un ángulo random el
+// resto del golpe, reportado: "no acompaña al tajo, parece que es abajo
+// arriba siempre" -- la fase de barrido solo duraba 0.12s fijos y el resto
+// del golpe, bastante más largo, se veía el arma inmóvil sin relación con
+// el tajo ya desaparecido):
+//   1. anticipación: de la puntería a `alza` (60% del tiempo hasta el
+//      impacto) y de `alza` a `pico` (40% restante, el arma ya está
+//      "armada" justo antes de golpear).
+//   2. tajo: de `pico` a `fin`, durante `finFxT` tras el impacto (mientras
+//      dura visualmente la capa de fx real).
+//   3. recuperación: de `fin` de vuelta a la puntería, durante el resto
+//      del golpe -- nunca se queda congelada.
+// finFxT (cuánto dura el barrido tras el impacto, antes de empezar a
+// recuperar) sale de sumar la duración REAL de los frames del combo en los
+// que la capa de fx todavía tiene píxeles visibles (medido sobre
+// heroB_combo_guerrero_side_fx.png y _tiempos.json, a COMBO_VEL=0.75):
+// golpe 1 -- fx hasta el frame 3 (el 4 ya está vacío): 0.13s.
+// golpe 2 -- fx hasta el frame 10 (el 11 es solo una chispa residual): 0.28s.
+// golpe 3 -- fx hasta el último frame (18): 0.43s, sin recuperación propia
+// (es el remate, el barrido dura todo el golpe).
+// Con un valor inventado más corto (como se probó primero), el arma
+// terminaba el barrido y se quedaba en la pose de recuperación MIENTRAS el
+// cuerpo todavía mostraba el frame de "brazo en alto" del hachazo --
+// confirmado superponiendo el ángulo calculado sobre capturas reales del
+// lienzo en varios instantes.
+const gr = (deg) => (deg * Math.PI) / 180;
+const ARCOS_COMBO_GUERRERO = [
+  { alza: 0, pico: gr(-45), fin: gr(-25), finFxT: 0.13 },
+  { alza: gr(-85), pico: gr(-85), fin: gr(75), finFxT: 0.28 },
+  { alza: gr(170), pico: gr(155), fin: gr(15), finFxT: 0.43 },
+];
+// Suavizado tipo "ease-in-out" (lento en los extremos, rápido en medio) en
+// vez de lineal -- el golpe 3 (barrido horizontal) pasa de apuntar hacia
+// atrás a apuntar hacia delante, un giro tan grande que cruza por fuerza
+// una zona intermedia sin relación clara con el tajo real (el arte real
+// muestra la hoja quieta casi horizontal la mayor parte del tiempo y
+// cambia de lado en apenas 1-2 frames, confirmado mirando esos frames
+// ampliados) -- con ease-in-out el arma pasa RÁPIDO por esa zona intermedia
+// en vez de cruzarla despacio, que es justo lo que se ve en el arte.
+const suave = (u) => u * u * (3 - 2 * u);
 function rotacionArmaCombo(p, combo, flip) {
   if (p.rol !== "guerrero") return p.aim;
-  const [a0, a1] = ARCOS_COMBO_GUERRERO[combo.paso] || [0, 0];
+  const a = ARCOS_COMBO_GUERRERO[combo.paso];
+  if (!a) return p.aim;
   let off;
-  if (combo.t < combo.impacto) off = a0 * (combo.t / combo.impacto);
-  else {
-    const u = Math.min(1, (combo.t - combo.impacto) / BARRIDO_COMBO);
-    off = a0 + (a1 - a0) * (1 - (1 - u) * (1 - u));
+  if (combo.t < combo.impacto) {
+    const u = combo.impacto > 0 ? combo.t / combo.impacto : 1;
+    off = u < 0.6 ? a.alza * suave(u / 0.6) : a.alza + (a.pico - a.alza) * suave((u - 0.6) / 0.4);
+  } else {
+    const tras = combo.t - combo.impacto;
+    if (tras < a.finFxT) {
+      off = a.pico + (a.fin - a.pico) * suave(tras / a.finFxT);
+    } else {
+      const restante = combo.dur - combo.impacto - a.finFxT;
+      const u = restante > 0 ? Math.min(1, (tras - a.finFxT) / restante) : 1;
+      off = a.fin * (1 - suave(u));
+    }
   }
   return p.aim + off * (flip ? -1 : 1);
 }
