@@ -57,10 +57,14 @@ function direccionDesdeAim(aim) {
 // finFxT (cuánto dura el barrido tras el impacto, antes de empezar a
 // recuperar) sale de sumar la duración REAL de los frames del combo en los
 // que la capa de fx todavía tiene píxeles visibles (medido sobre
-// heroB_combo_guerrero_side_fx.png y _tiempos.json, a COMBO_VEL=0.75):
+// heroB_combo_guerrero_side_fx.png y _tiempos.json, a COMBO_VEL=0.75), MENOS
+// el momento de impacto -- que desde el ajuste de sincronización de sonido
+// (ver exportarCombo.cjs: `impacto` ahora es el frame con MÁS píxeles de fx,
+// no el primero con alguno) cae más tarde, así que ya queda menos barrido
+// por delante:
 // golpe 1 -- fx hasta el frame 3 (el 4 ya está vacío): 0.13s.
-// golpe 2 -- fx hasta el frame 10 (el 11 es solo una chispa residual): 0.28s.
-// golpe 3 -- fx hasta el último frame (18): 0.43s, sin recuperación propia
+// golpe 2 -- fx hasta el frame 10 (el 11 es solo una chispa residual): 0.165s.
+// golpe 3 -- fx hasta el último frame (18): 0.21s, sin recuperación propia
 // (es el remate, el barrido dura todo el golpe).
 // Con un valor inventado más corto (como se probó primero), el arma
 // terminaba el barrido y se quedaba en la pose de recuperación MIENTRAS el
@@ -70,8 +74,8 @@ function direccionDesdeAim(aim) {
 const gr = (deg) => (deg * Math.PI) / 180;
 const ARCOS_COMBO_GUERRERO = [
   { alza: 0, pico: gr(-45), fin: gr(-25), finFxT: 0.13 },
-  { alza: gr(-85), pico: gr(-85), fin: gr(75), finFxT: 0.28 },
-  { alza: gr(170), pico: gr(155), fin: gr(15), finFxT: 0.43 },
+  { alza: gr(-85), pico: gr(-85), fin: gr(75), finFxT: 0.165 },
+  { alza: gr(170), pico: gr(155), fin: gr(15), finFxT: 0.21 },
 ];
 // Suavizado tipo "ease-in-out" (lento en los extremos, rápido en medio) en
 // vez de lineal -- el golpe 3 (barrido horizontal) pasa de apuntar hacia

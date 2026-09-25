@@ -50,11 +50,15 @@ function tira(capas) {
   for (let f = 0; f < F; f++) componer(ase, f, capas, img, f * ase.w);
   return img;
 }
-function hayPixeles(capas, f) {
+// Nº de píxeles con algo de alfa en un frame de esas capas -- usado para
+// encontrar el frame de más "tajo visible" (ver `impacto` más abajo), no
+// solo el primero que tenga algo.
+function contarPixeles(capas, f) {
   const t = new PNG({ width: ase.w, height: ase.h });
   componer(ase, f, capas, t);
-  for (let i = 3; i < t.data.length; i += 4) if (t.data[i]) return true;
-  return false;
+  let n = 0;
+  for (let i = 3; i < t.data.length; i += 4) if (t.data[i]) n++;
+  return n;
 }
 // Caja de los píxeles opacos de una capa marcador en un frame (null si vacía).
 function cajaMarcador(capa, f) {
@@ -89,14 +93,22 @@ const hitboxes = ["m-d", "m-i"].map((nombre) => {
 fs.writeFileSync(path.join(dirChars, cfg.base + ".json"), JSON.stringify(hitboxes));
 console.log("  " + cfg.base + ".json");
 
-// Golpes = tags que no son "idle", en orden de timeline. Impacto = primer
-// frame del golpe con píxeles de fx (el momento en que se ve el tajo).
+// Golpes = tags que no son "idle", en orden de timeline. Impacto = frame
+// del golpe con MÁS píxeles de fx (el momento en que el tajo se ve más
+// lleno/grande), no el primero que tenga algo -- antes cogía el primer
+// frame con cualquier píxel, que suele ser solo el arranque de la
+// animación del tajo (un par de píxeles sueltos) 1 frame ANTES de que se
+// vea de verdad, así que el daño/sonido de impacto sonaba un pelín pronto
+// (reportado: "sincronizar mejor el sonido con los golpes").
 const golpes = ase.tags
   .filter((t) => t.nombre.toLowerCase() !== "idle")
   .map((t) => {
-    let impacto = t.desde;
-    while (impacto <= t.hasta && !hayPixeles(capasFx, impacto)) impacto++;
-    if (impacto > t.hasta) impacto = Math.floor((t.desde + t.hasta) / 2);
+    let impacto = t.desde, mejorN = -1;
+    for (let f = t.desde; f <= t.hasta; f++) {
+      const n = contarPixeles(capasFx, f);
+      if (n > mejorN) { mejorN = n; impacto = f; }
+    }
+    if (mejorN <= 0) impacto = Math.floor((t.desde + t.hasta) / 2);
     return { nombre: t.nombre, desde: t.desde, hasta: t.hasta, impacto };
   });
 const tiempos = { durs: ase.frames.map((f) => f.dur), golpes };

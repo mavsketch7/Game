@@ -33,13 +33,13 @@
    "nombre": "Combo2",
    "desde": 6,
    "hasta": 11,
-   "impacto": 7
+   "impacto": 8
   },
   {
    "nombre": "Combo3",
    "desde": 12,
    "hasta": 18,
-   "impacto": 13
+   "impacto": 16
   }
  ]
 }
