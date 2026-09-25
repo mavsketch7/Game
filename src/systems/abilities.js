@@ -15,6 +15,8 @@ import { FRAGMENTOS_CATALOGO } from "./soul.js";
 import { META, guardarMeta } from "../core/save.js";
 import { toast } from "../ui/notifications.js";
 import { clamp, rnd } from "../utils/helpers.js";
+import { ATTACK_DUR, REAL_COMBO, comboGolpe } from "../render/sprites.js";
+import { aplicarElementoDaga, aplicarSinergiaDagas, avisoSinergia, elementosDelGolpe } from "./dagas.js";
 
 export function groundTarget(p, maxR) {
         let tx = p.inp ? p.inp.gtX : p.x,
@@ -29,6 +31,65 @@ export function groundTarget(p, maxR) {
 
 const cdHaste = (p) => (p.hasteT > 0 ? 0.55 : 1);
 
+// Combo de 3 golpes del ataque básico (guerrero/pícaro): pulsar atacar
+// durante la animación (desde COMBO_ENCADENAR_DESDE de su duración) o hasta
+// COMBO_VENTANA s después de que termine pasa al golpe siguiente; si no,
+// vuelve al 1º. Mantener pulsado encadena solo (atacar() se llama cada
+// frame mientras se mantiene, ver core/loop.js). El daño no sale al pulsar
+// sino en el frame de impacto del arte (ver comboGolpe() en
+// render/sprites.js y ejecutarGolpeCombo() más abajo).
+const COMBO_VENTANA = 0.5;
+const COMBO_ENCADENAR_DESDE = 0.7;
+// 3er golpe: más daño y más probabilidad de crítico.
+const COMBO_FINAL_DANO = 1.3;
+const COMBO_FINAL_CRIT = 15;
+
+function iniciarGolpeCombo(p) {
+        const siguiente = p.comboVentT > 0 && p.comboPaso >= 0 && p.comboPaso < 2 ? p.comboPaso + 1 : 0;
+        const g = comboGolpe(p.rol, siguiente);
+        const ritmo = cdHaste(p) / (1 + (p._hasteBonus || 0));
+        p.comboPaso = siguiente;
+        p.comboDur = g.dur * ritmo;
+        p.comboAnimT = p.comboDur;
+        p.comboImpactoT = Math.max(0.001, g.impacto * ritmo);
+        p.comboVentT = p.comboDur + COMBO_VENTANA;
+        p.atkCd = p.comboDur * COMBO_ENCADENAR_DESDE;
+        // Arriba/abajo (sin arte de combo) siguen con el golpe de siempre.
+        p.swingT = Math.min(ATTACK_DUR[p.rol] || 0.2, p.comboDur);
+      }
+
+// Mismo criterio que direccionDesdeAim() en render/character.js.
+const mirandoDeLado = (aim) => Math.abs(Math.cos(aim)) >= Math.abs(Math.sin(aim));
+
+// Llamado desde core/loop.js cuando vence p.comboImpactoT.
+export function ejecutarGolpeCombo(p) {
+        if (p.ko || p.atrapado) return;
+        const t = statsTot(p);
+        const final = p.comboPaso === 2;
+        // De lado, la hoja del combo ya trae el tajo dibujado (capa fx).
+        const sinFx = !!REAL_COMBO[p.rol] && mirandoDeLado(p.aim);
+        const bonusCrit = final ? COMBO_FINAL_CRIT : 0;
+        const mult = final ? COMBO_FINAL_DANO : 1;
+        if (p.rol === "guerrero") {
+          const hits = golpeArco(p, p.aim, final ? 68 : 62, final ? 1.7 : 1.5, t.atk * mult, false, { sinFx, bonusCrit });
+          if (hits > 0) {
+            p.combo = (p.combo || 0) + 1;
+            p.comboT = 3;
+            if (p.combo >= 4) fxTexto(p.x, p.y - 30, "⚔ ¡cargado!", "#e9b45c");
+            if (final) G.shake = Math.max(G.shake, 2);
+          }
+        } else if (p.rol === "picaro") {
+          const { elementos, sinergia } = elementosDelGolpe(p, p.comboPaso);
+          const hits = golpeArco(p, p.aim, 56, 0.65, t.atk * 0.75 * mult * (sinergia?.dano || 1), true, {
+            sinFx,
+            bonusCrit,
+            elementos,
+            sinergia,
+          });
+          if (sinergia && hits > 0) avisoSinergia(p, sinergia);
+        }
+      }
+
 export function atacar(p) {
         if (p.atrapado) return;
         if (G.salaTipo === "reto_parry") {
@@ -41,25 +102,23 @@ export function atacar(p) {
         const t = statsTot(p);
         if (p.rol === "guerrero") {
           if (p.atkCd > 0) return;
+          // Golpe Colosal (4 golpes que conectan, ver ejecutarGolpeCombo)
+          // convive con el combo de 3: si está cargado, el siguiente ataque
+          // es el colosal y la cadena vuelve a empezar después.
           const colosal = (p.combo || 0) >= 4;
-          p.atkCd =
-            ((colosal ? 0.5 : 0.38) * cdHaste(p)) / (1 + (p._hasteBonus || 0));
-          p.swingT = colosal ? 0.26 : 0.18; // 0.26 ver SPECIAL_ATTACK_DUR.guerrero en render/sprites.js -- mismo valor
-          p.atkEspecial = colosal; // qué hoja usa character.js: básica o especial
+          p.atkEspecial = colosal; // qué hoja usa character.js: combo o especial
           if (colosal) {
+            p.atkCd = (0.5 * cdHaste(p)) / (1 + (p._hasteBonus || 0));
+            p.swingT = 0.26; // ver SPECIAL_ATTACK_DUR.guerrero en render/sprites.js -- mismo valor
+            p.comboPaso = -1;
+            p.comboAnimT = p.comboImpactoT = p.comboVentT = 0;
             p.combo = 0;
             golpeArco(p, p.aim, 88, 2.1, t.atk * 2);
             fxOnda(p.x, p.y, 88, "#e9b45c");
             G.shake = Math.max(G.shake, 4);
             fxTexto(p.x, p.y - 36, "¡GOLPE COLOSAL!", "#e9b45c", true);
           } else {
-            const hits = golpeArco(p, p.aim, 62, 1.5, t.atk);
-            if (hits > 0) {
-              p.combo = (p.combo || 0) + 1;
-              p.comboT = 3;
-              if (p.combo >= 4)
-                fxTexto(p.x, p.y - 30, "⚔ ¡cargado!", "#e9b45c");
-            }
+            iniciarGolpeCombo(p);
           }
         } else if (p.rol === "arquero") {
           if (p.atkCd > 0) return;
@@ -132,12 +191,9 @@ export function atacar(p) {
           }
         } else if (p.rol === "picaro") {
           if (p.atkCd > 0) return;
-          p.atkCd = (0.2 * cdHaste(p)) / (1 + (p._hasteBonus || 0));
-          p.swingT = 0.1;
-          // rango 46->56 y arco 1.1->0.65 rad: más alcance pero más
-          // estrecho, a juego con la puñalada recta (ya no es un barrido
-          // ancho como el guerrero, ver CONFIG_ARMA.estocada en sprites.js).
-          golpeArco(p, p.aim, 56, 0.65, t.atk * 0.75, true);
+          // Combo de 3 (daga izq / daga der / doble) -- rango 56 y arco
+          // 0.65 rad de la puñalada recta, ver ejecutarGolpeCombo().
+          iniciarGolpeCombo(p);
         } else if (p.rol === "druida") {
           if (p.atkCd > 0) return;
           const fd = p._formDmg || 1;
@@ -211,13 +267,19 @@ function dentroDelArco(p, dir, rango, arco, ox, oy, radioObj) {
         return proy >= -radioObj && proy <= rango + radioObj && Math.abs(perp) <= anchoMitad + radioObj;
       }
 
-function golpeArco(p, dir, rango, arco, dmgBase, esPicaro) {
+// opts (opcional, golpes del combo -- ver ejecutarGolpeCombo()):
+//   sinFx: el arte del combo ya trae su propio tajo dibujado, no se añade
+//     el de código; bonusCrit: puntos extra de crítico solo para este golpe;
+//   elementos/sinergia: elementos de las dagas del pícaro (systems/dagas.js).
+function golpeArco(p, dir, rango, arco, dmgBase, esPicaro, opts = {}) {
         // Pícaro: línea recta de puñalada (fxEstocada), no el barrido en
         // media luna de fxTajo -- una daga apuñala, no siega (ver
         // CONFIG_ARMA.estocada en render/sprites.js, mismo criterio para
         // el arma en mano).
-        if (esPicaro) fxEstocada(p.x, p.y - ALTO_MANO_ESTOCADA, dir, ALCANCE_ESTOCADA_FX);
-        else fxTajo(p.x, p.y, dir, rango);
+        if (!opts.sinFx) {
+          if (esPicaro) fxEstocada(p.x, p.y - ALTO_MANO_ESTOCADA, dir, ALCANCE_ESTOCADA_FX);
+          else fxTajo(p.x, p.y, dir, rango);
+        }
         // guerrero/pícaro ya NO llevan el "espadazo" sintetizado en el
         // swing -- chocaba con el sonido de impacto/fallo REAL que se
         // decide más abajo (uno sintético + uno real a la vez sonaba raro,
@@ -263,10 +325,16 @@ function golpeArco(p, dir, rango, arco, dmgBase, esPicaro) {
                   true,
                   Math.cos(dir) * JUICE.knockback.meleeForce,
                   Math.sin(dir) * JUICE.knockback.meleeForce,
+                  opts.bonusCrit,
                 )
               )
                 huboCrit = true;
               hits++;
+              if (opts.elementos && opts.elementos.length) {
+                const atkEl = statsTot(p).atk;
+                for (const el of opts.elementos) aplicarElementoDaga(p, e, el, dmg, atkEl, dir, opts.sinergia);
+              }
+              if (opts.sinergia) aplicarSinergiaDagas(e, opts.sinergia);
               if (backstab) {
                 fxTexto(e.x, e.y - e.r - 16, "¡por la espalda!", "#c084f0");
                 // Colmillo del Umbral (Mítico, ver OBJETOS_MITICOS en

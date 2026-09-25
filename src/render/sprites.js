@@ -1275,8 +1275,12 @@ function cargarHojaFrames(url, destSize, onListo, sinAmpliar) {
 function cargarHojaConArmadura(bodyUrl, armorUrls, destSize, sinAmpliar, onListo, unionExterna) {
   const jsonUrl = bodyUrl.replace(/\.png(\?.*)?$/, ".json$1");
   const piezas = ["casco", "peto", "piernas"];
-  const imgs = { body: null, casco: null, peto: null, piernas: null };
-  let restantes = 1 + piezas.filter((p) => armorUrls[p]).length;
+  const imgs = { body: null, casco: null, peto: null, piernas: null, fx: null };
+  // `armorUrls.fx` (opcional): capa de efectos (tajo) que se sale del
+  // cuerpo -- NO entra en la unión de bbox (encogería/desplazaría el
+  // cuerpo), se recorta aparte con la misma transformación, ver recortarFx.
+  const cargables = [...piezas, "fx"].filter((p) => armorUrls[p]);
+  let restantes = 1 + cargables.length;
   function cargarUna(key, url) {
     const im = new Image();
     im.onload = () => { imgs[key] = im; if (--restantes === 0) procesar(); };
@@ -1284,7 +1288,7 @@ function cargarHojaConArmadura(bodyUrl, armorUrls, destSize, sinAmpliar, onListo
     im.src = url;
   }
   cargarUna("body", bodyUrl);
-  for (const p of piezas) if (armorUrls[p]) cargarUna(p, armorUrls[p]);
+  for (const p of cargables) cargarUna(p, armorUrls[p]);
 
   function procesar() {
     fetch(jsonUrl, { cache: "no-store" })
@@ -1398,25 +1402,44 @@ function cargarHojaConArmadura(bodyUrl, armorUrls, destSize, sinAmpliar, onListo
           return frames;
         }
 
+        // Fx: lienzo de 2x el tamaño (el tajo sale del cuerpo por los
+        // lados), con el lienzo del cuerpo centrado dentro -- el punto local
+        // (lx,ly) del cuerpo cae en (lx + destSize/2, ly + destSize/2). Se
+        // copia el frame de origen ENTERO con la misma escala/desplazamiento
+        // que recortarSerie le da al cuerpo, así queda pixel-alineado.
+        function recortarFx(im) {
+          const frames = [];
+          const m = destSize / 2;
+          for (let i = 0; i < frameCount; i++) {
+            const b = bboxesUnion[i];
+            const c = document.createElement("canvas");
+            c.width = destSize * 2;
+            c.height = destSize * 2;
+            const g = c.getContext("2d");
+            g.imageSmoothingEnabled = false;
+            const w = Math.round(b.w * escala);
+            const dx = Math.round((destSize - w) / 2), dy = Math.round(dyDeFrame(i));
+            const lado = Math.round(frameSize * escala);
+            g.drawImage(im, i * frameSize, 0, frameSize, frameSize,
+              Math.round(m + dx - b.x * escala), Math.round(m + dy - b.y * escala), lado, lado);
+            frames.push(c);
+          }
+          return frames;
+        }
+
         const bodyFrames = recortarSerie(imgs.body);
         const capas = {
           casco: recortarSerie(imgs.casco),
           peto: recortarSerie(imgs.peto),
           piernas: recortarSerie(imgs.piernas),
+          fx: imgs.fx ? recortarFx(imgs.fx) : [],
         };
 
         // Ancla de mano (ver puntosPorFrameDesdeHitbox arriba) con la misma
         // bbox/escala ya unificada -- mismo cálculo que cargarHojaFramesConAncla.
-        let puntosGlobales = null;
-        for (const nombre of NOMBRES_HITBOX_ARMA) {
-          const candidato = puntosPorFrameDesdeHitbox(meta, nombre);
-          if (candidato && Object.keys(candidato).length) {
-            puntosGlobales = candidato;
-            break;
-          }
-        }
-        const anclas = new Array(frameCount).fill(null);
-        if (puntosGlobales) {
+        function anclasDesde(puntosGlobales) {
+          const anclas = new Array(frameCount).fill(null);
+          if (!puntosGlobales) return anclas;
           for (let i = 0; i < frameCount; i++) {
             const bounds = puntosGlobales[i];
             if (!bounds) continue;
@@ -1429,9 +1452,22 @@ function cargarHojaConArmadura(bodyUrl, armorUrls, destSize, sinAmpliar, onListo
               y: dyDeFrame(i) + (sy - b.y) * escala,
             };
           }
+          return anclas;
         }
+        let puntosGlobales = null;
+        for (const nombre of NOMBRES_HITBOX_ARMA) {
+          const candidato = puntosPorFrameDesdeHitbox(meta, nombre);
+          if (candidato && Object.keys(candidato).length) {
+            puntosGlobales = candidato;
+            break;
+          }
+        }
+        const anclas = anclasDesde(puntosGlobales);
+        // Mano izquierda ("m-i") por separado -- solo la usan las hojas con
+        // dos armas (dagas del pícaro, ver REAL_COMBO más abajo).
+        const anclasI = anclasDesde(puntosPorFrameDesdeHitbox(meta, "m-i"));
 
-        onListo(bodyFrames, anclas, capas, { bboxesUnion, escala, frameSize });
+        onListo(bodyFrames, anclas, capas, { bboxesUnion, escala, frameSize, anclasI });
       });
   }
 }
@@ -1850,6 +1886,10 @@ export const REAL_RUN = { side: [], down: [], up: [] };
 // hay que repetirla por clase.
 export const REAL_IDLE_ANCLA = { side: [], down: [], up: [] };
 export const REAL_RUN_ANCLA = { side: [], down: [], up: [] };
+// Mano izquierda ("m-i") de idle/correr -- para la segunda daga del pícaro
+// (ver systems/dagas.js). `null` en los frames sin marcar.
+export const REAL_IDLE_ANCLA_I = { side: [], down: [], up: [] };
+export const REAL_RUN_ANCLA_I = { side: [], down: [], up: [] };
 
 // Capas de armadura equipable (casco/peto/piernas -- primer set del juego,
 // drop real del Guardián de Hielo, ver systems/loot.js): exportadas por
@@ -1923,6 +1963,7 @@ for (const dirIdle in REAL_IDLE_SRC) {
   cargarHojaConArmadura(REAL_IDLE_SRC[dirIdle], armorUrlsDe(ARMOR_BASE_IDLE[dirIdle]), TAM_HEROE, true, (frames, anclas, capas, meta) => {
     REAL_IDLE[dirIdle] = frames;
     REAL_IDLE_ANCLA[dirIdle] = anclas;
+    REAL_IDLE_ANCLA_I[dirIdle] = meta.anclasI;
     CASCO_IDLE[dirIdle] = capas.casco;
     PETO_IDLE[dirIdle] = capas.peto;
     PIERNAS_IDLE[dirIdle] = capas.piernas;
@@ -1933,6 +1974,7 @@ for (const dirRun in REAL_RUN_SRC) {
   cargarHojaConArmadura(REAL_RUN_SRC[dirRun], armorUrlsDe(ARMOR_BASE_RUN[dirRun]), TAM_HEROE, true, (frames, anclas, capas, meta) => {
     REAL_RUN[dirRun] = frames;
     REAL_RUN_ANCLA[dirRun] = anclas;
+    REAL_RUN_ANCLA_I[dirRun] = meta.anclasI;
     CASCO_RUN[dirRun] = capas.casco;
     PETO_RUN[dirRun] = capas.peto;
     PIERNAS_RUN[dirRun] = capas.piernas;
@@ -2390,6 +2432,73 @@ function cargarDashGuerrero() {
       REAL_DASH_ANCLA.guerrero[dirDash] = anclas;
     }, true);
   }
+}
+
+// Combo de 3 golpes del ataque básico (guerrero/pícaro), solo lateral:
+// exportado de Hero-atack-combos-*.aseprite con
+// tools/aseprite/exportarCombo.cjs -- una hoja con los 3 golpes seguidos
+// (más frames "idle" de relleno entre medias, que no se usan), cada golpe
+// es un tag del .aseprite. Arriba/abajo siguen con REAL_ATTACK de siempre.
+// `_tiempos.json` trae la duración de cada frame (ms, la del timeline de
+// Aseprite) y el frame de impacto (primer frame con fx) de cada golpe;
+// COMBO_VEL la escala a la velocidad de juego -- el timeline de Aseprite
+// está pensado para verse, no para el ritmo de combate (el pícaro a 1x
+// atacaría la mitad de rápido que antes).
+const COMBO_VEL = { guerrero: 0.75, picaro: 0.5 };
+const COMBO_BASE = { guerrero: "heroB_combo_guerrero_side", picaro: "heroB_combo_picaro_side" };
+// Hasta que carga el JSON (o si falla): mismos 3 golpes con tiempos fijos,
+// para que la mecánica funcione igual aunque el arte no esté.
+const COMBO_TIEMPOS_DEFECTO = [
+  { dur: 0.24, impacto: 0.06 },
+  { dur: 0.3, impacto: 0.08 },
+  { dur: 0.38, impacto: 0.1 },
+];
+// COMBO_TIEMPOS[rol] = [{ desde, hasta, durs: [s por frame], dur, impacto }]
+// (segundos ya escalados por COMBO_VEL, `impacto` = segundos desde el inicio
+// del golpe hasta el frame de impacto).
+const COMBO_TIEMPOS = { guerrero: null, picaro: null };
+// REAL_COMBO[rol] = { frames, anclas, anclasI, casco, peto, piernas, fx }
+// (casco/peto/piernas del pícaro ya teñidos por rareza, [rareza][frame]).
+export const REAL_COMBO = { guerrero: null, picaro: null };
+
+export function comboGolpe(rol, paso) {
+  const t = COMBO_TIEMPOS[rol];
+  return (t && t[paso]) || COMBO_TIEMPOS_DEFECTO[paso];
+}
+
+function cargarComboClase(rol) {
+  const base = COMBO_BASE[rol];
+  fetch(assetUrl(`characters/${base}_tiempos`).replace(/\.png(\?.*)?$/, ".json$1"), { cache: "no-store" })
+    .then((r) => (r.ok ? r.json() : null))
+    .catch(() => null)
+    .then((tiempos) => {
+      if (!tiempos || !Array.isArray(tiempos.golpes)) return;
+      const vel = COMBO_VEL[rol] || 1;
+      COMBO_TIEMPOS[rol] = tiempos.golpes.slice(0, 3).map((g) => {
+        const durs = tiempos.durs.slice(g.desde, g.hasta + 1).map((ms) => (ms / 1000) * vel);
+        const impacto = durs.slice(0, g.impacto - g.desde).reduce((a, b) => a + b, 0);
+        return { desde: g.desde, hasta: g.hasta, durs, dur: durs.reduce((a, b) => a + b, 0), impacto: Math.max(0.02, impacto) };
+      });
+    });
+  cargarHojaConArmadura(
+    assetUrl(`characters/${base}`),
+    { ...armorUrlsDe(base), fx: assetUrl(`characters/fx/${base}_fx`) },
+    TAM_HEROE,
+    true,
+    (frames, anclas, capas, meta) => {
+      const tin = rol === "picaro";
+      REAL_COMBO[rol] = {
+        frames,
+        anclas,
+        anclasI: meta.anclasI,
+        casco: tin ? tenirFramesPorRareza(capas.casco) : capas.casco,
+        peto: tin ? tenirFramesPorRareza(capas.peto) : capas.peto,
+        piernas: tin ? tenirFramesPorRareza(capas.piernas) : capas.piernas,
+        tintado: tin,
+        fx: capas.fx,
+      };
+    },
+  );
 }
 
 export const SPECIAL_ATTACK_DUR = { guerrero: 0.26, mago: 0.6 };
@@ -2862,6 +2971,7 @@ const clasesSpritesCargadas = new Set();
 const CARGADORES_SPRITES_CLASE = {
   guerrero: () => {
     cargarAtaqueClase("guerrero");
+    cargarComboClase("guerrero");
     cargarEspecialClase("guerrero");
     cargarDashGuerrero();
     cargarArmaClase("guerrero");
@@ -2885,6 +2995,7 @@ const CARGADORES_SPRITES_CLASE = {
   },
   picaro: () => {
     cargarAtaqueClase("picaro");
+    cargarComboClase("picaro");
     cargarArmaduraTinIdleRunPicaro();
     cargarArmaduraTinHurtPicaro();
     cargarArmaduraTinMuertePicaro();

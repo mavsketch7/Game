@@ -1,0 +1,45 @@
+{
+ "durs": [
+  120,
+  100,
+  100,
+  130,
+  50,
+  50,
+  90,
+  90,
+  120,
+  50,
+  50,
+  90,
+  90,
+  90,
+  160,
+  50,
+  60,
+  120,
+  100,
+  100,
+  120
+ ],
+ "golpes": [
+  {
+   "nombre": "daga-izq",
+   "desde": 2,
+   "hasta": 6,
+   "impacto": 4
+  },
+  {
+   "nombre": "daga-der",
+   "desde": 7,
+   "hasta": 12,
+   "impacto": 9
+  },
+  {
+   "nombre": "daga-doble",
+   "desde": 13,
+   "hasta": 19,
+   "impacto": 15
+  }
+ ]
+}

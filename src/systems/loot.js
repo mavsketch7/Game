@@ -1,7 +1,7 @@
 // Auto-generated during the modularization refactor (2026-07-23).
 // Alias: los usos de W/H aquí son posiciones DENTRO de la sala (mundo) --
 // ver el mismo truco en systems/floorgen.js.
-import { ARMA_ARTE_VARIANTES, CASCO_VARIANTES_MAX, MAX_PLANTA, NOMBRES_ARMA_CLASE, NOMBRES_ITEM, ORDEN_ROLES, PRECIO_VENTA, RAREZAS, ROLES, SALA_H as H, SALA_W as W, SLOTS, SUFIJOS } from "../core/constants.js";
+import { ARMA_ARTE_VARIANTES, CASCO_VARIANTES_MAX, ELEMENTOS_DAGA_IDS, MAX_PLANTA, NOMBRES_ARMA_CLASE, NOMBRES_ITEM, ORDEN_ROLES, PRECIO_VENTA, RAREZAS, ROLES, SALA_H as H, SALA_W as W, SLOTS, SUFIJOS } from "../core/constants.js";
 import { META, guardarMeta } from "../core/save.js";
 import { G, setG } from "../core/state.js";
 import { posDropValida } from "./floorgen.js";
@@ -91,6 +91,9 @@ export function genItem(f, forceRar, forceSlot) {
           nombre: nombreBase + " " + az(SUFIJOS[riX]),
           stats,
           ...(nVariantes ? { arteIdx: ri(0, nVariantes - 1) } : {}),
+          // Dagas de pícaro Raras o mejores: elemento propio (ver systems/dagas.js --
+          // efecto al golpear y sinergia con la daga de la otra mano).
+          ...(slot === "arma" && clase === "picaro" && riX >= 1 ? { elemento: az(ELEMENTOS_DAGA_IDS) } : {}),
           // Diseño de casco (ver CASCO_VARIANTES/CASCO_VARIANTES_MAX en
           // core/constants.js): a diferencia de arteIdx, no depende de
           // `clase` (el casco no está restringido por clase) -- se sortea

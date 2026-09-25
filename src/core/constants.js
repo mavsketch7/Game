@@ -324,6 +324,18 @@ export const RAREZAS = [
 
 export const PRECIO_VENTA = [8, 20, 50, 120, 320];
 
+// Elementos de las dagas del pícaro (Raro o mejor, ver genItem en
+// systems/loot.js) -- efectos y sinergias entre las dos dagas en
+// systems/dagas.js.
+export const ELEMENTOS_DAGA = {
+  fuego: { nombre: "Fuego", icono: "🔥", color: "#ff7d4d", desc: "quema al enemigo" },
+  hielo: { nombre: "Hielo", icono: "❄", color: "#7fc9e8", desc: "ralentiza al enemigo" },
+  rayo: { nombre: "Rayo", icono: "⚡", color: "#ffe36e", desc: "una chispa salta al enemigo más cercano" },
+  veneno: { nombre: "Veneno", icono: "☠", color: "#8fd46a", desc: "envenena al enemigo" },
+  agua: { nombre: "Agua", icono: "💧", color: "#5aa9e6", desc: "empuja y frena al enemigo" },
+};
+export const ELEMENTOS_DAGA_IDS = Object.keys(ELEMENTOS_DAGA);
+
 export const NOMBRES_ARMA_CLASE = {
         guerrero: ["Espada", "Filo", "Hacha", "Mandoble"],
         arquero: ["Arco", "Ballesta", "Arco Largo"],

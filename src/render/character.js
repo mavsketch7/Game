@@ -9,11 +9,12 @@ import { ELEMENTOS, RAREZAS, SUPS } from "../core/constants.js";
 import { G } from "../core/state.js";
 import { fxParticulas } from "./effects.js";
 import { drawSprite, drawSpriteBottom } from "./spriteDraw.js";
-import { AMULETO_FENIX_FRAME, AMULETO_FENIX_FRAMES_N, AMULETO_FENIX_IMG, ARQUERO_MANGO, ATTACK_DUR, CABALLERO_IMG, CABALLERO_LIENZO, cargarSpritesDeClase, CASCO_ATTACK, metaCaballero, CASCO_ATTACK_TIN, CASCO_ATTACK_TIN2, CASCO_HURT, CASCO_HURT_ARQUERO_TIN, CASCO_HURT_ARQUERO_TIN2, CASCO_HURT_MAGO_TIN, CASCO_HURT_PICARO_TIN, CASCO_IDLE, CASCO_IDLE_ARQUERO_TIN, CASCO_IDLE_ARQUERO_TIN2, CASCO_IDLE_MAGO_TIN, CASCO_IDLE_PICARO_TIN, CASCO_MUERTE_ARQUERO_TIN, CASCO_MUERTE_ARQUERO_TIN2, CASCO_MUERTE_MAGO_TIN, CASCO_MUERTE_PICARO_TIN, CASCO_RUN, CASCO_RUN_ARQUERO_TIN, CASCO_RUN_ARQUERO_TIN2, CASCO_RUN_MAGO_TIN, CASCO_RUN_PICARO_TIN, CASCO_SPECIAL_TIN, CONFIG_ARMA, DAGA_CARGADA_FH, DAGA_CARGADA_FRAMES, DAGA_CARGADA_FW, DAGA_CARGADA_SHEET, DASH_ATTACK_DUR, DUMMY_HIT, ESC_FORMA, FROST_GUARDIAN, LEYENDA_ARMA_IMG, MARTILLO_FRHOR_IMG, MIRA_IZQUIERDA_POR_DEFECTO, MOB_RUN, MUERTE_DUR, OFFHAND_IMG, OFFHAND_IMG_RAREZA, PARRY_FX_FH, PARRY_FX_FRAMES, PARRY_FX_FW, PARRY_FX_SHEET, PETO_ATTACK, PETO_ATTACK_TIN, PETO_HURT, PETO_HURT_ARQUERO_TIN, PETO_HURT_MAGO_TIN, PETO_HURT_PICARO_TIN, PETO_IDLE, PETO_IDLE_ARQUERO_TIN, PETO_IDLE_MAGO_TIN, PETO_IDLE_PICARO_TIN, PETO_MUERTE_ARQUERO_TIN, PETO_MUERTE_MAGO_TIN, PETO_MUERTE_PICARO_TIN, PETO_RUN, PETO_RUN_ARQUERO_TIN, PETO_RUN_MAGO_TIN, PETO_RUN_PICARO_TIN, PETO_SPECIAL_TIN, PIERNAS_ATTACK, PIERNAS_ATTACK_TIN, PIERNAS_HURT, PIERNAS_HURT_ARQUERO_TIN, PIERNAS_HURT_MAGO_TIN, PIERNAS_HURT_PICARO_TIN, PIERNAS_IDLE, PIERNAS_IDLE_ARQUERO_TIN, PIERNAS_IDLE_MAGO_TIN, PIERNAS_IDLE_PICARO_TIN, PIERNAS_MUERTE_ARQUERO_TIN, PIERNAS_MUERTE_MAGO_TIN, PIERNAS_MUERTE_PICARO_TIN, PIERNAS_RUN, PIERNAS_RUN_ARQUERO_TIN, PIERNAS_RUN_MAGO_TIN, PIERNAS_RUN_PICARO_TIN, PIERNAS_SPECIAL_TIN, REAL_ATTACK, REAL_ATTACK_ANCLA, REAL_DASH, REAL_DASH_ANCLA, REAL_HURT, REAL_IDLE, REAL_IDLE_ANCLA, REAL_MUERTE, REAL_RUN, REAL_RUN_ANCLA, REAL_SPECIAL, REAL_SPECIAL_ANCLA, REAL_SPRITE_SCALE, SHEETS, SPECIAL_ATTACK_DUR, SPR, SPR_FORMAS, TAM_HEROE, WEAPON_ART_POOL, WEAPON_IMG, WEAPON_IMG_RAREZA, armaHiltTip, assetOK, leyendaArmaHiltTip, seleccionarImgEnemigo, spriteJugador } from "./sprites.js";
+import { AMULETO_FENIX_FRAME, AMULETO_FENIX_FRAMES_N, AMULETO_FENIX_IMG, ARQUERO_MANGO, ATTACK_DUR, comboGolpe, REAL_COMBO, REAL_IDLE_ANCLA_I, REAL_RUN_ANCLA_I, CABALLERO_IMG, CABALLERO_LIENZO, cargarSpritesDeClase, CASCO_ATTACK, metaCaballero, CASCO_ATTACK_TIN, CASCO_ATTACK_TIN2, CASCO_HURT, CASCO_HURT_ARQUERO_TIN, CASCO_HURT_ARQUERO_TIN2, CASCO_HURT_MAGO_TIN, CASCO_HURT_PICARO_TIN, CASCO_IDLE, CASCO_IDLE_ARQUERO_TIN, CASCO_IDLE_ARQUERO_TIN2, CASCO_IDLE_MAGO_TIN, CASCO_IDLE_PICARO_TIN, CASCO_MUERTE_ARQUERO_TIN, CASCO_MUERTE_ARQUERO_TIN2, CASCO_MUERTE_MAGO_TIN, CASCO_MUERTE_PICARO_TIN, CASCO_RUN, CASCO_RUN_ARQUERO_TIN, CASCO_RUN_ARQUERO_TIN2, CASCO_RUN_MAGO_TIN, CASCO_RUN_PICARO_TIN, CASCO_SPECIAL_TIN, CONFIG_ARMA, DAGA_CARGADA_FH, DAGA_CARGADA_FRAMES, DAGA_CARGADA_FW, DAGA_CARGADA_SHEET, DASH_ATTACK_DUR, DUMMY_HIT, ESC_FORMA, FROST_GUARDIAN, LEYENDA_ARMA_IMG, MARTILLO_FRHOR_IMG, MIRA_IZQUIERDA_POR_DEFECTO, MOB_RUN, MUERTE_DUR, OFFHAND_IMG, OFFHAND_IMG_RAREZA, PARRY_FX_FH, PARRY_FX_FRAMES, PARRY_FX_FW, PARRY_FX_SHEET, PETO_ATTACK, PETO_ATTACK_TIN, PETO_HURT, PETO_HURT_ARQUERO_TIN, PETO_HURT_MAGO_TIN, PETO_HURT_PICARO_TIN, PETO_IDLE, PETO_IDLE_ARQUERO_TIN, PETO_IDLE_MAGO_TIN, PETO_IDLE_PICARO_TIN, PETO_MUERTE_ARQUERO_TIN, PETO_MUERTE_MAGO_TIN, PETO_MUERTE_PICARO_TIN, PETO_RUN, PETO_RUN_ARQUERO_TIN, PETO_RUN_MAGO_TIN, PETO_RUN_PICARO_TIN, PETO_SPECIAL_TIN, PIERNAS_ATTACK, PIERNAS_ATTACK_TIN, PIERNAS_HURT, PIERNAS_HURT_ARQUERO_TIN, PIERNAS_HURT_MAGO_TIN, PIERNAS_HURT_PICARO_TIN, PIERNAS_IDLE, PIERNAS_IDLE_ARQUERO_TIN, PIERNAS_IDLE_MAGO_TIN, PIERNAS_IDLE_PICARO_TIN, PIERNAS_MUERTE_ARQUERO_TIN, PIERNAS_MUERTE_MAGO_TIN, PIERNAS_MUERTE_PICARO_TIN, PIERNAS_RUN, PIERNAS_RUN_ARQUERO_TIN, PIERNAS_RUN_MAGO_TIN, PIERNAS_RUN_PICARO_TIN, PIERNAS_SPECIAL_TIN, REAL_ATTACK, REAL_ATTACK_ANCLA, REAL_DASH, REAL_DASH_ANCLA, REAL_HURT, REAL_IDLE, REAL_IDLE_ANCLA, REAL_MUERTE, REAL_RUN, REAL_RUN_ANCLA, REAL_SPECIAL, REAL_SPECIAL_ANCLA, REAL_SPRITE_SCALE, SHEETS, SPECIAL_ATTACK_DUR, SPR, SPR_FORMAS, TAM_HEROE, WEAPON_ART_POOL, WEAPON_IMG, WEAPON_IMG_RAREZA, armaHiltTip, assetOK, leyendaArmaHiltTip, seleccionarImgEnemigo, spriteJugador } from "./sprites.js";
 import { CARGA_ARQ_MAX, CARGA_ARQ_ZONA, CARGA_CUCH_MAX, CARGA_CUCH_ZONA, groundTarget } from "../systems/abilities.js";
 import { ESCALA_CABALLERO, masCercano, PARRY_FX_DUR } from "../systems/combat.js";
 import { mouse } from "../systems/input.js";
 import { JUICE } from "../systems/juice.js";
+import { dagaSecundaria } from "../systems/dagas.js";
 import { ENEMY_BAR, ENEMY_BAR_INTERIOR } from "./uiTiles.js";
 import { clamp, hexRgba, rnd } from "../utils/helpers.js";
 
@@ -24,6 +25,40 @@ import { clamp, hexRgba, rnd } from "../utils/helpers.js";
 function direccionDesdeAim(aim) {
   const ax = Math.cos(aim), ay = Math.sin(aim);
   return Math.abs(ay) > Math.abs(ax) ? (ay > 0 ? "down" : "up") : "side";
+}
+
+// Giro de la espada del guerrero en cada golpe del combo, en radianes
+// respecto a la puntería [inicio, fin] (mirando a la derecha; se espeja al
+// mirar a la izquierda): hasta el frame de impacto la hoja se prepara hacia
+// `inicio`, y a partir del impacto barre hasta `fin` en BARRIDO_COMBO s.
+// 1º de arriba abajo, 2º de vuelta (abajo arriba), 3º un barrido más amplio.
+// Las dagas del pícaro no barren: apuntan recto, la estocada ya la hace la
+// mano en el propio arte.
+const ARCOS_COMBO_GUERRERO = [[-1.3, 0.9], [1.0, -1.2], [-2.0, 1.3]];
+const BARRIDO_COMBO = 0.12;
+function rotacionArmaCombo(p, combo, flip) {
+  if (p.rol !== "guerrero") return p.aim;
+  const [a0, a1] = ARCOS_COMBO_GUERRERO[combo.paso] || [0, 0];
+  let off;
+  if (combo.t < combo.impacto) off = a0 * (combo.t / combo.impacto);
+  else {
+    const u = Math.min(1, (combo.t - combo.impacto) / BARRIDO_COMBO);
+    off = a0 + (a1 - a0) * (1 - (1 - u) * (1 - u));
+  }
+  return p.aim + off * (flip ? -1 : 1);
+}
+
+// Capa de fx del combo (tajo dibujado en el .aseprite, ver REAL_COMBO en
+// sprites.js): lienzo de 2x el del cuerpo con el cuerpo centrado, así que
+// su esquina queda TAM_HEROE a la izquierda y 1.5*TAM_HEROE por encima de
+// los pies (drawSpriteBottom pone el cuerpo a -TAM/2, -TAM).
+function dibujarFxCombo(fx, x, yPies, flip, esc) {
+  cx.save();
+  cx.translate(Math.round(x), Math.round(yPies));
+  if (flip) cx.scale(-1, 1);
+  cx.scale(esc, esc);
+  cx.drawImage(fx, -TAM_HEROE, -TAM_HEROE * 1.5);
+  cx.restore();
 }
 
 // Arte de armadura de mago recoloreado por rareza (ver
@@ -169,6 +204,13 @@ function calcularPoseHeroe(p, x, yPies, mov) {
         // fijo de siempre en ese caso. Por defecto la del frame de idle
         // base -- ataque/correr la reemplazan si aplican.
         let anclaLocal = idleFrameIdx >= 0 ? (REAL_IDLE_ANCLA[dirAim]?.[idleFrameIdx] || null) : null;
+        // Mano izquierda (segunda daga del pícaro, ver systems/dagas.js) --
+        // null donde la hoja no la trae; el dibujo cae a una posición de
+        // respaldo junto al cuerpo.
+        let anclaLocalI = idleFrameIdx >= 0 ? (REAL_IDLE_ANCLA_I[dirAim]?.[idleFrameIdx] || null) : null;
+        // Golpe del combo en curso (solo lateral, ver REAL_COMBO en
+        // sprites.js): frame de fx del tajo y progreso para el giro del arma.
+        let fxCombo = null, combo = null;
         // true solo cuando el frame de este tick sale de una hoja
         // ESPECÍFICA de clase (ataque/especial/dash, ver REAL_ATTACK/
         // REAL_SPECIAL/REAL_DASH) -- el cuerpo compartido de idle/correr
@@ -233,11 +275,44 @@ function calcularPoseHeroe(p, x, yPies, mov) {
             anclaLocal = anclasDir ? anclasDir[frameIdx] : null;
           }
         } else if (
+          p.comboAnimT > 0 &&
+          dirAim === "side" &&
+          REAL_COMBO[p.rol] &&
+          comboGolpe(p.rol, p.comboPaso).durs &&
+          !(p.rol === "guerrero" && p.atkEspecial)
+        ) {
+          // Combo de 3 golpes (ver iniciarGolpeCombo en abilities.js): el
+          // frame sale de las duraciones reales del timeline de Aseprite
+          // (no reparto uniforme), escaladas a lo que dura este golpe.
+          usaArteClase = true;
+          const rc = REAL_COMBO[p.rol];
+          const g = comboGolpe(p.rol, p.comboPaso);
+          const prog = clamp(1 - p.comboAnimT / (p.comboDur || g.dur), 0, 0.999);
+          const t = prog * g.dur;
+          let k = 0, acc = 0;
+          while (k < g.durs.length - 1 && acc + g.durs[k] <= t) acc += g.durs[k++];
+          const frameIdx = g.desde + k;
+          if (rc.frames[frameIdx]) img = rc.frames[frameIdx];
+          if (rc.tintado) {
+            imgCasco = capaPorRareza(rc.casco, p.equipo.casco?.rareza, frameIdx);
+            imgPeto = capaPorRareza(rc.peto, p.equipo.peto?.rareza, frameIdx);
+            imgPiernas = capaPorRareza(rc.piernas, p.equipo.piernas?.rareza, frameIdx);
+          } else {
+            imgCasco = rc.casco[frameIdx] || null;
+            imgPeto = rc.peto[frameIdx] || null;
+            imgPiernas = rc.piernas[frameIdx] || null;
+          }
+          anclaLocal = rc.anclas[frameIdx] || null;
+          anclaLocalI = rc.anclasI?.[frameIdx] || null;
+          fxCombo = rc.fx[frameIdx] || null;
+          combo = { paso: p.comboPaso, t, impacto: g.impacto, dur: g.dur };
+        } else if (
           (p.swingT > 0 || (p.rol === "mago" && p.castCd > 0)) &&
           atkFrames &&
           atkFrames.length
         ) {
           usaArteClase = true;
+          anclaLocalI = null;
           // Golpe Colosal (combo a 4 pips, ver abilities.js: atacar()) usa la
           // hoja de "especial" del guerrero en vez de la básica cuando ya
           // cargó (p.atkEspecial, fijado en abilities.js) -- si todavía no
@@ -355,6 +430,7 @@ function calcularPoseHeroe(p, x, yPies, mov) {
             const fr = runFrames[runFrameIdx];
             if (fr) img = fr;
             anclaLocal = REAL_RUN_ANCLA[dir]?.[runFrameIdx] || null;
+            anclaLocalI = REAL_RUN_ANCLA_I[dir]?.[runFrameIdx] || null;
             if (esMago) {
               imgCasco = capaPorRareza(CASCO_RUN_MAGO_TIN[dir], p.equipo.casco?.rareza, runFrameIdx);
               imgPeto = capaPorRareza(PETO_RUN_MAGO_TIN[dir], p.equipo.peto?.rareza, runFrameIdx);
@@ -389,18 +465,20 @@ function calcularPoseHeroe(p, x, yPies, mov) {
         // que el bloque "arma apuntando" (más abajo, mismo archivo) pueda
         // usarlo directamente como pivote sin repetir esta cuenta.
         const centroLocal = TAM_HEROE / 2;
-        const ancla = anclaLocal
+        const aMundo = (l) => l
           ? {
-              x: x + (flip ? -(anclaLocal.x - centroLocal) : (anclaLocal.x - centroLocal)),
-              y: yPies - TAM_HEROE + anclaLocal.y,
+              x: x + (flip ? -(l.x - centroLocal) : (l.x - centroLocal)),
+              y: yPies - TAM_HEROE + l.y,
             }
           : null;
+        const ancla = aMundo(anclaLocal);
+        const anclaI = aMundo(anclaLocalI);
         // `dir` sale junto al ancla (no solo ella) porque renderJugador()
         // lo necesita para decidir si el cuerpo se pinta antes o después
         // del arma -- de espaldas ("up") el arma debe quedar tapada por el
         // cuerpo, así que el cuerpo se dibuja el último; de frente/lateral
         // el orden de siempre (cuerpo, luego arma encima) sigue valiendo.
-        return { img, imgCasco, imgPeto, imgPiernas, flip, dir, ancla };
+        return { img, imgCasco, imgPeto, imgPiernas, flip, dir, ancla, anclaI, fxCombo, combo };
       }
 
       // `pose` es el objeto devuelto por calcularPoseHeroe() -- dibuja el
@@ -1151,7 +1229,14 @@ export function renderJugador(p) {
         // trae el arma a mano (caso conocido: guerrero arriba, "Guerrero
         // atque superior"), saldrá duplicada hasta que se limpie ese
         // archivo en origen -- no se intenta ocultar por código.
-        const wcol = eq.arma ? RAREZAS[eq.arma.rareza].col : null;
+        // Dibuja un arma en mano (`arma` = objeto equipado, o null para la
+        // de dibujo esquemático) con pivote en `anclaPiv` (ancla real de la
+        // mano, o null para el pivote fijo de siempre). `rotFija` (opcional):
+        // ángulo final ya calculado -- lo usa el combo, cuyo giro no es el
+        // bamboleo genérico (ver rotacionArmaCombo). Se llama una vez por
+        // arma: la segunda daga del pícaro reutiliza exactamente lo mismo.
+        const dibujarArmaEn = (arma, anclaPiv, rotFija) => {
+        const wcol = arma ? RAREZAS[arma.rareza].col : null;
         // Calibración del arma (escala/pivote/bamboleo) centralizada en
         // CONFIG_ARMA (sprites.js) -- sin ancla real (ver más abajo) es el
         // único sitio que tocar para recalibrar. No hay forma de derivar el
@@ -1164,7 +1249,7 @@ export function renderJugador(p) {
         // que ambos midan igual.
         if (!formaAnimal) {
           cx.save();
-          if (anclaMano) {
+          if (anclaPiv) {
             // Ancla real de este frame (slice "ancla_mano" en Aseprite, ver
             // REAL_ATTACK_ANCLA/cargarHojaFramesConAncla en sprites.js): la
             // mano ya se mueve por el frame del golpe, pero dejar la hoja
@@ -1178,14 +1263,14 @@ export function renderJugador(p) {
             // (p.atkEspecial), si no ATTACK_DUR de la clase -- sin esto el
             // arco iba desacompasado del frame real en los Golpes Colosales
             // (duran 0.26s, no los 0.22s de ATTACK_DUR.guerrero).
-            cx.translate(anclaMano.x, anclaMano.y);
+            cx.translate(anclaPiv.x, anclaPiv.y);
             const { multiplicadorAncla, duracionPorDefecto, sinBamboleo } = CONFIG_ARMA.bamboleo;
             const especialActivo = p.rol === "guerrero" && p.atkEspecial && SPECIAL_ATTACK_DUR[p.rol];
             const durAncla = (especialActivo && SPECIAL_ATTACK_DUR[p.rol]) || ATTACK_DUR[p.rol] || duracionPorDefecto;
             const swingAncla = (p.swingT > 0 && !sinBamboleo.has(p.rol))
               ? (p.swingT / durAncla - 0.5) * multiplicadorAncla
               : 0;
-            cx.rotate(p.aim + swingAncla);
+            cx.rotate(rotFija != null ? rotFija : p.aim + swingAncla);
           } else {
             cx.translate(p.x, p.y + 3);
             // El bamboleo de swing (giro extra tipo "espadazo") no pega con un
@@ -1199,10 +1284,10 @@ export function renderJugador(p) {
             // que se notaba "flotando"/errática en vez de un giro limpio de
             // principio a fin del golpe. Este pivote fijo + bamboleo es el
             // fallback para hojas sin "ancla_mano" todavía -- ver el
-            // `if (anclaMano)` de arriba.
+            // `if (anclaPiv)` de arriba.
             const { multiplicador, duracionPorDefecto, sinBamboleo } = CONFIG_ARMA.bamboleo;
             const dur = ATTACK_DUR[p.rol] || duracionPorDefecto;
-            cx.rotate(p.aim + (p.swingT > 0 && !sinBamboleo.has(p.rol) ? (p.swingT / dur - 0.5) * multiplicador : 0));
+            cx.rotate(rotFija != null ? rotFija : p.aim + (p.swingT > 0 && !sinBamboleo.has(p.rol) ? (p.swingT / dur - 0.5) * multiplicador : 0));
           }
           // Estocada (ver CONFIG_ARMA.estocada en sprites.js): pícaro
           // apuñala desplazando el arma hacia delante y recogiéndola, en
@@ -1210,13 +1295,13 @@ export function renderJugador(p) {
           // sinBamboleo, arriba) -- traslada en el eje X LOCAL, que tras el
           // rotate() de arriba ya apunta en la dirección de la puntería,
           // así que funciona igual con ancla real o con el pivote fijo.
-          if (p.swingT > 0 && CONFIG_ARMA.estocada.clases.has(p.rol)) {
+          if (rotFija == null && p.swingT > 0 && CONFIG_ARMA.estocada.clases.has(p.rol)) {
             const durEst = ATTACK_DUR[p.rol] || CONFIG_ARMA.bamboleo.duracionPorDefecto;
             const progEst = clamp(1 - p.swingT / durEst, 0, 1);
             cx.translate(Math.sin(progEst * Math.PI) * CONFIG_ARMA.estocada.distancia, 0);
           }
           cx.scale(CONFIG_ARMA.escala, CONFIG_ARMA.escala);
-          const rarezaArma = eq.arma ? eq.arma.rareza : 0;
+          const rarezaArma = arma ? arma.rareza : 0;
           // Destello leve solo a partir de Épico (2) -- antes arrancaba en
           // Raro (1), pedido expreso del usuario al pasar las armas con
           // arte real (ver WEAPON_ART_POOL en sprites.js) a mantener su
@@ -1256,12 +1341,12 @@ export function renderJugador(p) {
             // recolorear (solo guerrero/pícaro pasan por aquí con
             // `arteIdx`; arquero tiene su propio arco animado más arriba y
             // mago/clérigo/druida siguen sin pack de variantes todavía).
-            const poolArma = eq.arma && eq.arma.arteIdx !== undefined ? WEAPON_ART_POOL[eq.arma.clase] : null;
-            const imgLeyenda = eq.arma && LEYENDA_ARMA_IMG[eq.arma.id];
+            const poolArma = arma && arma.arteIdx !== undefined ? WEAPON_ART_POOL[arma.clase] : null;
+            const imgLeyenda = arma && LEYENDA_ARMA_IMG[arma.id];
             const wimg =
-              (eq.arma && eq.arma.id === "martillo_frhor" && MARTILLO_FRHOR_IMG) ||
+              (arma && arma.id === "martillo_frhor" && MARTILLO_FRHOR_IMG) ||
               imgLeyenda ||
-              (poolArma && poolArma.length && poolArma[eq.arma.arteIdx % poolArma.length]) ||
+              (poolArma && poolArma.length && poolArma[arma.arteIdx % poolArma.length]) ||
               (WEAPON_IMG_RAREZA[p.rol] && WEAPON_IMG_RAREZA[p.rol][rarezaArma]) ||
               WEAPON_IMG[p.rol];
             if (wimg) {
@@ -1272,7 +1357,7 @@ export function renderJugador(p) {
               // no) -- pero el DESPLAZAMIENTO de dibujo solo hace falta
               // cuando el pivote es el fallback fijo (p.x,p.y+3, que no es
               // la mano de verdad, así que hay que empujar la espada hacia
-              // fuera para que se vea sujeta). Con ancla real (anclaMano)
+              // fuera para que se vea sujeta). Con ancla real (anclaPiv)
               // el pivote YA ES la mano marcada en Aseprite -- empujar
               // GRIP px más allá dejaba el mango separado de la mano en
               // vez de sujeto desde ahí, que es justo lo que se pidió.
@@ -1301,7 +1386,7 @@ export function renderJugador(p) {
               // la rotación TODAVÍA estaba mal) -- ahora que el ángulo ya
               // es correcto, un empuje moderado alcanza sin volver a
               // alejarlo demasiado en correr/atacar.
-              const gripDibujo = anclaMano ? (p.rol === "arquero" ? 10 : 0) : GRIP;
+              const gripDibujo = anclaPiv ? (p.rol === "arquero" ? 10 : 0) : GRIP;
               // El pack "wood-weapons" no es consistente en cómo recortó cada
               // pieza: espada/daga/maza/báculo vienen en vertical (más alto
               // que ancho, punta arriba -- p.ej. sword-wood.png 10x41), pero
@@ -1325,11 +1410,11 @@ export function renderJugador(p) {
               // calibrados para esa variante concreta (arquero, u otra
               // futura), cae al mismo -45° de siempre como aproximación.
               const esArmaLeyenda = !!imgLeyenda && wimg === imgLeyenda;
-              const esIconoArma = esArmaLeyenda || !!(poolArma && poolArma.length && wimg === poolArma[eq.arma.arteIdx % poolArma.length]);
+              const esIconoArma = esArmaLeyenda || !!(poolArma && poolArma.length && wimg === poolArma[arma.arteIdx % poolArma.length]);
               const datosHiltTip = esArmaLeyenda
-                ? leyendaArmaHiltTip(eq.arma.id)
+                ? leyendaArmaHiltTip(arma.id)
                 : esIconoArma
-                ? armaHiltTip(eq.arma.clase, eq.arma.arteIdx)
+                ? armaHiltTip(arma.clase, arma.arteIdx)
                 : null;
               // Arco: "solo pégalo a la mano, sin girar el dibujo" (sin
               // rotación propia) dejaba el arco con su inclinación
@@ -1391,7 +1476,7 @@ export function renderJugador(p) {
                 // confirmado volcando la matriz de transformación real
                 // con cx.getTransform() y comparándola a mano).
                 let rotIcono = -refAngle;
-                let totalRot = p.aim + rotIcono;
+                let totalRot = (rotFija != null ? rotFija : p.aim) + rotIcono;
                 while (totalRot > Math.PI) totalRot -= TAU;
                 while (totalRot <= -Math.PI) totalRot += TAU;
                 const flipIcono = totalRot > Math.PI / 2 || totalRot < -Math.PI / 2;
@@ -1603,6 +1688,33 @@ export function renderJugador(p) {
           cx.shadowBlur = 0;
           }
           cx.restore();
+        }
+        };
+        const comboPose = poseHeroe && poseHeroe.combo;
+        const flipPose = !!(poseHeroe && poseHeroe.flip);
+        const rotCombo = comboPose ? rotacionArmaCombo(p, comboPose, flipPose) : null;
+        const daga2 = !formaAnimal && dagaSecundaria(p);
+        if (daga2) {
+          // Mano izquierda: ancla real si el frame la trae; si no, pegada
+          // al cuerpo en el lado contrario a la mano del arma.
+          const lado = flipPose ? 1 : -1;
+          const anclaI = (poseHeroe && poseHeroe.anclaI) ||
+            (anclaMano ? { x: anclaMano.x + lado * 6, y: anclaMano.y + 2 } : { x: p.x + lado * 6, y: p.y - 2 });
+          const rotI = comboPose ? p.aim : null;
+          // Mirando a la derecha la daga de la mano izquierda queda un poco
+          // tapada por la de la derecha; mirando a la izquierda, al revés.
+          if (!flipPose) {
+            dibujarArmaEn(daga2, anclaI, rotI);
+            dibujarArmaEn(eq.arma, anclaMano, rotCombo);
+          } else {
+            dibujarArmaEn(eq.arma, anclaMano, rotCombo);
+            dibujarArmaEn(daga2, anclaI, rotI);
+          }
+        } else {
+          dibujarArmaEn(eq.arma, anclaMano, rotCombo);
+        }
+        if (poseHeroe && poseHeroe.fxCombo) {
+          dibujarFxCombo(poseHeroe.fxCombo, p.x, p.y + bob, flipPose, REAL_SPRITE_SCALE[p.rol] || 1);
         }
         // De espaldas el cuerpo se dibuja aquí, DESPUÉS del arma (en vez
         // de junto al resto del cuerpo) para que la silueta tape la parte

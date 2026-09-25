@@ -1,6 +1,7 @@
 // Auto-generated during the modularization refactor (2026-07-23).
 import { ajustarLienzo, esPantallaCompleta, maximizado, toggleFullscreen } from "../core/canvas.js";
-import { ETQ, FORMAS_DRUIDA, FORMAS_INFO, MAX_NIV_PJ, PRECIO_VENTA, RAREZAS, ROLES, SENDA_ELEMENTAL, SLOTS, SLOT_LABEL, SUPS } from "../core/constants.js";
+import { ELEMENTOS_DAGA, ETQ, FORMAS_DRUIDA, FORMAS_INFO, MAX_NIV_PJ, PRECIO_VENTA, RAREZAS, ROLES, SENDA_ELEMENTAL, SLOTS, SLOT_LABEL, SUPS } from "../core/constants.js";
+import { dagaSecundaria, esDaga, sinergiaDagas } from "../systems/dagas.js";
 import { abandonarPartida } from "../core/gameflow.js";
 import { META } from "../core/save.js";
 import { AJ, aplicarTexto } from "../core/settings.js";
@@ -26,6 +27,44 @@ import {
 import { toast } from "./notifications.js";
 import { mostrar, ocultar } from "./overlays.js";
 import { clamp } from "../utils/helpers.js";
+
+// Para el pícaro la ranura "escudo" es la mano secundaria (segunda daga,
+// ver systems/dagas.js).
+function etiquetaSlot(slot, p) {
+  return p && p.rol === "picaro" && slot === "escudo" ? "Mano secundaria" : SLOT_LABEL[slot] || slot;
+}
+
+// Se puede llevar en la mano secundaria: dagas, y solo para el pícaro.
+function vaEnManoSecundaria(it, p) {
+  return p.rol === "picaro" && esDaga(it);
+}
+
+// Elemento de una daga + la sinergia que haría con la(s) daga(s)
+// equipada(s) en la otra mano.
+function lineaElemento(it, p) {
+  if (!it.elemento || !ELEMENTOS_DAGA[it.elemento]) return "";
+  const el = ELEMENTOS_DAGA[it.elemento];
+  let h = '<div class="tt-efecto" style="color:' + el.color + '">' + el.icono + " " + el.nombre + " — " + el.desc + "</div>";
+  if (!p || p.rol !== "picaro") return h;
+  const otras = p.equipo.arma === it ? [dagaSecundaria(p)]
+    : p.equipo.escudo === it ? [p.equipo.arma]
+    : [p.equipo.arma, dagaSecundaria(p)];
+  const vistas = new Set();
+  for (const o of otras) {
+    if (!o || o === it || !o.elemento || vistas.has(o.elemento)) continue;
+    vistas.add(o.elemento);
+    const sin = sinergiaDagas(it.elemento, o.elemento);
+    if (!sin) continue;
+    const oe = ELEMENTOS_DAGA[o.elemento];
+    h += '<div class="tt-efecto">✦ Con ' + oe.icono + " " + oe.nombre + ": " + sin.nombre + " (" + sin.desc + ", 3er golpe)</div>";
+  }
+  return h;
+}
+
+function botonManoSecundaria(it, idx, p, clase, extraOnclick) {
+  if (!vaEnManoSecundaria(it, p)) return "";
+  return '<button class="' + clase + '" title="Equipar como segunda daga" onclick="' + (extraOnclick || "") + "equipar(" + idx + ",'escudo')\">Mano izq.</button>";
+}
 
 function escHtml(s) {
         return String(s ?? "").replace(
@@ -439,7 +478,7 @@ function ordenarBolsa(crit) {
 // comparar contra sí mismo).
 function celdaSlotEquipo(slot, p) {
         const it = p.equipo[slot];
-        const label = SLOT_LABEL[slot] || slot;
+        const label = etiquetaSlot(slot, p);
         const dropAttrs =
           ' ondragover="permitirSoltar(event)" ondragleave="quitarResaltadoSlot(event)" ondrop="soltarEnSlot(event,\'' +
           slot +
@@ -491,6 +530,7 @@ function celdaSlotEquipo(slot, p) {
           (it.efectoDesc
             ? '<div class="tt-efecto">✦ ' + escHtml(it.efectoDesc) + "</div>"
             : "") +
+          lineaElemento(it, p) +
           (typeof it.kills === "number"
             ? '<div class="tt-efecto">🗡 ' + it.kills + " kills con esta arma</div>"
             : "") +
@@ -536,7 +576,7 @@ function ordCtrlHtml(p) {
 // tooltip al pasar el cursor, igual que antes.
 function celdaSlotLibro(slot, p) {
         const it = p.equipo[slot];
-        const label = SLOT_LABEL[slot] || slot;
+        const label = etiquetaSlot(slot, p);
         const pos = LIBRO_SLOT_POS[slot];
         const style =
           "left:" + pos.l + "%;top:" + pos.t + "%;width:" + pos.w + "%;height:" + pos.h + "%" +
@@ -576,6 +616,7 @@ function celdaSlotLibro(slot, p) {
           '<div class="tt-nombre ' + rar.cls + '">' + escHtml(it.nombre) + "</div>" +
           '<div class="tt-slot">' + label + ' · <span class="' + rar.cls + '">' + rar.n + "</span></div>" +
           (it.efectoDesc ? '<div class="tt-efecto">✦ ' + escHtml(it.efectoDesc) + "</div>" : "") +
+          lineaElemento(it, p) +
           (typeof it.kills === "number" ? '<div class="tt-efecto">🗡 ' + it.kills + " kills con esta arma</div>" : "") +
           '<div class="tt-stat-linea">' + fmtStats(it.stats) + "</div>" +
           "</div>" +
@@ -602,6 +643,7 @@ function celdaItemLibro(it, idx, p) {
           (it.efectoDesc
             ? '<div class="tt-efecto">✦ ' + escHtml(it.efectoDesc) + "</div>"
             : "") +
+          lineaElemento(it, p) +
           (typeof it.kills === "number"
             ? '<div class="tt-efecto">🗡 ' + it.kills + " kills con esta arma</div>"
             : "") +
@@ -610,6 +652,7 @@ function celdaItemLibro(it, idx, p) {
           (puedeEquipar
             ? '<button class="tt-btn-equipar" onclick="event.stopPropagation();ocultarTooltipFlotante();equipar(' + idx + ')">Equipar</button>'
             : '<button class="tt-btn-equipar" disabled title="Arma de otra clase">Solo ' + ROLES[it.clase].nombre.split(" ")[0] + "</button>") +
+          botonManoSecundaria(it, idx, p, "tt-btn-equipar", "event.stopPropagation();ocultarTooltipFlotante();") +
           "</div>" +
           "</div>" +
           "</div>"
@@ -1223,6 +1266,7 @@ function panelAccionItem(p) {
           (it.efectoDesc
             ? '<div class="item-efecto">✦ ' + escHtml(it.efectoDesc) + "</div>"
             : "") +
+          lineaElemento(it, p) +
           (typeof it.kills === "number"
             ? '<div class="item-efecto">🗡 ' + it.kills + " kills con esta arma</div>"
             : "") +
@@ -1237,6 +1281,7 @@ function panelAccionItem(p) {
             : '<button class="btn" disabled title="Arma de otra clase">Solo ' +
               ROLES[it.clase].nombre.split(" ")[0] +
               "</button>") +
+          botonManoSecundaria(it, idxSel, p, "btn") +
           transf +
           '<button class="btn" onclick="venderItem(' +
           idxSel +
@@ -1272,7 +1317,7 @@ function panelAccionEquipo(p) {
           escHtml(it.nombre) +
           "</div>" +
           '<div class="panel-item-slot">' +
-          (SLOT_LABEL[it.slot] || it.slot) +
+          etiquetaSlot(eqSel, p) +
           ' · <span class="' +
           rar.cls +
           '">' +
@@ -1283,6 +1328,7 @@ function panelAccionEquipo(p) {
           (it.efectoDesc
             ? '<div class="item-efecto">✦ ' + escHtml(it.efectoDesc) + "</div>"
             : "") +
+          lineaElemento(it, p) +
           (typeof it.kills === "number"
             ? '<div class="item-efecto">🗡 ' + it.kills + " kills con esta arma</div>"
             : "") +
@@ -1608,6 +1654,10 @@ function soltarEnSlot(ev, slot) {
         const p = G.players[G.invSel] || G.players[0];
         const it = p.bolsa[idx];
         if (!it) return;
+        if (slot === "escudo" && vaEnManoSecundaria(it, p)) {
+          equipar(idx, "escudo");
+          return;
+        }
         if (it.slot !== slot) {
           toast("Ese objeto no va en ese hueco", "#c9a35a");
           return;
@@ -1615,10 +1665,13 @@ function soltarEnSlot(ev, slot) {
         equipar(idx);
       }
 
-function equipar(idx) {
+// `destino` (opcional): ranura donde equiparlo si no es la suya -- solo
+// "escudo" para una daga del pícaro (mano secundaria, ver systems/dagas.js).
+function equipar(idx, destino) {
         const p = G.players[G.invSel] || G.players[0];
         const it = p.bolsa[idx];
         if (!it) return;
+        const slot = destino === "escudo" && vaEnManoSecundaria(it, p) ? "escudo" : it.slot;
         if (it.slot === "arma" && it.clase && it.clase !== p.rol) {
           toast(
             "Esa arma es de " +
@@ -1628,8 +1681,8 @@ function equipar(idx) {
           );
           return;
         }
-        const ant = p.equipo[it.slot];
-        p.equipo[it.slot] = it;
+        const ant = p.equipo[slot];
+        p.equipo[slot] = it;
         p.bolsa.splice(idx, 1);
         if (ant) p.bolsa.push(ant);
         p.hp = clamp(p.hp, 1, statsTot(p).hpMax);

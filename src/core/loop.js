@@ -6,7 +6,7 @@ import { META } from "./save.js";
 import { G } from "./state.js";
 import { NET, netAplicarInputs } from "../net/peer.js";
 import { fxOnda, fxParticulas, fxTexto } from "../render/effects.js";
-import { CARGA_ARQ_MAX, CARGA_ARQ_ZONA, CARGA_CUCH_MAX, CARGA_CUCH_ZONA, actualizarSendaElemental, actualizarSombraPicaro, aplicarImbuido, atacar, danoPilar, dispararArcano, dispararFlechaCargada, golpeObjeto, lanzarCuchillo } from "../systems/abilities.js";
+import { CARGA_ARQ_MAX, CARGA_ARQ_ZONA, CARGA_CUCH_MAX, CARGA_CUCH_ZONA, actualizarSendaElemental, actualizarSombraPicaro, aplicarImbuido, atacar, danoPilar, dispararArcano, dispararFlechaCargada, ejecutarGolpeCombo, golpeObjeto, lanzarCuchillo } from "../systems/abilities.js";
 import { sfx, sfxAterrizaje, sfxCargaArcano, sfxCargaCuchillo, sfxCargaLista, sfxFuegoBolaImpacto, sfxGolpeAire, sfxGolpeCritico, sfxImpactoGuerrero, sfxImpactoProyectil, sfxMoneda, sfxPaso, sfxTensarArco } from "../systems/audio.js";
 import { esJefe, escalaEnemigo } from "../systems/bosses.js";
 import { curarP, danoAEnemigo, danoAlJugador, explotarBomber, ganarXP, masCercano, matarEnemigo, spawnClon, spawnEnemigo, spawnJefeCaballero, statsTot, tipoAleatorio, vivos } from "../systems/combat.js";
@@ -41,6 +41,8 @@ const CDS_LINEALES = [
   "parryFxT",
   "golpeT",
   "swingT",
+  "comboAnimT",
+  "comboVentT",
   "hasteT",
   "castUltT",
   "sendaT",
@@ -294,6 +296,12 @@ export function update(dt) {
           const t = statsTot(p),
             b = ROLES[p.rol];
           for (const k of CDS_LINEALES) if (p[k] > 0) p[k] -= dt;
+          // Golpe del combo pendiente: el daño sale en el frame de impacto
+          // del arte, no al pulsar (ver iniciarGolpeCombo en abilities.js).
+          if (p.comboImpactoT > 0) {
+            p.comboImpactoT -= dt;
+            if (p.comboImpactoT <= 0) ejecutarGolpeCombo(p);
+          }
           for (let i = 0; i < 3; i++) if (p.supCd[i] > 0) p.supCd[i] -= dt;
           if (p.formCd > 0) p.formCd -= dt;
           actualizarSendaElemental(p, dt);

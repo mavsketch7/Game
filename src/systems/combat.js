@@ -32,8 +32,13 @@ export function statsTot(p) {
         for (const s of SLOTS) {
           const it = p.equipo[s];
           if (!it) continue;
+          // Daga en la mano secundaria del pícaro (ranura "escudo", ver
+          // systems/dagas.js): su ataque cuenta a la mitad -- la segunda
+          // daga suma, pero no duplica el daño del arma principal.
+          const manoSecundaria = s === "escudo" && it.slot === "arma";
           for (const k in it.stats) {
             if (k === "hp") t.hpMax += it.stats[k];
+            else if (k === "atk" && manoSecundaria) t.atk += Math.round(it.stats[k] * 0.5);
             else t[k] += it.stats[k];
           }
         }

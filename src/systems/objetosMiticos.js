@@ -4,7 +4,7 @@
 // mejores números) y por eso no se generan al azar en el loot normal.
 // Se obtienen vía fusión legendaria (ver ui/inventory.js) o, con muy poca
 // probabilidad, al romper pilares/barriles (ver systems/combat.js).
-import { RAREZAS } from "../core/constants.js";
+import { ELEMENTOS_DAGA_IDS, RAREZAS } from "../core/constants.js";
 import { az, ri } from "../utils/helpers.js";
 
 export const OBJETOS_MITICOS = [
@@ -171,5 +171,8 @@ export function genObjetoMitico(f, slot) {
           // únicas y con nombre propio, son de las pocas piezas que tiene
           // sentido que "acumulen historia" en vez de venderse/tirarse.
           ...(base.slot === "arma" ? { kills: 0 } : {}),
+          // Dagas de pícaro Míticas: elemento como cualquier daga Rara o mejor
+          // (ver genItem en systems/loot.js y systems/dagas.js).
+          ...(base.slot === "arma" && base.clase === "picaro" ? { elemento: az(ELEMENTOS_DAGA_IDS) } : {}),
         };
       }
