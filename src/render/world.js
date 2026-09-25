@@ -24,6 +24,101 @@ imYunqueIco.onload = () => {
 };
 imYunqueIco.src = `${import.meta.env.BASE_URL}assets/ui/ui-ingame/anvil-forja-strip.png`;
 
+// --- Puertas v2 + mesa de trabajo (assets/sprites/dungeon/puertas/) ---
+// Tiras horizontales a tamaño NATIVO (tiles de 16px: puerta horizontal
+// 3x3 = 48x48, vertical 1x3 = 16x48, mesa 3x2 = 48x32); fuentes .aseprite
+// con sus tags en art/puertas/ (ver puertas_meta.json). Se cargan aquí,
+// aparte de KENNEY_TILE, para dibujarlas con escala entera propia sin
+// tocar door1/door2 (que se quedan como respaldo si esto no carga).
+const PUERTAS_V2_SRC = {
+  h: "puerta_h_doble", // muros N/S
+  vO: "puerta_v_doble_izq", // muro oeste: abre hacia la sala (derecha)
+  vE: "puerta_v_doble_der", // muro este: espejo, abre hacia la izquierda
+  fase: "puerta_fase_portal", // portal de fin de planta (versión exenta)
+  faseVestibulo: "puerta_fase_h_doble", // portal de entrada del vestíbulo (con marco de puerta, para la arcada -- mismos 20 fotogramas/framePortalV2 que `fase`)
+  mesa: "mesa_trabajo",
+};
+const PUERTAS_V2 = {};
+for (const k in PUERTAS_V2_SRC) {
+  const im = new Image();
+  im.onload = () => {
+    PUERTAS_V2[k] = im;
+  };
+  im.src = `${import.meta.env.BASE_URL}assets/sprites/dungeon/puertas/${PUERTAS_V2_SRC[k]}.png`;
+}
+// Puerta normal: 0 = cerrada, 1..10 = apertura (10 = abierta del todo);
+// al alejarse se recorre al revés (tag "cierre" del .aseprite).
+const PUERTA_V2_ULTIMO = 10;
+const PUERTA_V2_T_APERTURA = 0.55; // segundos de cerrada a abierta
+const PUERTA_V2_RADIO = 150; // distancia a la que empieza a abrirse
+const PUERTA_V2_ESC = 3; // mismo x3 que el resto del tileset
+// Progreso 0..1 de cada puerta, solo para el dibujo (no viaja por red:
+// host e invitado lo derivan de la posición de los jugadores).
+const progresoPuertas = new Map();
+function framePuertaV2(clave, abrir) {
+  let p = progresoPuertas.get(clave) || 0;
+  p = clamp(p + ((abrir ? 1 : -1) * 0.016) / PUERTA_V2_T_APERTURA, 0, 1);
+  progresoPuertas.set(clave, p);
+  return p <= 0 ? 0 : Math.min(PUERTA_V2_ULTIMO, 1 + Math.round(p * (PUERTA_V2_ULTIMO - 1)));
+}
+// Puerta de fase: activación (2..7) + apertura (8..13) una sola vez al
+// aparecer el portal, luego bucle del remolino (14..19). Duraciones en ms,
+// las mismas que los tags del .aseprite.
+const FASE_V2_DUR = [70, 70, 70, 80, 90, 90, 70, 60, 60, 60, 70, 90];
+const FASE_V2_BUCLE = 100;
+function framePortalV2(t) {
+  let ms = t * 1000;
+  for (let i = 0; i < FASE_V2_DUR.length; i++) {
+    if (ms < FASE_V2_DUR[i]) return 2 + i;
+    ms -= FASE_V2_DUR[i];
+  }
+  return 14 + (Math.floor(ms / FASE_V2_BUCLE) % 6);
+}
+// Mesa: 0 = reposo, 1..4 = martilleo en bucle (tag "uso").
+const MESA_V2_DUR = [90, 110, 70, 160];
+function frameMesaV2(activa) {
+  if (!activa) return 0;
+  const total = MESA_V2_DUR.reduce((a, b) => a + b, 0);
+  let ms = (animGlobal * 1000) % total;
+  for (let i = 0; i < MESA_V2_DUR.length; i++) {
+    if (ms < MESA_V2_DUR[i]) return 1 + i;
+    ms -= MESA_V2_DUR[i];
+  }
+  return 1;
+}
+// --- Alma de Agua / Alma de Fuego (lobby, assets/sprites/dungeon/npcs/) ---
+// Mismo criterio que Puertas v2: tiras horizontales a tamaño nativo
+// (48x48 por frame), exportadas de los .aseprite de art/npcs/ (ver
+// npcs_meta.json) con tools/aseprite/exportarSprite.cjs. Sustituyen al
+// mercader/yunque de siempre -- ver ui/dialogoAlmas.js para el menú de
+// diálogo que abren (Mejoras permanentes/Comprar objetos y Mejorar
+// alma/Combinar almas respectivamente).
+const ALMA_NPC_SRC = { agua: "npc_alma_agua", fuego: "npc_alma_fuego" };
+const ALMA_NPC = {};
+for (const k in ALMA_NPC_SRC) {
+  const im = new Image();
+  im.onload = () => {
+    ALMA_NPC[k] = im;
+  };
+  im.src = `${import.meta.env.BASE_URL}assets/sprites/dungeon/npcs/${ALMA_NPC_SRC[k]}.png`;
+}
+// Solo el bucle "idle" (16 fotogramas, duración uniforme -- ver
+// npcs_meta.json) hace falta en el mundo; "derretirse"/"saludo" y
+// "martillazo"/"llamarada" quedan sin usar por ahora.
+const ALMA_IDLE_DUR_MS = { agua: 95, fuego: 85 };
+const ALMA_IDLE_FRAMES = 16;
+function frameAlmaIdle(k) {
+  const total = ALMA_IDLE_DUR_MS[k] * ALMA_IDLE_FRAMES;
+  const ms = (animGlobal * 1000) % total;
+  return Math.floor(ms / ALMA_IDLE_DUR_MS[k]);
+}
+function dibujarFrameTira(img, f, fw, fh, x, y, esc) {
+  const prev = cx.imageSmoothingEnabled;
+  cx.imageSmoothingEnabled = false;
+  cx.drawImage(img, f * fw, 0, fw, fh, Math.round(x), Math.round(y), fw * esc, fh * esc);
+  cx.imageSmoothingEnabled = prev;
+}
+
 // Marcador de estación con menú propio (Mesa de Trabajo, Fragua, Arena
 // PvP...): banderín de dos puntas (en vez del anillo pulsante genérico
 // de antes) con el icono de la estación dentro -- pedido expreso, "para
@@ -595,7 +690,41 @@ export function render() {
             );
             cx.stroke();
           }
-          if (KENNEY_TILE.door2) {
+          const imgPuertaV2 =
+            pu.dir === "N" || pu.dir === "S"
+              ? PUERTAS_V2.h
+              : pu.dir === "O"
+                ? PUERTAS_V2.vO
+                : PUERTAS_V2.vE;
+          if (imgPuertaV2) {
+            // Puerta v2: 3x3 tiles en N/S, 1x3 en E/O, centrada en el hueco
+            // del muro (HUECO_PUERTA=140 ~ 144 de la pieza a x3) y pegada al
+            // borde de la sala. Se abre sola al acercarse un jugador.
+            const cerca = G.players.some(
+              (p) => !p.ko && Math.hypot(p.x - pu.x, p.y - pu.y) < PUERTA_V2_RADIO,
+            );
+            const f = framePuertaV2(
+              pu.dir + "|" + Math.round(pu.x) + "|" + Math.round(pu.y),
+              cerca,
+            );
+            const E = PUERTA_V2_ESC;
+            if (pu.dir === "N" || pu.dir === "S") {
+              const lado = 48 * E;
+              dibujarFrameTira(
+                imgPuertaV2, f, 48, 48,
+                pu.x - lado / 2,
+                pu.dir === "N" ? 0 : SALA_H - lado,
+                E,
+              );
+            } else {
+              dibujarFrameTira(
+                imgPuertaV2, f, 16, 48,
+                pu.dir === "O" ? 0 : SALA_W - 16 * E,
+                pu.y - (48 * E) / 2,
+                E,
+              );
+            }
+          } else if (KENNEY_TILE.door2) {
             // door2 (indicación explícita del usuario) es una hoja de
             // ANIMACIÓN de 4 fotogramas (verificado recortando/ampliando
             // la imagen: portón cerrado -> abriéndose -> arco abierto),
@@ -700,7 +829,23 @@ export function render() {
           // otro estilo (gris suave, no el pixel art del tileset actual),
           // es justo lo que desencajaba. Solo se dibuja en las salas
           // procedurales, que no tienen arte propio para la salida.
-          if (!po.propio && SPR.escaleras) drawSprite(SPR.escaleras, po.x, po.y, false, 0.8);
+          // Vestíbulo: puerta con marco (encaja en la arcada de pared, ver
+          // LOBBY_MUROS en core/gameflow.js) -- el resto de portales (fin de
+          // planta, dentro de la mazmorra) usan la versión exenta de
+          // siempre, sin pared alrededor. Mismos 20 fotogramas/
+          // framePortalV2 en ambas, solo cambia el arte.
+          const spriteFase = G.escena === "lobby" ? PUERTAS_V2.faseVestibulo : PUERTAS_V2.fase;
+          if (!po.propio && spriteFase) {
+            // Puerta de fase v2 (48x48 a x2): se activa y abre al aparecer
+            // el portal (po.t arranca en 0) y luego queda en bucle.
+            const E = 2;
+            dibujarFrameTira(
+              spriteFase, framePortalV2(po.t || 0), 48, 48,
+              po.x - 24 * E,
+              po.y + po.r - 48 * E,
+              E,
+            );
+          } else if (!po.propio && SPR.escaleras) drawSprite(SPR.escaleras, po.x, po.y, false, 0.8);
           cx.fillStyle = "#e9b45c";
           cx.font = "700 11px Alegreya Sans";
           cx.textAlign = "center";
@@ -1436,23 +1581,29 @@ export function render() {
           }
         }
 
-        // mercader (lobby)
+        // Alma de Agua (lobby) -- antes "mercader" con SPR.mercader estático;
+        // mismo sitio/interacción (ver ui/dialogoAlmas.js: abrirAlmaAgua()),
+        // ahora con el espíritu animado en bucle.
         if (G.mercader) {
           const m = G.mercader;
           cx.fillStyle = "rgba(0,0,0,.35)";
           cx.beginPath();
           cx.ellipse(m.x, m.y + 16, 12, 4, 0, 0, TAU);
           cx.fill();
-          drawSprite(
-            SPR.mercader,
-            m.x,
-            m.y - 6 + Math.sin(animGlobal * 2) * 1.5,
-          );
-          drawSprite(SPR.moneda, m.x, m.y - 38 + Math.sin(animGlobal * 3) * 3);
-          cx.fillStyle = "#ffd27f";
+          if (ALMA_NPC.agua) {
+            const E = 2, s = 48 * E;
+            dibujarFrameTira(
+              ALMA_NPC.agua, frameAlmaIdle("agua"), 48, 48,
+              m.x - s / 2, m.y - 6 - s + Math.sin(animGlobal * 2) * 1.5,
+              E,
+            );
+          } else {
+            drawSprite(SPR.mercader, m.x, m.y - 6 + Math.sin(animGlobal * 2) * 1.5);
+          }
+          cx.fillStyle = "#6fc9e8";
           cx.font = "700 10px Alegreya Sans";
           cx.textAlign = "center";
-          cx.fillText("MERCADER — acércate", m.x, m.y + 34);
+          cx.fillText("ALMA DE AGUA — acércate", m.x, m.y + 34);
         }
         // sastre de skins (lobby)
         if (G.skinNpc) {
@@ -1488,10 +1639,12 @@ export function render() {
             etiqueta: "ARENA PvP — acércate",
           });
         }
-        // Mesa de Trabajo / Yunque (lobby): desmantelar armas en Fragmentos
-        // de Alma -- ver ui/workbench.js. Pedido expreso: sin el banderín
-        // flotante (bocadillo) que usan Arena/Fragua -- el yunque de
-        // verdad, plantado en el suelo, a tamaño bien visible.
+        // Alma de Fuego (lobby) -- antes el yunque a secas (icono estático +
+        // emoji ⚒ de respaldo). Mismo sitio/interacción (ver
+        // ui/dialogoAlmas.js: abrirAlmaFuego()): desmantelar armas en
+        // Fragmentos de Alma y fusión, ahora tras un menú de diálogo. El
+        // yunque de hierro se queda de decoración al lado (pedido expreso),
+        // el espíritu animado pasa a ser el marcador principal.
         if (G.yunqueNpc) {
           const m = G.yunqueNpc;
           const s = 52;
@@ -1499,18 +1652,36 @@ export function render() {
           cx.beginPath();
           cx.ellipse(m.x, m.y + 18, 20, 6, 0, 0, TAU);
           cx.fill();
+          if (PUERTAS_V2.mesa) {
+            // Mesa de trabajo v2 al lado (decorado de la estación): 48x32 a
+            // x2, martillea cuando hay alguien cerca.
+            const activa = G.players.some(
+              (p) => !p.ko && Math.hypot(p.x - m.x, p.y - m.y) < 110,
+            );
+            dibujarFrameTira(PUERTAS_V2.mesa, frameMesaV2(activa), 48, 32, m.x - s / 2 - 100, m.y + 18 - 64, 2);
+          }
+          // Yunque de hierro: decorativo, desplazado al lado del espíritu
+          // (antes era el propio marcador, en m.x).
           if (yunqueIcoListo) {
-            cx.drawImage(imYunqueIco, 0, 0, 32, 32, m.x - s / 2, m.y + 18 - s, s, s);
-          } else {
+            cx.drawImage(imYunqueIco, 0, 0, 32, 32, m.x - s / 2 + 46, m.y + 18 - s, s, s);
+          }
+          if (ALMA_NPC.fuego) {
+            const E = 2, sE = 48 * E;
+            dibujarFrameTira(
+              ALMA_NPC.fuego, frameAlmaIdle("fuego"), 48, 48,
+              m.x - sE / 2 - 24, m.y + 18 - sE,
+              E,
+            );
+          } else if (!yunqueIcoListo) {
             cx.fillStyle = "#e9c98a";
             cx.font = "700 26px Alegreya Sans";
             cx.textAlign = "center";
             cx.fillText("⚒", m.x, m.y + 5);
           }
-          cx.fillStyle = "#e9c98a";
+          cx.fillStyle = "#ff9d6a";
           cx.font = "700 10px Alegreya Sans";
           cx.textAlign = "center";
-          cx.fillText("MESA DE TRABAJO — acércate", m.x, m.y + 34);
+          cx.fillText("ALMA DE FUEGO — acércate", m.x, m.y + 34);
         }
         // Fragua de fusión: aparece por sorpresa en una sala normal de la
         // planta (ver systems/floorgen.js, sala.fraguaNpc/poblarSala) --

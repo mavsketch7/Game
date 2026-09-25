@@ -4007,3 +4007,103 @@ img.hoja-pieza {
 *:disabled {
   cursor: none !important;
 }
+
+/* ===== Diálogo de Alma de Agua / Alma de Fuego (ver ui/dialogoAlmas.js) =====
+   Retrato animado (tira de 40 fotogramas de 64x64, solo el "idle" de los
+   primeros 24 en bucle, mismo truco de background-position + steps() que
+   .herreria-yunque) + título + lista de opciones, como en art/npcs/
+   mockup_dialogo.png. Color por alma: naranja fuego / azul agua. */
+#dialogo.overlay {
+  justify-content: center;
+}
+#dialogo .overlay-inner {
+  width: min(640px, 94%);
+}
+.dialogo-caja {
+  --alma: #e8894f;
+  display: flex;
+  gap: 18px;
+  align-items: flex-start;
+  background: rgba(20, 19, 27, 0.97);
+  border: 2px solid var(--alma);
+  border-radius: 12px;
+  padding: 18px 22px;
+}
+.dialogo-caja.agua {
+  --alma: #6fb3e8;
+}
+.dialogo-avatar {
+  flex-shrink: 0;
+  width: 128px;
+  height: 128px;
+  border: 3px solid var(--alma);
+  border-radius: 8px;
+  background-repeat: no-repeat;
+  background-size: 5120px 128px;
+  image-rendering: pixelated;
+}
+.dialogo-avatar.fuego {
+  background-image: url("/assets/ui/dialogo/avatar_alma_fuego.png");
+  animation: alma-idle-fuego 2.28s steps(24, jump-end) infinite;
+}
+.dialogo-avatar.agua {
+  background-image: url("/assets/ui/dialogo/avatar_alma_agua.png");
+  animation: alma-idle-agua 2.4s steps(24, jump-end) infinite;
+}
+@keyframes alma-idle-fuego {
+  from { background-position-x: 0; }
+  to { background-position-x: -3072px; }
+}
+@keyframes alma-idle-agua {
+  from { background-position-x: 0; }
+  to { background-position-x: -3072px; }
+}
+.dialogo-cuerpo {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.dialogo-titulo {
+  color: var(--alma, #e8894f);
+  font-size: 1.3rem;
+  margin: 0 0 8px;
+}
+.dialogo-titulo.fuego { color: #e8894f; }
+.dialogo-titulo.agua { color: #6fb3e8; }
+.dialogo-opcion {
+  background: none;
+  border: none;
+  text-align: left;
+  color: var(--hueso, #e9e3d5);
+  font-family: inherit;
+  font-size: 1.05rem;
+  padding: 6px 4px;
+  cursor: pointer;
+  border-radius: 6px;
+}
+.dialogo-opcion .dialogo-flecha {
+  display: inline-block;
+  width: 1.4em;
+  opacity: 0;
+}
+.dialogo-opcion:hover,
+.dialogo-opcion:focus-visible,
+.dialogo-opcion.pad-foco {
+  background: rgba(255, 255, 255, 0.07);
+  outline: none;
+}
+.dialogo-opcion:hover .dialogo-flecha,
+.dialogo-opcion:focus-visible .dialogo-flecha,
+.dialogo-opcion.pad-foco .dialogo-flecha {
+  opacity: 1;
+}
+/* Como en el mockup: la primera opción lleva el ▶ por defecto hasta que el
+   cursor pasa por otra. */
+.dialogo-cuerpo:not(:has(.dialogo-opcion:hover)) .dialogo-opcion:first-of-type .dialogo-flecha {
+  opacity: 1;
+}
+.dialogo-adios {
+  color: var(--ceniza);
+  padding-left: calc(4px + 1.4em);
+}

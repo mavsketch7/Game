@@ -5,7 +5,6 @@
 import { RAREZAS } from "../core/constants.js";
 import { G } from "../core/state.js";
 import { cantidadFragmentos, desmantelarArma, fragPorId } from "../systems/soul.js";
-import { abrirFusion } from "./forjaFusion.js";
 import { toast } from "./notifications.js";
 import { cerrarOverlayBase, iniciarAperturaOverlay, mostrar } from "./overlays.js";
 
@@ -62,23 +61,15 @@ export function abrirYunque() {
       " no lleva armas sueltas en la bolsa (el arma equipada no se puede desmantelar).</p>";
   document.getElementById("yunque-inner").innerHTML =
     '<div class="tienda-cab">' +
-    "<h2>⚒ Mesa de Trabajo</h2>" +
+    "<h2>🔥 Mejorar alma</h2>" +
     '<p style="color:var(--ceniza);font-size:.8rem;margin-top:4px">Desmantela armas de la bolsa de ' +
     p.nombre +
     " en Fragmentos de Alma. Cuanto mejor sea el arma, más y mejores fragmentos suelta.</p>" +
     "</div>" +
     lineas +
-    // La fusión (3 objetos → 1 superior) vive en su propio popup, ver
-    // ui/forjaFusion.js -- accesible desde aquí (pedido expreso: "su
-    // propio botón/acceso desde el mismo NPC del yunque").
-    '<div style="text-align:center;margin-top:14px"><button class="btn dorado" onclick="irAFusion()">⚗ Ir a la Fragua (fusionar objetos)</button></div>' +
-    '<div style="text-align:center;margin-top:8px"><button class="btn" onclick="cerrarYunque()">Cerrar (Esc)</button></div>';
+    '<div style="text-align:center;margin-top:14px"><button class="btn dorado" onclick="cerrarYunque()">Cerrar (Esc)</button></div>' +
+    '<div style="text-align:center;margin-top:8px"><button class="btn" onclick="volverAlmaFuego()">← Volver</button></div>';
   mostrar("yunque");
-}
-
-function irAFusion() {
-  cerrarYunque();
-  abrirFusion();
 }
 
 function desmantelar(idx) {
@@ -99,4 +90,3 @@ export function cerrarYunque() {
 // Expuestas en window: referenciadas desde onclick="..." en HTML generado dinámicamente.
 window.cerrarYunque = cerrarYunque;
 window.desmantelar = desmantelar;
-window.irAFusion = irAFusion;

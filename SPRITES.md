@@ -143,3 +143,21 @@ frecuente hasta ahora.
 - [ ] ¿Autotiling completo o piezas grandes prefabricadas?
 - [ ] Espera confirmación mía (con captura del recorte) antes de que algo
       estructural (muro/suelo/columna) quede wired en el juego.
+
+## 7. Puertas v2 y mesa de trabajo (`dungeon/puertas/`)
+
+Tiras horizontales a tamaño nativo (tiles de 16px), fuentes `.aseprite`
+con tags en `art/puertas/` (medidas y rangos en `puertas_meta.json`).
+Se dibujan desde `render/world.js` (bloque "Puertas v2"); `door1`/`door2`
+y `escaleras` no se han tocado y siguen de respaldo si algo no carga.
+
+- `puerta_h_doble/simple.png` — 48x48 (3x3), 11 fotogramas: 0 cerrada,
+  1..10 apertura (10 abierta). Muros N/S, dibujada a x3.
+- `puerta_v_doble/simple_izq|der.png` — 16x48 (1x3), mismos 11
+  fotogramas. `izq` = muro oeste, `der` = muro este (espejo).
+- `puerta_fase_h|v_*.png` — puerta de cambio de nivel, 20 fotogramas:
+  0-1 cerrada, 2-7 activación, 8-13 apertura, 14-19 portal (bucle).
+- `puerta_fase_portal.png` — la misma sin muro alrededor (exenta), usada
+  para el portal de fin de planta, a x2.
+- `mesa_trabajo.png` (48x32) / `mesa_trabajo_peq.png` (32x32) — 0 reposo,
+  1-4 martilleo. En el lobby, junto al yunque, a x2.

@@ -57,12 +57,16 @@ function lineaOferta(it, idx) {
         );
       }
 
-export function abrirTienda() {
+const VOLVER_ALMA_AGUA =
+  '<div style="text-align:center;margin-top:8px"><button class="btn" onclick="volverAlmaAgua()">← Volver</button></div>';
+
+// Mejoras permanentes: antes la mitad de arriba del panel del mercader
+// (ver abrirTienda(), más abajo, que hacía las dos cosas mezcladas), ahora
+// su propia opción de diálogo -- "Alma de Agua › Mejoras permanentes" (ver
+// ui/dialogoAlmas.js). Reutiliza el mismo overlay #tienda (nunca están
+// abiertos los dos paneles del alma de agua a la vez).
+export function abrirMejoras() {
         if (!iniciarAperturaOverlay("tiendaLock")) return;
-        if (!ofertaTienda) {
-          const f = Math.max(1, G.planta || 1);
-          ofertaTienda = [genItem(f), genItem(f), genItem(f)];
-        }
         const lineas = MEJORAS_TIENDA.map((m) => {
           const niv = META.mejoras[m.id],
             max = niv >= m.max,
@@ -102,22 +106,42 @@ export function abrirTienda() {
             "</div>"
           );
         }).join("");
+        document.getElementById("tienda-inner").innerHTML =
+          '<div class="tienda-cab">' +
+          "<h2>💧 Mejoras permanentes</h2>" +
+          '<div class="tienda-oro">Banca: ' +
+          META.oro +
+          " 🪙</div>" +
+          '<p style="color:var(--ceniza);font-size:.8rem;margin-top:4px">Se aplican a todo el grupo en todas las partidas.</p>' +
+          "</div>" +
+          lineas +
+          '<div style="text-align:center;margin-top:14px"><button class="btn dorado" onclick="cerrarTienda()">Cerrar (Esc)</button></div>' +
+          VOLVER_ALMA_AGUA;
+        mostrar("tienda");
+      }
+
+// Objetos del día: la otra mitad de lo que hacía abrirTienda() -- ahora
+// "Alma de Agua › Comprar objetos" (ver ui/dialogoAlmas.js).
+export function abrirComprarObjetos() {
+        if (!iniciarAperturaOverlay("tiendaLock")) return;
+        if (!ofertaTienda) {
+          const f = Math.max(1, G.planta || 1);
+          ofertaTienda = [genItem(f), genItem(f), genItem(f)];
+        }
         const ofertaLineas = ofertaTienda.length
           ? ofertaTienda.map(lineaOferta).join("")
           : '<p style="color:var(--ceniza);font-size:.8rem">Vuelve más tarde para ver objetos nuevos.</p>';
         document.getElementById("tienda-inner").innerHTML =
           '<div class="tienda-cab">' +
-          "<h2>🛒 Mercader del Gremio</h2>" +
+          "<h2>🎒 Comprar objetos</h2>" +
           '<div class="tienda-oro">Banca: ' +
           META.oro +
           " 🪙</div>" +
-          '<p style="color:var(--ceniza);font-size:.8rem;margin-top:4px">Mejoras permanentes: se aplican a todo el grupo en todas las partidas.</p>' +
+          '<p style="color:var(--ceniza);font-size:.75rem;margin-top:4px">Van a la bolsa del personaje seleccionado en la ficha. Se renuevan al volver a entrar.</p>' +
           "</div>" +
-          lineas +
-          '<h3 style="margin-top:14px;font-size:.85rem;color:var(--vespero)">🎒 Objetos del día</h3>' +
-          '<p style="color:var(--ceniza);font-size:.75rem;margin-bottom:6px">Van a la bolsa del personaje seleccionado en la ficha. Se renuevan al volver a entrar.</p>' +
           ofertaLineas +
-          '<div style="text-align:center;margin-top:14px"><button class="btn dorado" onclick="cerrarTienda()">Cerrar (Esc)</button></div>';
+          '<div style="text-align:center;margin-top:14px"><button class="btn dorado" onclick="cerrarTienda()">Cerrar (Esc)</button></div>' +
+          VOLVER_ALMA_AGUA;
         mostrar("tienda");
       }
 
@@ -136,7 +160,7 @@ function comprarMejora(id) {
         );
         // curar al nuevo máximo si compraron HP
         for (const p of G.players) p.hp = clamp(p.hp, 1, statsTot(p).hpMax);
-        abrirTienda();
+        abrirMejoras();
       }
 
 function comprarObjeto(idx) {
@@ -151,12 +175,16 @@ function comprarObjeto(idx) {
         p.bolsa.push(it);
         ofertaTienda.splice(idx, 1);
         toast(p.nombre + " compra " + it.nombre, RAREZAS[it.rareza].col);
-        abrirTienda();
+        abrirComprarObjetos();
+      }
+
+export function renovarOferta() {
+        ofertaTienda = null;
       }
 
 export function cerrarTienda() {
         cerrarOverlayBase("tienda");
-        ofertaTienda = null;
+        renovarOferta();
       }
 
 // Expuestas en window: referenciadas desde onclick="..." en HTML generado dinámicamente.

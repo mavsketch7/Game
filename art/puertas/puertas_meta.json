@@ -1,0 +1,367 @@
+{
+ "puerta_h_doble": {
+  "frame": [
+   48,
+   48
+  ],
+  "frames": 11,
+  "tags": {
+   "cerrada": [
+    0,
+    0
+   ],
+   "apertura": [
+    1,
+    10
+   ],
+   "abierta": [
+    10,
+    10
+   ],
+   "cierre": [
+    2,
+    10,
+    "reverse"
+   ]
+  }
+ },
+ "puerta_v_doble_izq": {
+  "frame": [
+   16,
+   48
+  ],
+  "frames": 11,
+  "tags": {
+   "cerrada": [
+    0,
+    0
+   ],
+   "apertura": [
+    1,
+    10
+   ],
+   "abierta": [
+    10,
+    10
+   ],
+   "cierre": [
+    2,
+    10,
+    "reverse"
+   ]
+  }
+ },
+ "puerta_v_doble_der": {
+  "frame": [
+   16,
+   48
+  ],
+  "frames": 11,
+  "tags": {
+   "cerrada": [
+    0,
+    0
+   ],
+   "apertura": [
+    1,
+    10
+   ],
+   "abierta": [
+    10,
+    10
+   ],
+   "cierre": [
+    2,
+    10,
+    "reverse"
+   ]
+  }
+ },
+ "puerta_h_simple": {
+  "frame": [
+   48,
+   48
+  ],
+  "frames": 11,
+  "tags": {
+   "cerrada": [
+    0,
+    0
+   ],
+   "apertura": [
+    1,
+    10
+   ],
+   "abierta": [
+    10,
+    10
+   ],
+   "cierre": [
+    2,
+    10,
+    "reverse"
+   ]
+  }
+ },
+ "puerta_v_simple_izq": {
+  "frame": [
+   16,
+   48
+  ],
+  "frames": 11,
+  "tags": {
+   "cerrada": [
+    0,
+    0
+   ],
+   "apertura": [
+    1,
+    10
+   ],
+   "abierta": [
+    10,
+    10
+   ],
+   "cierre": [
+    2,
+    10,
+    "reverse"
+   ]
+  }
+ },
+ "puerta_v_simple_der": {
+  "frame": [
+   16,
+   48
+  ],
+  "frames": 11,
+  "tags": {
+   "cerrada": [
+    0,
+    0
+   ],
+   "apertura": [
+    1,
+    10
+   ],
+   "abierta": [
+    10,
+    10
+   ],
+   "cierre": [
+    2,
+    10,
+    "reverse"
+   ]
+  }
+ },
+ "puerta_fase_h_doble": {
+  "frame": [
+   48,
+   48
+  ],
+  "frames": 20,
+  "tags": {
+   "cerrada": [
+    0,
+    1
+   ],
+   "activacion": [
+    2,
+    7
+   ],
+   "apertura": [
+    8,
+    13
+   ],
+   "portal": [
+    14,
+    19
+   ]
+  }
+ },
+ "puerta_fase_v_doble_izq": {
+  "frame": [
+   16,
+   48
+  ],
+  "frames": 20,
+  "tags": {
+   "cerrada": [
+    0,
+    1
+   ],
+   "activacion": [
+    2,
+    7
+   ],
+   "apertura": [
+    8,
+    13
+   ],
+   "portal": [
+    14,
+    19
+   ]
+  }
+ },
+ "puerta_fase_v_doble_der": {
+  "frame": [
+   16,
+   48
+  ],
+  "frames": 20,
+  "tags": {
+   "cerrada": [
+    0,
+    1
+   ],
+   "activacion": [
+    2,
+    7
+   ],
+   "apertura": [
+    8,
+    13
+   ],
+   "portal": [
+    14,
+    19
+   ]
+  }
+ },
+ "puerta_fase_h_simple": {
+  "frame": [
+   48,
+   48
+  ],
+  "frames": 20,
+  "tags": {
+   "cerrada": [
+    0,
+    1
+   ],
+   "activacion": [
+    2,
+    7
+   ],
+   "apertura": [
+    8,
+    13
+   ],
+   "portal": [
+    14,
+    19
+   ]
+  }
+ },
+ "puerta_fase_v_simple_izq": {
+  "frame": [
+   16,
+   48
+  ],
+  "frames": 20,
+  "tags": {
+   "cerrada": [
+    0,
+    1
+   ],
+   "activacion": [
+    2,
+    7
+   ],
+   "apertura": [
+    8,
+    13
+   ],
+   "portal": [
+    14,
+    19
+   ]
+  }
+ },
+ "puerta_fase_v_simple_der": {
+  "frame": [
+   16,
+   48
+  ],
+  "frames": 20,
+  "tags": {
+   "cerrada": [
+    0,
+    1
+   ],
+   "activacion": [
+    2,
+    7
+   ],
+   "apertura": [
+    8,
+    13
+   ],
+   "portal": [
+    14,
+    19
+   ]
+  }
+ },
+ "mesa_trabajo": {
+  "frame": [
+   48,
+   32
+  ],
+  "frames": 5,
+  "tags": {
+   "idle": [
+    0,
+    0
+   ],
+   "uso": [
+    1,
+    4
+   ]
+  }
+ },
+ "mesa_trabajo_peq": {
+  "frame": [
+   32,
+   32
+  ],
+  "frames": 5,
+  "tags": {
+   "idle": [
+    0,
+    0
+   ],
+   "uso": [
+    1,
+    4
+   ]
+  }
+ },
+ "puerta_fase_portal": {
+  "frame": [
+   48,
+   48
+  ],
+  "frames": 20,
+  "tags": {
+   "cerrada": [
+    0,
+    1
+   ],
+   "activacion": [
+    2,
+    7
+   ],
+   "apertura": [
+    8,
+    13
+   ],
+   "portal": [
+    14,
+    19
+   ]
+  }
+ }
+}

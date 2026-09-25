@@ -201,7 +201,13 @@ function render() {
     p.bolsa.length +
     ")</h3>" +
     gridBolsaFusion(p) +
-    '<div style="text-align:center;margin-top:14px"><button class="btn" onclick="cerrarFusion()">Cerrar (Esc)</button></div>';
+    '<div style="text-align:center;margin-top:14px"><button class="btn" onclick="cerrarFusion()">Cerrar (Esc)</button></div>' +
+    // "Volver" solo si se llegó aquí desde el diálogo de Alma de Fuego (lobby)
+    // -- la fragua sorpresa de la mazmorra (ver sala.fraguaNpc en
+    // floorgen.js) no tiene a dónde volver.
+    (G.escena === "lobby"
+      ? '<div style="text-align:center;margin-top:8px"><button class="btn" onclick="volverAlmaFuego()">← Volver</button></div>'
+      : "");
 }
 
 function togFusionPop(idx) {

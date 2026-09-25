@@ -16,11 +16,10 @@ import { leerInput } from "../systems/input.js";
 import { actualizarNavegacion, obtenerRumbo } from "../systems/navegacion.js";
 import { finPartida, plantaDespejada } from "../systems/loot.js";
 import { abrirCartasParaJugador } from "../ui/cardsOverlay.js";
+import { abrirAlmaAgua, abrirAlmaFuego } from "../ui/dialogoAlmas.js";
 import { banner, toast } from "../ui/notifications.js";
 import { abrirArenaPvp } from "../ui/pvp.js";
-import { abrirTienda } from "../ui/shop.js";
 import { abrirSkins } from "../ui/skins.js";
-import { abrirYunque } from "../ui/workbench.js";
 import { abrirFusion } from "../ui/forjaFusion.js";
 import { az, clamp, rnd } from "../utils/helpers.js";
 
@@ -2146,13 +2145,13 @@ export function update(dt) {
           }
         }
 
-        // mercader (solo en lobby): abrir tienda por proximidad
+        // Alma de Agua (solo en lobby): abrir diálogo por proximidad
         if (G.escena === "lobby" && G.mercader) {
           const cerca = vivos().some(
             (q) => Math.hypot(G.mercader.x - q.x, G.mercader.y - q.y) < 50,
           );
           if (cerca && !G.tiendaLock && !G.pausa) {
-            abrirTienda();
+            abrirAlmaAgua();
           }
           if (!cerca) G.tiendaLock = false;
         }
@@ -2166,14 +2165,14 @@ export function update(dt) {
           }
           if (!cerca) G.skinLock = false;
         }
-        // Mesa de Trabajo / Yunque (solo en lobby): desmantelar armas en
-        // Fragmentos de Alma -- ver ui/workbench.js y systems/soul.js.
+        // Alma de Fuego (solo en lobby): abrir diálogo por proximidad --
+        // ver ui/dialogoAlmas.js (reparte a ui/workbench.js/forjaFusion.js).
         if (G.escena === "lobby" && G.yunqueNpc) {
           const cerca = vivos().some(
             (q) => Math.hypot(G.yunqueNpc.x - q.x, G.yunqueNpc.y - q.y) < 50,
           );
           if (cerca && !G.yunqueLock && !G.pausa) {
-            abrirYunque();
+            abrirAlmaFuego();
           }
           if (!cerca) G.yunqueLock = false;
         }

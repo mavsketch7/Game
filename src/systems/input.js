@@ -28,7 +28,8 @@ let cerrarTienda = null,
   cerrarSkins = null,
   cerrarYunque = null,
   cerrarFusion = null,
-  cerrarArenaPvp = null;
+  cerrarArenaPvp = null,
+  cerrarDialogo = null;
 import("../ui/shop.js").then((m) => {
   cerrarTienda = m.cerrarTienda;
 });
@@ -43,6 +44,9 @@ import("../ui/forjaFusion.js").then((m) => {
 });
 import("../ui/pvp.js").then((m) => {
   cerrarArenaPvp = m.cerrarArenaPvp;
+});
+import("../ui/dialogoAlmas.js").then((m) => {
+  cerrarDialogo = m.cerrarDialogo;
 });
 
 export const keys = {};
@@ -248,6 +252,7 @@ const OVERLAYS_PAD = [
         "yunque",
         "fusion",
         "arena-pvp",
+        "dialogo",
         "inv",
         "fin",
       ];
@@ -305,6 +310,7 @@ function padCierra() {
         else if (ov === "yunque") cerrarYunque && cerrarYunque();
         else if (ov === "fusion") cerrarFusion && cerrarFusion();
         else if (ov === "arena-pvp") cerrarArenaPvp && cerrarArenaPvp();
+        else if (ov === "dialogo") cerrarDialogo && cerrarDialogo();
         else if (ov === "info-overlay") cerrarInfo();
         padFoco = 0;
       }
@@ -479,6 +485,12 @@ window.addEventListener("keydown", (e) => {
                 .classList.contains("oculto")
             ) {
               cerrarArenaPvp && cerrarArenaPvp();
+              return;
+            }
+            if (
+              !document.getElementById("dialogo").classList.contains("oculto")
+            ) {
+              cerrarDialogo && cerrarDialogo();
               return;
             }
             cerrarInv();

@@ -326,7 +326,7 @@ export function iniciarLobby() {
         // nada más.
         G.skinNpc = null;
         G.arenaNpc = { x: LOBBY_W / 2, y: 380 };
-        G.yunqueNpc = { x: LOBBY_W / 2 - 330, y: 280 };
+        G.yunqueNpc = { x: LOBBY_W / 2 - 240, y: 280 };
         // Cofre de pruebas (QA): solo aparece con ?qa=1 en la URL -- a
         // propósito NO depende de import.meta.env.DEV para que se pueda
         // activar también en el build de producción sin tener que montar
