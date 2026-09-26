@@ -559,6 +559,8 @@ function serializarEstado() {
             nace: a.nace,
             tick: a.tick,
             senda: a.senda,
+            sArc: a.sArc,
+            owner: a.owner,
           })),
           D: G.drops.map((dr) => ({
             x: dr.x,

@@ -126,7 +126,29 @@ imAgujero.onload = () => { agujeroListo = true; };
 imAgujero.src = `${import.meta.env.BASE_URL}assets/sprites/fx/agujero_negro.png`;
 const imRastro = new Image();
 let rastroListo = false;
-imRastro.onload = () => { rastroListo = true; };
+// Pincel tileable por fotograma: la galaxia es una elipse con los extremos
+// vacíos, así que repetirla tal cual dejaba un hueco cada 32px (parecía una
+// fila de sellos). Solo se usan sus columnas centrales (RASTRO_COL0..+18) y se
+// repiten en ESPEJO (18 + 18 columnas) para que la textura corra continua por
+// el trazo sin huecos ni costuras.
+const RASTRO_TIRAS = [];
+const RASTRO_COL0 = 7, RASTRO_TILE = 18;
+imRastro.onload = () => {
+  for (let f = 0; f < 10; f++) {
+    const c = document.createElement("canvas");
+    c.width = RASTRO_TILE * 2;
+    c.height = 20;
+    const g = c.getContext("2d");
+    g.drawImage(imRastro, f * 32 + RASTRO_COL0, 0, RASTRO_TILE, 20, 0, 0, RASTRO_TILE, 20);
+    g.save();
+    g.translate(RASTRO_TILE * 2, 0);
+    g.scale(-1, 1);
+    g.drawImage(imRastro, f * 32 + RASTRO_COL0, 0, RASTRO_TILE, 20, 0, 0, RASTRO_TILE, 20);
+    g.restore();
+    RASTRO_TIRAS.push(c);
+  }
+  rastroListo = true;
+};
 imRastro.src = `${import.meta.env.BASE_URL}assets/sprites/fx/rastro_galaxia.png`;
 // Duración de cada fotograma del agujero (ms) -- los del .aseprite; su suma
 // hasta el fotograma 18 (destello) es AGUJERO_ESTALLIDO en systems/abilities.js.
@@ -146,6 +168,55 @@ function frameRastro(edad, total) {
   if (ms < 210) return Math.floor(ms / 70);
   if (resta < 360) return 6 + Math.min(3, Math.floor((360 - resta) / 90));
   return 3 + (Math.floor((ms - 210) / 90) % 3);
+}
+// Rastro arcano como PINCEL (no un sello por parche): los parches de la Senda
+// arcana (ver actualizarSendaElemental, a.sArc = distancia recorrida) son los
+// puntos de un camino; entre cada par se dibuja un trozo de la galaxia
+// (32x20, x2) girado a la dirección del tramo y tomado de la columna que toca
+// según la distancia recorrida -- así la textura corre continua a lo largo del
+// trazo en vez de repetirse entera en cada parche. El fotograma de cada tramo
+// sale de su edad (aparece -> brilla -> se disipa), así la animación viaja por
+// el trazo como una onda, y el alfa lo apaga por la cola.
+const RASTRO_ESC = 2;
+function dibujarRastroArcano() {
+  const pts = G.areas.filter((a) => a.senda && a.elemento === "arcano" && a.ttlTotal && a.sArc !== undefined);
+  if (!pts.length) return;
+  const prev = cx.imageSmoothingEnabled;
+  cx.imageSmoothingEnabled = false;
+  const ALTO = 20 * RASTRO_ESC;
+  for (let i = 0; i < pts.length; i++) {
+    const B = pts[i], A = pts[i - 1];
+    const edad = B.ttlTotal - B.ttl;
+    const alfa = Math.min(1, B.ttl / 0.5) * Math.min(1, edad / 0.08);
+    if (alfa <= 0) continue;
+    const f = frameRastro(edad, B.ttlTotal);
+    if (!A || A.owner !== B.owner || Math.hypot(B.x - A.x, B.y - A.y) > 50 || Math.abs(A.ttl - B.ttl) > 0.2) {
+      // primer punto de un trazo (o parado): un toque suelto del pincel
+      cx.globalAlpha = alfa * 0.8;
+      cx.drawImage(imRastro, f * 32, 0, 32, 20, Math.round(B.x - 16 * RASTRO_ESC), Math.round(B.y - 26), 32 * RASTRO_ESC, ALTO);
+      continue;
+    }
+    const dx = B.x - A.x, dy = B.y - A.y, L = Math.hypot(dx, dy);
+    if (L < 0.5) continue;
+    const PER = RASTRO_TILE * 2;
+    let u = (A.sArc / RASTRO_ESC) % PER;
+    let restante = (L + 1) / RASTRO_ESC; // +1px de solape para que no se vean juntas
+    let pos = 0;
+    cx.globalAlpha = alfa;
+    cx.save();
+    cx.translate(A.x, A.y - 6);
+    cx.rotate(Math.atan2(dy, dx));
+    while (restante > 0.01) {
+      const sw = Math.min(restante, PER - u);
+      cx.drawImage(RASTRO_TIRAS[f], u, 0, sw, 20, pos * RASTRO_ESC, -ALTO / 2, sw * RASTRO_ESC, ALTO);
+      pos += sw;
+      restante -= sw;
+      u = (u + sw) % PER;
+    }
+    cx.restore();
+  }
+  cx.globalAlpha = 1;
+  cx.imageSmoothingEnabled = prev;
 }
 function dibujarFrameTira(img, f, fw, fh, x, y, esc) {
   const prev = cx.imageSmoothingEnabled;
@@ -935,6 +1006,7 @@ export function render() {
         }
 
         // áreas
+        let rastroDibujado = false;
         for (const a of G.areas) {
           // Agujero Negro (ulti arcana del mago, ver crearAgujeroNegro en
           // systems/abilities.js): 96x96 a x2 centrado en el área (r=90).
@@ -943,14 +1015,13 @@ export function render() {
             dibujarFrameTira(imAgujero, frameAgujero(edad), 96, 96, a.x - 96, a.y - 96, 2);
             continue;
           }
-          // Rastro arcano de la Senda (parches con a.senda, uno cada 0.06s):
-          // la galaxia (32x20 a x2 = 64x40, casi el diámetro SENDA_RADIO*2 del
-          // parche) recorre su animación en la vida del parche.
-          if (a.senda && a.elemento === "arcano" && rastroListo && a.ttlTotal) {
-            const alfaRastro = a.ttl < 0.15 ? a.ttl / 0.15 : 1;
-            cx.globalAlpha = alfaRastro;
-            dibujarFrameTira(imRastro, frameRastro(a.ttlTotal - a.ttl, a.ttlTotal), 32, 20, a.x - 32, a.y - 20, 2);
-            cx.globalAlpha = 1;
+          // Rastro arcano de la Senda: todos sus parches se pintan de una vez
+          // como un solo trazo continuo (ver dibujarRastroArcano).
+          if (a.senda && a.elemento === "arcano" && rastroListo && a.ttlTotal && a.sArc !== undefined) {
+            if (!rastroDibujado) {
+              rastroDibujado = true;
+              dibujarRastroArcano();
+            }
             continue;
           }
           // Parches de la Senda Elemental de fuego (ver a.senda en

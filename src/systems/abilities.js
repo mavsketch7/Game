@@ -1063,6 +1063,8 @@ export function sendaElemental(p) {
         p.sendaCd = SENDA_ELEMENTAL.cd;
         p.sendaT = SENDA_ELEMENTAL.dur;
         p._sendaTick = 0;
+        p._sendaPx = undefined;
+        p._sendaS = 0;
         const el = ELEMENTOS[p.elemento];
         fxTexto(p.x, p.y - 24, "Senda de " + el.nombre, el.color, true);
         fxOnda(p.x, p.y, 40, el.color);
@@ -1102,7 +1104,19 @@ export function actualizarSendaElemental(p, dt) {
         p._sendaTick -= dt;
         if (p._sendaTick <= 0) {
           p._sendaTick = SENDA_INTERVALO[p.elemento] || 0.06;
+          // Distancia recorrida desde que empezó la Senda: el rastro arcano se
+          // dibuja como UN trazo continuo de pincel (ver dibujarRastroArcano
+          // en render/world.js) y necesita saber la posición de cada parche a
+          // lo largo del camino para que la textura no salte al desaparecer
+          // los más viejos.
+          const dS = p._sendaPx === undefined ? 0 : Math.hypot(p.x - p._sendaPx, p.y - p._sendaPy);
+          p._sendaS = (p._sendaS || 0) + dS;
+          p._sendaPx = p.x;
+          p._sendaPy = p.y;
           crearArea(p.x, p.y, SENDA_RADIO, p.elemento, SENDA_MULT, p, true);
+          const parche = G.areas[G.areas.length - 1];
+          parche.sArc = p._sendaS;
+          parche.owner = p.idx;
         }
       }
 
