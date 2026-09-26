@@ -56,7 +56,12 @@ export function ajustarLienzo() {
         }
         const limite = Math.min(maxW / W, maxH / H);
         let esc;
-        if (AJ.escala === "auto") esc = escalaSinMoire(limite);
+        // Pantalla completa: ocupa TODO lo que cabe, sin redondear al entero
+        // (con el redondeo, en un monitor 2560x1440 el lienzo quedaba al ~75%
+        // con anchas franjas negras -- pedido expreso: "que ocupe full
+        // width"). En ventana normal se mantiene el entero anti-moiré.
+        if (fs && AJ.escala === "auto") esc = limite;
+        else if (AJ.escala === "auto") esc = escalaSinMoire(limite);
         else esc = escalaSinMoire(Math.min(parseFloat(AJ.escala), limite));
         // El suelo de 0.5 es solo para que una ventana normal no encoja el
         // lienzo hasta hacerlo ilegible -- nunca debe forzarlo a un tamaño

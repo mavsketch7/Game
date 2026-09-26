@@ -39,6 +39,18 @@ const PUERTAS_V2_SRC = {
   mesa: "mesa_trabajo",
 };
 const PUERTAS_V2 = {};
+// Orbe arcano del mago (ataque básico): vuelo en bucle (8 fotogramas de
+// 48x24, el orbe en (33.5,12) y la estela hacia la izquierda, se rota con
+// la velocidad) e impacto (9 fotogramas de 48x48 centrados). Fuente:
+// art/magia/orbe_arcano.aseprite. Si no cargan, se dibuja el círculo de antes.
+const ORBE_ARC = {};
+for (const [k, n] of [["vuelo", "orbe_arcano_vuelo"], ["impacto", "orbe_arcano_impacto"]]) {
+  const im = new Image();
+  im.onload = () => {
+    ORBE_ARC[k] = im;
+  };
+  im.src = `${import.meta.env.BASE_URL}assets/sprites/fx/arcano/${n}.png`;
+}
 for (const k in PUERTAS_V2_SRC) {
   const im = new Image();
   im.onload = () => {
@@ -644,9 +656,22 @@ export function render() {
           const centroY = base.reduce((s, p) => s + p.y, 0) / base.length;
           camX = clamp(centroX - W / 2, 0, Math.max(0, SALA_W - W));
           camY = clamp(centroY - H / 2, 0, Math.max(0, SALA_H - H));
+          // Sala MÁS PEQUEÑA que la pantalla (el vestíbulo, 900x520 en un
+          // lienzo de 960x560): centrada en vez de pegada arriba-izquierda,
+          // con el margen que sobra en negro (ver el relleno de abajo).
+          if (SALA_W < W) camX = (SALA_W - W) / 2;
+          if (SALA_H < H) camY = (SALA_H - H) / 2;
         }
         if (G) G.cam = { x: camX, y: camY };
 
+        // El lienzo nunca se borraba entre fotogramas: lo que queda fuera de
+        // una sala más pequeña que la pantalla enseñaba restos de lo último
+        // que se dibujó ahí (el suelo y el marco morado de la portada, la
+        // "L" del vestíbulo). Se pinta de negro antes de nada.
+        if (G && (SALA_W < W || SALA_H < H)) {
+          cx.fillStyle = "#0c0805";
+          cx.fillRect(0, 0, W, H);
+        }
         cx.save();
         if (G && G.shake > 0)
           cx.translate(rnd(-G.shake, G.shake), rnd(-G.shake, G.shake));
@@ -2303,6 +2328,18 @@ export function render() {
             cx.lineTo(pr.x - 1, pr.y + 6);
             cx.closePath();
             cx.fill();
+          } else if (pr.tipo === "orbeArc" && ORBE_ARC.vuelo) {
+            // escala con la carga (pr.r 4..11): ~0.75x sin cargar, ~1.5x a tope
+            const esc = ((pr.r || 4) + 3) / 9.5;
+            const fOrbe = Math.floor(animGlobal * 14) % 8;
+            cx.save();
+            cx.translate(pr.x, pr.y);
+            cx.rotate(Math.atan2(pr.vy, pr.vx));
+            const prevSm = cx.imageSmoothingEnabled;
+            cx.imageSmoothingEnabled = false;
+            cx.drawImage(ORBE_ARC.vuelo, fOrbe * 48, 0, 48, 24, -33.5 * esc, -12 * esc, 48 * esc, 24 * esc);
+            cx.imageSmoothingEnabled = prevSm;
+            cx.restore();
           } else if (pr.tipo === "orbeArc") {
             const rr = pr.r || 4;
             cx.fillStyle = "rgba(192,132,240,.25)";
@@ -2573,6 +2610,18 @@ export function render() {
               cx.globalAlpha = k < 0.2 ? k / 0.2 : 1;
               cx.drawImage(imgImpact, f.x - imgImpact.width / 2, f.y - imgImpact.height / 2);
               cx.globalAlpha = 1;
+            }
+          } else if (f.tipo === "impactoArc") {
+            // Estallido del orbe arcano al impactar (ver fxImpactoArcano en
+            // render/effects.js) -- 9 fotogramas repartidos en su vida.
+            if (ORBE_ARC.impacto) {
+              const nI = 9;
+              const fI = Math.min(nI - 1, Math.max(0, Math.floor((1 - k) * nI)));
+              const eI = f.escala || 1;
+              const prevSm = cx.imageSmoothingEnabled;
+              cx.imageSmoothingEnabled = false;
+              cx.drawImage(ORBE_ARC.impacto, fI * 48, 0, 48, 48, f.x - 24 * eI, f.y - 24 * eI, 48 * eI, 48 * eI);
+              cx.imageSmoothingEnabled = prevSm;
             }
           } else if (f.tipo === "part") {
             f.x += f.vx * 0.016;

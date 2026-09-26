@@ -454,7 +454,7 @@ export function iniciarLobby() {
         );
         banner("Vestíbulo del Gremio — probad, comprad y entrad al portal");
         toast(
-          "El mercader (" + META.oro + " 🪙 disponibles) espera a la derecha",
+          "Habla con las Almas (E) — " + META.oro + " 🪙 disponibles",
           "#ffd27f",
         );
       }
