@@ -6,7 +6,7 @@ import { META } from "./save.js";
 import { G } from "./state.js";
 import { NET, netAplicarInputs } from "../net/peer.js";
 import { fxOnda, fxParticulas, fxTexto } from "../render/effects.js";
-import { registrarAbrirNpc, CARGA_ARQ_MAX, CARGA_ARQ_ZONA, CARGA_CUCH_MAX, CARGA_CUCH_ZONA, actualizarSendaElemental, actualizarSombraPicaro, aplicarImbuido, atacar, danoPilar, dispararArcano, dispararFlechaCargada, ejecutarGolpeCombo, golpeObjeto, lanzarCuchillo } from "../systems/abilities.js";
+import { actualizarAgujeroNegro, registrarAbrirNpc, CARGA_ARQ_MAX, CARGA_ARQ_ZONA, CARGA_CUCH_MAX, CARGA_CUCH_ZONA, actualizarSendaElemental, actualizarSombraPicaro, aplicarImbuido, atacar, danoPilar, dispararArcano, dispararFlechaCargada, ejecutarGolpeCombo, golpeObjeto, lanzarCuchillo } from "../systems/abilities.js";
 import { sfx, sfxAterrizaje, sfxCargaArcano, sfxCargaCuchillo, sfxCargaLista, sfxFuegoBolaImpacto, sfxGolpeAire, sfxGolpeCritico, sfxImpactoGuerrero, sfxImpactoProyectil, sfxMoneda, sfxPaso, sfxTensarArco } from "../systems/audio.js";
 import { esJefe, escalaEnemigo } from "../systems/bosses.js";
 import { curarP, danoAEnemigo, danoAlJugador, explotarBomber, ganarXP, masCercano, matarEnemigo, spawnClon, spawnEnemigo, spawnJefeCaballero, statsTot, tipoAleatorio, vivos } from "../systems/combat.js";
@@ -965,6 +965,7 @@ export function update(dt) {
           a.ttl -= dt;
           a.tick -= dt;
           if (a.nace > 0) a.nace -= dt;
+          if (a.clase === "agujero") actualizarAgujeroNegro(a, dt);
           // Hielo se rompe en partículas al desvanecerse (pedido expreso,
           // tanto el rastro de la Senda como la ulti -- ver ICE_BURST en
           // render/sprites.js/world.js) -- una vez, justo al entrar en la

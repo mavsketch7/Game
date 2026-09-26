@@ -555,8 +555,10 @@ function serializarEstado() {
             elemento: a.elemento,
             color: a.color,
             ttl: a.ttl,
+            ttlTotal: a.ttlTotal,
             nace: a.nace,
             tick: a.tick,
+            senda: a.senda,
           })),
           D: G.drops.map((dr) => ({
             x: dr.x,

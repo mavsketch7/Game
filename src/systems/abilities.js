@@ -7,7 +7,7 @@ import { G } from "../core/state.js";
 import { fxEstocada, fxImpacto, fxOnda, fxParticulas, fxTajo, fxTexto, fxViento } from "../render/effects.js";
 import { detenerSendaFuegoAudio, iniciarSendaFuegoAudio, sfx, sfxDisparoArco, sfxFuegoBolaLanzamiento, sfxFuegoUltiCast, sfxFuegoUltiExplosion, sfxGolpeAire, sfxGolpeCritico, sfxImpactoFrhor, sfxImpactoGuerrero, sfxImpactoPicaro, sfxImpactoProyectil, sfxMoneda, sfxRompeBarril, sfxRompeHielo, sfxSwingFrhor } from "./audio.js";
 import { curarP, danoAEnemigo, danoAlJugador, masCercano, matarEnemigo, statsTot, vivos } from "./combat.js";
-import { posDropValida } from "./floorgen.js";
+import { colisionaMuro, posDropValida } from "./floorgen.js";
 import { JUICE } from "./juice.js";
 import { dropItem, genItem } from "./loot.js";
 import { OBJETOS_MITICOS, genObjetoMitico, tieneEfecto } from "./objetosMiticos.js";
@@ -1106,6 +1106,81 @@ export function actualizarSendaElemental(p, dt) {
         }
       }
 
+// Ulti arcana del mago: Agujero Negro (arte real en art/magia/agujero_negro_
+// ultimate.aseprite, 28 fotogramas: formación 0-5, bucle 6-13, colapso 14-17,
+// estallido 18-27 -- ver AGUJERO_DUR_MS en render/world.js, mismos tiempos).
+// Sustituye al "portal" de antes (tragaba a los enemigos y los soltaba arriba
+// con daño de caída): ahora forma un agujero que ATRAE a los enemigos
+// durante formación+bucle+colapso (1.33s) y estalla en el primer fotograma
+// del estallido (el destello blanco), dañando todo lo que quede dentro. El
+// daño es el mismo de antes (2.2x ataque, 1.4x a jefes, que además no se
+// mueven del sitio).
+export const AGUJERO_ESTALLIDO = 1.33; // s hasta el destello (suma de formación+bucle+colapso)
+export const AGUJERO_TOTAL = 2.17; // s de animación completa
+export const AGUJERO_RADIO = 90;
+const AGUJERO_TIRON = 150; // px/s con los que arrastra hacia el centro
+const AGUJERO_RADIO_TIRON = 1.35; // el tirón alcanza algo más lejos que el estallido
+
+function crearAgujeroNegro(x, y, p, dmg) {
+        G.areas.push({
+          clase: "agujero",
+          x,
+          y,
+          r: AGUJERO_RADIO,
+          ttl: AGUJERO_TOTAL,
+          ttlTotal: AGUJERO_TOTAL,
+          tick: 99,
+          nace: 0,
+          duenio: p,
+          dmg,
+          estallo: false,
+        });
+      }
+
+// Llamado cada frame por core/loop.js para cada área de clase "agujero".
+export function actualizarAgujeroNegro(a, dt) {
+        if (a.estallo) return;
+        const edad = a.ttlTotal - a.ttl;
+        if (edad < AGUJERO_ESTALLIDO) {
+          for (const e of G.enemigos) {
+            if (e.hp <= 0 || e.dummy || e.jefe || e.parteDeJefe || e.armaDeJefe) continue;
+            const dx = a.x - e.x, dy = a.y - e.y;
+            const d = Math.hypot(dx, dy);
+            if (d > a.r * AGUJERO_RADIO_TIRON + e.r || d < 10) continue;
+            const paso = Math.min(d - 8, AGUJERO_TIRON * dt);
+            const nx = e.x + (dx / d) * paso, ny = e.y + (dy / d) * paso;
+            if (!colisionaMuro(nx, e.y, e.r)) e.x = nx;
+            if (!colisionaMuro(e.x, ny, e.r)) e.y = ny;
+            e.stunT = Math.max(e.stunT, 0.12); // sin IA mientras lo arrastra
+          }
+          return;
+        }
+        a.estallo = true;
+        const p = a.duenio || G.players[0];
+        let aplastados = 0;
+        fxOnda(a.x, a.y, a.r, "#c084f0");
+        fxOnda(a.x, a.y, a.r * 0.6, "#e0c0ff");
+        fxParticulas(a.x, a.y, 24, "#c084f0");
+        sfx("golpe");
+        for (const e of G.enemigos) {
+          if (e.hp <= 0 && !e.dummy) continue;
+          if (Math.hypot(e.x - a.x, e.y - a.y) >= a.r + e.r) continue;
+          if (e.jefe) {
+            danoAEnemigo(e, (a.dmg / 2.2) * 1.4, p, true);
+            fxTexto(e.x, e.y - e.r - 8, "¡resiste!", "#c084f0");
+          } else {
+            danoAEnemigo(e, a.dmg, p, true);
+            if (!e.dummy) {
+              e.stunT = Math.max(e.stunT, 0.8);
+              aplastados++;
+            }
+          }
+        }
+        if (aplastados > 0)
+          fxTexto(a.x, a.y - 20, "¡" + aplastados + " aplastado" + (aplastados > 1 ? "s" : "") + "!", "#c084f0", true);
+        G.shake = Math.max(G.shake, 6);
+      }
+
 export function habilidad(p) {
         const t = statsTot(p),
           sk = ROLES[p.rol].skill;
@@ -1235,48 +1310,10 @@ export function habilidad(p) {
                 }
               }
             } else {
-              // PORTAL ARCANO: los enemigos caen y reaparecen arriba con daño de caída
+              // AGUJERO NEGRO: atrae a los enemigos y estalla (ver
+              // crearAgujeroNegro/actualizarAgujeroNegro más arriba)
               sfx("portal");
-              fxOnda(g.x, g.y, 90, "#c084f0");
-              fxOnda(g.x, g.y, 55, "#e0c0ff");
-              fxParticulas(g.x, g.y, 20, "#c084f0");
-              G.areas.push({
-                clase: "malArea",
-                x: g.x,
-                y: g.y,
-                r: 90,
-                ttl: 0.6,
-                tick: 99,
-                nace: 0.1,
-                dps: 0,
-                color: "#c084f0",
-              });
-              let tragados = 0;
-              for (const e of G.enemigos) {
-                if ((e.hp <= 0 && !e.dummy) || e.dummy) continue;
-                if (Math.hypot(e.x - g.x, e.y - g.y) < 90 + e.r) {
-                  if (e.jefe) {
-                    // los jefes resisten el portal: solo daño parcial
-                    danoAEnemigo(e, t.atk * 1.4, p, true);
-                    fxTexto(e.x, e.y - e.r - 8, "¡resiste!", "#c084f0");
-                  } else {
-                    e.portalT = 0.7;
-                    e.portalX = e.x;
-                    e.portalDmg = t.atk * 2.2;
-                    e.portalOwner = p;
-                    fxParticulas(e.x, e.y, 8, "#c084f0");
-                    tragados++;
-                  }
-                }
-              }
-              if (tragados > 0)
-                fxTexto(
-                  g.x,
-                  g.y - 20,
-                  "¡" + tragados + " tragado" + (tragados > 1 ? "s" : "") + "!",
-                  "#c084f0",
-                  true,
-                );
+              crearAgujeroNegro(g.x, g.y, p, t.atk * 2.2);
             }
             G.shake = Math.max(G.shake, 4);
           } else if (p.rol === "picaro") {

@@ -116,6 +116,37 @@ function frameAlmaIdle(k) {
   const ms = (animGlobal * 1000) % total;
   return Math.floor(ms / ALMA_IDLE_DUR_MS[k]);
 }
+// --- FX arcanos del mago (assets/sprites/fx/, fuentes en art/magia/) ---
+// Agujero Negro (ulti arcana, 96x96, 28 fotogramas: formación 0-5, bucle 6-13,
+// colapso 14-17, estallido 18-27) y rastro de galaxia (Senda arcana, 32x20,
+// 10 fotogramas: aparece 0-2, brilla 3-5, se disipa 6-9).
+const imAgujero = new Image();
+let agujeroListo = false;
+imAgujero.onload = () => { agujeroListo = true; };
+imAgujero.src = `${import.meta.env.BASE_URL}assets/sprites/fx/agujero_negro.png`;
+const imRastro = new Image();
+let rastroListo = false;
+imRastro.onload = () => { rastroListo = true; };
+imRastro.src = `${import.meta.env.BASE_URL}assets/sprites/fx/rastro_galaxia.png`;
+// Duración de cada fotograma del agujero (ms) -- los del .aseprite; su suma
+// hasta el fotograma 18 (destello) es AGUJERO_ESTALLIDO en systems/abilities.js.
+const AGUJERO_DUR_MS = [70, 70, 70, 80, 80, 90, 80, 80, 80, 80, 80, 80, 80, 80, 60, 60, 60, 50, 70, 70, 70, 90, 90, 90, 90, 90, 90, 90];
+function frameAgujero(edad) {
+  let ms = edad * 1000;
+  for (let i = 0; i < AGUJERO_DUR_MS.length; i++) {
+    if (ms < AGUJERO_DUR_MS[i]) return i;
+    ms -= AGUJERO_DUR_MS[i];
+  }
+  return AGUJERO_DUR_MS.length - 1;
+}
+// Rastro: aparece (3x70ms) -> brilla en bucle (3x90ms) mientras dura el parche
+// -> se disipa (4x90ms) justo antes de que expire.
+function frameRastro(edad, total) {
+  const ms = edad * 1000, resta = (total - edad) * 1000;
+  if (ms < 210) return Math.floor(ms / 70);
+  if (resta < 360) return 6 + Math.min(3, Math.floor((360 - resta) / 90));
+  return 3 + (Math.floor((ms - 210) / 90) % 3);
+}
 function dibujarFrameTira(img, f, fw, fh, x, y, esc) {
   const prev = cx.imageSmoothingEnabled;
   cx.imageSmoothingEnabled = false;
@@ -905,6 +936,23 @@ export function render() {
 
         // áreas
         for (const a of G.areas) {
+          // Agujero Negro (ulti arcana del mago, ver crearAgujeroNegro en
+          // systems/abilities.js): 96x96 a x2 centrado en el área (r=90).
+          if (a.clase === "agujero" && agujeroListo) {
+            const edad = (a.ttlTotal || 2.17) - a.ttl;
+            dibujarFrameTira(imAgujero, frameAgujero(edad), 96, 96, a.x - 96, a.y - 96, 2);
+            continue;
+          }
+          // Rastro arcano de la Senda (parches con a.senda, uno cada 0.06s):
+          // la galaxia (32x20 a x2 = 64x40, casi el diámetro SENDA_RADIO*2 del
+          // parche) recorre su animación en la vida del parche.
+          if (a.senda && a.elemento === "arcano" && rastroListo && a.ttlTotal) {
+            const alfaRastro = a.ttl < 0.15 ? a.ttl / 0.15 : 1;
+            cx.globalAlpha = alfaRastro;
+            dibujarFrameTira(imRastro, frameRastro(a.ttlTotal - a.ttl, a.ttlTotal), 32, 20, a.x - 32, a.y - 20, 2);
+            cx.globalAlpha = 1;
+            continue;
+          }
           // Parches de la Senda Elemental de fuego (ver a.senda en
           // systems/abilities.js: crearArea/actualizarSendaElemental): arte
           // real (FIRE_COLUMN, un ciclo completo nace->arde->brasas) en vez
