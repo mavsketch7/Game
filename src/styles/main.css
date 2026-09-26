@@ -79,6 +79,24 @@
   background-position: center 32%;
   animation: inicio-zoom 20s ease-in-out infinite alternate;
 }
+/* Vídeo de fondo en bucle (ver ui/intro.js: dos <video> que se funden entre sí
+   al final para que el corte del bucle no se note). Encima del .inicio-fondo
+   (portada.webp), que queda de respaldo si el vídeo no carga o hay
+   "reducir movimiento". */
+.inicio-video {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+.inicio-video video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center 32%;
+  opacity: 0;
+}
 .inicio-vineta {
   position: absolute;
   inset: 0;
