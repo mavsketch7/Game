@@ -85,6 +85,12 @@ export function fxSangre(x, y, dirEmpuje, escala) {
 // danoPilar en systems/abilities.js) -- en CADA golpe, no solo al romperlo
 // (eso ya tenía su propio fxParticulas de escombros). Sin dirección/escala:
 // a diferencia de fxSangre, es un chispazo simétrico, no un splat orientado.
+// Estallido del orbe arcano (ataque básico del mago) -- ver "impactoArc" en
+// render/world.js. escala acompaña al tamaño del orbe (según la carga).
+export function fxImpactoArcano(x, y, escala) {
+        G.fx.push({ id: _fxId++, tipo: "impactoArc", x, y, escala: escala || 1, t: 0.54, t0: 0.54 });
+      }
+
 export function fxImpacto(x, y) {
         if (!IMPACT_VFX.length) return; // hoja aún sin cargar (arranque)
         G.fx.push({ id: _fxId++, tipo: "impacto", x, y, t: IMPACT_VFX_DUR, t0: IMPACT_VFX_DUR });

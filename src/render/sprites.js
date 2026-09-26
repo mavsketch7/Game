@@ -2953,6 +2953,13 @@ function cargarDagaCargadaPicaro() {
   DAGA_CARGADA_SHEET.src = assetUrl("fx/daga_cargada/sheet");
 }
 
+// Orbe arcano del mago (ataque básico arcano, fuente art/magia/orbe_arcano.
+// aseprite): carga en la mano (8 fotogramas de 24x24, la galaxia que crece),
+// vuelo y estallido (estos dos se cargan en render/world.js). La carga se
+// dibuja en dibujarCargaMago (render/character.js).
+export const ORBE_ARC_CARGA = new Image();
+ORBE_ARC_CARGA.src = `${import.meta.env.BASE_URL}assets/sprites/fx/arcano/orbe_arcano_carga.png`;
+
 // Carga perezosa de sprites por clase -- despachador central. El cuerpo
 // base (idle/correr/herido/muerte) y los iconos de clase (KENNEY_ICON_SRC,
 // de los que depende el propio fallback spriteJugador()) se cargan SIEMPRE

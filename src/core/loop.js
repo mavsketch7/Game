@@ -5,7 +5,7 @@ import { iniciarLobby } from "./gameflow.js";
 import { META } from "./save.js";
 import { G } from "./state.js";
 import { NET, netAplicarInputs } from "../net/peer.js";
-import { fxOnda, fxParticulas, fxTexto } from "../render/effects.js";
+import { fxImpactoArcano, fxOnda, fxParticulas, fxTexto } from "../render/effects.js";
 import { actualizarAgujeroNegro, registrarAbrirNpc, CARGA_ARQ_MAX, CARGA_ARQ_ZONA, CARGA_CUCH_MAX, CARGA_CUCH_ZONA, actualizarSendaElemental, actualizarSombraPicaro, aplicarImbuido, atacar, danoPilar, dispararArcano, dispararFlechaCargada, ejecutarGolpeCombo, golpeObjeto, lanzarCuchillo } from "../systems/abilities.js";
 import { sfx, sfxAterrizaje, sfxCargaArcano, sfxCargaCuchillo, sfxCargaLista, sfxFuegoBolaImpacto, sfxGolpeAire, sfxGolpeCritico, sfxImpactoGuerrero, sfxImpactoProyectil, sfxMoneda, sfxPaso, sfxTensarArco } from "../systems/audio.js";
 import { esJefe, escalaEnemigo } from "../systems/bosses.js";
@@ -843,6 +843,8 @@ export function update(dt) {
                 // ahora (distinto del "impactoProyectil" genérico de
                 // arriba, sonido propio pedido expreso).
                 if (pr.tipo === "bola") sfxFuegoBolaImpacto();
+                // orbe arcano: estallido con su sprite (escala según la carga)
+                if (pr.tipo === "orbeArc") fxImpactoArcano(pr.x, pr.y, ((pr.r || 4) + 3) / 9.5);
                 if (
                   pr.duenio &&
                   pr.duenio._poison &&
