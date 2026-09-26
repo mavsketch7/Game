@@ -14,13 +14,19 @@ if (el) {
   // Fondo en vídeo: 20 s, empieza limpio y termina lleno de partículas, así que
   // un loop nativo daría un corte seco. Dos copias: al acercarse el final la
   // segunda entra desde 0 con un fundido y hace de "activa" cuando la primera
-  // acaba (y al revés), sin salto. Sin vídeo (o con "reducir movimiento") se
-  // queda la portada estática de siempre.
+  // acaba (y al revés), sin salto. Si el vídeo no puede
+  // reproducirse se queda la portada estática de siempre.
   const FUNDIDO_VIDEO = 1.8;
   let parar = false;
   function iniciarVideoFondo() {
     const cont = document.getElementById("inicio-video");
-    if (!cont || matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    // Antes también se descartaba con "reducir movimiento" (prefers-reduced-
+    // motion), pero en Windows basta con tener las animaciones del sistema
+    // desactivadas para que el navegador lo reporte -- y entonces nadie veía
+    // el vídeo, solo la portada estática (reportado: "aún carga la imagen
+    // antigua"). Es un fondo silencioso y suave, sin destellos, así que se
+    // reproduce siempre; la portada solo queda de respaldo si el vídeo falla.
+    if (!cont) return;
     const src = `${import.meta.env.BASE_URL}assets/ui/inicio.mp4`;
     const crear = () => {
       const v = document.createElement("video");

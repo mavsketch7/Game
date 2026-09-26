@@ -563,7 +563,32 @@ function calcularPoseHeroe(p, x, yPies, mov) {
         if (conHalo) cx.shadowBlur = 0;
       }
 
-      function dibujarCuerpoHeroe(p, pose, x, yPies) {
+      // Halo del aura de la Senda, horneado una vez por (fotograma, color): el
+// fotograma con el mismo drop-shadow de 2px+5px de antes, en un lienzo con
+// HALO_MARGEN px de sobra por cada lado para que el desenfoque no se recorte.
+const HALO_MARGEN = 10;
+const _halosAura = new WeakMap();
+function haloAura(img, col) {
+  let porColor = _halosAura.get(img);
+  if (!porColor) {
+    porColor = new Map();
+    _halosAura.set(img, porColor);
+  }
+  let c = porColor.get(col);
+  if (!c) {
+    c = document.createElement("canvas");
+    c.width = img.width + HALO_MARGEN * 2;
+    c.height = img.height + HALO_MARGEN * 2;
+    const g = c.getContext("2d");
+    const colAura = hexRgba(col, 0.55);
+    g.filter = `drop-shadow(0 0 2px ${colAura}) drop-shadow(0 0 5px ${colAura})`;
+    g.drawImage(img, HALO_MARGEN, HALO_MARGEN);
+    porColor.set(col, c);
+  }
+  return c;
+}
+
+function dibujarCuerpoHeroe(p, pose, x, yPies) {
         const { img, imgCasco, imgPeto, imgPiernas, flip } = pose;
         // Aura de la Senda Elemental (tecla C, ver systems/abilities.js):
         // pedido expreso de que sea "un aura con la forma del png del
@@ -571,13 +596,25 @@ function calcularPoseHeroe(p, x, yPies, mov) {
         // como ruido visual -- drop-shadow es alpha-aware, así que el halo
         // sale recortado a la silueta real del personaje sin necesidad de
         // dibujar una máscara aparte.
+        // RENDIMIENTO: antes el drop-shadow se aplicaba como cx.filter en CADA
+        // dibujo (cuerpo + hasta 3 capas de armadura) CADA fotograma mientras
+        // durase la Senda -- los filtros de canvas caen a raster por software y
+        // dejaban el juego a ~28 fps (medido con Playwright: 60 fps sin el
+        // filtro, con fuego y con arcano por igual). Ahora el halo se hornea UNA
+        // vez por fotograma de sprite y color (haloAura, cacheado) y por
+        // fotograma solo se hace un drawImage más.
         const auraSenda = p.rol === "mago" && p.sendaT > 0;
-        if (auraSenda) {
-          const colAura = hexRgba(ELEMENTOS[p.elemento].color, 0.55);
-          cx.filter = `drop-shadow(0 0 2px ${colAura}) drop-shadow(0 0 5px ${colAura})`;
-        }
         if (img) {
           const esc = REAL_SPRITE_SCALE[p.rol] || 1;
+          if (auraSenda) {
+            const halo = haloAura(img, ELEMENTOS[p.elemento].color);
+            cx.save();
+            cx.translate(Math.round(x), Math.round(yPies));
+            if (flip) cx.scale(-1, 1);
+            cx.scale(esc, esc);
+            cx.drawImage(halo, -halo.width / 2, -halo.height + HALO_MARGEN);
+            cx.restore();
+          }
           drawSpriteBottom(img, x, yPies, flip, esc);
           if (p.equipo.piernas) dibujarCapaArmadura(imgPiernas, p.equipo.piernas, x, yPies, flip, esc);
           if (p.equipo.peto) dibujarCapaArmadura(imgPeto, p.equipo.peto, x, yPies, flip, esc);
@@ -588,7 +625,6 @@ function calcularPoseHeroe(p, x, yPies, mov) {
           // pies como los frames de arriba, así que se ancla como antes.
           drawSprite(spriteJugador(p), x, yPies - 6, flip, REAL_SPRITE_SCALE[p.rol] || 1);
         }
-        if (auraSenda) cx.filter = "none";
       }
 
 // Preview animado en idle para overlays HTML (ver ui/inventory.js: la

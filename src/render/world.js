@@ -2444,7 +2444,11 @@ export function render() {
             const nP = 12;
             const grosor = 6 + f.r * 0.026;
             cx.save();
-            cx.filter = "blur(1.4px)";
+            // RENDIMIENTO: antes cx.filter = "blur(1.4px)" en cada tajo -- los
+            // filtros de canvas van por software y atacar mirando arriba/abajo
+            // bajaba a ~50 fps con picos de 66 ms (medido). El suavizado del
+            // borde se consigue ahora con un trazo ancho y translúcido del
+            // mismo degradado justo antes del relleno (ver más abajo).
             cx.globalAlpha = k; // antes k*k -- se apaga más despacio, más presencia de estela
             cx.beginPath();
             for (let i = 0; i <= nP; i++) {
@@ -2480,6 +2484,12 @@ export function render() {
             grad.addColorStop(0.45, "rgba(255,247,224,.55)");
             grad.addColorStop(1, "rgba(255,255,255,.95)");
             cx.fillStyle = grad;
+            cx.globalAlpha = k * 0.35;
+            cx.strokeStyle = grad;
+            cx.lineWidth = 2.6;
+            cx.lineJoin = "round";
+            cx.stroke();
+            cx.globalAlpha = k;
             cx.fill();
             // segunda pasada, más translúcida y algo más ancha: dos capas
             // superpuestas leen como una estela con cuerpo en vez de una
@@ -2543,7 +2553,8 @@ export function render() {
             cx.save();
             cx.translate(f.x, f.y);
             cx.rotate(f.dir);
-            cx.filter = "blur(1.6px)";
+            // (sin cx.filter: ver el comentario del tajo -- mismo motivo; el
+            // borde suave sale del trazo translúcido de cada ráfaga)
             cx.globalAlpha = k * 0.85;
             for (const off of [0, -5]) {
               cx.beginPath();
@@ -2556,6 +2567,12 @@ export function render() {
               gradV.addColorStop(0.55, "rgba(214,238,255,.65)");
               gradV.addColorStop(1, "rgba(255,255,255,.9)");
               cx.fillStyle = gradV;
+              cx.save();
+              cx.globalAlpha = k * 0.3;
+              cx.strokeStyle = gradV;
+              cx.lineWidth = 2.4;
+              cx.stroke();
+              cx.restore();
               cx.fill();
             }
             cx.globalAlpha = k;
