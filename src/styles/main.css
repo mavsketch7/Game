@@ -72,17 +72,11 @@
 #pantalla-inicio.oculto {
   display: none;
 }
-.inicio-fondo {
-  position: absolute;
-  inset: 0;
-  background-size: cover;
-  background-position: center 32%;
-  animation: inicio-zoom 20s ease-in-out infinite alternate;
-}
 /* Vídeo de fondo en bucle (ver ui/intro.js: dos <video> que se funden entre sí
-   al final para que el corte del bucle no se note). Encima del .inicio-fondo
-   (portada.webp), que queda de respaldo si el vídeo no carga o hay
-   "reducir movimiento". */
+   al final para que el corte del bucle no se note). Sin capa de portada
+   estática debajo: el `poster` del propio <video> (primer fotograma exacto)
+   cubre el hueco mientras carga, así que #pantalla-inicio solo necesita su
+   color de fondo liso como último respaldo si todo lo demás fallara. */
 .inicio-video {
   position: absolute;
   inset: 0;
@@ -126,14 +120,6 @@
   text-transform: uppercase;
   opacity: 0;
 }
-@keyframes inicio-zoom {
-  from {
-    transform: scale(1);
-  }
-  to {
-    transform: scale(1.06);
-  }
-}
 @keyframes inicio-aparece {
   from {
     opacity: 0;
@@ -155,7 +141,6 @@
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  .inicio-fondo,
   .inicio-start,
   .inicio-logo {
     animation: none !important;

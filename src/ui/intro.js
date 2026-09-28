@@ -6,16 +6,18 @@ import { initAudio, iniciarMusicaAmbiente, reanudarAudio } from "../systems/audi
 const el = document.getElementById("pantalla-inicio");
 
 if (el) {
-  const fondo = document.getElementById("inicio-fondo");
   const logo = document.getElementById("inicio-logo");
-  fondo.style.backgroundImage = `url("${import.meta.env.BASE_URL}assets/ui/portada.webp")`;
   logo.src = `${import.meta.env.BASE_URL}assets/ui/logo.png`;
 
-  // Fondo en vídeo: 20 s, empieza limpio y termina lleno de partículas, así que
-  // un loop nativo daría un corte seco. Dos copias: al acercarse el final la
-  // segunda entra desde 0 con un fundido y hace de "activa" cuando la primera
-  // acaba (y al revés), sin salto. Si el vídeo no puede
-  // reproducirse se queda la portada estática de siempre.
+  // Fondo en vídeo: 20 s (recodificado de art/inicio/portada-soulforge.gif
+  // con tools/gifAVideo.mjs), empieza limpio y termina lleno de partículas,
+  // así que un loop nativo daría un corte seco. Dos copias: al acercarse el
+  // final la segunda entra desde 0 con un fundido y hace de "activa" cuando
+  // la primera acaba (y al revés), sin salto. Sin portada estática de
+  // respaldo: el propio `poster` del <video> (primer fotograma exacto, ver
+  // más abajo) cubre el hueco mientras carga, así que no hay ningún
+  // parpadeo con una imagen vieja antes de que arranque el vídeo de verdad
+  // (reportado: "aún carga la imagen antigua").
   const FUNDIDO_VIDEO = 1.8;
   let parar = false;
   function iniciarVideoFondo() {
@@ -28,9 +30,11 @@ if (el) {
     // reproduce siempre; la portada solo queda de respaldo si el vídeo falla.
     if (!cont) return;
     const src = `${import.meta.env.BASE_URL}assets/ui/inicio.mp4`;
+    const poster = `${import.meta.env.BASE_URL}assets/ui/inicio-poster.jpg`;
     const crear = () => {
       const v = document.createElement("video");
       v.src = src;
+      v.poster = poster;
       v.muted = true;
       v.defaultMuted = true;
       v.playsInline = true;
@@ -42,7 +46,11 @@ if (el) {
     let activo = crear();
     let otro = crear();
     let fundiendo = false;
-    activo.addEventListener("playing", () => { activo.style.opacity = "1"; }, { once: true });
+    // Opacidad a 1 YA (no en el evento "playing"): el poster es el primer
+    // fotograma exacto del propio vídeo, así que se ve al instante sin
+    // esperar nada -- cuando el vídeo real esté listo, sustituye al poster
+    // sin ningún salto visual porque es literalmente el mismo fotograma.
+    activo.style.opacity = "1";
     activo.play().catch(() => cont.remove());
     otro.load();
     function tick() {
