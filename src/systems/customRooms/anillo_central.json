@@ -1,6 +1,7 @@
 {
   "id": "anillo_central",
   "nombre": "Anillo central",
+  "tipoSala": "mazmorra",
   "muros": [
     {
       "x": 740,

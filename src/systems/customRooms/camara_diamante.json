@@ -1,6 +1,7 @@
 {
   "id": "camara_diamante",
   "nombre": "Cámara diamante",
+  "tipoSala": "mazmorra",
   "muros": [
     {
       "x": 40,

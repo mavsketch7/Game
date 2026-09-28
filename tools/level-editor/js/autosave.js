@@ -42,7 +42,7 @@ function serializar() {
   return {
     version: 1,
     salaActual: estado.salaActual,
-    salas: estado.salas.map(s => ({ nombre: s.nombre, nota: s.nota, grid: s.grid })),
+    salas: estado.salas.map(s => ({ nombre: s.nombre, nota: s.nota, tipoSala: s.tipoSala, grid: s.grid })),
     tiposCustom,
   };
 }
@@ -94,7 +94,7 @@ export function cargarLocal() {
   actualizarDiccionarios();
 
   estado.salas = datos.salas.map(s => ({
-    nombre: s.nombre, nota: s.nota || "", grid: s.grid,
+    nombre: s.nombre, nota: s.nota || "", tipoSala: s.tipoSala || "mazmorra", grid: s.grid,
     historial: [clonarGrid(s.grid)], indiceHistoria: 0,
   }));
   estado.salaActual = Math.min(Math.max(0, datos.salaActual || 0), estado.salas.length - 1);

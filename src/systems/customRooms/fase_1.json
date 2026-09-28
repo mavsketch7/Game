@@ -1,6 +1,7 @@
 {
   "id": "fase_1",
   "nombre": "Fase 1",
+  "tipoSala": "mazmorra",
   "w": 2900,
   "h": 2080,
   "fondo": "/assets/sprites/dungeon/rooms/fase_1.png",

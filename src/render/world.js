@@ -5,6 +5,7 @@ import { G } from "../core/state.js";
 import { renderHUD } from "./hud.js";
 import { CAMPFIRE_CELDA, FIRE_COLUMN, FIREBALL_FH, FIREBALL_FRAMES, FIREBALL_FW, FIREBALL_SHEET, FIRE_EXPLOSION_FH, FIRE_EXPLOSION_FRAMES, FIRE_EXPLOSION_FW, FIRE_EXPLOSION_INICIO, FIRE_EXPLOSION_SHEET, FROST_GUARDIAN, ICE_BURST, IMPACT_VFX, KENNEY_TILE, PILAR_HIELO_FRAMES, SANGRE_ANIM, SANGRE_DUR, SHEETS, SPR, assetOK, campfireFrame, iconoDrop, muroBordeBasePatron, muroBordeLateralPatron, muroBordeSuperiorPatron, muroEsquinaImg, remateMuroPatron, wallPatron } from "./sprites.js";
 import { drawSprite, drawSpriteBottom } from "./spriteDraw.js";
+import { ALTO_HILADA_BORDE, calcularMetaBordes as calcularMetaBordesCompartido, TOQUE_BORDE_TOL, UMBRAL_LARGO_BORDE } from "./wallBorders.js";
 import { renderEnemigo, renderJugador, renderMira } from "./character.js";
 import { EXPLOSION_BURST_DUR, EXPLOSION_FADE_DUR } from "../systems/abilities.js";
 import { mouse } from "../systems/input.js";
@@ -538,47 +539,20 @@ function dibujarHogueraReal(x, y, tam) {
 // tipo escalera (torreón circular, diamante, zigzag...) se quedan con el
 // remate liso original -- detectar esquina real en esas formas por
 // contacto rectángulo-a-rectángulo daría un patchwork, no una mejora.
-const UMBRAL_LARGO_BORDE = 80;
-// Tolerancia en px para decidir si dos rectángulos de G.muros "se tocan"
-// en una esquina -- G.muros no guarda ninguna relación de vecindad (ver
-// systems/floorgen.js), así que la única forma de saber si el extremo de
-// un muro horizontal es una esquina real (y no un hueco de puerta) es
-// comprobar si hay un muro VERTICAL pegado justo ahí.
-const TOQUE_BORDE_TOL = 4;
+// UMBRAL_LARGO_BORDE/TOQUE_BORDE_TOL/calcularMetaBordes ahora viven en
+// wallBorders.js -- módulo puro sin dependencias del motor, importado
+// también por el Telar de Mazmorras (tools/level-editor/) para que su
+// vista previa decida esquina-real-vs-remate-liso con el MISMO criterio
+// que este renderer, en vez de tener cada uno su propia lógica (antes
+// solo el editor pintaba un remate liso por celda, sin esquinas reales,
+// así que una sala podía verse distinta en el juego de lo que el
+// diseñador vio al exportarla).
 let cacheMurosRefBordes = null;
 let metaBordes = new Map();
 function calcularMetaBordes(muros) {
-        metaBordes = new Map();
-        for (const m of muros) {
-          const horizontal = m.w >= m.h;
-          if (!horizontal) { metaBordes.set(m, { horizontal }); continue; }
-          let esqIzq = false, esqDer = false;
-          for (const o of muros) {
-            if (o === m || o.w >= o.h) continue; // solo cuenta un muro vertical
-            // Solape/contacto en Y en CUALQUIER punto de la altura de m, no
-            // solo en su fila superior: un muro horizontal que hace de
-            // borde INFERIOR de una sala se junta con su vertical por la
-            // fila de ARRIBA de m (m.y), pero uno que hace de borde
-            // SUPERIOR se junta por la fila de ABAJO (m.y+m.h) -- sin saber
-            // cuál es cuál, comprobar el rango completo cubre los dos casos.
-            if (o.y > m.y + m.h + TOQUE_BORDE_TOL || o.y + o.h < m.y - TOQUE_BORDE_TOL) continue;
-            // El vertical no siempre está pegado por fuera (abutment puro,
-            // sin solape) -- lo normal en las formas de este juego es que
-            // el bloque en L comparta la esquina (el vertical arranca en la
-            // MISMA x que el borde de m, no justo después). Así que basta
-            // con que el rango en X del vertical CUBRA la columna del
-            // borde de m, no que termine exactamente ahí.
-            if (o.x <= m.x + TOQUE_BORDE_TOL && o.x + o.w >= m.x + TOQUE_BORDE_TOL) esqIzq = true;
-            if (o.x <= m.x + m.w - TOQUE_BORDE_TOL && o.x + o.w >= m.x + m.w - TOQUE_BORDE_TOL) esqDer = true;
-          }
-          metaBordes.set(m, { horizontal, esqIzq, esqDer });
-        }
+        metaBordes = calcularMetaBordesCompartido(muros);
         cacheMurosRefBordes = muros;
       }
-// Alto en pantalla de cada hilada (hilada superior / zócalo / esquina) --
-// las piezas nuevas son de 16px nativos, ×3 igual que el resto de
-// KENNEY_TILE (ver sprites.js).
-const ALTO_HILADA_BORDE = 48;
 function dibujarMuroConBorde(m, meta, wallPat, rematePat) {
         const pTop = muroBordeSuperiorPatron();
         if (!pTop) {

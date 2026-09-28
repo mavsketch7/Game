@@ -15,6 +15,7 @@ function exportarSala(s) {
   const lineas = [];
   lineas.push("=== SALA: " + s.nombre + " ===");
   if (s.nota) lineas.push("# Nota: " + s.nota);
+  lineas.push("# Categoría: " + (s.tipoSala || "mazmorra"));
   lineas.push("# Leyenda: " + TIPOS.map((t) => t.ch + "=" + t.label).join(" | "));
   lineas.push("# " + COLS + "x" + ROWS + " celdas de " + CELL + "px");
 
@@ -50,6 +51,7 @@ function registrarTipoImportado(ch, label) {
 function parsearCuerpoSala(cuerpo) {
   const lineas = cuerpo.split("\n");
   let nota = "";
+  let tipoSala = "mazmorra";
   let modo = "legado"; // "legado" | "suelo" | "elem"
   const filasSuelo = [], filasElem = [], filasLegado = [];
 
@@ -57,6 +59,7 @@ function parsearCuerpoSala(cuerpo) {
     const l = linea.trim();
     if (!l) continue;
     if (l.startsWith("# Nota:")) { nota = l.slice(7).trim(); continue; }
+    if (l.startsWith("# Categoría:")) { tipoSala = l.slice(12).trim() || "mazmorra"; continue; }
     if (l.startsWith("# Leyenda:")) {
       l.slice(10).trim().split(" | ").forEach(p => {
         const [ch, label] = p.split("=");
@@ -74,7 +77,7 @@ function parsearCuerpoSala(cuerpo) {
     else filasLegado.push(l);
   }
 
-  return { nota, filasSuelo, filasElem, filasLegado };
+  return { nota, tipoSala, filasSuelo, filasElem, filasLegado };
 }
 
 function construirGridDesdeFilas(filasSuelo, filasElem, filasLegado) {
@@ -142,14 +145,14 @@ export function inicializarIO(redibujar) {
     for (let i = 1; i < bloques.length; i += 2) {
       const nombre = bloques[i].trim();
       const cuerpo = bloques[i + 1] || "";
-      const { nota, filasSuelo, filasElem, filasLegado } = parsearCuerpoSala(cuerpo);
+      const { nota, tipoSala, filasSuelo, filasElem, filasLegado } = parsearCuerpoSala(cuerpo);
 
       const g = construirGridDesdeFilas(filasSuelo, filasElem, filasLegado);
       if (!g) {
         document.getElementById("copiaEstado").textContent = `⚠ Error de dimensiones en sala "${nombre}".`;
         return;
       }
-      nuevasSalas.push({ nombre, nota, grid: g, historial: [clonarGrid(g)], indiceHistoria: 0 });
+      nuevasSalas.push({ nombre, nota, tipoSala, grid: g, historial: [clonarGrid(g)], indiceHistoria: 0 });
     }
 
     estado.salas = nuevasSalas;

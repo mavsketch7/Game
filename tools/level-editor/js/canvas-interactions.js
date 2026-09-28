@@ -1,7 +1,7 @@
 // --- Interacción con el lienzo, herramientas de dibujo y atajos de teclado ---
 import { COLS, ROWS, CELL, TIPOS } from "./config.js";
 import { estado, salaActiva, guardarEstado, deshacer, rehacer, capaDe } from "./state.js";
-import { construirPaleta } from "./ui.js";
+import { construirPaleta, construirListaSalas } from "./ui.js";
 
 function celdaDesdeEvento(cv, e) {
   const rect = cv.getBoundingClientRect();
@@ -186,5 +186,10 @@ export function inicializarInteracciones(cv, redibujar) {
 
   document.getElementById("notaSala").addEventListener("input", (e) => {
     salaActiva().nota = e.target.value;
+  });
+
+  document.getElementById("tipoSala").addEventListener("change", (e) => {
+    salaActiva().tipoSala = e.target.value;
+    construirListaSalas();
   });
 }

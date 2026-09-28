@@ -16,6 +16,7 @@ import { cargarSpritesDeClase } from "../render/sprites.js";
 import { statsTot } from "../systems/combat.js";
 import { M } from "../systems/input.js";
 import { armaBasica } from "../systems/loot.js";
+import { CUSTOM_ROOMS } from "../systems/customRooms.js";
 import { abrirInv, cerrarInv, invSel } from "../ui/inventory.js";
 import { banner, toast } from "../ui/notifications.js";
 import { ocultar } from "../ui/overlays.js";
@@ -254,34 +255,27 @@ export function nuevaPartida() {
 // Vestíbulo del Gremio -- diseñado a mano en el Telar de Mazmorras (mismo
 // flujo pintar -> exportar JSON -> aplicar que una sala de mazmorra),
 // tamaño propio 900x520 en vez de los 1600x1000 de siempre (ver
-// setSalaDims en core/constants.js). Los `muros` y el fondo horneado son
-// tal cual salieron del editor; el resto de posiciones (mercader, yunque,
-// muñecos de prueba, portal de arena, cofres/portales QA) se repartieron a
-// mano dentro de esta forma nueva -- antes vivían sueltas por todo un
-// lienzo de 1600 de ancho sin ninguna sala real detrás.
-const LOBBY_MUROS = [
-  { x: 0, y: 0, w: 380, h: 20 },
-  { x: 520, y: 0, w: 380, h: 20 },
-  { x: 0, y: 20, w: 180, h: 20 },
-  { x: 720, y: 20, w: 180, h: 20 },
-  { x: 0, y: 40, w: 20, h: 140 },
-  { x: 880, y: 40, w: 20, h: 140 },
-  { x: 0, y: 340, w: 20, h: 180 },
-  { x: 880, y: 340, w: 20, h: 180 },
-  { x: 20, y: 480, w: 360, h: 40 },
-  { x: 520, y: 480, w: 360, h: 40 },
-];
-const LOBBY_W = 900, LOBBY_H = 520;
-const LOBBY_FONDO = "/assets/sprites/dungeon/lobby/vestibulo.png";
-const LOBBY_PORTAL = { x: 450, y: 30 };
+// setSalaDims en core/constants.js). `muros`/`w`/`h`/`fondo`/`portal`
+// viven en systems/customRooms/lobby.json (tipoSala: "lobby") como
+// cualquier otra sala hecha en el editor -- antes estaban transcritos a
+// mano aquí mismo, así que el lobby no se podía retocar con el editor
+// como las demás salas. El resto de posiciones (mercader, yunque, muñecos
+// de prueba, portal de arena, cofres/portales QA, punto de aparición) no
+// tienen equivalente en el esquema genérico de sala -- se quedan como
+// constantes propias de este flujo, repartidas a mano dentro de la forma
+// del JSON.
+const LOBBY = CUSTOM_ROOMS.lobby;
+const LOBBY_W = LOBBY.w, LOBBY_H = LOBBY.h;
+const LOBBY_FONDO = LOBBY.fondo;
+const LOBBY_PORTAL = LOBBY.portal;
 const LOBBY_SPAWN = { x: 450, y: 210 };
 
 export function iniciarLobby() {
         // por si se abandona la partida estando en la sala de un jefe
         // (ver abandonarPartida() más abajo) -- no-op si no estaba sonando.
         detenerMusicaJefe();
-        // Tamaño y forma propios del vestíbulo (ver LOBBY_MUROS arriba) --
-        // ya no la medida base de una sala de mazmorra cualquiera.
+        // Tamaño y forma propios del vestíbulo (ver LOBBY arriba) -- ya no
+        // la medida base de una sala de mazmorra cualquiera.
         setSalaDims(LOBBY_W, LOBBY_H);
         G.salaW = LOBBY_W;
         G.salaH = LOBBY_H;
@@ -302,7 +296,7 @@ export function iniciarLobby() {
         G.wx = [];
         G.rayos = [];
         G.forma = "sala";
-        G.muros = LOBBY_MUROS.map((m) => ({ ...m }));
+        G.muros = LOBBY.muros.map((m) => ({ ...m }));
         G.vacios = [];
         G.mazmorra = null;
         G.puertas = [];
@@ -312,7 +306,7 @@ export function iniciarLobby() {
         G.fogata = null;
         G.fogataUsada = true;
         G.pilares = [];
-        // Reparto dentro de la forma nueva (900x520, ver LOBBY_MUROS): fila
+        // Reparto dentro de la forma nueva (900x520, ver LOBBY.muros): fila
         // media (y=280) con el yunque y el mercader a los lados y los 3
         // muñecos de prueba en el centro; fila de portales (y=380) con la
         // arena PvP en medio; fila de cofres (y=450) pegada a la pared de
@@ -334,7 +328,7 @@ export function iniciarLobby() {
         // objetos Míticos al abrirse (ver interactuar() en abilities.js).
         if (new URLSearchParams(location.search).get("qa") === "1") {
           // Fila de cofres, pegada a la pared de abajo (y=450, la pared
-          // real empieza en y=480 -- ver LOBBY_MUROS): mago / dorado /
+          // real empieza en y=480 -- ver LOBBY.muros): mago / dorado /
           // pícaro / arquero de izquierda a derecha.
           G.objetos.push({
             tipo: "cofre",

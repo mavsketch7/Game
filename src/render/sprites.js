@@ -5,6 +5,7 @@ import { META, SKINS } from "../core/save.js";
 import { G } from "../core/state.js";
 import { M, keys } from "../systems/input.js";
 import { construirMenu } from "../ui/menu.js";
+import { upscaleNN } from "./pixelArt.js";
 
 // Real PNG files (extracted from the original inline base64 blobs) live in
 // public/assets/sprites/. BASE_URL respects vite.config.js's `base: "./"`,
@@ -904,16 +905,6 @@ const imgVialReal = new Image();
 imgVialReal.onload = () => { SPR.vial = imgVialReal; };
 
 imgVialReal.src = assetUrl("vial");
-
-function upscaleNN(img, factor) {
-        const c = document.createElement("canvas");
-        c.width = img.width * factor;
-        c.height = img.height * factor;
-        const g = c.getContext("2d");
-        g.imageSmoothingEnabled = false;
-        g.drawImage(img, 0, 0, c.width, c.height);
-        return c;
-      }
 
 const KENNEY_ICON_SRC = {
         esqueleto: assetUrl("esqueleto"),

@@ -1,6 +1,7 @@
 {
   "id": "sala_sin_nombre",
   "nombre": "Sala sin nombre",
+  "tipoSala": "mazmorra",
   "w": 2940,
   "h": 2080,
   "fondo": "/assets/sprites/dungeon/rooms/sala_sin_nombre.png",

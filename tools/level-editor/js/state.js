@@ -21,7 +21,10 @@ export function capaDe(idTipo) {
 }
 
 export function crearSalaVacia(nombre) {
-  return { nombre, nota: "", grid: crearGridVacia(), historial: [], indiceHistoria: -1 };
+  // tipoSala: para qué se usa la sala (ver exportar-json.js) -- "mazmorra"
+  // por defecto porque es, con diferencia, el caso más común (todas las
+  // salas diseñadas a mano hasta ahora son de mazmorra).
+  return { nombre, nota: "", tipoSala: "mazmorra", grid: crearGridVacia(), historial: [], indiceHistoria: -1 };
 }
 
 export const estado = {

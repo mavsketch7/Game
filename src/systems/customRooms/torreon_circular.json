@@ -1,6 +1,7 @@
 {
   "id": "torreon_circular",
   "nombre": "Torreón circular",
+  "tipoSala": "mazmorra",
   "muros": [
     {
       "x": 40,

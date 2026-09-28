@@ -9,7 +9,7 @@ import { anclasBloqueadas } from "./validacion.js";
 // menor número de rectángulos posible: primero runs horizontales por fila, luego
 // fusión vertical de runs con el mismo rango de columnas. Es el mismo enfoque que
 // se usa para convertir un tilemap en rectángulos de colisión.
-function fusionarCeldas(grid, idsObjetivo) {
+export function fusionarCeldas(grid, idsObjetivo) {
   const idsSet = new Set(idsObjetivo);
   const visitado = Array.from({ length: ROWS }, () => Array(COLS).fill(false));
   const rects = [];
@@ -75,6 +75,12 @@ export function exportarSalaJSON(sala) {
   const json = {
     id: sala.nombre.trim().toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "") || "sala",
     nombre: sala.nombre,
+    // Para qué se usa la sala (lobby/mazmorra/jefe, ver docs/LEVEL_FORMAT.md)
+    // -- floorgen.js todavía no lee este campo para filtrar/repartir salas
+    // (sigue usando exclusión por id a mano), es solo identificación por
+    // ahora, pensado para cuando haya suficientes salas por categoría para
+    // analizar el estilo y generar el resto automáticamente.
+    tipoSala: sala.tipoSala || "mazmorra",
     muros: todosMuros,
     objetos,
     enemigos,

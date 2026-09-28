@@ -1,6 +1,7 @@
 {
   "id": "arsenal",
   "nombre": "Cámara del Arsenal",
+  "tipoSala": "mazmorra",
   "muros": [
     { "x": 40, "y": 56, "w": 80, "h": 32 },
     { "x": 1128, "y": 56, "w": 144, "h": 32 },

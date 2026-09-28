@@ -16,7 +16,7 @@ viene convertido a ese modelo — el motor solo necesita volcarlo en `G` (ver
 ## Sistema de coordenadas
 
 - Sala: 1600×1000 px (`SALA_W`/`SALA_H` en `src/core/constants.js`).
-- Grid del editor: 40×25 celdas de 40×40 px cada una (`COLS`/`ROWS`/`CELL` en
+- Grid del editor: 80×50 celdas de 20×20 px cada una (`COLS`/`ROWS`/`CELL` en
   `tools/level-editor/js/config.js`).
 - Todas las coordenadas del JSON son píxeles absolutos de sala, origen (0,0) en la
   esquina superior izquierda — igual que `G.muros`/`G.objetos`/`G.enemigos` en tiempo
@@ -31,6 +31,7 @@ referencia real):
 {
   "id": "arsenal",
   "nombre": "Cámara del Arsenal",
+  "tipoSala": "mazmorra",
   "muros": [
     { "x": 160, "y": 200, "w": 360, "h": 80 },
     { "x": 1200, "y": 200, "w": 120, "h": 80, "secreto": true }
@@ -45,6 +46,15 @@ referencia real):
   debe ser único entre todos los `customRooms/*.json`. El editor lo deriva del
   nombre de la sala (minúsculas, sin espacios/acentos); puedes editarlo a mano en el
   JSON si quieres un id concreto.
+- **`tipoSala`**: `"mazmorra"` (por defecto si se omite) / `"lobby"` / `"jefe"` — para
+  qué se usa la sala. Se elige en el editor con el desplegable "Categoría" del panel
+  de Salas. Solo las salas `"mazmorra"` entran en el reparto aleatorio por planta
+  (`CUSTOM_ROOMS_ORGANICAS` en `floorgen.js`); `"lobby"` es la única categoría con
+  efecto real por ahora (excluye la sala de ese reparto — ver
+  `src/systems/customRooms/lobby.json`, cargada por `core/gameflow.js:iniciarLobby()`
+  en vez de tener el vestíbulo transcrito a mano). `"jefe"` es, de momento, solo
+  identificación: aún no hay ninguna sala de jefe hecha a mano ni un mecanismo que la
+  seleccione para las plantas de jefe.
 - **`muros`**: rectángulos ya fusionados a partir de las celdas contiguas marcadas
   como muro/muro secreto en el editor. `secreto: true` hace que ese rectángulo se
   pueda revelar en el juego pulsando E (igual que la sala "arsenal" original).
@@ -52,6 +62,12 @@ referencia real):
   motor puebla la sala proceduralmente como cualquier otra forma (ver
   `poblarSala()`). Si traen contenido, se coloca **exactamente** ahí en vez de
   sortearlo (`colocarContenidoFijo()` en `floorgen.js`).
+- **Esquina real de muro** (ver `dibujarMuroConBorde()` en `render/world.js` y
+  `render/wallBorders.js`): un tramo de muro horizontal ≥80px con un muro vertical
+  pegado a alguno de sus extremos se dibuja con la pieza de esquina real en vez del
+  remate liso; el Telar de Mazmorras usa el mismo criterio (mismo módulo
+  `wallBorders.js`) para previsualizarlo igual que sale en el juego — no hace falta
+  marcar nada a mano, es automático a partir de la geometría de `muros`.
 
 ## Catálogo de tipos (motorTipo)
 

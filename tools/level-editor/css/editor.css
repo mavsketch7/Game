@@ -188,6 +188,12 @@ label { font-family: var(--font-ui); font-size: 1rem; }
 .sala-item:hover { background: var(--piedra3); }
 .sala-item.activa { border-color: var(--vespero); background: var(--piedra3); font-weight: 700; }
 .sala-item span.nombre { flex: 1; }
+.tipo-sala-badge {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 18px; height: 18px; border-radius: 4px; font-size: 0.7rem;
+  font-weight: 700; background: var(--piedra3); border: 1px solid var(--borde);
+  flex-shrink: 0;
+}
 
 /* ---------- Modal genérico (sustituye alerts/prompts) ---------- */
 .modal-overlay {

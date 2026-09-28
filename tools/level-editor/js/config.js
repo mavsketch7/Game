@@ -1,4 +1,5 @@
 // --- CONFIGURACIÓN BASE Y CARGA DE ASSETS ---
+import { upscaleNN } from "../../../src/render/pixelArt.js";
 // CELL bajado de 40 a 20px (COLS/ROWS duplicados a la par: 80x50, mismo
 // lienzo de 1600x1000 de siempre) -- pedido expreso del usuario tras ver
 // un plano de mazmorra con salas de forma orgánica (circulares/diagonales
@@ -25,6 +26,17 @@ export const ASSETS_PATHS = {
   suelo2: "/assets/sprites/dungeon/floor_fill2.png",
   wall: "/assets/sprites/dungeon/wall_fill.png",
   wallRemate: "/assets/sprites/dungeon/wall_top.png",
+  // Piezas de esquina/borde real (ver dibujarMuroConBorde en
+  // render/world.js y wallBorders.js, calcularMetaBordes compartido):
+  // antes el editor solo pintaba el remate liso, así que una sala con
+  // tramos ≥80px que el motor renderiza con esquina real se veía
+  // distinta aquí de lo que salía en el juego. Mismos archivos que
+  // KENNEY_TILE en render/sprites.js.
+  wallCornerL: "/assets/sprites/dungeon/wall_corner_left.png",
+  wallCornerR: "/assets/sprites/dungeon/wall_corner_right.png",
+  wallEdgeTop: "/assets/sprites/dungeon/wall_top_edge.png",
+  wallEdgeBase: "/assets/sprites/dungeon/wall_base_edge.png",
+  wallEdgeSide: "/assets/sprites/dungeon/wall_side_edge.png",
   paredIntermedia: "/assets/sprites/Pared-intermedia.png",
   door1: "/assets/sprites/door1.png",
   door2: "/assets/sprites/door2.png",
@@ -56,6 +68,21 @@ for (const key of Object.keys(ASSETS_PATHS)) {
   ASSETS[key] = new Image();
 }
 
+// Piezas del tileset de mazmorra que en el juego se muestran reescaladas
+// 3x nearest-neighbor (ver KENNEY_TILE en render/sprites.js: los PNG
+// nativos son de 16x16). El editor las usa como relleno de PATRÓN (pared/
+// suelo/remate/esquinas) -- si se dejan en su resolución nativa, el
+// patrón se repite cada 16px en vez de cada 48px y se ve más fino/denso
+// que en el juego real, aunque la decisión de esquina-vs-liso ya sea la
+// misma (ver wallBorders.js). Se guardan aparte de ASSETS (que TIPOS usa
+// tal cual para el icono de pincel) para no romper otros usos de esas
+// mismas Image().
+export const TEX = {};
+const CLAVES_TEX_3X = [
+  "wall", "wallRemate", "wallCornerL", "wallCornerR",
+  "wallEdgeTop", "wallEdgeBase", "wallEdgeSide", "suelo1", "suelo2",
+];
+
 export function cargarAssets(onListo) {
   let assetsCargados = 0;
   const totalAssets = Object.keys(ASSETS_PATHS).length;
@@ -63,6 +90,7 @@ export function cargarAssets(onListo) {
   for (const [key, path] of Object.entries(ASSETS_PATHS)) {
     const img = ASSETS[key];
     img.onload = () => {
+      if (CLAVES_TEX_3X.includes(key)) TEX[key] = upscaleNN(img, 3);
       assetsCargados++;
       if (assetsCargados === totalAssets) onListo();
     };

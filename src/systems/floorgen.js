@@ -67,15 +67,24 @@ const FORMAS_MAPA = [
         "antesala",
         "herradura",
         "escalonada",
-        ...Object.keys(CUSTOM_ROOMS),
+        // "lobby" (tipoSala: "lobby") queda fuera: no es una forma de
+        // mazmorra, es el vestíbulo (tamaño y contenido propios, ver
+        // core/gameflow.js) -- no tiene sentido como sala de una planta
+        // cualquiera.
+        ...Object.keys(CUSTOM_ROOMS).filter((id) => id !== "lobby"),
       ];
 
-// Salas propias reales -- "arsenal"/"sala_sin_nombre" quedan fuera: son
-// contenido FIJO de la entrada de planta 1 (ver colocarContenidoFijo()/
-// poblarSala()), no una forma más a repartir en cualquier sala de
-// cualquier planta.
+// Salas propias reales -- "arsenal"/"sala_sin_nombre"/"fase_1" quedan
+// fuera: son contenido FIJO de la entrada de planta 1 (ver
+// colocarContenidoFijo()/poblarSala()), no una forma más a repartir en
+// cualquier sala de cualquier planta. "lobby" (tipoSala: "lobby", ver
+// customRooms/lobby.json) tampoco es una forma de mazmorra -- filtrar
+// también por tipoSala !== "mazmorra" para que cualquier sala futura que
+// no sea de mazmorra (lobby, jefe) quede fuera de este reparto por
+// defecto, sin tener que acordarse de añadirla aquí a mano cada vez.
 const CUSTOM_ROOMS_ORGANICAS = Object.keys(CUSTOM_ROOMS).filter(
-  (id) => id !== "arsenal" && id !== "sala_sin_nombre" && id !== "fase_1",
+  (id) => id !== "arsenal" && id !== "sala_sin_nombre" && id !== "fase_1" &&
+    (CUSTOM_ROOMS[id].tipoSala || "mazmorra") === "mazmorra",
 );
 
 // QA (?qa=1, mismo interruptor que el arsenal/cofre de pruebas de

@@ -1,6 +1,8 @@
 // --- Renderizado del Lienzo ---
-import { COLS, ROWS, CELL, MARGEN, ANCLAS_PUERTA, POR_ID, ASSETS } from "./config.js";
+import { COLS, ROWS, CELL, MARGEN, ANCLAS_PUERTA, POR_ID, TEX } from "./config.js";
 import { estado, salaActiva } from "./state.js";
+import { fusionarCeldas } from "./exportar-json.js";
+import { ALTO_HILADA_BORDE, calcularMetaBordes, UMBRAL_LARGO_BORDE } from "../../../src/render/wallBorders.js";
 
 export function varColor(name) {
   return getComputedStyle(document.body).getPropertyValue(name).trim();
@@ -17,7 +19,13 @@ export function varColor(name) {
 // fillRect() individual.
 const cachePatrones = new Map();
 function patronDe(ctx, img) {
-  if (!img || !img.complete || img.naturalWidth === 0) return null;
+  // Las texturas reescaladas (ver TEX en config.js) son <canvas>, no
+  // <img> -- no tienen .complete/.naturalWidth, están listas en cuanto
+  // existen (se crean síncronamente a partir de la imagen ya cargada).
+  const listo = img instanceof HTMLCanvasElement
+    ? img.width > 0
+    : img && img.complete && img.naturalWidth > 0;
+  if (!listo) return null;
   let p = cachePatrones.get(img);
   if (!p) {
     p = ctx.createPattern(img, "repeat");
@@ -59,7 +67,9 @@ export function dibujarTile(ctx, idTipo, x, y, ancho, alto, sinFondo) {
   // visualmente IDÉNTICO a uno normal, pero en el editor conviene que
   // quien diseña SÍ lo distinga a simple vista.
   if (t.id === "suelo" || t.id === "muro") {
-    const patron = patronDe(ctx, t.img);
+    // TEX.* (reescalado 3x, ver config.js) en vez de t.img (nativo a
+    // 16px): mismo tamaño de patrón que el juego real, ver patronDe().
+    const patron = patronDe(ctx, t.id === "muro" ? TEX.wall : TEX.suelo1);
     if (patron) {
       ctx.fillStyle = patron;
       ctx.fillRect(x, y, ancho, alto);
@@ -119,7 +129,7 @@ export function dibujar(cv, cx) {
   // superior de cada tramo, no en cada celda del bloque). Se salta
   // tramos de 1 sola celda de alto (20px) -- mismo criterio que
   // `m.h >= 26` en el juego, para no saturar obstáculos chiquitos.
-  const patronRemate = patronDe(cx, ASSETS.wallRemate);
+  const patronRemate = patronDe(cx, TEX.wallRemate);
   if (patronRemate) {
     for (let r = 0; r < ROWS; r++) {
       for (let c = 0; c < COLS; c++) {
@@ -133,6 +143,13 @@ export function dibujar(cv, cx) {
       }
     }
   }
+
+  // Esquina real / borde lateral (ver dibujarMuroConBorde en
+  // render/world.js, mismo criterio compartido vía wallBorders.js): se
+  // pinta ENCIMA del remate liso de arriba, solo en los tramos que el
+  // juego también trataría como "borde largo de verdad" -- así lo que se
+  // ve aquí es lo mismo que sale en el juego, sin sorpresas al exportar.
+  dibujarBordesReales(cx, g);
 
   // Dibujar previsualización de rectángulo
   if (estado.pintando && estado.toolActiva === "rect" && estado.inicioRect) {
@@ -186,5 +203,53 @@ export function dibujar(cv, cx) {
     cx.moveTo(px - 14, py); cx.lineTo(px + 14, py);
     cx.moveTo(px, py - 14); cx.lineTo(px, py + 14);
     cx.stroke();
+  }
+}
+
+// Recalcula esto solo cuando cambia realmente algo -- fusionarCeldas +
+// calcularMetaBordes recorren toda la grid, no hace falta en cada frame
+// del picker/hover, pero dibujar() se llama en cada trazo de pintura, así
+// que se recalcula cada vez que se llama (barato: 80x50 celdas).
+function dibujarBordesReales(cx, grid) {
+  const murosReales = fusionarCeldas(grid, ["muro"]);
+  if (!murosReales.length) return;
+  // Igual que G.muros en el motor real (systems/floorgen.js): un muro
+  // secreto cuenta como vecino para decidir esquina aunque no se dibuje
+  // con el mismo arte aquí (ver dibujarTile(): "secreta" se queda con su
+  // imagen propia a propósito, para que quien diseña lo distinga).
+  const secretos = fusionarCeldas(grid, ["secreta"]);
+  const meta = calcularMetaBordes([...murosReales, ...secretos]);
+
+  const pTop = patronDe(cx, TEX.wallEdgeTop);
+  const pBase = patronDe(cx, TEX.wallEdgeBase);
+  const pLado = patronDe(cx, TEX.wallEdgeSide);
+
+  for (const m of murosReales) {
+    const metaB = meta.get(m);
+    if (!metaB) continue;
+    if (pTop && metaB.horizontal && m.w >= UMBRAL_LARGO_BORDE && m.h >= 26) {
+      const altoTop = Math.min(ALTO_HILADA_BORDE, m.h);
+      cx.fillStyle = pTop;
+      cx.fillRect(m.x, m.y, m.w, altoTop);
+      if (pBase && m.h >= ALTO_HILADA_BORDE * 2) {
+        cx.fillStyle = pBase;
+        cx.fillRect(m.x, m.y + ALTO_HILADA_BORDE, m.w, Math.min(ALTO_HILADA_BORDE, m.h - ALTO_HILADA_BORDE));
+      }
+      const imgIzq = metaB.esqIzq ? TEX.wallCornerL : null;
+      const imgDer = metaB.esqDer ? TEX.wallCornerR : null;
+      if (imgIzq) {
+        const w = Math.min(imgIzq.width, m.w);
+        cx.drawImage(imgIzq, m.x, m.y, w, altoTop);
+      }
+      if (imgDer) {
+        const w = Math.min(imgDer.width, m.w);
+        cx.drawImage(imgDer, m.x + m.w - w, m.y, w, altoTop);
+      }
+      continue;
+    }
+    if (pLado && !metaB.horizontal && m.h >= UMBRAL_LARGO_BORDE) {
+      cx.fillStyle = pLado;
+      cx.fillRect(m.x, m.y, m.w, m.h);
+    }
   }
 }

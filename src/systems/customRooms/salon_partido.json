@@ -1,6 +1,7 @@
 {
   "id": "salon_partido",
   "nombre": "Salón partido",
+  "tipoSala": "mazmorra",
   "muros": [
     {
       "x": 220,

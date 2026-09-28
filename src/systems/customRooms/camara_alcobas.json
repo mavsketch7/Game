@@ -1,6 +1,7 @@
 {
   "id": "camara_alcobas",
   "nombre": "Cámara con alcobas",
+  "tipoSala": "mazmorra",
   "muros": [
     {
       "x": 40,

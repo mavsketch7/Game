@@ -103,18 +103,22 @@ export function construirListaSalas() {
 
     const faltan = puertasFaltantes(s);
     const aviso = faltan.length ? `<span title="Faltan puertas: ${faltan.map(a => a.dir).join(', ')}" style="color:#ff7675;">⚠</span>` : "";
+    const ETIQUETA_TIPO = { mazmorra: "M", lobby: "L", jefe: "J" };
+    const tipoBadge = `<span class="tipo-sala-badge" title="Categoría: ${s.tipoSala || "mazmorra"}">${ETIQUETA_TIPO[s.tipoSala] || "M"}</span>`;
 
     div.appendChild(mini);
-    div.insertAdjacentHTML("beforeend", '<span class="nombre">' + s.nombre + "</span>" + aviso);
+    div.insertAdjacentHTML("beforeend", tipoBadge + '<span class="nombre">' + s.nombre + "</span>" + aviso);
     div.onclick = () => {
       estado.salaActual = i;
       document.getElementById("notaSala").value = estado.salas[estado.salaActual].nota;
+      document.getElementById("tipoSala").value = estado.salas[estado.salaActual].tipoSala || "mazmorra";
       construirListaSalas();
       onCambio();
     };
     cont.appendChild(div);
   });
   document.getElementById("notaSala").value = estado.salas[estado.salaActual].nota;
+  document.getElementById("tipoSala").value = estado.salas[estado.salaActual].tipoSala || "mazmorra";
   // Guardar estado inicial si no lo tiene
   if (estado.salas[estado.salaActual].historial.length === 0) guardarEstado();
 }

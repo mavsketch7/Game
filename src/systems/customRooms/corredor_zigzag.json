@@ -1,6 +1,7 @@
 {
   "id": "corredor_zigzag",
   "nombre": "Corredor en zigzag",
+  "tipoSala": "mazmorra",
   "muros": [
     {
       "x": 40,
