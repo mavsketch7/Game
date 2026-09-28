@@ -31,12 +31,16 @@ export function groundTarget(p, maxR) {
 
 const cdHaste = (p) => (p.hasteT > 0 ? 0.55 : 1);
 
-// Combo de 3 golpes del ataque básico (guerrero/pícaro): pulsar atacar
-// durante la animación (desde COMBO_ENCADENAR_DESDE de su duración) o hasta
-// COMBO_VENTANA s después de que termine pasa al golpe siguiente; si no,
-// vuelve al 1º. Mantener pulsado encadena solo (atacar() se llama cada
-// frame mientras se mantiene, ver core/loop.js). El daño no sale al pulsar
-// sino en el frame de impacto del arte (ver comboGolpe() en
+// Combo de 3 golpes del ataque básico (guerrero/pícaro): CADA golpe exige su
+// propio clic/pulsación -- mantener pulsado ya NO encadena solo (antes
+// atacar() se llamaba cada frame mientras se mantenía el botón, ver
+// core/loop.js, y la cadena se disparaba sola tan rápido como el juego
+// dejara; pedido expreso: "que solo haga una acción" por pulsación, también
+// porque el sonido de golpe llegaba a sonar duplicado/solapado con el combo
+// disparándose solo). Pulsar de nuevo durante la animación (desde
+// COMBO_ENCADENAR_DESDE de su duración) o hasta COMBO_VENTANA s después de
+// que termine pasa al golpe siguiente; si no, vuelve al 1º. El daño no sale
+// al pulsar sino en el frame de impacto del arte (ver comboGolpe() en
 // render/sprites.js y ejecutarGolpeCombo() más abajo).
 const COMBO_VENTANA = 0.5;
 const COMBO_ENCADENAR_DESDE = 0.7;

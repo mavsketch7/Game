@@ -744,8 +744,19 @@ export function update(dt) {
             if (p.cargaArqT > 0 && p.rol === "arquero")
               dispararFlechaCargada(p); // quedó atrapado a media carga: suelta lo cargado
             else p.cargaArqT = 0;
-            if (p.inp.atkHeld) atacar(p);
+            // Guerrero/pícaro (combo de 3, ver abilities.js): CADA golpe
+            // exige su propio clic -- solo se dispara en el flanco de
+            // subida de atkHeld (recién pulsado), no cada frame mientras
+            // se mantiene. Pedido expreso ("que solo haga una acción" al
+            // mantener pulsado) -- antes mantener encadenaba la cadena
+            // sola, y llegaba a sonar el golpe duplicado/solapado. El
+            // resto de clases (mago fuego/hielo, clérigo, druida) sigue
+            // atacando cada frame mientras se mantiene, sin cambios.
+            const soloClic = p.rol === "guerrero" || p.rol === "picaro";
+            const clicNuevo = p.inp.atkHeld && !p._atkHeldPrev;
+            if (soloClic ? clicNuevo : p.inp.atkHeld) atacar(p);
           }
+          p._atkHeldPrev = p.inp.atkHeld;
           // Cuchillo del pícaro: entrada INDEPENDIENTE del botón de ataque
           // de arriba (Mayús/lanzarHeld, no clic izq/atkHeld) -- conserva
           // su golpe de daga de siempre Y puede cargar el cuchillo aparte,
