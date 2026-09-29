@@ -727,19 +727,20 @@ function generarGrafoPlanta() {
         };
         let actual = crear(gxInicial, gyInicial, true);
         // QA (?qa=1 en la URL, mismo interruptor que el cofre de pruebas en
-        // core/gameflow.js): la sala de entrada de la planta 1 (justo al
-        // subir las escaleras desde el lobby) es siempre esta -- para poder
-        // probarla sin esperar a que el sorteo la saque por azar. Exportada
-        // desde el Telar de Mazmorras (artefacto, botón "Exportar TODO lo
-        // pintado" -- ver src/systems/customRooms/sala_sin_nombre.json),
-        // mismo flujo pintar-a-mano -> exportar JSON -> usar en el juego que
-        // ya se usaba con tools/level-editor/ para "arsenal" antes de esta.
+        // core/gameflow.js): la sala de entrada de estas plantas concretas
+        // (justo al cruzar el portal) es siempre la indicada aquí -- para
+        // poder probarlas en orden ("fase 1, fase 2, fase 3") sin esperar a
+        // que el sorteo/el recorrido secuencial las saque. Exportadas desde
+        // el Telar de Mazmorras (artefacto, botón "Exportar TODO lo
+        // pintado" -- ver src/systems/customRooms/{fase_1,sala2,sala3}.json).
+        const ENTRADA_QA_POR_PLANTA = { 1: "fase_1", 2: "sala2", 3: "sala3" };
+        const entradaQA = ENTRADA_QA_POR_PLANTA[G.planta];
         if (
-          G.planta === 1 &&
+          entradaQA &&
           new URLSearchParams(location.search).get("qa") === "1"
         ) {
-          actual.forma = "fase_1";
-          // La entrada de planta 1 ya venía de elegirForma() (dentro de
+          actual.forma = entradaQA;
+          // La entrada de la planta ya venía de elegirForma() (dentro de
           // nuevaSala()) antes de sobreescribirla arriba -- sin este
           // "devolver" el turno, esa llamada desperdiciada adelantaría en 1
           // el recorrido en orden de las salas propias (ver qaSalaIdx).
