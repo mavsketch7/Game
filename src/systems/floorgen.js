@@ -733,7 +733,7 @@ function generarGrafoPlanta() {
         // que el sorteo/el recorrido secuencial las saque. Exportadas desde
         // el Telar de Mazmorras (artefacto, botón "Exportar TODO lo
         // pintado" -- ver src/systems/customRooms/{fase_1,sala2,sala3}.json).
-        const ENTRADA_QA_POR_PLANTA = { 1: "fase_1", 2: "sala2", 3: "sala3" };
+        const ENTRADA_QA_POR_PLANTA = { 1: "fase_1", 2: "sala2", 3: "sala3", 4: "fase4" };
         const entradaQA = ENTRADA_QA_POR_PLANTA[G.planta];
         if (
           entradaQA &&
